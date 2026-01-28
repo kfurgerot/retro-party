@@ -9,8 +9,8 @@ import { ResultsScreen } from '@/components/screens/ResultsScreen';
 const Index: React.FC = () => {
   const isOnline = useMemo(() => {
     if (typeof window === 'undefined') return false;
-    const params = new URLSearchParams(window.location.search);
-    return params.get('online') === '1';
+
+    return window.location.hostname !== 'localhost';
   }, []);
 
   // Local state (single screen)
