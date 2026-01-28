@@ -13,8 +13,8 @@ services:
     container_name: retro-party-backend
     restart: unless-stopped
     environment:
-      - PORT=3000
+      - PORT=3001
       # In prod, set to your https domain to lock CORS:
       # - ORIGIN=https://retro-party.example.com
     ports:
-      - "3000:3000"
+      - "3001:3001"
