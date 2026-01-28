@@ -15,7 +15,7 @@ import {
   resetGame,
 } from "./gameLogic.js";
 
-const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
+const PORT = process.env.PORT ? Number(process.env.PORT) : 3001;
 const ORIGIN = process.env.ORIGIN || true; // in prod set to your https domain
 
 const app = express();
