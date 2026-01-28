@@ -1,0 +1,20 @@
+services:
+  frontend:
+    build: .
+    container_name: retro-party-frontend
+    restart: unless-stopped
+    ports:
+      - "8088:80"
+    depends_on:
+      - backend
+
+  backend:
+    build: ./server
+    container_name: retro-party-backend
+    restart: unless-stopped
+    environment:
+      - PORT=3000
+      # In prod, set to your https domain to lock CORS:
+      # - ORIGIN=https://retro-party.example.com
+    ports:
+      - "3000:3000"

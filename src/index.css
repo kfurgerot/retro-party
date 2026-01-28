@@ -1,0 +1,274 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import '@fontsource/press-start-2p';
+
+/* Rétro Party - Pixel Art Design System */
+
+@layer base {
+  :root {
+    /* Core colors - Retro neon palette */
+    --background: 240 20% 8%;
+    --foreground: 60 100% 95%;
+
+    --card: 240 20% 12%;
+    --card-foreground: 60 100% 95%;
+
+    --popover: 240 20% 10%;
+    --popover-foreground: 60 100% 95%;
+
+    --primary: 180 100% 50%;
+    --primary-foreground: 240 20% 8%;
+
+    --secondary: 300 100% 60%;
+    --secondary-foreground: 60 100% 95%;
+
+    --muted: 240 15% 20%;
+    --muted-foreground: 240 10% 60%;
+
+    --accent: 45 100% 55%;
+    --accent-foreground: 240 20% 8%;
+
+    --destructive: 0 85% 55%;
+    --destructive-foreground: 60 100% 95%;
+
+    --border: 240 20% 25%;
+    --input: 240 20% 18%;
+    --ring: 180 100% 50%;
+
+    --radius: 0px;
+
+    /* Game-specific colors */
+    --tile-blue: 210 100% 55%;
+    --tile-red: 0 85% 55%;
+    --tile-green: 140 70% 45%;
+    --tile-violet: 270 80% 60%;
+    --tile-star: 45 100% 55%;
+    --tile-shop: 30 90% 50%;
+    --tile-wip: 15 90% 45%;
+    --tile-swap: 180 100% 50%;
+    --tile-teleport: 280 100% 65%;
+
+    /* Resource colors */
+    --resource-tickets: 45 100% 55%;
+    --resource-bugs: 0 85% 55%;
+    --resource-debt: 270 80% 60%;
+    --resource-stars: 45 100% 70%;
+
+    /* Pixel shadows and effects */
+    --pixel-shadow: 4px 4px 0px hsl(0 0% 0% / 0.5);
+    --pixel-glow-cyan: 0 0 20px hsl(180 100% 50% / 0.5);
+    --pixel-glow-magenta: 0 0 20px hsl(300 100% 60% / 0.5);
+    --pixel-glow-gold: 0 0 20px hsl(45 100% 55% / 0.5);
+
+    --sidebar-background: 240 20% 10%;
+    --sidebar-foreground: 60 100% 95%;
+    --sidebar-primary: 180 100% 50%;
+    --sidebar-primary-foreground: 240 20% 8%;
+    --sidebar-accent: 300 100% 60%;
+    --sidebar-accent-foreground: 60 100% 95%;
+    --sidebar-border: 240 20% 25%;
+    --sidebar-ring: 180 100% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Press Start 2P', monospace;
+    image-rendering: pixelated;
+
+    /* Prevent browser scrolling */
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  html, body {
+    height: 100%;
+    width: 100%;
+  }
+
+  #root {
+    height: 100%;
+    width: 100%;
+  }
+}
+
+@layer components {
+  /* Pixel art button styles */
+  .pixel-btn {
+    @apply relative px-6 py-3 font-bold uppercase tracking-wider transition-all duration-100;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.75rem;
+    box-shadow: var(--pixel-shadow);
+    border: 4px solid;
+    image-rendering: pixelated;
+  }
+
+  .pixel-btn:hover {
+    transform: translate(2px, 2px);
+    box-shadow: 2px 2px 0px hsl(0 0% 0% / 0.5);
+  }
+
+  .pixel-btn:active {
+    transform: translate(4px, 4px);
+    box-shadow: none;
+  }
+
+  .pixel-btn-primary {
+    @apply pixel-btn bg-primary text-primary-foreground border-primary;
+  }
+
+  .pixel-btn-secondary {
+    @apply pixel-btn bg-secondary text-secondary-foreground border-secondary;
+  }
+
+  .pixel-btn-accent {
+    @apply pixel-btn bg-accent text-accent-foreground border-accent;
+  }
+
+  /* Pixel card */
+  .pixel-card {
+    @apply relative p-4;
+    background: hsl(var(--card));
+    border: 4px solid hsl(var(--border));
+    box-shadow: var(--pixel-shadow);
+  }
+
+  /* Scanline effect */
+  .scanlines::after {
+    content: '';
+    @apply absolute inset-0 pointer-events-none;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      hsl(0 0% 0% / 0.1) 2px,
+      hsl(0 0% 0% / 0.1) 4px
+    );
+  }
+
+  /* Glow effects */
+  .glow-cyan {
+    box-shadow: var(--pixel-glow-cyan);
+  }
+
+  .glow-magenta {
+    box-shadow: var(--pixel-glow-magenta);
+  }
+
+  .glow-gold {
+    box-shadow: var(--pixel-glow-gold);
+  }
+
+  /* Pixel text styles */
+  .pixel-text {
+    font-family: 'Press Start 2P', monospace;
+    text-shadow: 2px 2px 0px hsl(0 0% 0%);
+  }
+
+  .pixel-text-sm {
+    @apply pixel-text text-xs;
+  }
+
+  .pixel-text-lg {
+    @apply pixel-text text-lg;
+  }
+
+  .pixel-text-xl {
+    @apply pixel-text text-2xl;
+  }
+
+  /* Resource badge */
+  .resource-badge {
+    @apply inline-flex items-center gap-2 px-3 py-1 pixel-card text-xs;
+  }
+
+  /* Tile styles */
+  .game-tile {
+    @apply relative flex items-center justify-center;
+    width: 48px;
+    height: 48px;
+    border: 3px solid hsl(0 0% 0%);
+    box-shadow: inset 0 0 0 2px hsl(0 0% 100% / 0.2);
+  }
+
+  /* Avatar pixel style */
+  .pixel-avatar {
+    @apply relative;
+    image-rendering: pixelated;
+    border: 3px solid hsl(var(--primary));
+    box-shadow: var(--pixel-shadow);
+  }
+}
+
+@layer utilities {
+  /* Animations */
+  @keyframes pixel-bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+
+  @keyframes pixel-shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+  }
+
+  @keyframes pixel-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  @keyframes dice-roll {
+    0% { transform: rotate(0deg) scale(1); }
+    25% { transform: rotate(90deg) scale(1.1); }
+    50% { transform: rotate(180deg) scale(1); }
+    75% { transform: rotate(270deg) scale(1.1); }
+    100% { transform: rotate(360deg) scale(1); }
+  }
+
+  @keyframes star-sparkle {
+    0%, 100% { 
+      filter: brightness(1) drop-shadow(0 0 8px hsl(45 100% 55%));
+    }
+    50% { 
+      filter: brightness(1.3) drop-shadow(0 0 16px hsl(45 100% 70%));
+    }
+  }
+
+  @keyframes move-step {
+    0% { transform: translateY(0); }
+    50% { transform: translateY(-12px); }
+    100% { transform: translateY(0); }
+  }
+
+  .animate-pixel-bounce {
+    animation: pixel-bounce 0.5s ease-in-out infinite;
+  }
+
+  .animate-pixel-shake {
+    animation: pixel-shake 0.3s ease-in-out;
+  }
+
+  .animate-pixel-pulse {
+    animation: pixel-pulse 1s ease-in-out infinite;
+  }
+
+  .animate-dice-roll {
+    animation: dice-roll 0.5s ease-out;
+  }
+
+  .animate-star-sparkle {
+    animation: star-sparkle 2s ease-in-out infinite;
+  }
+
+  .animate-move-step {
+    animation: move-step 0.3s ease-out;
+  }
+}
