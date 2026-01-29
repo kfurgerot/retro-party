@@ -6,6 +6,7 @@ import { Dice } from "../game/Dice";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { QuestionModal } from "../game/QuestionModal";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface GameScreenProps {
   gameState: GameState;
@@ -27,6 +28,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const [hasMovedThisTurn, setHasMovedThisTurn] = useState(false);
   // Keep the right column compact: one panel with tabs (no scrolling needed)
   const [sidebarTab, setSidebarTab] = useState<"players" | "legend">("players");
+  const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
 
   const currentPlayer = gameState.players[gameState.currentPlayerIndex];
   const isMyTurn = !!currentPlayer && !!myPlayerId && currentPlayer.id === myPlayerId;
@@ -59,7 +61,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   };
 
   return (
-    <div className="flex h-svh w-full flex-col gap-3 p-3 overflow-hidden scanlines">
+    <div className="flex h-svh w-full flex-col gap-2 p-2 sm:gap-3 sm:p-3 overflow-hidden scanlines">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Card className="bg-card/80 backdrop-blur px-4 py-3">
@@ -82,7 +84,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         </Card>
       </div>
 
-    <div className="grid flex-1 min-h-0 grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid flex-1 min-h-0 grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_320px]">
         {/* Board */}
         <div className="flex min-h-0 flex-col gap-3">
           <div className="flex-1 min-h-0 overflow-hidden rounded-md border border-border/40 bg-card/30 p-1">
@@ -103,6 +105,14 @@ export const GameScreen: React.FC<GameScreenProps> = ({
             </div>
 
             <div className="flex gap-2">
+              {/* Mobile: keep the board big by moving the sidebar into a dialog */}
+              <Button
+                className="lg:hidden"
+                variant="secondary"
+                onClick={() => setMobilePanelOpen(true)}
+              >
+                👥 Joueurs
+              </Button>
               <Button onClick={handleMove} disabled={!canMove}>
                 ➡️ Avancer
               </Button>
@@ -111,7 +121,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         </div>
 
         {/* Sidebar */}
-        <div className="flex min-h-0 flex-col gap-3 min-w-0">
+        <div className="hidden lg:flex min-h-0 flex-col gap-3 min-w-0">
           <Card className="bg-card/80 backdrop-blur px-3 py-3 flex min-h-0 flex-col">
             <div className="flex items-center justify-between gap-2">
               <div className="text-base font-bold">{sidebarTab === "players" ? "Joueurs" : "Légende"}</div>
@@ -157,6 +167,54 @@ export const GameScreen: React.FC<GameScreenProps> = ({
           </Card>
         </div>
       </div>
+
+      {/* Mobile panel (players / legend) */}
+      <Dialog open={mobilePanelOpen} onOpenChange={setMobilePanelOpen}>
+        <DialogContent className="max-w-[min(92vw,480px)]">
+          <DialogHeader>
+            <DialogTitle>{sidebarTab === "players" ? "Joueurs" : "Légende"}</DialogTitle>
+          </DialogHeader>
+
+          <div className="flex gap-2">
+            <Button
+              variant={sidebarTab === "players" ? "default" : "secondary"}
+              size="sm"
+              onClick={() => setSidebarTab("players")}
+            >
+              Joueurs
+            </Button>
+            <Button
+              variant={sidebarTab === "legend" ? "default" : "secondary"}
+              size="sm"
+              onClick={() => setSidebarTab("legend")}
+            >
+              Légende
+            </Button>
+          </div>
+
+          {sidebarTab === "legend" ? (
+            <div className="mt-3 grid gap-2 text-sm">
+              {legend.map((l) => (
+                <div key={l.k} className="flex items-center gap-2">
+                  <span className="text-base">{l.icon}</span>
+                  <span className="leading-tight">{l.label}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-3 grid gap-2 max-h-[65svh] overflow-auto pr-1">
+              {gameState.players.map((p) => (
+                <PlayerCard
+                  key={p.id}
+                  player={p as any}
+                  isActive={currentPlayer?.id === p.id}
+                  compact
+                />
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {gameState.currentQuestion && (
         <QuestionModal

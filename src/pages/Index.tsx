@@ -10,7 +10,24 @@ const Index: React.FC = () => {
   const isOnline = useMemo(() => {
     if (typeof window === 'undefined') return false;
 
-    return window.location.hostname !== 'localhost';
+    // Legacy override (optional): ?online=1 or ?online=0
+    const params = new URLSearchParams(window.location.search);
+    const override = params.get('online');
+    if (override === '1') return true;
+    if (override === '0') return false;
+
+    // Dev override (no URL params): set VITE_FORCE_ONLINE=1 in .env.development
+    const force = (import.meta.env.VITE_FORCE_ONLINE as string | undefined) === '1';
+    if (force) return true;
+
+    // Auto mode:
+// - In dev (`vite`), localhost => local (unless forced by VITE_FORCE_ONLINE)
+// - In production build served on localhost (e.g. docker/preview), treat as online
+const host = window.location.hostname;
+if (host === 'localhost' || host === '127.0.0.1') {
+  return import.meta.env.PROD;
+}
+return true;
   }, []);
 
   // Local state (single screen)

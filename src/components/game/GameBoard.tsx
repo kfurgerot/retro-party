@@ -37,36 +37,40 @@ export const GameBoard: React.FC<GameBoardProps> = ({ tiles, players }) => {
     return { minX, minY, maxX, maxY };
   }, [tiles]);
 
-  const width = Math.max(900, bounds.maxX - bounds.minX);
-  const height = Math.max(520, bounds.maxY - bounds.minY);
+  // IMPORTANT for mobile:
+  // Avoid forcing a large minimum canvas size. If we keep something like 900x520,
+  // small screens will scale the whole board down and tiles become unreadable.
+  const width = Math.max(0, bounds.maxX - bounds.minX);
+  const height = Math.max(0, bounds.maxY - bounds.minY);
 
-  const points = tiles.map(t => ({ x: t.x - bounds.minX, y: t.y - bounds.minY }));const containerRef = useRef<HTMLDivElement | null>(null);
-const [scale, setScale] = useState(1);
+  const points = tiles.map((t) => ({ x: t.x - bounds.minX, y: t.y - bounds.minY }));
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [scale, setScale] = useState(1);
 
-useLayoutEffect(() => {
-  const el = containerRef.current;
-  if (!el) return;
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
 
-  const compute = () => {
-    const rect = el.getBoundingClientRect();
-    // Leave a small margin inside the container
-    const availW = Math.max(0, rect.width - 16);
-    const availH = Math.max(0, rect.height - 16);
-    if (width <= 0 || height <= 0) return;
+    const compute = () => {
+      const rect = el.getBoundingClientRect();
+      // Leave a small margin inside the container
+      const availW = Math.max(0, rect.width - 16);
+      const availH = Math.max(0, rect.height - 16);
+      if (width <= 0 || height <= 0) return;
 
-    const s = Math.min(availW / width, availH / height, 2);
-    setScale(Number.isFinite(s) ? s : 1);
-  };
+      const s = Math.min(availW / width, availH / height, 2);
+      setScale(Number.isFinite(s) ? s : 1);
+    };
 
-  compute();
-  const ro = new ResizeObserver(() => compute());
-  ro.observe(el);
-  window.addEventListener('resize', compute);
-  return () => {
-    ro.disconnect();
-    window.removeEventListener('resize', compute);
-  };
-}, [width, height]);
+    compute();
+    const ro = new ResizeObserver(() => compute());
+    ro.observe(el);
+    window.addEventListener('resize', compute);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', compute);
+    };
+  }, [width, height]);
 
   return (
     <div ref={containerRef} className="relative w-full h-full overflow-hidden rounded-lg border-4 border-black bg-slate-900 p-2">
