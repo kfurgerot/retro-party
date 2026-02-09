@@ -294,7 +294,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 
             <div className={`grid gap-2 ${onLeave ? "grid-cols-3" : "grid-cols-2"}`}>
               <Button
-                className={`h-10 w-full shadow-sm ${neutralSecondaryBtn}`}
+                className={`h-10 w-full border-cyan-300 bg-cyan-500 text-slate-950 shadow-sm shadow-[0_0_0_2px_rgba(34,211,238,0.35)] hover:bg-cyan-400`}
                 size="sm"
                 variant="secondary"
                 onClick={openPlayers}
@@ -303,7 +303,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               </Button>
 
               <Button
-                className={`h-10 w-full shadow-sm ${neutralSecondaryBtn}`}
+                className={`h-10 w-full border-cyan-300 bg-cyan-500 text-slate-950 shadow-sm shadow-[0_0_0_2px_rgba(34,211,238,0.35)] hover:bg-cyan-400`}
                 size="sm"
                 variant="secondary"
                 onClick={openLegend}
