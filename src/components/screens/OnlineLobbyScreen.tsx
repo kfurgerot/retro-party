@@ -49,6 +49,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
   const [mode, setMode] = useState<"host" | "join">("host");
   const [name, setName] = useState("");
   const [avatar, setAvatar] = useState(0);
+  const [avatarDialogOpen, setAvatarDialogOpen] = useState(false);
   const [code, setCode] = useState("");
   const [pending, setPending] = useState<Pending>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -317,21 +318,51 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
 
               <div>
                 <p className="mb-2 text-sm text-muted-foreground">Avatar</p>
-                <div className="flex flex-wrap gap-2">
-                  {AVATARS.map((a, i) => (
-                    <button
-                      key={i}
-                      disabled={lockMode || pending !== "idle"}
-                      onClick={() => setAvatar(i)}
-                      className={cn(
-                        "h-11 w-11 rounded-md border border-border bg-background/60 text-lg",
-                        i === avatar && "ring-2 ring-cyan-400"
-                      )}
-                      aria-label={`Avatar ${i}`}
-                    >
-                      {a}
-                    </button>
-                  ))}
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-background/40 p-2">
+                  <div className="flex items-center gap-3">
+                    <span className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-cyan-400/60 bg-background/70 text-2xl">
+                      {AVATARS[avatar]}
+                    </span>
+                    <div className="text-xs text-muted-foreground">
+                      Selection actuelle
+                    </div>
+                  </div>
+
+                  <Dialog open={avatarDialogOpen} onOpenChange={setAvatarDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="secondary"
+                        disabled={lockMode || pending !== "idle"}
+                        className={neutralSecondaryBtn}
+                      >
+                        Changer
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-[92vw] sm:max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>Choisir un avatar</DialogTitle>
+                      </DialogHeader>
+                      <div className="grid grid-cols-5 gap-2 sm:grid-cols-6">
+                        {AVATARS.map((a, i) => (
+                          <button
+                            key={i}
+                            disabled={lockMode || pending !== "idle"}
+                            onClick={() => {
+                              setAvatar(i);
+                              setAvatarDialogOpen(false);
+                            }}
+                            className={cn(
+                              "h-12 w-12 rounded-md border border-border bg-background/60 text-xl",
+                              i === avatar && "ring-2 ring-cyan-400"
+                            )}
+                            aria-label={`Avatar ${i + 1}`}
+                          >
+                            {a}
+                          </button>
+                        ))}
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                 </div>
               </div>
             </section>
