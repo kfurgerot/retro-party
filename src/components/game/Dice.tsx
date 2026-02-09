@@ -35,19 +35,19 @@ const DiceFace: React.FC<{ value: number }> = ({ value }) => {
       "bottom-3 right-3",
     ],
     6: [
-      "top-3 left-3",
-      "top-3 right-3",
+      "top-2 left-3",
+      "top-2 right-3",
       "top-1/2 left-3 -translate-y-1/2",
       "top-1/2 right-3 -translate-y-1/2",
-      "bottom-3 left-3",
-      "bottom-3 right-3",
+      "bottom-2 left-3",
+      "bottom-2 right-3",
     ],
   };
 
   return (
     <div className="relative w-20 h-20 bg-foreground border-4 border-primary">
       {dotPositions[value]?.map((pos, i) => (
-        <div key={i} className={cn("absolute w-4 h-4 bg-background", pos)} />
+        <div key={i} className={cn("absolute w-3 h-3 rounded-full bg-background", pos)} />
       ))}
     </div>
   );
