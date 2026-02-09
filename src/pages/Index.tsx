@@ -46,6 +46,7 @@ return true;
             lobbyPlayers={online.lobby as any}
             onHost={online.createRoom}
             onJoin={online.joinRoom}
+            onLeave={online.leaveRoom}
             onStartGame={online.startGame}
             canStart={online.isHost}
           />

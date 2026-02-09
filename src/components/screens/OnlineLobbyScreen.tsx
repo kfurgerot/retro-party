@@ -20,6 +20,7 @@ interface OnlineLobbyScreenProps {
   lobbyPlayers: LobbyPlayer[];
   onHost: (name: string, avatar: number) => void;
   onJoin: (code: string, name: string, avatar: number) => void;
+  onLeave: () => void;
   onStartGame: () => void;
   canStart: boolean;
 }
@@ -36,6 +37,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
   lobbyPlayers,
   onHost,
   onJoin,
+  onLeave,
   onStartGame,
   canStart,
 }) => {
@@ -140,6 +142,16 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
     setError(null);
     setPending("starting");
     onStartGame();
+  };
+
+  const submitLeave = () => {
+    if (!roomCode || pending !== "idle") return;
+    const isHost = canStart;
+    const message = isHost
+      ? "Annuler la room ? Tous les joueurs seront déconnectés."
+      : "Quitter la room ?";
+    if (!window.confirm(message)) return;
+    onLeave();
   };
 
   const primaryLabel = roomCode
@@ -394,6 +406,14 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
                   className="bg-violet-600 hover:bg-violet-700"
                 >
                   {primaryLabel}
+                </Button>
+
+                <Button
+                  onClick={submitLeave}
+                  disabled={pending !== "idle"}
+                  variant="secondary"
+                >
+                  {canStart ? "Annuler la room" : "Quitter la room"}
                 </Button>
 
                 <p className="text-xs text-muted-foreground">
