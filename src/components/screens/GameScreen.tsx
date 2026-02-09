@@ -13,6 +13,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import { cn } from "@/lib/utils";
 
 interface GameScreenProps {
   gameState: GameState;
@@ -38,7 +39,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const [hasMovedThisTurn, setHasMovedThisTurn] = useState(false);
   const [isMoveAnimating, setIsMoveAnimating] = useState(false);
   const [sidebarTab, setSidebarTab] = useState<"players" | "legend">("players");
-
   const [playersOpen, setPlayersOpen] = useState(false);
   const [legendOpen, setLegendOpen] = useState(false);
 
@@ -83,20 +83,23 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 
   const legend = useMemo(
     () => [
-      { k: "blue", label: "BLEU - Comprendre", icon: "🔵" },
-      { k: "green", label: "VERT - Améliorer", icon: "🟢" },
-      { k: "red", label: "ROUGE - Frictions", icon: "🔴" },
-      { k: "violet", label: "VIOLET - Vision", icon: "🟣" },
-      { k: "bonus", label: "BONUS - Kudobox ⭐", icon: "⭐" },
+      { k: "blue", label: "BLEU - Comprendre", icon: "B" },
+      { k: "green", label: "VERT - Ameliorer", icon: "V" },
+      { k: "red", label: "ROUGE - Frictions", icon: "R" },
+      { k: "violet", label: "VIOLET - Vision", icon: "I" },
+      { k: "bonus", label: "BONUS - Kudobox", icon: "*" },
     ],
     []
   );
 
-  const handleMove = useCallback((steps: number) => {
-    setHasMovedThisTurn(true);
-    setIsMoveAnimating(true);
-    onMovePlayer(steps);
-  }, [onMovePlayer]);
+  const handleMove = useCallback(
+    (steps: number) => {
+      setHasMovedThisTurn(true);
+      setIsMoveAnimating(true);
+      onMovePlayer(steps);
+    },
+    [onMovePlayer]
+  );
 
   useEffect(() => {
     if (!canMove || hasMovedThisTurn || gameState.diceValue == null) return;
@@ -151,14 +154,14 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 
   const infoTitle = gameState.currentQuestion
     ? gameState.currentQuestion.status === "pending"
-      ? "Question prête"
+      ? "Question prete"
       : "Question en cours..."
     : isMyTurn
     ? "A toi de jouer"
     : "En attente...";
 
   const infoHint = canRoll
-    ? "Lance le dé"
+    ? "Lance le de"
     : isMoveAnimating
     ? "Deplacement en cours..."
     : canMove
@@ -174,13 +177,15 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   };
 
   const turnStatusClass = gameState.currentQuestion
-    ? "border-amber-500/30 bg-amber-500/10 text-amber-300"
+    ? "border-amber-500/30 bg-amber-500/10 text-amber-200"
     : isMyTurn
-    ? "border-cyan-400/40 bg-cyan-500/15 text-cyan-300"
-    : "border-border/70 bg-background/40 text-muted-foreground";
+    ? "border-cyan-400/40 bg-cyan-500/15 text-cyan-100"
+    : "border-cyan-300/20 bg-slate-900/40 text-slate-300";
 
+  const neonCard =
+    "border-cyan-300/30 bg-slate-900/55 text-cyan-50 shadow-[0_0_0_1px_rgba(34,211,238,0.18),0_0_24px_rgba(34,211,238,0.12)] backdrop-blur";
   const neutralSecondaryBtn =
-    "border-border/70 bg-background/50 text-foreground hover:bg-background/70";
+    "border-cyan-300/20 bg-slate-900/45 text-cyan-100 hover:bg-slate-900/70";
   const activeCyanBtn =
     "border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_0_2px_rgba(34,211,238,0.35)] hover:bg-cyan-400";
 
@@ -194,220 +199,237 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     gameState.currentQuestion.targetPlayerId === myPlayerId;
 
   return (
-    <div className="flex h-svh w-full flex-col overflow-hidden p-2 sm:p-3">
-      {/* Header */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:flex lg:flex-wrap lg:items-center lg:justify-between lg:gap-3">
-        <Card className="border-border/70 bg-card/80 px-3 py-2 shadow-sm backdrop-blur sm:px-4 sm:py-3">
-          <div className="text-sm opacity-80">Manche</div>
-          <div className="text-xl font-bold">
-            {gameState.currentRound} / {gameState.maxRounds}
-          </div>
-        </Card>
+    <div className="scanlines relative min-h-svh w-full overflow-hidden">
+      <div
+        className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(34,211,238,0.22),transparent_35%),radial-gradient(circle_at_80%_70%,rgba(168,85,247,0.18),transparent_35%),linear-gradient(to_bottom,rgba(15,23,42,0.9),rgba(2,6,23,0.98))]"
+        aria-hidden="true"
+      />
 
-        <Card className="border-border/70 bg-card/80 px-3 py-2 shadow-sm backdrop-blur sm:px-4 sm:py-3">
-          <div className="text-sm opacity-80">Tour de</div>
-          <div className="truncate text-xl font-bold">{currentPlayer?.name ?? "-"}</div>
-        </Card>
-
-        <Card className="border-border/70 bg-card/80 px-3 py-2 shadow-sm backdrop-blur sm:px-4 sm:py-3">
-          <div className="text-sm opacity-80">Kudobox ⭐</div>
-          <div className="text-xl font-bold">
-            {gameState.players.find((p) => p.id === myPlayerId)?.stars ?? 0}
-          </div>
-        </Card>
-
-        {onLeave && (
-          <Button
-            className={`hidden lg:inline-flex ${neutralSecondaryBtn}`}
-            variant="secondary"
-            onClick={handleLeave}
-          >
-            Quitter
-          </Button>
-        )}
-      </div>
-
-      {/* Main layout */}
-      <div className="mt-2 grid flex-1 min-h-0 grid-cols-1 gap-3 sm:mt-3 lg:grid-cols-[minmax(0,1fr)_320px]">
-        {/* Board */}
-        <div className="flex min-h-0 flex-col gap-3">
-          <div className="flex-1 min-h-0 overflow-hidden rounded-md border border-border/40 bg-card/30 p-1 shadow-sm">
-            <GameBoard
-              tiles={gameState.tiles}
-              players={gameState.players}
-              onMoveAnimationEnd={(playerId) => {
-                if (playerId === currentPlayer?.id) setIsMoveAnimating(false);
-              }}
-            />
-          </div>
-
-          {/* Desktop controls */}
-          <Card className="hidden shrink-0 border-border/70 bg-card/80 px-4 py-3 shadow-sm backdrop-blur lg:block">
-            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-6">
-              <div />
-              <div className="flex justify-center">
-                <Dice
-                  value={gameState.diceValue}
-                  isRolling={gameState.isRolling}
-                  canRoll={canRoll}
-                  canMove={canMove}
-                  canOpenQuestionCard={canOpenQuestionCard}
-                  onRoll={onRollDice}
-                  onMove={handleMove}
-                  onOpenQuestionCard={onOpenQuestionCard}
-                  playerIndex={myIndex}
-                />
-              </div>
-
-              <div className="text-right justify-self-end max-w-[360px]">
-                <div className={`mb-2 inline-flex rounded-full border px-2 py-1 text-[11px] ${turnStatusClass}`}>
-                  {gameState.currentQuestion ? "Question" : isMyTurn ? "Ton tour" : "Attente"}
-                </div>
-                <div className="text-sm opacity-80 truncate">{infoTitle}</div>
-                <div className="text-xs opacity-60 truncate">{infoHint}</div>
-              </div>
+      <div className="relative z-10 flex h-svh w-full flex-col overflow-hidden p-2 sm:p-3">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:flex lg:flex-wrap lg:items-center lg:justify-between lg:gap-3">
+          <Card className={cn(neonCard, "px-3 py-2 sm:px-4 sm:py-3")}>
+            <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">
+              Manche
+            </div>
+            <div className="text-xl font-bold">
+              {gameState.currentRound} / {gameState.maxRounds}
             </div>
           </Card>
+
+          <Card className={cn(neonCard, "px-3 py-2 sm:px-4 sm:py-3")}>
+            <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">
+              Tour de
+            </div>
+            <div className="truncate text-xl font-bold">{currentPlayer?.name ?? "-"}</div>
+          </Card>
+
+          <Card className={cn(neonCard, "px-3 py-2 sm:px-4 sm:py-3")}>
+            <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">
+              Kudobox
+            </div>
+            <div className="text-xl font-bold">
+              {gameState.players.find((p) => p.id === myPlayerId)?.stars ?? 0}
+            </div>
+          </Card>
+
+          {onLeave && (
+            <Button
+              className={`hidden lg:inline-flex ${neutralSecondaryBtn}`}
+              variant="secondary"
+              onClick={handleLeave}
+            >
+              Quitter
+            </Button>
+          )}
         </div>
 
-        {/* Sidebar desktop */}
-        <div className="hidden min-w-0 min-h-0 flex-col gap-3 lg:flex">
-          <Card className="flex min-h-0 flex-col border-border/70 bg-card/80 px-3 py-3 shadow-sm backdrop-blur">
-            <div className="flex items-center justify-between gap-2">
-              <div className="text-base font-bold">
-                {sidebarTab === "players" ? "Joueurs" : "Légende"}
+        <div className="mt-2 grid min-h-0 flex-1 grid-cols-1 gap-3 sm:mt-3 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="flex min-h-0 flex-col gap-3">
+            <div className="min-h-0 flex-1 overflow-hidden rounded-md border border-cyan-300/25 bg-slate-900/35 p-1 shadow-[0_0_24px_rgba(34,211,238,0.1)]">
+              <GameBoard
+                tiles={gameState.tiles}
+                players={gameState.players}
+                onMoveAnimationEnd={(playerId) => {
+                  if (playerId === currentPlayer?.id) setIsMoveAnimating(false);
+                }}
+              />
+            </div>
+
+            <Card className={cn(neonCard, "hidden shrink-0 px-4 py-3 lg:block")}>
+              <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-6">
+                <div />
+                <div className="flex justify-center">
+                  <Dice
+                    value={gameState.diceValue}
+                    isRolling={gameState.isRolling}
+                    canRoll={canRoll}
+                    canMove={canMove}
+                    canOpenQuestionCard={canOpenQuestionCard}
+                    onRoll={onRollDice}
+                    onMove={handleMove}
+                    onOpenQuestionCard={onOpenQuestionCard}
+                    playerIndex={myIndex}
+                  />
+                </div>
+
+                <div className="max-w-[360px] justify-self-end text-right">
+                  <div
+                    className={`mb-2 inline-flex rounded-full border px-2 py-1 text-[11px] ${turnStatusClass}`}
+                  >
+                    {gameState.currentQuestion ? "Question" : isMyTurn ? "Ton tour" : "Attente"}
+                  </div>
+                  <div className="truncate text-sm text-cyan-100/90">{infoTitle}</div>
+                  <div className="truncate text-xs text-slate-300">{infoHint}</div>
+                </div>
               </div>
-              <div className="flex gap-2">
+            </Card>
+          </div>
+
+          <div className="hidden min-h-0 min-w-0 flex-col gap-3 lg:flex">
+            <Card className={cn(neonCard, "flex min-h-0 flex-col px-3 py-3")}>
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-base font-bold">
+                  {sidebarTab === "players" ? "Joueurs" : "Legende"}
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className={
+                      sidebarTab === "players"
+                        ? activeCyanBtn
+                        : `${neutralSecondaryBtn} opacity-95`
+                    }
+                    onClick={() => setSidebarTab("players")}
+                  >
+                    Joueurs
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className={
+                      sidebarTab === "legend"
+                        ? activeCyanBtn
+                        : `${neutralSecondaryBtn} opacity-95`
+                    }
+                    onClick={() => setSidebarTab("legend")}
+                  >
+                    Legende
+                  </Button>
+                </div>
+              </div>
+
+              {sidebarTab === "players" ? (
+                <div className="mt-3 grid gap-2">
+                  {gameState.players.map((p) => (
+                    <PlayerCard
+                      key={p.id}
+                      player={p as any}
+                      isActive={currentPlayer?.id === p.id}
+                      compact
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-3 grid gap-2 text-sm text-cyan-50">
+                  {legend.map((l) => (
+                    <div key={l.k} className="flex items-center gap-2">
+                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-sm border border-cyan-300/35 bg-slate-900/60 text-[11px] font-semibold text-cyan-200">
+                        {l.icon}
+                      </span>
+                      <span className="leading-tight">{l.label}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+          </div>
+        </div>
+
+        <div className="sticky bottom-0 z-30 mt-2 pb-[env(safe-area-inset-bottom)] lg:hidden">
+          <Card className={cn(neonCard, "border px-2 py-2")}>
+            <div className="flex flex-col gap-3">
+              <div className="flex min-w-0 items-end gap-3">
+                <div className="origin-left shrink-0 scale-[0.88]">
+                  <Dice
+                    value={gameState.diceValue}
+                    isRolling={gameState.isRolling}
+                    canRoll={canRoll}
+                    canMove={canMove}
+                    canOpenQuestionCard={canOpenQuestionCard}
+                    onRoll={onRollDice}
+                    onMove={handleMove}
+                    onOpenQuestionCard={onOpenQuestionCard}
+                    playerIndex={myIndex}
+                  />
+                </div>
+
+                <div className="min-w-0 flex-1 self-end pb-3 text-right">
+                  <div
+                    className={`mb-1 inline-flex rounded-full border px-2 py-1 text-[11px] ${turnStatusClass}`}
+                  >
+                    {gameState.currentQuestion ? "Question" : isMyTurn ? "Ton tour" : "Attente"}
+                  </div>
+                  <div className="truncate text-sm text-cyan-100/90">{infoTitle}</div>
+                  <div className="truncate text-xs text-slate-300">{infoHint}</div>
+                </div>
+              </div>
+
+              <div className={`grid gap-2 ${onLeave ? "grid-cols-3" : "grid-cols-2"}`}>
                 <Button
-                  variant="secondary"
+                  className="h-10 w-full border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_0_2px_rgba(34,211,238,0.35)] hover:bg-cyan-400"
                   size="sm"
-                  className={
-                    sidebarTab === "players"
-                      ? activeCyanBtn
-                      : `${neutralSecondaryBtn} opacity-95`
-                  }
-                  onClick={() => setSidebarTab("players")}
+                  variant="secondary"
+                  onClick={openPlayers}
                 >
                   Joueurs
                 </Button>
+
                 <Button
-                  variant="secondary"
+                  className="h-10 w-full border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_0_2px_rgba(34,211,238,0.35)] hover:bg-cyan-400"
                   size="sm"
-                  className={
-                    sidebarTab === "legend"
-                      ? activeCyanBtn
-                      : `${neutralSecondaryBtn} opacity-95`
-                  }
-                  onClick={() => setSidebarTab("legend")}
+                  variant="secondary"
+                  onClick={openLegend}
+                  aria-label="Afficher la legende"
                 >
-                  Légende
+                  Legende
                 </Button>
+
+                {onLeave && (
+                  <Button
+                    className={cn("h-10 w-full", neutralSecondaryBtn)}
+                    size="sm"
+                    variant="secondary"
+                    onClick={handleLeave}
+                  >
+                    Quitter
+                  </Button>
+                )}
               </div>
             </div>
-
-            {sidebarTab === "players" ? (
-              <div className="mt-3 grid gap-2">
-                {gameState.players.map((p) => (
-                  <PlayerCard
-                    key={p.id}
-                    player={p as any}
-                    isActive={currentPlayer?.id === p.id}
-                    compact
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="mt-3 grid gap-2 text-sm">
-                {legend.map((l) => (
-                  <div key={l.k} className="flex items-center gap-2">
-                    <span className="text-base">{l.icon}</span>
-                    <span className="leading-tight">{l.label}</span>
-                  </div>
-                ))}
-              </div>
-            )}
           </Card>
         </div>
       </div>
 
-      {/* MOBILE TOOLBAR */}
-      <div className="sticky bottom-0 z-30 mt-2 pb-[env(safe-area-inset-bottom)] lg:hidden">
-        <Card className="border border-border/70 bg-card/95 px-2 py-2 shadow-sm backdrop-blur">
-          <div className="flex flex-col gap-3">
-            <div className="flex min-w-0 items-end gap-3">
-              <div className="shrink-0 scale-[0.88] origin-left">
-                <Dice
-                  value={gameState.diceValue}
-                  isRolling={gameState.isRolling}
-                  canRoll={canRoll}
-                  canMove={canMove}
-                  canOpenQuestionCard={canOpenQuestionCard}
-                  onRoll={onRollDice}
-                  onMove={handleMove}
-                  onOpenQuestionCard={onOpenQuestionCard}
-                  playerIndex={myIndex}
-                />
-              </div>
-
-              <div className="min-w-0 flex-1 self-end pb-3 text-right">
-                <div className={`mb-1 inline-flex rounded-full border px-2 py-1 text-[11px] ${turnStatusClass}`}>
-                  {gameState.currentQuestion ? "Question" : isMyTurn ? "Ton tour" : "Attente"}
-                </div>
-                <div className="truncate text-sm opacity-80">{infoTitle}</div>
-                <div className="truncate text-xs opacity-60">{infoHint}</div>
-              </div>
-            </div>
-
-            <div className={`grid gap-2 ${onLeave ? "grid-cols-3" : "grid-cols-2"}`}>
-              <Button
-                className={`h-10 w-full border-cyan-300 bg-cyan-500 text-slate-950 shadow-sm shadow-[0_0_0_2px_rgba(34,211,238,0.35)] hover:bg-cyan-400`}
-                size="sm"
-                variant="secondary"
-                onClick={openPlayers}
-              >
-                Joueurs
-              </Button>
-
-              <Button
-                className={`h-10 w-full border-cyan-300 bg-cyan-500 text-slate-950 shadow-sm shadow-[0_0_0_2px_rgba(34,211,238,0.35)] hover:bg-cyan-400`}
-                size="sm"
-                variant="secondary"
-                onClick={openLegend}
-                aria-label="Afficher la legende"
-              >
-                Legende
-              </Button>
-
-              {onLeave && (
-                <Button
-                  className="h-10 w-full shadow-sm"
-                  size="sm"
-                  variant="destructive"
-                  onClick={handleLeave}
-                >
-                  Quitter
-                </Button>
-              )}
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      {/* Drawer Players */}
       <Drawer open={playersOpen} onOpenChange={setPlayersOpen}>
-        <DrawerContent className="lg:hidden">
+        <DrawerContent className="border-cyan-300/30 bg-slate-950/95 text-cyan-50 lg:hidden">
           <DrawerHeader className="pb-2">
             <div className="flex items-center justify-between gap-2">
               <DrawerTitle>Joueurs</DrawerTitle>
               <DrawerClose asChild>
-                <Button variant="ghost" size="sm" aria-label="Fermer le panneau joueurs">
-                  ✕
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  aria-label="Fermer le panneau joueurs"
+                  className="text-cyan-100 hover:bg-slate-800/60 hover:text-cyan-50"
+                >
+                  X
                 </Button>
               </DrawerClose>
             </div>
           </DrawerHeader>
 
-          <div className="px-4 pb-4 grid gap-2 max-h-[60svh] overflow-auto">
+          <div className="grid max-h-[60svh] gap-2 overflow-auto px-4 pb-4">
             {gameState.players.map((p) => (
               <PlayerCard
                 key={p.id}
@@ -420,24 +442,30 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         </DrawerContent>
       </Drawer>
 
-      {/* Drawer Legend */}
       <Drawer open={legendOpen} onOpenChange={setLegendOpen}>
-        <DrawerContent className="lg:hidden">
+        <DrawerContent className="border-cyan-300/30 bg-slate-950/95 text-cyan-50 lg:hidden">
           <DrawerHeader className="pb-2">
             <div className="flex items-center justify-between gap-2">
-              <DrawerTitle>Légende</DrawerTitle>
+              <DrawerTitle>Legende</DrawerTitle>
               <DrawerClose asChild>
-                <Button variant="ghost" size="sm" aria-label="Fermer le panneau legende">
-                  ✕
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  aria-label="Fermer le panneau legende"
+                  className="text-cyan-100 hover:bg-slate-800/60 hover:text-cyan-50"
+                >
+                  X
                 </Button>
               </DrawerClose>
             </div>
           </DrawerHeader>
 
-          <div className="px-4 pb-4 grid gap-2 text-sm">
+          <div className="grid gap-2 px-4 pb-4 text-sm text-cyan-50">
             {legend.map((l) => (
               <div key={l.k} className="flex items-center gap-2">
-                <span className="text-base">{l.icon}</span>
+                <span className="inline-flex h-5 w-5 items-center justify-center rounded-sm border border-cyan-300/35 bg-slate-900/60 text-[11px] font-semibold text-cyan-200">
+                  {l.icon}
+                </span>
                 <span className="leading-tight">{l.label}</span>
               </div>
             ))}
