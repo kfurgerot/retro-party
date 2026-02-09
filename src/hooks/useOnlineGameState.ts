@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useState } from "react";
 import { GameState } from "@/types/game";
 import { socket } from "@/net/socket";
 
@@ -52,6 +52,21 @@ export function useOnlineGameState() {
     socket.emit("join_room", { code: roomCode, name, avatar });
   }, []);
 
+  const leaveRoom = useCallback(() => {
+    socket.emit("leave_room");
+
+    // Mobile browsers can drop the packet if transport is closed immediately.
+    if (socket.connected) {
+      window.setTimeout(() => socket.disconnect(), 200);
+    } else {
+      socket.disconnect();
+    }
+
+    setCode(null);
+    setLobby([]);
+    setGameState(EMPTY_STATE);
+  }, []);
+
   const startGame = useCallback(() => socket.emit("start_game"), []);
   const rollDice = useCallback(() => socket.emit("roll_dice"), []);
   const movePlayer = useCallback((steps: number) => socket.emit("move_player", { steps }), []);
@@ -72,6 +87,7 @@ export function useOnlineGameState() {
     myPlayerId,
     createRoom,
     joinRoom,
+    leaveRoom,
     startGame,
     rollDice,
     movePlayer,
