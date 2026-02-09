@@ -4,6 +4,16 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { RetroScreenBackground } from "./RetroScreenBackground";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type LobbyPlayer = {
   name: string;
@@ -59,6 +69,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
   const [pending, setPending] = useState<Pending>("idle");
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
   const copiedTimer = useRef<number | null>(null);
   const lastAutoSubmittedKeyRef = useRef<number | null>(null);
 
@@ -153,10 +164,11 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
       onLeave();
       return;
     }
-    const message = canStart
-      ? "Annuler la room ? Tous les joueurs seront deconnectes."
-      : "Quitter la room ?";
-    if (!window.confirm(message)) return;
+    setLeaveDialogOpen(true);
+  };
+
+  const confirmLeave = () => {
+    setLeaveDialogOpen(false);
     onLeave();
   };
 
@@ -388,6 +400,32 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
           </div>
         </section>
       </div>
+
+      <AlertDialog open={leaveDialogOpen} onOpenChange={setLeaveDialogOpen}>
+        <AlertDialogContent className="border-cyan-300/30 bg-slate-950/95 text-cyan-50">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {canStart ? "Annuler la room ?" : "Quitter la room ?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-300">
+              {canStart
+                ? "Tous les joueurs seront deconnectes de cette room."
+                : "Tu vas quitter la room en cours."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-cyan-300/20 bg-slate-900/45 text-cyan-100 hover:bg-slate-900/70">
+              Annuler
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="border-rose-300 bg-rose-500 text-white shadow-[0_0_0_2px_rgba(251,113,133,0.35)] hover:bg-rose-400"
+              onClick={confirmLeave}
+            >
+              {canStart ? "Annuler la room" : "Quitter la room"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
