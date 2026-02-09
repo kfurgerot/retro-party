@@ -146,7 +146,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         </Card>
 
         {onLeave && (
-          <Button variant="secondary" onClick={handleLeave}>
+          <Button className="hidden lg:inline-flex" variant="secondary" onClick={handleLeave}>
             Quitter
           </Button>
         )}
