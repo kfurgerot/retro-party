@@ -28,6 +28,11 @@ interface OnlineLobbyScreenProps {
   onLeave: () => void;
   onStartGame: () => void;
   canStart: boolean;
+  initialName?: string;
+  initialAvatar?: number;
+  initialMode?: "host" | "join";
+  initialCode?: string;
+  autoSubmitKey?: number;
 }
 
 type Pending = "idle" | "hosting" | "joining" | "starting";
@@ -45,18 +50,27 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
   onLeave,
   onStartGame,
   canStart,
+  initialName,
+  initialAvatar,
+  initialMode,
+  initialCode,
+  autoSubmitKey,
 }) => {
-  const [mode, setMode] = useState<"host" | "join">("host");
-  const [name, setName] = useState("");
-  const [avatar, setAvatar] = useState(0);
+  const [mode, setMode] = useState<"host" | "join">(initialMode ?? "host");
+  const [name, setName] = useState(() => cleanName(initialName ?? ""));
+  const [avatar, setAvatar] = useState(() => {
+    const next = Number.isFinite(initialAvatar) ? Number(initialAvatar) : 0;
+    return Math.max(0, Math.min(AVATARS.length - 1, next));
+  });
   const [avatarDialogOpen, setAvatarDialogOpen] = useState(false);
-  const [code, setCode] = useState("");
+  const [code, setCode] = useState(() => cleanCode(initialCode ?? ""));
   const [pending, setPending] = useState<Pending>("idle");
   const [error, setError] = useState<string | null>(null);
 
   // Feedback copy (optionnel)
   const [copied, setCopied] = useState(false);
   const copiedTimer = useRef<number | null>(null);
+  const lastAutoSubmittedKeyRef = useRef<number | null>(null);
 
   const lockMode = !!roomCode;
 
@@ -110,6 +124,16 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
       if (copiedTimer.current) window.clearTimeout(copiedTimer.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (roomCode) return;
+    if (typeof initialName === "string") setName(cleanName(initialName));
+    if (typeof initialAvatar === "number") {
+      setAvatar(Math.max(0, Math.min(AVATARS.length - 1, initialAvatar)));
+    }
+    if (initialMode) setMode(initialMode);
+    if (typeof initialCode === "string") setCode(cleanCode(initialCode));
+  }, [initialName, initialAvatar, initialMode, initialCode, roomCode]);
 
   const copyRoom = async () => {
     if (!roomCode) return;
@@ -177,6 +201,20 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
     (roomCode ? !canLaunch : mode === "host" ? !canCreate : !canJoin);
   const neutralSecondaryBtn =
     "border-border/70 bg-background/50 text-foreground hover:bg-background/70";
+
+  useEffect(() => {
+    if (!autoSubmitKey || roomCode || pending !== "idle") return;
+    if (lastAutoSubmittedKeyRef.current === autoSubmitKey) return;
+    if (mode === "host" && canCreate) {
+      lastAutoSubmittedKeyRef.current = autoSubmitKey;
+      submitHost();
+      return;
+    }
+    if (mode === "join" && canJoin) {
+      lastAutoSubmittedKeyRef.current = autoSubmitKey;
+      submitJoin();
+    }
+  }, [autoSubmitKey, roomCode, pending, mode, canCreate, canJoin, submitHost, submitJoin]);
 
   return (
     <div className="scanlines flex min-h-svh w-full flex-col gap-3 overflow-y-auto p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:p-4">

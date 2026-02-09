@@ -3,9 +3,17 @@ import { useGameState } from '@/hooks/useGameState';
 import { useOnlineGameState } from '@/hooks/useOnlineGameState';
 import { LobbyScreen } from '@/components/screens/LobbyScreen';
 import { OnlineLobbyScreen } from '@/components/screens/OnlineLobbyScreen';
+import { OnlineOnboardingScreen } from '@/components/screens/OnlineOnboardingScreen';
 import { PressStartScreen } from '@/components/screens/PressStartScreen';
 import { GameScreen } from '@/components/screens/GameScreen';
 import { ResultsScreen } from '@/components/screens/ResultsScreen';
+
+type OnlineSetup = {
+  name: string;
+  avatar: number;
+  mode: 'host' | 'join';
+  code: string;
+};
 
 const Index: React.FC = () => {
   const isOnline = useMemo(() => {
@@ -37,11 +45,26 @@ return true;
   // Online state (rooms + websocket)
   const online = useOnlineGameState();
   const [hasEnteredOnlineLobby, setHasEnteredOnlineLobby] = useState(false);
+  const [onlineSetup, setOnlineSetup] = useState<OnlineSetup | null>(null);
+  const [autoSubmitKey, setAutoSubmitKey] = useState(0);
 
   if (isOnline) {
     if (online.gameState.phase === 'lobby') {
       if (!hasEnteredOnlineLobby) {
         return <PressStartScreen onStart={() => setHasEnteredOnlineLobby(true)} />;
+      }
+
+      if (!online.code && !onlineSetup) {
+        return (
+          <OnlineOnboardingScreen
+            connected={online.connected}
+            onBack={() => setHasEnteredOnlineLobby(false)}
+            onSubmit={({ name, avatar, mode, code }) => {
+              setOnlineSetup({ name, avatar, mode, code });
+              setAutoSubmitKey((k) => k + 1);
+            }}
+          />
+        );
       }
 
       return (
@@ -52,9 +75,17 @@ return true;
             lobbyPlayers={online.lobby as any}
             onHost={online.createRoom}
             onJoin={online.joinRoom}
-            onLeave={online.leaveRoom}
+            onLeave={() => {
+              online.leaveRoom();
+              setOnlineSetup(null);
+            }}
             onStartGame={online.startGame}
             canStart={online.isHost}
+            initialName={onlineSetup?.name}
+            initialAvatar={onlineSetup?.avatar}
+            initialMode={onlineSetup?.mode}
+            initialCode={onlineSetup?.code}
+            autoSubmitKey={autoSubmitKey}
           />
         </div>
       );
