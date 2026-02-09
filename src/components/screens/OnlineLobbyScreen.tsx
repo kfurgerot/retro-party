@@ -407,32 +407,42 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
                   </span>
                 </div>
 
-                {mode === "join" && (
+                {mode === "join" ? (
                   <div className="grid gap-2">
-                    <Input
-                      placeholder="Code room"
-                      value={code}
-                      disabled={pending !== "idle"}
-                      onChange={(e) => setCode(cleanCode(e.target.value))}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && canJoin) submitJoin();
-                      }}
-                    />
+                    <div className="flex items-start gap-2">
+                      <Input
+                        placeholder="Code room"
+                        value={code}
+                        disabled={pending !== "idle"}
+                        className="h-11 flex-1"
+                        onChange={(e) => setCode(cleanCode(e.target.value))}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && canJoin) submitJoin();
+                        }}
+                      />
+                      <Button
+                        onClick={submitJoin}
+                        disabled={primaryDisabled}
+                        className="h-11 shrink-0 bg-cyan-500 px-4 text-slate-950 shadow-sm hover:bg-cyan-400"
+                      >
+                        {primaryLabel}
+                      </Button>
+                    </div>
                     {!validCode && code.length > 0 && (
                       <div className="text-xs text-muted-foreground">
                         Min. 4 caracteres (A-Z0-9)
                       </div>
                     )}
                   </div>
+                ) : (
+                  <Button
+                    onClick={submitHost}
+                    disabled={primaryDisabled}
+                    className="h-11 bg-cyan-500 text-slate-950 shadow-sm hover:bg-cyan-400"
+                  >
+                    {primaryLabel}
+                  </Button>
                 )}
-
-                <Button
-                  onClick={mode === "host" ? submitHost : submitJoin}
-                  disabled={primaryDisabled}
-                  className="h-11 bg-cyan-500 text-slate-950 shadow-sm hover:bg-cyan-400"
-                >
-                  {primaryLabel}
-                </Button>
               </section>
             )}
 
