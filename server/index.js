@@ -167,15 +167,32 @@ function syncHostFlags(room) {
   }
 }
 
-function reassignHost(room) {
-  const nextHost = room.lobby.find((p) => p.connected)?.socketId ?? room.lobby[0]?.socketId ?? null;
-  room.hostSocketId = nextHost;
-  syncHostFlags(room);
+function closeRoomForAll(code, reason = "Le host a quitte la partie") {
+  const room = rooms.get(code);
+  if (!room) return;
+
+  io.to(code).emit("room_closed", { message: reason });
+
+  room.disconnectTimers.forEach((timer) => clearTimeout(timer));
+  room.disconnectTimers.clear();
+
+  room.clients.forEach((clientId) => {
+    socketToRoom.delete(clientId);
+    const clientSocket = io.sockets.sockets.get(clientId);
+    if (clientSocket) clientSocket.leave(code);
+  });
+
+  rooms.delete(code);
 }
 
 function removePlayerNow(code, socketId) {
   const room = rooms.get(code);
   if (!room) return;
+
+  if (room.hostSocketId === socketId) {
+    closeRoomForAll(code);
+    return;
+  }
 
   room.clients.delete(socketId);
   socketToRoom.delete(socketId);
@@ -189,11 +206,7 @@ function removePlayerNow(code, socketId) {
 
   room.state = removePlayerFromState(room.state, socketId);
 
-  if (room.hostSocketId === socketId) {
-    reassignHost(room);
-  } else {
-    syncHostFlags(room);
-  }
+  syncHostFlags(room);
 
   if (room.lobby.length === 0 && room.clients.size === 0) {
     rooms.delete(code);

@@ -106,6 +106,14 @@ export function useOnlineGameState() {
       }
     };
     const onDisconnect = () => setConnected(false);
+    const onRoomClosed = () => {
+      sessionRef.current = null;
+      pendingProfileRef.current = null;
+      storeSession(null);
+      setCode(null);
+      setLobby([]);
+      setGameState(EMPTY_STATE);
+    };
     const onError = ({ message }: { message?: string }) => {
       const normalized = message?.toLowerCase() ?? "";
       const shouldResetSession =
@@ -125,6 +133,7 @@ export function useOnlineGameState() {
     socket.on("room_created", onRoomKnown);
     socket.on("room_joined", onRoomKnown);
     socket.on("room_reconnected", onRoomKnown);
+    socket.on("room_closed", onRoomClosed);
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
     socket.on("error_msg", onError);
@@ -137,6 +146,7 @@ export function useOnlineGameState() {
       socket.off("room_created", onRoomKnown);
       socket.off("room_joined", onRoomKnown);
       socket.off("room_reconnected", onRoomKnown);
+      socket.off("room_closed", onRoomClosed);
       socket.off("connect", onConnect);
       socket.off("disconnect", onDisconnect);
       socket.off("error_msg", onError);
