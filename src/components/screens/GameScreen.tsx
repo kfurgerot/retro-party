@@ -14,6 +14,7 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { cn } from "@/lib/utils";
+import { RetroScreenBackground } from "./RetroScreenBackground";
 
 interface GameScreenProps {
   gameState: GameState;
@@ -200,10 +201,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 
   return (
     <div className="scanlines relative min-h-svh w-full overflow-hidden">
-      <div
-        className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(34,211,238,0.22),transparent_35%),radial-gradient(circle_at_80%_70%,rgba(168,85,247,0.18),transparent_35%),linear-gradient(to_bottom,rgba(15,23,42,0.9),rgba(2,6,23,0.98))]"
-        aria-hidden="true"
-      />
+      <RetroScreenBackground />
 
       <div className="relative z-10 flex h-svh w-full flex-col overflow-hidden p-2 sm:p-3">
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:flex lg:flex-wrap lg:items-center lg:justify-between lg:gap-3">

@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AVATARS } from "@/types/game";
 import { cn } from "@/lib/utils";
+import { RetroScreenBackground } from "./RetroScreenBackground";
 
 type SetupMode = "host" | "join";
 
@@ -70,10 +71,7 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
 
   return (
     <div className="scanlines relative flex min-h-svh w-full items-center justify-center overflow-hidden px-4 py-8">
-      <div
-        className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(34,211,238,0.3),transparent_35%),radial-gradient(circle_at_80%_70%,rgba(168,85,247,0.28),transparent_35%),linear-gradient(to_bottom,rgba(15,23,42,0.82),rgba(2,6,23,0.96))]"
-        aria-hidden="true"
-      />
+      <RetroScreenBackground />
 
       <div className="relative z-10 w-full max-w-2xl rounded border border-cyan-300/60 bg-card/88 p-5 shadow-[0_0_0_2px_rgba(34,211,238,0.3),0_0_34px_rgba(34,211,238,0.32)] backdrop-blur sm:p-8">
         <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-cyan-200/80">
