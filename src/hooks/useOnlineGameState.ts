@@ -20,6 +20,7 @@ const EMPTY_STATE: GameState = {
   diceValue: null,
   isRolling: false,
   currentQuestion: null,
+  questionHistory: [],
 };
 
 const SESSION_STORAGE_KEY = "retro-party:online-session";

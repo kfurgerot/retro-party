@@ -55,7 +55,13 @@ return true;
     }
 
     if (online.gameState.phase === 'results') {
-      return <ResultsScreen players={online.gameState.players} onPlayAgain={online.resetGame} />;
+      return (
+        <ResultsScreen
+          players={online.gameState.players}
+          questionHistory={online.gameState.questionHistory}
+          onPlayAgain={online.resetGame}
+        />
+      );
     }
 
     return (
@@ -78,7 +84,13 @@ return true;
   }
 
   if (local.gameState.phase === 'results') {
-    return <ResultsScreen players={local.gameState.players} onPlayAgain={local.resetGame} />;
+    return (
+      <ResultsScreen
+        players={local.gameState.players}
+        questionHistory={local.gameState.questionHistory}
+        onPlayAgain={local.resetGame}
+      />
+    );
   }
 
   // In local mode we don't have per-player sockets; just let player 1 validate.

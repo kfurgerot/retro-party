@@ -32,6 +32,14 @@ export interface QuestionState {
   status: 'pending' | 'open';
 }
 
+export interface QuestionSummary {
+  id: string;
+  type: 'blue' | 'red' | 'green' | 'violet' | 'bonus';
+  text: string;
+  upVotes: number;
+  downVotes: number;
+}
+
 export interface GameState {
   phase: 'lobby' | 'playing' | 'results';
   players: Player[];
@@ -46,6 +54,7 @@ export interface GameState {
   isRolling: boolean;
 
   currentQuestion: QuestionState | null;
+  questionHistory: QuestionSummary[];
 }
 
 export const AVATARS = [

@@ -39,6 +39,7 @@ export function createInitialState() {
 
     // question flow
     currentQuestion: null, // { id, type, text, targetPlayerId, votes: { up: [], down: [] }, status:"open" }
+    questionHistory: [],
   };
 }
 
@@ -75,6 +76,7 @@ export function initializePlayers(state, lobbyPlayers) {
     diceValue: null,
     isRolling: false,
     currentQuestion: null,
+    questionHistory: [],
   };
 }
 
@@ -195,8 +197,25 @@ export function validateQuestion(state, socketId) {
   // Only the target player (the one who landed) can validate
   if (state.currentQuestion.targetPlayerId !== socketId) return state;
 
+  const questionHistory = [
+    ...(state.questionHistory ?? []),
+    {
+      id: state.currentQuestion.id,
+      type: state.currentQuestion.type,
+      text: state.currentQuestion.text,
+      upVotes: state.currentQuestion.votes.up.length,
+      downVotes: state.currentQuestion.votes.down.length,
+    },
+  ];
+
   // Close question and advance turn
-  const cleared = { ...state, currentQuestion: null, diceValue: null, isRolling: false };
+  const cleared = {
+    ...state,
+    currentQuestion: null,
+    diceValue: null,
+    isRolling: false,
+    questionHistory,
+  };
   return nextTurn(cleared);
 }
 

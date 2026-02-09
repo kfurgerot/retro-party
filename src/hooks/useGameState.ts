@@ -31,6 +31,7 @@ const createInitialState = (): GameState => {
     diceValue: null,
     isRolling: false,
     currentQuestion: null,
+    questionHistory: [],
   };
 };
 
@@ -47,6 +48,7 @@ export function useGameState() {
       diceValue: null,
       isRolling: false,
       currentQuestion: null,
+      questionHistory: [],
     }));
   }, []);
 
@@ -118,6 +120,17 @@ export function useGameState() {
       }
       if (!prev.currentQuestion) return prev;
 
+      const questionHistory = [
+        ...prev.questionHistory,
+        {
+          id: prev.currentQuestion.id,
+          type: prev.currentQuestion.type,
+          text: prev.currentQuestion.text,
+          upVotes: prev.currentQuestion.votes.up.length,
+          downVotes: prev.currentQuestion.votes.down.length,
+        },
+      ];
+
       // close question and advance turn
       let nextIndex = prev.currentPlayerIndex + 1;
       let nextRound = prev.currentRound;
@@ -126,9 +139,24 @@ export function useGameState() {
         nextRound += 1;
       }
       if (nextRound > prev.maxRounds) {
-        return { ...prev, phase: "results", currentQuestion: null, diceValue: null, isRolling: false };
+        return {
+          ...prev,
+          phase: "results",
+          currentQuestion: null,
+          diceValue: null,
+          isRolling: false,
+          questionHistory,
+        };
       }
-      return { ...prev, currentQuestion: null, diceValue: null, isRolling: false, currentPlayerIndex: nextIndex, currentRound: nextRound };
+      return {
+        ...prev,
+        currentQuestion: null,
+        diceValue: null,
+        isRolling: false,
+        currentPlayerIndex: nextIndex,
+        currentRound: nextRound,
+        questionHistory,
+      };
     });
   }, []);
 
