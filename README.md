@@ -1,68 +1,93 @@
-# Welcome to retro online
+﻿# Retro Party
 
-## Project info
+Jeu de retrospective d'equipe en mode plateau, avec:
+- mode local (un seul navigateur)
+- mode online temps reel (rooms + Socket.IO)
 
+## Stack
+- Frontend: React + TypeScript + Vite + Tailwind + shadcn/ui
+- Backend: Node.js + Express + Socket.IO
+- Conteneurisation: Docker + Docker Compose + Nginx
 
-## How can I edit this code?
-
-There are several ways of editing your application.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+## Structure du repo
+```text
+.
+|- src/                 # Frontend
+|- server/              # Backend Socket.IO + logique de jeu
+|- Dockerfile           # Image frontend
+|- server/Dockerfile    # Image backend
+|- docker-compose.yml   # Orchestration locale
+`- nginx.conf           # Reverse proxy frontend -> backend/socket.io
 ```
 
-**Edit a file directly in GitHub**
+## Lancer en local (sans Docker)
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### 1) Frontend
+```bash
+npm install
+npm run dev
+```
+Frontend: `http://localhost:5173`
 
-**Use GitHub Codespaces**
+### 2) Backend
+```bash
+cd server
+npm install
+npm run dev
+```
+Backend: `http://localhost:3001`
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### Variables utiles
+- Frontend:
+  - `VITE_BACKEND_URL` (optionnel): URL du backend Socket.IO/HTTP
+- Backend:
+  - `PORT` (defaut: `3001`)
+  - `ORIGIN` (defaut: `*`) pour CORS
 
-## What technologies are used for this project?
+## Lancer avec Docker
+```bash
+docker compose build --no-cache
+docker compose up -d
+```
 
-This project is built with:
+Services:
+- Frontend: `http://localhost:8088`
+- Backend: `http://localhost:3001`
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+Arret:
+```bash
+docker compose down
+```
 
-## How can I deploy this project?
+## Scripts principaux
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+A la racine:
+- `npm run dev` lance Vite
+- `npm run build` build frontend
+- `npm run test` lance les tests Vitest
 
-## Can I connect a custom domain to my Lovable project?
+Dans `server/`:
+- `npm run dev` lance le backend Node
+- `npm run start` lance le backend en mode standard
 
-Yes, you can!
+## Fonctionnalites
+- Creation et partage de room (code court)
+- Rejoindre une room existante
+- Demarrage de partie par le host
+- Des, deplacement, questions retro, votes
+- Reconnexion avec delai de grace
+- Gestion host et fermeture room si host quitte
+- Bouton d'annulation de room dans le lobby online
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## Notes techniques
+- Le serveur est autoritaire sur l'etat online (`server/gameLogic.js`).
+- Le frontend supporte aussi un mode local (`src/hooks/useGameState.ts`).
+- Le flux Socket.IO est gere cote client dans `src/hooks/useOnlineGameState.ts`.
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+## Tests
+```bash
+npm run test
+```
+
+## Licence
+A definir.
