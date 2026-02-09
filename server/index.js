@@ -9,6 +9,7 @@ import {
   settleDice,
   movePlayer,
   onPlayerLanded,
+  openQuestion,
   voteQuestion,
   validateQuestion,
   nextTurn,
@@ -386,6 +387,16 @@ io.on("connection", (socket) => {
     if (!room) return;
 
     room.state = voteQuestion(room.state, socket.id, vote);
+    broadcastState(code);
+  });
+
+  socket.on("open_question", () => {
+    const code = socketToRoom.get(socket.id);
+    if (!code) return;
+    const room = rooms.get(code);
+    if (!room) return;
+
+    room.state = openQuestion(room.state, socket.id);
     broadcastState(code);
   });
 

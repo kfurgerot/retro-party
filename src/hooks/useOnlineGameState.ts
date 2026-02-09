@@ -172,6 +172,7 @@ export function useOnlineGameState() {
   const startGame = useCallback(() => socket.emit("start_game"), []);
   const rollDice = useCallback(() => socket.emit("roll_dice"), []);
   const movePlayer = useCallback((steps: number) => socket.emit("move_player", { steps }), []);
+  const openQuestionCard = useCallback(() => socket.emit("open_question"), []);
   const voteQuestion = useCallback((vote: "up" | "down") => socket.emit("vote_question", { vote }), []);
   const validateQuestion = useCallback(() => socket.emit("validate_question"), []);
   const resetGame = useCallback(() => socket.emit("reset_game"), []);
@@ -193,6 +194,7 @@ export function useOnlineGameState() {
     startGame,
     rollDice,
     movePlayer,
+    openQuestionCard,
     voteQuestion,
     validateQuestion,
     resetGame,

@@ -85,9 +85,18 @@ export function useGameState() {
           text,
           targetPlayerId: cur.id,
           votes: { up: [], down: [] },
-          status: "open",
+          status: "pending",
         },
       };
+    });
+  }, []);
+
+  const openQuestionCard = useCallback((playerId: string) => {
+    setGameState((prev) => {
+      const q = prev.currentQuestion;
+      if (!q || q.status !== "pending") return prev;
+      if (q.targetPlayerId !== playerId) return prev;
+      return { ...prev, currentQuestion: { ...q, status: "open" } };
     });
   }, []);
 
@@ -130,6 +139,7 @@ export function useGameState() {
     startGame,
     rollDice,
     movePlayer,
+    openQuestionCard,
     voteQuestion,
     validateQuestion,
     resetGame,

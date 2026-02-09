@@ -65,6 +65,7 @@ return true;
         onLeave={online.leaveRoom}
         onRollDice={online.rollDice}
         onMovePlayer={online.movePlayer}
+        onOpenQuestionCard={online.openQuestionCard}
         onVoteQuestion={online.voteQuestion}
         onValidateQuestion={online.validateQuestion}
       />
@@ -87,6 +88,7 @@ return true;
       myPlayerId={'local-0'}
       onRollDice={local.rollDice}
       onMovePlayer={local.movePlayer}
+      onOpenQuestionCard={() => local.openQuestionCard('local-0')}
       onVoteQuestion={(vote) => local.voteQuestion(vote, 'local-0')}
       onValidateQuestion={local.validateQuestion}
     />

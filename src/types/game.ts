@@ -29,7 +29,7 @@ export interface QuestionState {
   text: string;
   targetPlayerId: string;
   votes: { up: string[]; down: string[] };
-  status: 'open';
+  status: 'pending' | 'open';
 }
 
 export interface GameState {

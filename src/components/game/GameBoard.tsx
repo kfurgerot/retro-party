@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 interface GameBoardProps {
   tiles: Tile[];
   players: Player[];
+  onMoveAnimationEnd?: (playerId: string) => void;
 }
 
 const TileIcon: Record<string, string> = {
@@ -36,7 +37,13 @@ function isCoarsePointer() {
   return window.matchMedia?.("(pointer: coarse)")?.matches ?? false;
 }
 
-export const GameBoard: React.FC<GameBoardProps> = ({ tiles, players }) => {
+const MOVE_STEP_MS = 320;
+
+export const GameBoard: React.FC<GameBoardProps> = ({
+  tiles,
+  players,
+  onMoveAnimationEnd,
+}) => {
   const bounds = useMemo(() => {
     if (!tiles.length) return { minX: 0, minY: 0, maxX: 800, maxY: 500 };
     const xs = tiles.map((t) => t.x);
@@ -57,6 +64,12 @@ export const GameBoard: React.FC<GameBoardProps> = ({ tiles, players }) => {
   );
 
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const moveTimeoutsRef = useRef<number[]>([]);
+  const previousPositionsRef = useRef<Record<string, number>>({});
+  const onMoveAnimationEndRef = useRef(onMoveAnimationEnd);
+  const displayPositionsRef = useRef<Record<string, number>>({});
+
+  const [displayPositions, setDisplayPositions] = useState<Record<string, number>>({});
 
   // Keep latest values for resize callbacks / pointer handlers.
   const scaleRef = useRef(1);
@@ -70,6 +83,14 @@ export const GameBoard: React.FC<GameBoardProps> = ({ tiles, players }) => {
     scaleRef.current = scale;
     offsetRef.current = offset;
   }, [scale, offset]);
+
+  useLayoutEffect(() => {
+    onMoveAnimationEndRef.current = onMoveAnimationEnd;
+  }, [onMoveAnimationEnd]);
+
+  useLayoutEffect(() => {
+    displayPositionsRef.current = displayPositions;
+  }, [displayPositions]);
 
   // Pointer tracking (drag + pinch)
   const pointers = useRef(new Map<number, Point>());
@@ -314,6 +335,52 @@ export const GameBoard: React.FC<GameBoardProps> = ({ tiles, players }) => {
 
   const showControls = isCoarsePointer();
 
+  useLayoutEffect(() => {
+    const clearMoveTimeouts = () => {
+      moveTimeoutsRef.current.forEach((id) => window.clearTimeout(id));
+      moveTimeoutsRef.current = [];
+    };
+
+    const tilesLen = tiles.length || 1;
+    const nextActual = Object.fromEntries(players.map((p) => [p.id, p.position]));
+
+    if (Object.keys(previousPositionsRef.current).length === 0) {
+      previousPositionsRef.current = nextActual;
+      setDisplayPositions(nextActual);
+      return;
+    }
+
+    clearMoveTimeouts();
+    let hasAnimatedMove = false;
+
+    players.forEach((p) => {
+      const from =
+        displayPositionsRef.current[p.id] ??
+        previousPositionsRef.current[p.id] ??
+        p.position;
+      const to = p.position;
+      if (from === to) return;
+
+      const steps = ((to - from) % tilesLen + tilesLen) % tilesLen;
+      if (steps <= 0) return;
+      hasAnimatedMove = true;
+
+      for (let step = 1; step <= steps; step += 1) {
+        const timeoutId = window.setTimeout(() => {
+          const position = (from + step) % tilesLen;
+          setDisplayPositions((prev) => ({ ...prev, [p.id]: position }));
+          if (step === steps) onMoveAnimationEndRef.current?.(p.id);
+        }, MOVE_STEP_MS * step);
+        moveTimeoutsRef.current.push(timeoutId);
+      }
+    });
+
+    if (!hasAnimatedMove) setDisplayPositions(nextActual);
+    previousPositionsRef.current = nextActual;
+
+    return () => clearMoveTimeouts();
+  }, [players, tiles.length]);
+
   return (
     <div
       ref={containerRef}
@@ -362,8 +429,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({ tiles, players }) => {
             const py = tile.y - bounds.minY;
 
             const playersHere = players
-              .map((p, pIdx) => ({ p, pIdx }))
-              .filter(({ p }) => p.position === tile.id);
+              .map((p) => ({ p }))
+              .filter(({ p }) => (displayPositions[p.id] ?? p.position) === tile.id);
 
             return (
               <div

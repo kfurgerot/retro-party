@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GameState } from "@/types/game";
-import { GameBoard, GameBoardHandle } from "../game/GameBoard";
+import { GameBoard } from "../game/GameBoard";
 import { PlayerCard } from "../game/PlayerCard";
 import { Dice } from "../game/Dice";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ interface GameScreenProps {
   onLeave?: () => void;
   onRollDice: () => void;
   onMovePlayer: (steps: number) => void;
+  onOpenQuestionCard: () => void;
   onVoteQuestion: (vote: "up" | "down") => void;
   onValidateQuestion: () => void;
 }
@@ -30,16 +31,19 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   onLeave,
   onRollDice,
   onMovePlayer,
+  onOpenQuestionCard,
   onVoteQuestion,
   onValidateQuestion,
 }) => {
   const [hasMovedThisTurn, setHasMovedThisTurn] = useState(false);
+  const [isMoveAnimating, setIsMoveAnimating] = useState(false);
   const [sidebarTab, setSidebarTab] = useState<"players" | "legend">("players");
 
   const [playersOpen, setPlayersOpen] = useState(false);
   const [legendOpen, setLegendOpen] = useState(false);
 
-  const boardRef = useRef<GameBoardHandle | null>(null);
+  const autoMoveKeyRef = useRef<string | null>(null);
+  const moveAnimationFallbackRef = useRef<number | null>(null);
 
   const currentPlayer = gameState.players[gameState.currentPlayerIndex];
   const isMyTurn =
@@ -54,7 +58,13 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 
   useEffect(() => {
     setHasMovedThisTurn(false);
-  }, [gameState.currentPlayerIndex, gameState.currentQuestion?.id]);
+    setIsMoveAnimating(false);
+    autoMoveKeyRef.current = null;
+    if (moveAnimationFallbackRef.current) {
+      window.clearTimeout(moveAnimationFallbackRef.current);
+      moveAnimationFallbackRef.current = null;
+    }
+  }, [gameState.currentPlayerIndex, gameState.currentRound]);
 
   const canRoll =
     gameState.phase === "playing" &&
@@ -82,10 +92,47 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     []
   );
 
-  const handleMove = (steps: number) => {
+  const handleMove = useCallback((steps: number) => {
     setHasMovedThisTurn(true);
+    setIsMoveAnimating(true);
     onMovePlayer(steps);
-  };
+  }, [onMovePlayer]);
+
+  useEffect(() => {
+    if (!canMove || hasMovedThisTurn || gameState.diceValue == null) return;
+    const autoMoveKey = `${currentPlayer?.id ?? "unknown"}-${gameState.currentRound}-${gameState.currentPlayerIndex}-${gameState.diceValue}`;
+    if (autoMoveKeyRef.current === autoMoveKey) return;
+
+    autoMoveKeyRef.current = autoMoveKey;
+    handleMove(gameState.diceValue);
+  }, [
+    canMove,
+    hasMovedThisTurn,
+    currentPlayer?.id,
+    gameState.currentRound,
+    gameState.currentPlayerIndex,
+    gameState.diceValue,
+    handleMove,
+  ]);
+
+  useEffect(() => {
+    if (!isMoveAnimating || !gameState.currentQuestion) return;
+
+    if (moveAnimationFallbackRef.current) {
+      window.clearTimeout(moveAnimationFallbackRef.current);
+    }
+    moveAnimationFallbackRef.current = window.setTimeout(() => {
+      setIsMoveAnimating(false);
+      moveAnimationFallbackRef.current = null;
+    }, 1400);
+
+    return () => {
+      if (moveAnimationFallbackRef.current) {
+        window.clearTimeout(moveAnimationFallbackRef.current);
+        moveAnimationFallbackRef.current = null;
+      }
+    };
+  }, [gameState.currentQuestion, isMoveAnimating]);
 
   const isMobile = () => {
     if (typeof window === "undefined") return true;
@@ -103,15 +150,19 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   };
 
   const infoTitle = gameState.currentQuestion
-    ? "Question en cours..."
+    ? gameState.currentQuestion.status === "pending"
+      ? "Question prête"
+      : "Question en cours..."
     : isMyTurn
     ? "A toi de jouer"
     : "En attente...";
 
   const infoHint = canRoll
     ? "Lance le dé"
+    : isMoveAnimating
+    ? "Deplacement en cours..."
     : canMove
-    ? "Puis avance"
+    ? "Avance auto..."
     : isMyTurn
     ? "..."
     : "Tour adverse";
@@ -132,6 +183,15 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     "border-border/70 bg-background/50 text-foreground hover:bg-background/70";
   const activeCyanBtn =
     "border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_0_2px_rgba(34,211,238,0.35)] hover:bg-cyan-400";
+
+  const canOpenQuestionCard =
+    !!gameState.currentQuestion &&
+    gameState.currentQuestion.status === "pending" &&
+    !isMoveAnimating &&
+    !!currentPlayer &&
+    !!myPlayerId &&
+    currentPlayer.id === myPlayerId &&
+    gameState.currentQuestion.targetPlayerId === myPlayerId;
 
   return (
     <div className="flex h-svh w-full flex-col overflow-hidden p-2 sm:p-3">
@@ -173,9 +233,11 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         <div className="flex min-h-0 flex-col gap-3">
           <div className="flex-1 min-h-0 overflow-hidden rounded-md border border-border/40 bg-card/30 p-1 shadow-sm">
             <GameBoard
-              ref={boardRef}
               tiles={gameState.tiles}
               players={gameState.players}
+              onMoveAnimationEnd={(playerId) => {
+                if (playerId === currentPlayer?.id) setIsMoveAnimating(false);
+              }}
             />
           </div>
 
@@ -201,6 +263,15 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 </div>
                 <div className="text-sm opacity-80 truncate">{infoTitle}</div>
                 <div className="text-xs opacity-60 truncate">{infoHint}</div>
+                {canOpenQuestionCard && (
+                  <Button
+                    size="sm"
+                    className="mt-2 bg-cyan-500 text-slate-950 hover:bg-cyan-400"
+                    onClick={onOpenQuestionCard}
+                  >
+                    Ouvrir la carte
+                  </Button>
+                )}
               </div>
             </div>
           </Card>
@@ -289,6 +360,15 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 </div>
                 <div className="truncate text-sm opacity-80">{infoTitle}</div>
                 <div className="truncate text-xs opacity-60">{infoHint}</div>
+                {canOpenQuestionCard && (
+                  <Button
+                    size="sm"
+                    className="mt-2 h-8 bg-cyan-500 text-slate-950 hover:bg-cyan-400"
+                    onClick={onOpenQuestionCard}
+                  >
+                    Ouvrir carte
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -379,7 +459,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         </DrawerContent>
       </Drawer>
 
-      {gameState.currentQuestion && (
+      {gameState.currentQuestion?.status === "open" && !isMoveAnimating && (
         <QuestionModal
           question={gameState.currentQuestion}
           players={gameState.players}

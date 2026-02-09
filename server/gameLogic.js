@@ -157,6 +157,18 @@ export function onPlayerLanded(state, socketId) {
       text,
       targetPlayerId: curPlayer.id,
       votes: { up: [], down: [] },
+      status: "pending",
+    },
+  };
+}
+
+export function openQuestion(state, socketId) {
+  if (!state.currentQuestion || state.currentQuestion.status !== "pending") return state;
+  if (state.currentQuestion.targetPlayerId !== socketId) return state;
+  return {
+    ...state,
+    currentQuestion: {
+      ...state.currentQuestion,
       status: "open",
     },
   };
