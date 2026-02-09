@@ -83,9 +83,10 @@
     font-family: 'Press Start 2P', monospace;
     image-rendering: pixelated;
 
-    /* Prevent browser scrolling */
-    overflow: hidden;
-    overscroll-behavior: none;
+    /* Keep horizontal lock, allow vertical scrolling on mobile screens like lobby */
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
   }
 
   html, body {

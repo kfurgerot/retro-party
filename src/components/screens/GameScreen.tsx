@@ -122,23 +122,34 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     onLeave();
   };
 
+  const turnStatusClass = gameState.currentQuestion
+    ? "border-amber-500/30 bg-amber-500/10 text-amber-300"
+    : isMyTurn
+    ? "border-cyan-400/40 bg-cyan-500/15 text-cyan-300"
+    : "border-border/70 bg-background/40 text-muted-foreground";
+
+  const neutralSecondaryBtn =
+    "border-border/70 bg-background/50 text-foreground hover:bg-background/70";
+  const activeCyanBtn =
+    "border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_0_2px_rgba(34,211,238,0.35)] hover:bg-cyan-400";
+
   return (
     <div className="flex h-svh w-full flex-col overflow-hidden p-2 sm:p-3">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Card className="bg-card/80 backdrop-blur px-4 py-3">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:flex lg:flex-wrap lg:items-center lg:justify-between lg:gap-3">
+        <Card className="border-border/70 bg-card/80 px-3 py-2 shadow-sm backdrop-blur sm:px-4 sm:py-3">
           <div className="text-sm opacity-80">Manche</div>
           <div className="text-xl font-bold">
             {gameState.currentRound} / {gameState.maxRounds}
           </div>
         </Card>
 
-        <Card className="bg-card/80 backdrop-blur px-4 py-3">
+        <Card className="border-border/70 bg-card/80 px-3 py-2 shadow-sm backdrop-blur sm:px-4 sm:py-3">
           <div className="text-sm opacity-80">Tour de</div>
-          <div className="text-xl font-bold">{currentPlayer?.name ?? "-"}</div>
+          <div className="truncate text-xl font-bold">{currentPlayer?.name ?? "-"}</div>
         </Card>
 
-        <Card className="bg-card/80 backdrop-blur px-4 py-3">
+        <Card className="border-border/70 bg-card/80 px-3 py-2 shadow-sm backdrop-blur sm:px-4 sm:py-3">
           <div className="text-sm opacity-80">Kudobox ⭐</div>
           <div className="text-xl font-bold">
             {gameState.players.find((p) => p.id === myPlayerId)?.stars ?? 0}
@@ -146,17 +157,21 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         </Card>
 
         {onLeave && (
-          <Button className="hidden lg:inline-flex" variant="secondary" onClick={handleLeave}>
+          <Button
+            className={`hidden lg:inline-flex ${neutralSecondaryBtn}`}
+            variant="secondary"
+            onClick={handleLeave}
+          >
             Quitter
           </Button>
         )}
       </div>
 
       {/* Main layout */}
-      <div className="grid flex-1 min-h-0 grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_320px] mt-2 sm:mt-3">
+      <div className="mt-2 grid flex-1 min-h-0 grid-cols-1 gap-3 sm:mt-3 lg:grid-cols-[minmax(0,1fr)_320px]">
         {/* Board */}
         <div className="flex min-h-0 flex-col gap-3">
-          <div className="flex-1 min-h-0 overflow-hidden rounded-md border border-border/40 bg-card/30 p-1">
+          <div className="flex-1 min-h-0 overflow-hidden rounded-md border border-border/40 bg-card/30 p-1 shadow-sm">
             <GameBoard
               ref={boardRef}
               tiles={gameState.tiles}
@@ -165,7 +180,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
           </div>
 
           {/* Desktop controls */}
-          <Card className="hidden lg:block bg-card/80 backdrop-blur px-4 py-3 shrink-0">
+          <Card className="hidden shrink-0 border-border/70 bg-card/80 px-4 py-3 shadow-sm backdrop-blur lg:block">
             <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-6">
               <div />
               <div className="flex justify-center">
@@ -181,6 +196,9 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               </div>
 
               <div className="text-right justify-self-end max-w-[360px]">
+                <div className={`mb-2 inline-flex rounded-full border px-2 py-1 text-[11px] ${turnStatusClass}`}>
+                  {gameState.currentQuestion ? "Question" : isMyTurn ? "Ton tour" : "Attente"}
+                </div>
                 <div className="text-sm opacity-80 truncate">{infoTitle}</div>
                 <div className="text-xs opacity-60 truncate">{infoHint}</div>
               </div>
@@ -189,23 +207,33 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         </div>
 
         {/* Sidebar desktop */}
-        <div className="hidden lg:flex min-h-0 flex-col gap-3 min-w-0">
-          <Card className="bg-card/80 backdrop-blur px-3 py-3 flex min-h-0 flex-col">
+        <div className="hidden min-w-0 min-h-0 flex-col gap-3 lg:flex">
+          <Card className="flex min-h-0 flex-col border-border/70 bg-card/80 px-3 py-3 shadow-sm backdrop-blur">
             <div className="flex items-center justify-between gap-2">
               <div className="text-base font-bold">
                 {sidebarTab === "players" ? "Joueurs" : "Légende"}
               </div>
               <div className="flex gap-2">
                 <Button
-                  variant={sidebarTab === "players" ? "default" : "secondary"}
+                  variant="secondary"
                   size="sm"
+                  className={
+                    sidebarTab === "players"
+                      ? activeCyanBtn
+                      : `${neutralSecondaryBtn} opacity-95`
+                  }
                   onClick={() => setSidebarTab("players")}
                 >
                   Joueurs
                 </Button>
                 <Button
-                  variant={sidebarTab === "legend" ? "default" : "secondary"}
+                  variant="secondary"
                   size="sm"
+                  className={
+                    sidebarTab === "legend"
+                      ? activeCyanBtn
+                      : `${neutralSecondaryBtn} opacity-95`
+                  }
                   onClick={() => setSidebarTab("legend")}
                 >
                   Légende
@@ -239,12 +267,11 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       </div>
 
       {/* MOBILE TOOLBAR */}
-      <div className="lg:hidden sticky bottom-0 z-30 mt-2 pb-[env(safe-area-inset-bottom)]">
-        <Card className="bg-card/95 backdrop-blur border px-2 py-2">
-          <div className="flex items-stretch gap-2">
-            {/* Left: Dice + info (aligned bottom with the dice action button) */}
-            <div className="flex flex-1 items-end gap-3 min-w-0">
-              <div className="shrink-0 scale-[0.85] origin-left">
+      <div className="sticky bottom-0 z-30 mt-2 pb-[env(safe-area-inset-bottom)] lg:hidden">
+        <Card className="border border-border/70 bg-card/95 px-2 py-2 shadow-sm backdrop-blur">
+          <div className="flex flex-col gap-3">
+            <div className="flex min-w-0 items-end gap-3">
+              <div className="shrink-0 scale-[0.88] origin-left">
                 <Dice
                   value={gameState.diceValue}
                   isRolling={gameState.isRolling}
@@ -256,30 +283,42 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 />
               </div>
 
-              <div className="flex-1 text-right min-w-0 self-end pb-3">
-                <div className="text-xs opacity-80 truncate">{infoTitle}</div>
-                <div className="text-[11px] opacity-60 truncate">{infoHint}</div>
+              <div className="min-w-0 flex-1 self-end pb-3 text-right">
+                <div className={`mb-1 inline-flex rounded-full border px-2 py-1 text-[11px] ${turnStatusClass}`}>
+                  {gameState.currentQuestion ? "Question" : isMyTurn ? "Ton tour" : "Attente"}
+                </div>
+                <div className="truncate text-sm opacity-80">{infoTitle}</div>
+                <div className="truncate text-xs opacity-60">{infoHint}</div>
               </div>
             </div>
 
-            {/* Right rail */}
-            <div className="flex w-[28%] min-w-[92px] flex-col gap-2">
-              <Button className="w-full" size="sm" onClick={openPlayers}>
-                👥 Joueurs
+            <div className={`grid gap-2 ${onLeave ? "grid-cols-3" : "grid-cols-2"}`}>
+              <Button
+                className={`h-10 w-full shadow-sm ${neutralSecondaryBtn}`}
+                size="sm"
+                variant="secondary"
+                onClick={openPlayers}
+              >
+                Joueurs
               </Button>
 
               <Button
-                className="w-full h-8 px-0"
+                className={`h-10 w-full shadow-sm ${neutralSecondaryBtn}`}
                 size="sm"
                 variant="secondary"
                 onClick={openLegend}
-                title="Légende"
+                aria-label="Afficher la legende"
               >
-                🗺️
+                Legende
               </Button>
 
               {onLeave && (
-                <Button className="w-full" size="sm" variant="destructive" onClick={handleLeave}>
+                <Button
+                  className="h-10 w-full shadow-sm"
+                  size="sm"
+                  variant="destructive"
+                  onClick={handleLeave}
+                >
                   Quitter
                 </Button>
               )}
@@ -295,7 +334,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
             <div className="flex items-center justify-between gap-2">
               <DrawerTitle>Joueurs</DrawerTitle>
               <DrawerClose asChild>
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" aria-label="Fermer le panneau joueurs">
                   ✕
                 </Button>
               </DrawerClose>
@@ -322,7 +361,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
             <div className="flex items-center justify-between gap-2">
               <DrawerTitle>Légende</DrawerTitle>
               <DrawerClose asChild>
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" aria-label="Fermer le panneau legende">
                   ✕
                 </Button>
               </DrawerClose>

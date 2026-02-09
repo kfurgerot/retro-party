@@ -12,7 +12,12 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
-type LobbyPlayer = { name: string; avatar: number; isHost: boolean };
+type LobbyPlayer = {
+  name: string;
+  avatar: number;
+  isHost: boolean;
+  connected?: boolean;
+};
 
 interface OnlineLobbyScreenProps {
   connected: boolean;
@@ -169,70 +174,83 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
   const primaryDisabled =
     pending !== "idle" ||
     (roomCode ? !canLaunch : mode === "host" ? !canCreate : !canJoin);
+  const neutralSecondaryBtn =
+    "border-border/70 bg-background/50 text-foreground hover:bg-background/70";
 
   return (
-    <div className="flex h-full w-full flex-col gap-4 p-4 overflow-hidden scanlines">
-      {/* HEADER */}
-      <Card className="bg-card/80 backdrop-blur">
-        <CardHeader className="py-3 flex flex-row items-center justify-between">
-          <div>
-            <div className="text-xs opacity-70">RÉTRO PARTY</div>
-            <CardTitle className="text-base">Mode en ligne</CardTitle>
-            <div className="text-xs text-muted-foreground mt-1">{subtitle}</div>
+    <div className="scanlines flex min-h-svh w-full flex-col gap-3 overflow-y-auto p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:p-4">
+      <Card className="border-border/70 bg-card/80 shadow-sm backdrop-blur">
+        <CardHeader className="py-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="text-xs opacity-70">RETRO PARTY</div>
+              <CardTitle className="text-base">Lobby en ligne</CardTitle>
+              <div className="mt-1 text-xs text-muted-foreground">{subtitle}</div>
+            </div>
 
-            {roomCode && (
-              <button
-                onClick={copyRoom}
-                className="mt-2 inline-flex items-center gap-2 text-xs opacity-80 hover:opacity-100 transition"
-                title="Copier le code de la room"
-              >
-                <span className="opacity-70">Room :</span>
-                <span className="font-semibold text-violet-400">{roomCode}</span>
-                <span className="opacity-70">📋</span>
-                {copied && (
-                  <span className="ml-1 text-violet-300 opacity-100">
-                    Copié !
-                  </span>
+            <div className="flex items-center gap-2 text-xs">
+              <span
+                className={cn(
+                  "rounded-full border px-2 py-1",
+                  connected
+                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+                    : "border-amber-500/30 bg-amber-500/10 text-amber-300"
                 )}
-              </button>
-            )}
-          </div>
-
-          <div className="text-right">
-            <div className="text-xs opacity-70">Statut</div>
-            <div className="text-sm font-semibold">
-              {connected ? "Connecté" : "…"}
+              >
+                {connected ? "Connecte" : "Connexion..."}
+              </span>
+              <span className="rounded-full border border-border/70 bg-background/40 px-2 py-1">
+                {lobbyPlayers.length}/10 joueurs
+              </span>
             </div>
           </div>
         </CardHeader>
 
-        {error && (
-          <div className="px-4 pb-3">
-            <div className="text-xs rounded-full border border-red-500/30 bg-red-500/10 text-red-200 px-3 py-1 inline-block">
-              {error}
-            </div>
-          </div>
+        {(roomCode || error) && (
+          <CardContent className="pt-0 pb-3">
+            {roomCode && (
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                <span className="text-muted-foreground">Code room:</span>
+                <span className="rounded bg-cyan-500/10 px-2 py-1 font-semibold text-cyan-300">
+                  {roomCode}
+                </span>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className={neutralSecondaryBtn}
+                  onClick={copyRoom}
+                  disabled={pending !== "idle"}
+                >
+                  {copied ? "Copie !" : "Copier"}
+                </Button>
+              </div>
+            )}
+
+            {error && (
+              <div className="mt-2 inline-block rounded-full border border-red-500/30 bg-red-500/10 px-3 py-1 text-xs text-red-200">
+                {error}
+              </div>
+            )}
+          </CardContent>
         )}
       </Card>
 
-      {/* MAIN */}
-      <div className="grid flex-1 min-h-0 grid-cols-1 gap-4 lg:grid-cols-[1fr_360px]">
-        {/* LEFT */}
-        <Card className="h-full bg-card/80 backdrop-blur flex flex-col min-h-0">
-          <CardContent className="p-4 overflow-y-auto flex flex-col gap-5 min-h-0">
-            {/* Mobile players list */}
+      <div className="grid grid-cols-1 gap-3 lg:flex-1 lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <Card className="border-border/70 bg-card/80 shadow-sm backdrop-blur lg:h-full lg:min-h-0">
+          <CardContent className="flex flex-col gap-5 p-4 lg:min-h-0 lg:overflow-y-auto">
             <div className="lg:hidden">
               <Dialog>
                 <DialogTrigger asChild>
-                  <Button variant="secondary" className="w-full">
+                  <Button
+                    variant="secondary"
+                    className={cn("w-full", neutralSecondaryBtn)}
+                  >
                     Voir les joueurs ({lobbyPlayers.length}/10)
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-[92vw]">
                   <DialogHeader>
-                    <DialogTitle>
-                      Joueurs ({lobbyPlayers.length}/10)
-                    </DialogTitle>
+                    <DialogTitle>Joueurs ({lobbyPlayers.length}/10)</DialogTitle>
                   </DialogHeader>
                   <div className="grid gap-2">
                     {lobbyPlayers.map((p, i) => (
@@ -244,28 +262,31 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
                           <span className="text-lg">{AVATARS[p.avatar]}</span>
                           <span className="font-medium">{p.name}</span>
                         </div>
-                        {p.isHost && (
-                          <span className="text-xs rounded bg-muted px-2 py-1">
-                            Host
-                          </span>
-                        )}
+                        <div className="flex items-center gap-2">
+                          {p.connected === false && (
+                            <span className="text-xs text-muted-foreground">Hors ligne</span>
+                          )}
+                          {p.isHost && (
+                            <span className="rounded bg-muted px-2 py-1 text-xs">Host</span>
+                          )}
+                        </div>
                       </div>
                     ))}
                     {lobbyPlayers.length === 0 && (
-                      <div className="text-sm text-muted-foreground">
-                        En attente de joueurs…
-                      </div>
+                      <div className="text-sm text-muted-foreground">En attente de joueurs...</div>
                     )}
                   </div>
                 </DialogContent>
               </Dialog>
             </div>
 
-            {/* PROFIL */}
-            <div className="grid gap-4">
+            <section className="grid gap-4 rounded-lg border border-border/60 bg-background/30 p-3 sm:p-4">
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Profil joueur
+              </div>
               <div className="flex items-end gap-2">
                 <div className="flex-1">
-                  <p className="text-sm text-muted-foreground mb-1">Pseudo</p>
+                  <p className="mb-1 text-sm text-muted-foreground">Pseudo</p>
                   <Input
                     value={name}
                     disabled={lockMode || pending !== "idle"}
@@ -278,8 +299,8 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
                     }}
                   />
                   {!validName && name.length > 0 && (
-                    <div className="text-xs text-muted-foreground mt-1">
-                      Min. 2 caractères (max 16)
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      Min. 2 caracteres (max 16)
                     </div>
                   )}
                 </div>
@@ -288,15 +309,14 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
                   variant="secondary"
                   onClick={resetPseudo}
                   disabled={pending !== "idle" || lockMode || name.length === 0}
-                  title="Reset pseudo"
-                  className="shrink-0"
+                  className={cn("shrink-0", neutralSecondaryBtn)}
                 >
                   Reset
                 </Button>
               </div>
 
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Avatar</p>
+                <p className="mb-2 text-sm text-muted-foreground">Avatar</p>
                 <div className="flex flex-wrap gap-2">
                   {AVATARS.map((a, i) => (
                     <button
@@ -304,8 +324,8 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
                       disabled={lockMode || pending !== "idle"}
                       onClick={() => setAvatar(i)}
                       className={cn(
-                        "h-10 w-10 rounded-md border border-border bg-background/60 text-lg",
-                        i === avatar && "ring-2 ring-violet-500"
+                        "h-11 w-11 rounded-md border border-border bg-background/60 text-lg",
+                        i === avatar && "ring-2 ring-cyan-400"
                       )}
                       aria-label={`Avatar ${i}`}
                     >
@@ -314,96 +334,92 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
                   ))}
                 </div>
               </div>
-            </div>
+            </section>
 
-            {/* MODE */}
             {!roomCode && (
-              <div className="grid gap-3 sm:grid-cols-2">
-                {/* HOST */}
-                <Card
-                  onClick={() => setMode("host")}
-                  className={cn(
-                    "cursor-pointer border border-border/60",
-                    mode === "host"
-                      ? "ring-2 ring-violet-500"
-                      : "opacity-90 hover:opacity-100"
-                  )}
-                >
-                  <CardContent className="p-4">
-                    <div className="font-medium mb-3">Héberger</div>
-                    {mode === "host" && (
-                      <Button
-                        onClick={submitHost}
-                        disabled={!canCreate}
-                        className="w-full bg-violet-600 hover:bg-violet-700"
-                      >
-                        Créer la room
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* JOIN */}
-                <Card
-                  onClick={() => setMode("join")}
-                  className={cn(
-                    "cursor-pointer border border-border/60",
-                    mode === "join"
-                      ? "ring-2 ring-violet-500"
-                      : "opacity-90 hover:opacity-100"
-                  )}
-                >
-                  <CardContent className="p-4">
-                    <div className="font-medium mb-3">Rejoindre</div>
-                    {mode === "join" && (
-                      <>
-                        <Input
-                          placeholder="CODE"
-                          value={code}
-                          disabled={pending !== "idle"}
-                          onChange={(e) => setCode(cleanCode(e.target.value))}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" && canJoin) submitJoin();
-                          }}
-                        />
-                        <Button
-                          onClick={submitJoin}
-                          disabled={!canJoin}
-                          className="w-full mt-2 bg-violet-600 hover:bg-violet-700"
-                        >
-                          Rejoindre
-                        </Button>
-                      </>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            )}
-
-            {/* ROOM ACTIVE */}
-            {roomCode && (
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="text-sm text-muted-foreground">
-                    Partage ce code :{" "}
-                    <span className="font-semibold text-violet-400">
-                      {roomCode}
-                    </span>
-                  </div>
+              <section className="grid gap-3 rounded-lg border border-border/60 bg-background/30 p-3 sm:p-4">
+                <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Acces room
+                </div>
+                <div className="grid grid-cols-2 gap-2">
                   <Button
                     variant="secondary"
-                    size="sm"
-                    onClick={copyRoom}
+                    onClick={() => setMode("host")}
                     disabled={pending !== "idle"}
+                    className={cn(
+                      "h-11 border-border/70 bg-background/50 font-semibold text-foreground transition-all hover:bg-background/70",
+                      mode === "host"
+                        ? "border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_0_2px_rgba(34,211,238,0.35)] hover:bg-cyan-400"
+                        : "opacity-95"
+                    )}
                   >
-                    {copied ? "Copié !" : "Copier"}
+                    Heberger
                   </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setMode("join")}
+                    disabled={pending !== "idle"}
+                    className={cn(
+                      "h-11 border-border/70 bg-background/50 font-semibold text-foreground transition-all hover:bg-background/70",
+                      mode === "join"
+                        ? "border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_0_2px_rgba(34,211,238,0.35)] hover:bg-cyan-400"
+                        : "opacity-95"
+                    )}
+                  >
+                    Rejoindre
+                  </Button>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Mode actif:{" "}
+                  <span className="font-semibold text-cyan-300">
+                    {mode === "host" ? "Heberger" : "Rejoindre"}
+                  </span>
+                </div>
+
+                {mode === "join" && (
+                  <div className="grid gap-2">
+                    <Input
+                      placeholder="Code room"
+                      value={code}
+                      disabled={pending !== "idle"}
+                      onChange={(e) => setCode(cleanCode(e.target.value))}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && canJoin) submitJoin();
+                      }}
+                    />
+                    {!validCode && code.length > 0 && (
+                      <div className="text-xs text-muted-foreground">
+                        Min. 4 caracteres (A-Z0-9)
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <Button
+                  onClick={mode === "host" ? submitHost : submitJoin}
+                  disabled={primaryDisabled}
+                  className="h-11 bg-cyan-500 text-slate-950 shadow-sm hover:bg-cyan-400"
+                >
+                  {primaryLabel}
+                </Button>
+              </section>
+            )}
+
+            {roomCode && (
+              <section className="grid gap-3 rounded-lg border border-border/60 bg-background/30 p-3 sm:p-4">
+                <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Actions de room
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {canStart
+                    ? "Tu es host. Lance la partie quand tous les joueurs sont prets."
+                    : "En attente du host pour lancer la partie."}
                 </div>
 
                 <Button
                   onClick={submitStart}
                   disabled={!canLaunch || pending !== "idle"}
-                  className="bg-violet-600 hover:bg-violet-700"
+                  className="h-11 bg-cyan-500 text-slate-950 shadow-sm hover:bg-cyan-400"
                 >
                   {primaryLabel}
                 </Button>
@@ -412,52 +428,55 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
                   onClick={submitLeave}
                   disabled={pending !== "idle"}
                   variant="secondary"
+                  className={neutralSecondaryBtn}
                 >
                   {canStart ? "Annuler la room" : "Quitter la room"}
                 </Button>
 
                 <p className="text-xs text-muted-foreground">
-                  Le host lance la partie • 2–10 joueurs
+                  Le host lance la partie - 2 a 10 joueurs
                 </p>
-              </div>
+              </section>
             )}
           </CardContent>
         </Card>
 
-        {/* RIGHT – JOUEURS (DESKTOP) */}
-        <div className="hidden lg:block">
-          <Card className="h-full bg-card/80 backdrop-blur">
+        <div className="hidden min-h-0 lg:block">
+          <Card className="h-full min-h-0 border-border/70 bg-card/80 shadow-sm backdrop-blur">
             <CardHeader className="border-b border-border/60 py-4">
-              <div className="flex justify-between items-baseline">
+              <div className="flex items-baseline justify-between">
                 <CardTitle className="text-base">Joueurs</CardTitle>
-                <div className="text-sm text-muted-foreground">
-                  {lobbyPlayers.length}/10
-                </div>
+                <div className="text-sm text-muted-foreground">{lobbyPlayers.length}/10</div>
               </div>
             </CardHeader>
 
-            <CardContent className="space-y-2 p-4">
+            <CardContent className="space-y-2 overflow-y-auto p-4">
               {lobbyPlayers.map((p, i) => (
                 <div
                   key={i}
-                  className="flex justify-between items-center border border-border/70 rounded-md px-3 py-2 bg-background/40"
+                  className="flex items-center justify-between rounded-md border border-border/70 bg-background/40 px-3 py-2"
                 >
                   <div className="flex items-center gap-2">
                     <span>{AVATARS[p.avatar]}</span>
                     <span className="text-sm font-medium">{p.name}</span>
                   </div>
-                  {p.isHost && (
-                    <span className="text-xs rounded-full border border-violet-500/30 bg-violet-500/10 px-2 py-0.5 text-violet-300">
-                      HOST
-                    </span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {p.connected === false && (
+                      <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs text-amber-300">
+                        Hors ligne
+                      </span>
+                    )}
+                    {p.isHost && (
+                      <span className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2 py-0.5 text-xs text-cyan-300">
+                        HOST
+                      </span>
+                    )}
+                  </div>
                 </div>
               ))}
 
               {lobbyPlayers.length === 0 && (
-                <div className="text-sm text-muted-foreground">
-                  En attente de joueurs…
-                </div>
+                <div className="text-sm text-muted-foreground">En attente de joueurs...</div>
               )}
             </CardContent>
           </Card>
