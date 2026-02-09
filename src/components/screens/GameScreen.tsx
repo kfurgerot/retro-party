@@ -251,8 +251,10 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                   isRolling={gameState.isRolling}
                   canRoll={canRoll}
                   canMove={canMove}
+                  canOpenQuestionCard={canOpenQuestionCard}
                   onRoll={onRollDice}
                   onMove={handleMove}
+                  onOpenQuestionCard={onOpenQuestionCard}
                   playerIndex={myIndex}
                 />
               </div>
@@ -263,15 +265,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 </div>
                 <div className="text-sm opacity-80 truncate">{infoTitle}</div>
                 <div className="text-xs opacity-60 truncate">{infoHint}</div>
-                {canOpenQuestionCard && (
-                  <Button
-                    size="sm"
-                    className="mt-2 bg-cyan-500 text-slate-950 hover:bg-cyan-400"
-                    onClick={onOpenQuestionCard}
-                  >
-                    Ouvrir la carte
-                  </Button>
-                )}
               </div>
             </div>
           </Card>
@@ -348,8 +341,10 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                   isRolling={gameState.isRolling}
                   canRoll={canRoll}
                   canMove={canMove}
+                  canOpenQuestionCard={canOpenQuestionCard}
                   onRoll={onRollDice}
                   onMove={handleMove}
+                  onOpenQuestionCard={onOpenQuestionCard}
                   playerIndex={myIndex}
                 />
               </div>
@@ -360,15 +355,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 </div>
                 <div className="truncate text-sm opacity-80">{infoTitle}</div>
                 <div className="truncate text-xs opacity-60">{infoHint}</div>
-                {canOpenQuestionCard && (
-                  <Button
-                    size="sm"
-                    className="mt-2 h-8 bg-cyan-500 text-slate-950 hover:bg-cyan-400"
-                    onClick={onOpenQuestionCard}
-                  >
-                    Ouvrir carte
-                  </Button>
-                )}
               </div>
             </div>
 

@@ -8,9 +8,11 @@ interface DiceProps {
 
   canRoll: boolean;
   canMove: boolean;
+  canOpenQuestionCard?: boolean;
 
   onRoll: () => void;
   onMove: (steps: number) => void;
+  onOpenQuestionCard?: () => void;
 
   playerIndex?: number;
 }
@@ -56,23 +58,28 @@ export const Dice: React.FC<DiceProps> = ({
   isRolling,
   canRoll,
   canMove,
+  canOpenQuestionCard = false,
   onRoll,
   onMove,
+  onOpenQuestionCard,
   playerIndex = 0,
 }) => {
   const playerKey = getPlayerBoardKey(playerIndex);
+  const canOpen = canOpenQuestionCard && !!onOpenQuestionCard;
 
-  const disabled = !canRoll && !canMove;
+  const disabled = !canRoll && !canMove && !canOpen;
 
   const handleAction = () => {
     if (canRoll) return onRoll();
     if (canMove && value != null) return onMove(value);
+    if (canOpen) return onOpenQuestionCard();
   };
 
   const label = (() => {
     if (isRolling) return "🎲 ...";
     if (canRoll) return `🎲 Lancer [${playerKey}]`;
     if (canMove && value != null) return `➡️ Avancer (${value})`;
+    if (canOpen) return "🃏 Ouvrir carte";
     return "⏳ Attente";
   })();
 
@@ -93,7 +100,7 @@ export const Dice: React.FC<DiceProps> = ({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [disabled, isRolling, canRoll, canMove, value, playerIndex]);
+  }, [disabled, isRolling, canRoll, canMove, canOpen, value, playerIndex]);
 
   return (
     <div className="flex flex-col items-center gap-4">
