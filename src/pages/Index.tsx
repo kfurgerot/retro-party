@@ -1,8 +1,9 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useGameState } from '@/hooks/useGameState';
 import { useOnlineGameState } from '@/hooks/useOnlineGameState';
 import { LobbyScreen } from '@/components/screens/LobbyScreen';
 import { OnlineLobbyScreen } from '@/components/screens/OnlineLobbyScreen';
+import { PressStartScreen } from '@/components/screens/PressStartScreen';
 import { GameScreen } from '@/components/screens/GameScreen';
 import { ResultsScreen } from '@/components/screens/ResultsScreen';
 
@@ -35,9 +36,14 @@ return true;
 
   // Online state (rooms + websocket)
   const online = useOnlineGameState();
+  const [hasEnteredOnlineLobby, setHasEnteredOnlineLobby] = useState(false);
 
   if (isOnline) {
     if (online.gameState.phase === 'lobby') {
+      if (!hasEnteredOnlineLobby) {
+        return <PressStartScreen onStart={() => setHasEnteredOnlineLobby(true)} />;
+      }
+
       return (
         <div className="h-full w-full">
           <OnlineLobbyScreen
