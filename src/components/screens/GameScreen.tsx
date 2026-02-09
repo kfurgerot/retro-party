@@ -17,6 +17,7 @@ import {
 interface GameScreenProps {
   gameState: GameState;
   myPlayerId?: string | null;
+  onLeave?: () => void;
   onRollDice: () => void;
   onMovePlayer: (steps: number) => void;
   onVoteQuestion: (vote: "up" | "down") => void;
@@ -26,6 +27,7 @@ interface GameScreenProps {
 export const GameScreen: React.FC<GameScreenProps> = ({
   gameState,
   myPlayerId,
+  onLeave,
   onRollDice,
   onMovePlayer,
   onVoteQuestion,
@@ -71,11 +73,11 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 
   const legend = useMemo(
     () => [
-      { k: "blue", label: "BLEU — Comprendre", icon: "🔵" },
-      { k: "green", label: "VERT — Améliorer", icon: "🟢" },
-      { k: "red", label: "ROUGE — Frictions", icon: "🔴" },
-      { k: "violet", label: "VIOLET — Vision", icon: "🟣" },
-      { k: "bonus", label: "BONUS — Kudobox ⭐", icon: "⭐" },
+      { k: "blue", label: "BLEU - Comprendre", icon: "🔵" },
+      { k: "green", label: "VERT - Améliorer", icon: "🟢" },
+      { k: "red", label: "ROUGE - Frictions", icon: "🔴" },
+      { k: "violet", label: "VIOLET - Vision", icon: "🟣" },
+      { k: "bonus", label: "BONUS - Kudobox ⭐", icon: "⭐" },
     ],
     []
   );
@@ -101,18 +103,24 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   };
 
   const infoTitle = gameState.currentQuestion
-    ? "Question en cours…"
+    ? "Question en cours..."
     : isMyTurn
-    ? "À toi de jouer"
-    : "En attente…";
+    ? "A toi de jouer"
+    : "En attente...";
 
   const infoHint = canRoll
     ? "Lance le dé"
     : canMove
     ? "Puis avance"
     : isMyTurn
-    ? "…"
+    ? "..."
     : "Tour adverse";
+
+  const handleLeave = () => {
+    if (!onLeave) return;
+    if (!window.confirm("Quitter la partie en ligne ?")) return;
+    onLeave();
+  };
 
   return (
     <div className="flex h-svh w-full flex-col overflow-hidden p-2 sm:p-3">
@@ -136,6 +144,12 @@ export const GameScreen: React.FC<GameScreenProps> = ({
             {gameState.players.find((p) => p.id === myPlayerId)?.stars ?? 0}
           </div>
         </Card>
+
+        {onLeave && (
+          <Button variant="secondary" onClick={handleLeave}>
+            Quitter
+          </Button>
+        )}
       </div>
 
       {/* Main layout */}
@@ -242,7 +256,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 />
               </div>
 
-              {/* ✅ moved down: align with the dice button */}
               <div className="flex-1 text-right min-w-0 self-end pb-3">
                 <div className="text-xs opacity-80 truncate">{infoTitle}</div>
                 <div className="text-[11px] opacity-60 truncate">{infoHint}</div>
@@ -264,6 +277,12 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               >
                 🗺️
               </Button>
+
+              {onLeave && (
+                <Button className="w-full" size="sm" variant="destructive" onClick={handleLeave}>
+                  Quitter
+                </Button>
+              )}
             </div>
           </div>
         </Card>

@@ -62,6 +62,7 @@ return true;
       <GameScreen
         gameState={online.gameState}
         myPlayerId={online.myPlayerId}
+        onLeave={online.leaveRoom}
         onRollDice={online.rollDice}
         onMovePlayer={online.movePlayer}
         onVoteQuestion={online.voteQuestion}

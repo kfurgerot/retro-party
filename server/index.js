@@ -17,6 +17,7 @@ import {
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3001;
 const ORIGIN = process.env.ORIGIN || true; // in prod set to your https domain
+const RECONNECT_GRACE_MS = 30000;
 
 const app = express();
 app.use(cors({ origin: ORIGIN, credentials: false }));
@@ -33,7 +34,11 @@ function makeCode() {
   return Math.random().toString(36).slice(2, 6).toUpperCase();
 }
 
-const rooms = new Map(); // code -> { state, hostSocketId, clients: Set<socketId>, lobby: [] }
+function makeSessionId() {
+  return `session-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+const rooms = new Map(); // code -> { state, hostSocketId, clients, lobby, disconnectTimers }
 const socketToRoom = new Map(); // socketId -> code
 
 function sanitizeState(state) {
@@ -68,37 +73,265 @@ function broadcastState(code) {
   io.to(code).emit("state_update", sanitizeState(room.state));
 }
 
+function broadcastLobby(code) {
+  const room = rooms.get(code);
+  if (!room) return;
+  io.to(code).emit("lobby_update", { players: room.lobby });
+}
+
+function clearDisconnectTimer(room, sessionId) {
+  if (!sessionId) return;
+  const timer = room.disconnectTimers.get(sessionId);
+  if (!timer) return;
+  clearTimeout(timer);
+  room.disconnectTimers.delete(sessionId);
+}
+
+function remapSocketIdInState(state, oldSocketId, newSocketId) {
+  let nextState = { ...state };
+
+  if (nextState.players?.length) {
+    nextState.players = nextState.players.map((p) =>
+      p.id === oldSocketId ? { ...p, id: newSocketId } : p
+    );
+  }
+
+  if (nextState.currentQuestion) {
+    const q = nextState.currentQuestion;
+    nextState.currentQuestion = {
+      ...q,
+      targetPlayerId: q.targetPlayerId === oldSocketId ? newSocketId : q.targetPlayerId,
+      votes: {
+        up: q.votes.up.map((id) => (id === oldSocketId ? newSocketId : id)),
+        down: q.votes.down.map((id) => (id === oldSocketId ? newSocketId : id)),
+      },
+    };
+  }
+
+  return nextState;
+}
+
+function removePlayerFromState(state, socketId) {
+  if (!state?.players?.length) return state;
+  const leavingIndex = state.players.findIndex((p) => p.id === socketId);
+  if (leavingIndex === -1) return state;
+
+  const players = state.players.filter((p) => p.id !== socketId);
+  if (players.length === 0) {
+    return {
+      ...state,
+      phase: "lobby",
+      players: [],
+      currentPlayerIndex: 0,
+      currentQuestion: null,
+      diceValue: null,
+      isRolling: false,
+    };
+  }
+
+  let currentPlayerIndex = state.currentPlayerIndex;
+  if (leavingIndex < currentPlayerIndex) currentPlayerIndex -= 1;
+  if (currentPlayerIndex >= players.length) currentPlayerIndex = 0;
+
+  let currentQuestion = state.currentQuestion;
+  if (currentQuestion) {
+    if (currentQuestion.targetPlayerId === socketId) {
+      currentQuestion = null;
+    } else {
+      currentQuestion = {
+        ...currentQuestion,
+        votes: {
+          up: currentQuestion.votes.up.filter((id) => id !== socketId),
+          down: currentQuestion.votes.down.filter((id) => id !== socketId),
+        },
+      };
+    }
+  }
+
+  return {
+    ...state,
+    players,
+    currentPlayerIndex,
+    currentQuestion,
+  };
+}
+
+function syncHostFlags(room) {
+  room.lobby = room.lobby.map((p) => ({ ...p, isHost: p.socketId === room.hostSocketId }));
+  if (room.state?.players?.length) {
+    room.state.players = room.state.players.map((p) => ({
+      ...p,
+      isHost: p.id === room.hostSocketId,
+    }));
+  }
+}
+
+function reassignHost(room) {
+  const nextHost = room.lobby.find((p) => p.connected)?.socketId ?? room.lobby[0]?.socketId ?? null;
+  room.hostSocketId = nextHost;
+  syncHostFlags(room);
+}
+
+function removePlayerNow(code, socketId) {
+  const room = rooms.get(code);
+  if (!room) return;
+
+  room.clients.delete(socketId);
+  socketToRoom.delete(socketId);
+
+  const leavingIndex = room.lobby.findIndex((p) => p.socketId === socketId);
+  if (leavingIndex >= 0) {
+    const leaving = room.lobby[leavingIndex];
+    clearDisconnectTimer(room, leaving.sessionId);
+    room.lobby.splice(leavingIndex, 1);
+  }
+
+  room.state = removePlayerFromState(room.state, socketId);
+
+  if (room.hostSocketId === socketId) {
+    reassignHost(room);
+  } else {
+    syncHostFlags(room);
+  }
+
+  if (room.lobby.length === 0 && room.clients.size === 0) {
+    rooms.delete(code);
+    return;
+  }
+
+  broadcastLobby(code);
+  broadcastState(code);
+}
+
+function scheduleDisconnectCleanup(code, socketId, sessionId) {
+  const room = rooms.get(code);
+  if (!room || !sessionId) return;
+
+  clearDisconnectTimer(room, sessionId);
+  const timer = setTimeout(() => {
+    const activeRoom = rooms.get(code);
+    if (!activeRoom) return;
+
+    const stillDisconnected = activeRoom.lobby.find(
+      (p) => p.sessionId === sessionId && p.socketId === socketId && !p.connected
+    );
+    if (!stillDisconnected) return;
+
+    removePlayerNow(code, socketId);
+  }, RECONNECT_GRACE_MS);
+
+  room.disconnectTimers.set(sessionId, timer);
+}
+
+function attachSocketToExistingPlayer(code, room, player, socket) {
+  const oldSocketId = player.socketId;
+  if (oldSocketId && oldSocketId !== socket.id) {
+    room.clients.delete(oldSocketId);
+    socketToRoom.delete(oldSocketId);
+    room.state = remapSocketIdInState(room.state, oldSocketId, socket.id);
+    if (room.hostSocketId === oldSocketId) {
+      room.hostSocketId = socket.id;
+    }
+  }
+
+  player.socketId = socket.id;
+  player.connected = true;
+  delete player.disconnectedAt;
+
+  room.clients.add(socket.id);
+  socketToRoom.set(socket.id, code);
+  socket.join(code);
+  clearDisconnectTimer(room, player.sessionId);
+  syncHostFlags(room);
+}
+
 io.on("connection", (socket) => {
   socket.emit("server_hello", { ok: true });
 
-  socket.on("create_room", ({ name, avatar }) => {
+  socket.on("create_room", ({ name, avatar, sessionId }) => {
     const code = makeCode();
     const state = createInitialState();
+    const resolvedSessionId = typeof sessionId === "string" ? sessionId : makeSessionId();
     rooms.set(code, {
       state,
       hostSocketId: socket.id,
       clients: new Set([socket.id]),
-      lobby: [{ socketId: socket.id, name: name || "Host", avatar: avatar ?? 0, isHost: true }],
+      disconnectTimers: new Map(),
+      lobby: [
+        {
+          socketId: socket.id,
+          sessionId: resolvedSessionId,
+          name: name || "Host",
+          avatar: avatar ?? 0,
+          isHost: true,
+          connected: true,
+        },
+      ],
     });
     socketToRoom.set(socket.id, code);
     socket.join(code);
     socket.emit("room_created", { code });
-    io.to(code).emit("lobby_update", { players: rooms.get(code).lobby });
+    broadcastLobby(code);
     broadcastState(code);
   });
 
-  socket.on("join_room", ({ code, name, avatar }) => {
+  socket.on("join_room", ({ code, name, avatar, sessionId }) => {
     const room = rooms.get(code);
     if (!room) return socket.emit("error_msg", { message: "Room introuvable" });
 
+    const requestedSessionId = typeof sessionId === "string" ? sessionId : null;
+    if (requestedSessionId) {
+      const existing = room.lobby.find((p) => p.sessionId === requestedSessionId);
+      if (existing) {
+        attachSocketToExistingPlayer(code, room, existing, socket);
+        socket.emit("room_reconnected", { code });
+        broadcastLobby(code);
+        broadcastState(code);
+        return;
+      }
+    }
+
+    if (room.state.phase !== "lobby") {
+      return socket.emit("error_msg", { message: "Partie deja demarree" });
+    }
+
+    const resolvedSessionId = requestedSessionId ?? makeSessionId();
     room.clients.add(socket.id);
-    room.lobby.push({ socketId: socket.id, name: name || "Player", avatar: avatar ?? 0, isHost: false });
+    room.lobby.push({
+      socketId: socket.id,
+      sessionId: resolvedSessionId,
+      name: name || "Player",
+      avatar: avatar ?? 0,
+      isHost: false,
+      connected: true,
+    });
     socketToRoom.set(socket.id, code);
     socket.join(code);
 
     socket.emit("room_joined", { code });
-    io.to(code).emit("lobby_update", { players: room.lobby });
+    broadcastLobby(code);
     broadcastState(code);
+  });
+
+  socket.on("reconnect_room", ({ code, sessionId }) => {
+    if (!code || typeof sessionId !== "string") return;
+    const room = rooms.get(code);
+    if (!room) return socket.emit("error_msg", { message: "Room introuvable" });
+
+    const existing = room.lobby.find((p) => p.sessionId === sessionId);
+    if (!existing) return socket.emit("error_msg", { message: "Session introuvable" });
+
+    attachSocketToExistingPlayer(code, room, existing, socket);
+    socket.emit("room_reconnected", { code });
+    broadcastLobby(code);
+    broadcastState(code);
+  });
+
+  socket.on("leave_room", () => {
+    const code = socketToRoom.get(socket.id);
+    if (!code) return;
+    socket.leave(code);
+    removePlayerNow(code, socket.id);
   });
 
   socket.on("start_game", () => {
@@ -109,7 +342,10 @@ io.on("connection", (socket) => {
 
     if (room.hostSocketId !== socket.id) return;
 
-    room.state = initializePlayers(room.state, room.lobby);
+    room.state = initializePlayers(
+      room.state,
+      room.lobby.filter((p) => p.connected !== false)
+    );
     broadcastState(code);
   });
 
@@ -183,7 +419,7 @@ io.on("connection", (socket) => {
     if (room.hostSocketId !== socket.id) return;
 
     room.state = resetGame(room.state);
-    io.to(code).emit("lobby_update", { players: room.lobby });
+    broadcastLobby(code);
     broadcastState(code);
   });
 
@@ -197,24 +433,25 @@ io.on("connection", (socket) => {
     if (!room) return;
 
     room.clients.delete(socket.id);
-    room.lobby = room.lobby.filter((p) => p.socketId !== socket.id);
 
-    if (room.clients.size === 0) {
-      rooms.delete(code);
+    const player = room.lobby.find((p) => p.socketId === socket.id);
+    if (!player) {
+      if (room.lobby.length === 0 && room.clients.size === 0) {
+        rooms.delete(code);
+      }
       return;
     }
 
-    // If host left, assign a new host
-    if (room.hostSocketId === socket.id) {
-      const newHost = [...room.clients][0];
-      room.hostSocketId = newHost;
-      room.lobby = room.lobby.map((p) => ({ ...p, isHost: p.socketId === newHost }));
-      if (room.state?.players?.length) {
-        room.state.players = room.state.players.map((p) => ({ ...p, isHost: p.id === newHost }));
-      }
+    player.connected = false;
+    player.disconnectedAt = Date.now();
+
+    if (!player.sessionId) {
+      removePlayerNow(code, socket.id);
+      return;
     }
 
-    io.to(code).emit("lobby_update", { players: room.lobby });
+    scheduleDisconnectCleanup(code, socket.id, player.sessionId);
+    broadcastLobby(code);
     broadcastState(code);
   });
 });
