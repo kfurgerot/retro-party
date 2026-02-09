@@ -13,6 +13,16 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { RetroScreenBackground } from "./RetroScreenBackground";
 
@@ -42,6 +52,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const [sidebarTab, setSidebarTab] = useState<"players" | "legend">("players");
   const [playersOpen, setPlayersOpen] = useState(false);
   const [legendOpen, setLegendOpen] = useState(false);
+  const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
 
   const autoMoveKeyRef = useRef<string | null>(null);
   const moveAnimationFallbackRef = useRef<number | null>(null);
@@ -171,10 +182,14 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     ? "..."
     : "Tour adverse";
 
-  const handleLeave = () => {
+  const requestLeave = () => {
     if (!onLeave) return;
-    if (!window.confirm("Quitter la partie en ligne ?")) return;
-    onLeave();
+    setLeaveDialogOpen(true);
+  };
+
+  const confirmLeave = () => {
+    setLeaveDialogOpen(false);
+    onLeave?.();
   };
 
   const turnStatusClass = gameState.currentQuestion
@@ -189,6 +204,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     "border-cyan-300/20 bg-slate-900/45 text-cyan-100 hover:bg-slate-900/70";
   const activeCyanBtn =
     "border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_0_2px_rgba(34,211,238,0.35)] hover:bg-cyan-400";
+  const dangerLeaveBtn =
+    "border-rose-300 bg-rose-500 text-white shadow-[0_0_0_2px_rgba(251,113,133,0.35)] hover:bg-rose-400";
 
   const canOpenQuestionCard =
     !!gameState.currentQuestion &&
@@ -232,11 +249,11 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 
           {onLeave && (
             <Button
-              className={`hidden lg:inline-flex ${neutralSecondaryBtn}`}
+              className={cn("hidden lg:inline-flex", dangerLeaveBtn)}
               variant="secondary"
-              onClick={handleLeave}
+              onClick={requestLeave}
             >
-              Quitter
+              Quitter la partie
             </Button>
           )}
         </div>
@@ -395,10 +412,10 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 
                 {onLeave && (
                   <Button
-                    className={cn("h-10 w-full", neutralSecondaryBtn)}
+                    className={cn("h-10 w-full", dangerLeaveBtn)}
                     size="sm"
                     variant="secondary"
-                    onClick={handleLeave}
+                    onClick={requestLeave}
                   >
                     Quitter
                   </Button>
@@ -470,6 +487,25 @@ export const GameScreen: React.FC<GameScreenProps> = ({
           </div>
         </DrawerContent>
       </Drawer>
+
+      <AlertDialog open={leaveDialogOpen} onOpenChange={setLeaveDialogOpen}>
+        <AlertDialogContent className="border-cyan-300/30 bg-slate-950/95 text-cyan-50">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Quitter la partie ?</AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-300">
+              Tu vas revenir au lobby en ligne. Cette action est immediate.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className={cn(neutralSecondaryBtn, "text-cyan-100")}>
+              Annuler
+            </AlertDialogCancel>
+            <AlertDialogAction className={dangerLeaveBtn} onClick={confirmLeave}>
+              Quitter
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {gameState.currentQuestion?.status === "open" && !isMoveAnimating && (
         <QuestionModal
