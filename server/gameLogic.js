@@ -117,8 +117,10 @@ export function movePlayer(state, socketId, steps) {
   const tilesLen = state.tiles.length || 1;
   const players = state.players.map(p => ({ ...p }));
   const cur = players[state.currentPlayerIndex];
+  const lastTileIndex = Math.max(0, tilesLen - 1);
 
-  cur.position = (cur.position + steps) % tilesLen;
+  // Stop on the final tile instead of looping back to the beginning.
+  cur.position = Math.min(cur.position + steps, lastTileIndex);
 
   return {
     ...state,

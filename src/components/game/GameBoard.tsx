@@ -427,6 +427,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
           {tiles.map((tile, idx) => {
             const px = tile.x - bounds.minX;
             const py = tile.y - bounds.minY;
+            const isLastTile = idx === tiles.length - 1;
 
             const playersHere = players
               .map((p) => ({ p }))
@@ -437,11 +438,17 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                 key={tile.id}
                 className={cn(
                   "absolute flex h-14 w-14 items-center justify-center rounded-md border-4 border-black text-base font-bold shadow-[4px_4px_0_0_rgba(0,0,0,0.6)]",
-                  TileColors[tile.type] ?? "bg-slate-800"
+                  TileColors[tile.type] ?? "bg-slate-800",
+                  isLastTile && "border-yellow-300 bg-amber-300 text-black ring-4 ring-yellow-500/60"
                 )}
                 style={{ left: px, top: py }}
                 title={`${idx + 1} — ${tile.type}`}
               >
+                {isLastTile && (
+                  <span className="absolute -top-5 left-1/2 -translate-x-1/2 rounded border-2 border-black bg-yellow-200 px-1 text-[9px] leading-4 tracking-wide text-black">
+                    ARRIVEE
+                  </span>
+                )}
                 <span>{TileIcon[tile.type] ?? "⬜"}</span>
 
                 {/* Players on tile */}
