@@ -333,7 +333,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     zoomAt(next, { x: e.clientX - rect.left, y: e.clientY - rect.top });
   };
 
-  const showControls = isCoarsePointer();
+  const showControls = true;
 
   useLayoutEffect(() => {
     const clearMoveTimeouts = () => {
@@ -469,10 +469,17 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         </div>
       </div>
 
-      {/* Mobile controls: keep them minimal and non-intrusive */}
+      {/* Zoom controls available on both mobile and desktop */}
       {showControls && (
-        <div className="absolute right-2 top-2 flex flex-col gap-2">
+        <div
+          className="absolute right-2 top-2 z-20 flex flex-col gap-2"
+          onPointerDown={(e) => e.stopPropagation()}
+          onPointerMove={(e) => e.stopPropagation()}
+          onPointerUp={(e) => e.stopPropagation()}
+          onWheel={(e) => e.stopPropagation()}
+        >
           <button
+            type="button"
             className="h-10 w-10 rounded-md border-4 border-black bg-white/90 text-lg font-extrabold text-black shadow-[3px_3px_0_0_rgba(0,0,0,0.6)]"
             onClick={() => zoomAt(scale * 1.15, { x: 80, y: 80 })}
             aria-label="Zoom +"
@@ -480,6 +487,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
             +
           </button>
           <button
+            type="button"
             className="h-10 w-10 rounded-md border-4 border-black bg-white/90 text-lg font-extrabold text-black shadow-[3px_3px_0_0_rgba(0,0,0,0.6)]"
             onClick={() => zoomAt(scale / 1.15, { x: 80, y: 80 })}
             aria-label="Zoom -"
@@ -487,6 +495,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
             −
           </button>
           <button
+            type="button"
             className="h-10 w-10 rounded-md border-4 border-black bg-white/90 text-sm font-extrabold text-black shadow-[3px_3px_0_0_rgba(0,0,0,0.6)]"
             onClick={resetView}
             aria-label="Recentrer"
