@@ -3,6 +3,15 @@ import { GameState, Player } from "@/types/game";
 import { generateRandomBoard } from "@/data/boardGenerator";
 import { pickQuestion } from "@/data/questions";
 
+const BUG_SMASH_DURATION_MS = 20000;
+
+const getBugSmashStars = (score: number) => {
+  if (score >= 18) return 3;
+  if (score >= 12) return 2;
+  if (score >= 6) return 1;
+  return 0;
+};
+
 const makePlayers = (names: string[], avatars: number[]): Player[] => {
   const colors = ["#3b82f6", "#ef4444", "#22c55e", "#a855f7", "#f97316", "#14b8a6", "#eab308", "#ec4899", "#0ea5e9", "#84cc16"];
   return names.map((name, idx) => ({
@@ -31,6 +40,7 @@ const createInitialState = (): GameState => {
     diceValue: null,
     isRolling: false,
     currentQuestion: null,
+    currentMinigame: null,
     questionHistory: [],
   };
 };
@@ -48,13 +58,14 @@ export function useGameState() {
       diceValue: null,
       isRolling: false,
       currentQuestion: null,
+      currentMinigame: null,
       questionHistory: [],
     }));
   }, []);
 
   const rollDice = useCallback(() => {
     setGameState((prev) => {
-      if (prev.phase !== "playing" || prev.currentQuestion) return prev;
+      if (prev.phase !== "playing" || prev.currentQuestion || prev.currentMinigame) return prev;
       const dice = 1 + Math.floor(Math.random() * 6);
       return { ...prev, diceValue: dice, isRolling: true };
     });
@@ -65,22 +76,39 @@ export function useGameState() {
 
   const movePlayer = useCallback((steps: number) => {
     setGameState((prev) => {
-      if (prev.phase !== "playing" || prev.currentQuestion) return prev;
+      if (prev.phase !== "playing" || prev.currentQuestion || prev.currentMinigame) return prev;
       if (prev.diceValue == null) return prev;
       const tilesLen = prev.tiles.length || 1;
       const players = prev.players.map((p) => ({ ...p }));
       const cur = players[prev.currentPlayerIndex];
-      cur.position = (cur.position + steps) % tilesLen;
+      const lastTileIndex = Math.max(0, tilesLen - 1);
+      cur.position = Math.min(cur.position + steps, lastTileIndex);
 
       const tile = prev.tiles[cur.position];
       const type = tile.type === "bonus" ? "bonus" : tile.type;
-      const text = pickQuestion(type as any);
 
       if (type === "bonus") cur.stars += 1;
+      if (type === "red") {
+        return {
+          ...prev,
+          players,
+          isRolling: false,
+          currentQuestion: null,
+          currentMinigame: {
+            minigameId: "BUG_SMASH",
+            targetPlayerId: cur.id,
+            startAt: Date.now() + 1500,
+            durationMs: BUG_SMASH_DURATION_MS,
+          },
+        };
+      }
+
+      const text = pickQuestion(type as any);
 
       return {
         ...prev,
         players,
+        currentMinigame: null,
         currentQuestion: {
           id: `${Date.now()}`,
           type: type as any,
@@ -95,6 +123,7 @@ export function useGameState() {
 
   const openQuestionCard = useCallback((playerId: string) => {
     setGameState((prev) => {
+      if (prev.currentMinigame) return prev;
       const q = prev.currentQuestion;
       if (!q || q.status !== "pending") return prev;
       if (q.targetPlayerId !== playerId) return prev;
@@ -104,6 +133,7 @@ export function useGameState() {
 
   const voteQuestion = useCallback((vote: "up" | "down", voterId: string) => {
     setGameState((prev) => {
+      if (prev.currentMinigame) return prev;
       if (!prev.currentQuestion) return prev;
       const q = { ...prev.currentQuestion, votes: { up: [...prev.currentQuestion.votes.up], down: [...prev.currentQuestion.votes.down] } };
       q.votes.up = q.votes.up.filter((id) => id !== voterId);
@@ -115,6 +145,7 @@ export function useGameState() {
 
   const validateQuestion = useCallback(() => {
     setGameState((prev) => {
+      if (prev.currentMinigame) return prev;
       if (prev.phase !== "playing" || prev.currentQuestion) {
         // allow validate if question open
       }
@@ -151,11 +182,56 @@ export function useGameState() {
       return {
         ...prev,
         currentQuestion: null,
+        currentMinigame: null,
         diceValue: null,
         isRolling: false,
         currentPlayerIndex: nextIndex,
         currentRound: nextRound,
         questionHistory,
+      };
+    });
+  }, []);
+
+  const completeBugSmash = useCallback((score: number, playerId: string) => {
+    setGameState((prev) => {
+      const minigame = prev.currentMinigame;
+      if (!minigame || minigame.minigameId !== "BUG_SMASH") return prev;
+      if (minigame.targetPlayerId !== playerId) return prev;
+
+      const players = prev.players.map((p) => ({ ...p }));
+      const player = players.find((p) => p.id === playerId);
+      if (!player) return prev;
+      player.stars += getBugSmashStars(score);
+
+      let nextIndex = prev.currentPlayerIndex + 1;
+      let nextRound = prev.currentRound;
+      if (nextIndex >= players.length) {
+        nextIndex = 0;
+        nextRound += 1;
+      }
+
+      if (nextRound > prev.maxRounds) {
+        return {
+          ...prev,
+          phase: "results",
+          players,
+          currentRound: prev.maxRounds,
+          currentMinigame: null,
+          currentQuestion: null,
+          diceValue: null,
+          isRolling: false,
+        };
+      }
+
+      return {
+        ...prev,
+        players,
+        currentPlayerIndex: nextIndex,
+        currentRound: nextRound,
+        currentMinigame: null,
+        currentQuestion: null,
+        diceValue: null,
+        isRolling: false,
       };
     });
   }, []);
@@ -170,6 +246,7 @@ export function useGameState() {
     openQuestionCard,
     voteQuestion,
     validateQuestion,
+    completeBugSmash,
     resetGame,
   };
 }

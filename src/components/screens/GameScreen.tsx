@@ -26,6 +26,7 @@ import {
 import { cn } from "@/lib/utils";
 import { RetroScreenBackground } from "./RetroScreenBackground";
 import { WhoSaidItMinigame } from "../game/WhoSaidItMinigame";
+import { BugSmashMinigame } from "../game/BugSmashMinigame";
 
 interface GameScreenProps {
   gameState: GameState;
@@ -36,6 +37,7 @@ interface GameScreenProps {
   onOpenQuestionCard: () => void;
   onVoteQuestion: (vote: "up" | "down") => void;
   onValidateQuestion: () => void;
+  onCompleteBugSmash?: (score: number) => void;
   whoSaidItState?: WhoSaidItViewState | null;
   onWhoSaidItSubmit?: (role: WhoSaidItRole) => void;
 }
@@ -49,6 +51,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   onOpenQuestionCard,
   onVoteQuestion,
   onValidateQuestion,
+  onCompleteBugSmash,
   whoSaidItState,
   onWhoSaidItSubmit,
 }) => {
@@ -63,7 +66,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const moveAnimationFallbackRef = useRef<number | null>(null);
 
   const currentPlayer = gameState.players[gameState.currentPlayerIndex];
-  const isMinigameActive = !!whoSaidItState;
+  const bugSmashState = gameState.currentMinigame?.minigameId === "BUG_SMASH" ? gameState.currentMinigame : null;
+  const isMinigameActive = !!whoSaidItState || !!bugSmashState;
   const isMyTurn =
     !!currentPlayer && !!myPlayerId && currentPlayer.id === myPlayerId;
 
@@ -532,6 +536,18 @@ export const GameScreen: React.FC<GameScreenProps> = ({
           players={gameState.players}
           myPlayerId={myPlayerId}
           onSubmit={onWhoSaidItSubmit}
+        />
+      )}
+
+      {bugSmashState && onCompleteBugSmash && (
+        <BugSmashMinigame
+          players={gameState.players}
+          targetPlayerId={bugSmashState.targetPlayerId}
+          myPlayerId={myPlayerId}
+          startAt={bugSmashState.startAt}
+          durationMs={bugSmashState.durationMs}
+          canPlay={!onLeave}
+          onComplete={onCompleteBugSmash}
         />
       )}
     </div>

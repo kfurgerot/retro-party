@@ -9,6 +9,7 @@ import {
   settleDice,
   movePlayer,
   onPlayerLanded,
+  completeBugSmash,
   openQuestion,
   voteQuestion,
   validateQuestion,
@@ -154,6 +155,14 @@ function sanitizeState(state) {
           status: state.currentQuestion.status,
         }
       : null,
+    currentMinigame: state.currentMinigame
+      ? {
+          minigameId: state.currentMinigame.minigameId,
+          targetPlayerId: state.currentMinigame.targetPlayerId,
+          startAt: state.currentMinigame.startAt,
+          durationMs: state.currentMinigame.durationMs,
+        }
+      : null,
   };
 }
 
@@ -198,6 +207,16 @@ function remapSocketIdInState(state, oldSocketId, newSocketId) {
     };
   }
 
+  if (nextState.currentMinigame) {
+    nextState.currentMinigame = {
+      ...nextState.currentMinigame,
+      targetPlayerId:
+        nextState.currentMinigame.targetPlayerId === oldSocketId
+          ? newSocketId
+          : nextState.currentMinigame.targetPlayerId,
+    };
+  }
+
   return nextState;
 }
 
@@ -214,6 +233,7 @@ function removePlayerFromState(state, socketId) {
       players: [],
       currentPlayerIndex: 0,
       currentQuestion: null,
+      currentMinigame: null,
       diceValue: null,
       isRolling: false,
     };
@@ -238,11 +258,17 @@ function removePlayerFromState(state, socketId) {
     }
   }
 
+  let currentMinigame = state.currentMinigame;
+  if (currentMinigame?.targetPlayerId === socketId) {
+    currentMinigame = null;
+  }
+
   return {
     ...state,
     players,
     currentPlayerIndex,
     currentQuestion,
+    currentMinigame,
   };
 }
 
@@ -536,7 +562,29 @@ io.on("connection", (socket) => {
     const shouldStartWhoSaidIt =
       room.state.phase === "playing" &&
       room.state.currentRound > previousRound &&
-      !room.state.currentQuestion;
+      !room.state.currentQuestion &&
+      !room.state.currentMinigame;
+    if (shouldStartWhoSaidIt) {
+      startWhoSaidItMinigame(code);
+    }
+  });
+
+  socket.on("BUG_SMASH_COMPLETE", ({ score }) => {
+    const code = socketToRoom.get(socket.id);
+    if (!code) return;
+    const room = rooms.get(code);
+    if (!room) return;
+    if (isWhoSaidItActive(room)) return;
+
+    const previousRound = room.state.currentRound;
+    room.state = completeBugSmash(room.state, socket.id, score);
+    broadcastState(code);
+
+    const shouldStartWhoSaidIt =
+      room.state.phase === "playing" &&
+      room.state.currentRound > previousRound &&
+      !room.state.currentQuestion &&
+      !room.state.currentMinigame;
     if (shouldStartWhoSaidIt) {
       startWhoSaidItMinigame(code);
     }

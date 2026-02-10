@@ -27,6 +27,7 @@ const EMPTY_STATE: GameState = {
   diceValue: null,
   isRolling: false,
   currentQuestion: null,
+  currentMinigame: null,
   questionHistory: [],
 };
 
@@ -312,6 +313,9 @@ export function useOnlineGameState() {
   const voteQuestion = useCallback((vote: "up" | "down") => socket.emit("vote_question", { vote }), []);
   const validateQuestion = useCallback(() => socket.emit("validate_question"), []);
   const resetGame = useCallback(() => socket.emit("reset_game"), []);
+  const completeBugSmash = useCallback((score: number) => {
+    socket.emit("BUG_SMASH_COMPLETE", { score });
+  }, []);
   const submitWhoSaidIt = useCallback((role: WhoSaidItRole) => {
     setWhoSaidIt((prev) => {
       if (!prev || prev.phase !== "answer") return prev;
@@ -340,6 +344,7 @@ export function useOnlineGameState() {
     openQuestionCard,
     voteQuestion,
     validateQuestion,
+    completeBugSmash,
     resetGame,
     whoSaidIt,
     submitWhoSaidIt,

@@ -40,6 +40,13 @@ export interface QuestionSummary {
   downVotes: number;
 }
 
+export interface BugSmashState {
+  minigameId: "BUG_SMASH";
+  targetPlayerId: string;
+  startAt: number;
+  durationMs: number;
+}
+
 export interface GameState {
   phase: 'lobby' | 'playing' | 'results';
   players: Player[];
@@ -54,6 +61,7 @@ export interface GameState {
   isRolling: boolean;
 
   currentQuestion: QuestionState | null;
+  currentMinigame: BugSmashState | null;
   questionHistory: QuestionSummary[];
 }
 

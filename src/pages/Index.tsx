@@ -102,6 +102,7 @@ const Index: React.FC = () => {
         onOpenQuestionCard={online.openQuestionCard}
         onVoteQuestion={online.voteQuestion}
         onValidateQuestion={online.validateQuestion}
+        onCompleteBugSmash={online.completeBugSmash}
         whoSaidItState={online.whoSaidIt}
         onWhoSaidItSubmit={online.submitWhoSaidIt}
       />
@@ -124,15 +125,22 @@ const Index: React.FC = () => {
   }
 
   // In local mode we don't have per-player sockets; just let player 1 validate.
+  const localCurrentPlayerId =
+    local.gameState.players[local.gameState.currentPlayerIndex]?.id ?? 'local-0';
   return (
     <GameScreen
       gameState={local.gameState}
-      myPlayerId={'local-0'}
+      myPlayerId={localCurrentPlayerId}
       onRollDice={local.rollDice}
       onMovePlayer={local.movePlayer}
-      onOpenQuestionCard={() => local.openQuestionCard('local-0')}
-      onVoteQuestion={(vote) => local.voteQuestion(vote, 'local-0')}
+      onOpenQuestionCard={() => local.openQuestionCard(localCurrentPlayerId)}
+      onVoteQuestion={(vote) => local.voteQuestion(vote, localCurrentPlayerId)}
       onValidateQuestion={local.validateQuestion}
+      onCompleteBugSmash={(score) => {
+        const current = local.gameState.players[local.gameState.currentPlayerIndex];
+        if (!current) return;
+        local.completeBugSmash(score, current.id);
+      }}
     />
   );
 };
