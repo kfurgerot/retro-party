@@ -25,18 +25,9 @@ const Index: React.FC = () => {
     if (override === '1') return true;
     if (override === '0') return false;
 
-    // Dev override (no URL params): set VITE_FORCE_ONLINE=1 in .env.development
-    const force = (import.meta.env.VITE_FORCE_ONLINE as string | undefined) === '1';
-    if (force) return true;
-
-    // Auto mode:
-// - In dev (`vite`), localhost => local (unless forced by VITE_FORCE_ONLINE)
-// - In production build served on localhost (e.g. docker/preview), treat as online
-const host = window.location.hostname;
-if (host === 'localhost' || host === '127.0.0.1') {
-  return import.meta.env.PROD;
-}
-return true;
+    // Default to online on every platform (desktop + mobile).
+    // Use ?online=0 when local mode is explicitly needed.
+    return true;
   }, []);
 
   // Local state (single screen)
