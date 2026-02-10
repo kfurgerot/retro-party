@@ -4,6 +4,7 @@ import { generateRandomBoard } from "@/data/boardGenerator";
 import { pickQuestion } from "@/data/questions";
 
 const BUG_SMASH_DURATION_MS = 20000;
+const BUG_SMASH_ANNOUNCE_MS = 4000;
 
 const getBugSmashStars = (score: number) => {
   if (score >= 18) return 3;
@@ -88,20 +89,6 @@ export function useGameState() {
       const type = tile.type === "bonus" ? "bonus" : tile.type;
 
       if (type === "bonus") cur.stars += 1;
-      if (type === "red") {
-        return {
-          ...prev,
-          players,
-          isRolling: false,
-          currentQuestion: null,
-          currentMinigame: {
-            minigameId: "BUG_SMASH",
-            targetPlayerId: cur.id,
-            startAt: Date.now() + 1500,
-            durationMs: BUG_SMASH_DURATION_MS,
-          },
-        };
-      }
 
       const text = pickQuestion(type as any);
 
@@ -116,6 +103,7 @@ export function useGameState() {
           targetPlayerId: cur.id,
           votes: { up: [], down: [] },
           status: "pending",
+          nextMinigame: type === "red" ? "BUG_SMASH" : null,
         },
       };
     });
@@ -161,6 +149,23 @@ export function useGameState() {
           downVotes: prev.currentQuestion.votes.down.length,
         },
       ];
+
+      if (prev.currentQuestion.nextMinigame === "BUG_SMASH") {
+        return {
+          ...prev,
+          questionHistory,
+          currentQuestion: null,
+          currentMinigame: {
+            minigameId: "BUG_SMASH",
+            targetPlayerId: prev.currentQuestion.targetPlayerId,
+            startAt: Date.now() + BUG_SMASH_ANNOUNCE_MS,
+            durationMs: BUG_SMASH_DURATION_MS,
+            score: 0,
+          },
+          diceValue: null,
+          isRolling: false,
+        };
+      }
 
       // close question and advance turn
       let nextIndex = prev.currentPlayerIndex + 1;
@@ -236,6 +241,22 @@ export function useGameState() {
     });
   }, []);
 
+  const updateBugSmashProgress = useCallback((score: number, playerId: string) => {
+    setGameState((prev) => {
+      const minigame = prev.currentMinigame;
+      if (!minigame || minigame.minigameId !== "BUG_SMASH") return prev;
+      if (minigame.targetPlayerId !== playerId) return prev;
+      const normalized = Math.max(0, Math.floor(score));
+      return {
+        ...prev,
+        currentMinigame: {
+          ...minigame,
+          score: normalized,
+        },
+      };
+    });
+  }, []);
+
   const resetGame = useCallback(() => setGameState(createInitialState()), []);
 
   return {
@@ -247,6 +268,7 @@ export function useGameState() {
     voteQuestion,
     validateQuestion,
     completeBugSmash,
+    updateBugSmashProgress,
     resetGame,
   };
 }

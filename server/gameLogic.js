@@ -6,6 +6,7 @@ import { generateRandomBoard } from "./boardGenerator.js";
 import { pickQuestion, QUESTIONS } from "./questions.js";
 
 const BUG_SMASH_DURATION_MS = 20000;
+const BUG_SMASH_ANNOUNCE_MS = 4000;
 
 function getBugSmashStars(score) {
   if (score >= 18) return 3;
@@ -160,20 +161,6 @@ export function onPlayerLanded(state, socketId) {
   if (type === "bonus") {
     players[state.currentPlayerIndex].stars += 1;
   }
-  if (type === "red") {
-    return {
-      ...state,
-      players,
-      isRolling: false,
-      currentQuestion: null,
-      currentMinigame: {
-        minigameId: "BUG_SMASH",
-        targetPlayerId: curPlayer.id,
-        startAt: Date.now() + 1500,
-        durationMs: BUG_SMASH_DURATION_MS,
-      },
-    };
-  }
 
   const text = pickQuestion(type, rng) || "(Question manquante)";
   const qId = `${Date.now()}-${Math.floor(Math.random() * 100000)}`;
@@ -190,6 +177,7 @@ export function onPlayerLanded(state, socketId) {
       targetPlayerId: curPlayer.id,
       votes: { up: [], down: [] },
       status: "pending",
+      nextMinigame: type === "red" ? "BUG_SMASH" : null,
     },
   };
 }
@@ -240,6 +228,23 @@ export function validateQuestion(state, socketId) {
       downVotes: state.currentQuestion.votes.down.length,
     },
   ];
+
+  if (state.currentQuestion.nextMinigame === "BUG_SMASH") {
+    return {
+      ...state,
+      questionHistory,
+      currentQuestion: null,
+      currentMinigame: {
+        minigameId: "BUG_SMASH",
+        targetPlayerId: state.currentQuestion.targetPlayerId,
+        startAt: Date.now() + BUG_SMASH_ANNOUNCE_MS,
+        durationMs: BUG_SMASH_DURATION_MS,
+        score: 0,
+      },
+      diceValue: null,
+      isRolling: false,
+    };
+  }
 
   // Close question and advance turn
   const cleared = {
@@ -331,4 +336,21 @@ export function completeBugSmash(state, socketId, score) {
     isRolling: false,
   };
   return nextTurn(cleared);
+}
+
+export function updateBugSmashProgress(state, socketId, score) {
+  if (state.phase !== "playing") return state;
+  if (!state.currentMinigame || state.currentMinigame.minigameId !== "BUG_SMASH") return state;
+  if (state.currentMinigame.targetPlayerId !== socketId) return state;
+
+  const numericScore = Number.isFinite(score) ? Number(score) : 0;
+  const clampedScore = Math.max(0, Math.min(999, Math.floor(numericScore)));
+
+  return {
+    ...state,
+    currentMinigame: {
+      ...state.currentMinigame,
+      score: clampedScore,
+    },
+  };
 }

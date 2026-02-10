@@ -111,7 +111,7 @@ export const WhoSaidItMinigame: React.FC<WhoSaidItMinigameProps> = ({
           Manche {Math.max(1, roundIndex)} / {state.totalRounds}
         </div>
         <div className="rounded border border-cyan-300/35 bg-slate-900/70 px-3 py-2 text-sm font-semibold">
-          {phase === "answer" ? `${timerSeconds}s` : phase === "reveal" ? "Revelation" : "Resultat"}
+          {phase === "answer" ? `${timerSeconds}s` : phase === "reveal" ? "Revelation" : phase === "done" ? "Resultat" : "Preparation"}
         </div>
       </div>
 

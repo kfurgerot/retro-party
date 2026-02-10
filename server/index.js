@@ -10,6 +10,7 @@ import {
   movePlayer,
   onPlayerLanded,
   completeBugSmash,
+  updateBugSmashProgress,
   openQuestion,
   voteQuestion,
   validateQuestion,
@@ -34,6 +35,7 @@ const PORT = process.env.PORT ? Number(process.env.PORT) : 3001;
 const ORIGIN = process.env.ORIGIN || true; // in prod set to your https domain
 const RECONNECT_GRACE_MS = 30000;
 const MAX_PLAYERS = 20;
+const WHO_SAID_IT_ANNOUNCE_MS = 4000;
 
 const app = express();
 app.use(cors({ origin: ORIGIN, credentials: false }));
@@ -129,7 +131,7 @@ function startWhoSaidItMinigame(code) {
   room.wsi = createWhoSaidItSession(room.state.players.map((player) => player.id));
 
   io.to(code).emit("MINIGAME_START", getWhoSaidItStartPayload(room.wsi));
-  startWhoSaidItRoundLoop(code);
+  setWhoSaidItTimer(room, () => startWhoSaidItRoundLoop(code), WHO_SAID_IT_ANNOUNCE_MS);
 }
 
 function sanitizeState(state) {
@@ -153,6 +155,10 @@ function sanitizeState(state) {
           targetPlayerId: state.currentQuestion.targetPlayerId,
           votes: state.currentQuestion.votes,
           status: state.currentQuestion.status,
+          startAt: state.currentQuestion.startAt,
+          endsAt: state.currentQuestion.endsAt,
+          durationMs: state.currentQuestion.durationMs,
+          nextMinigame: state.currentQuestion.nextMinigame ?? null,
         }
       : null,
     currentMinigame: state.currentMinigame
@@ -161,6 +167,7 @@ function sanitizeState(state) {
           targetPlayerId: state.currentMinigame.targetPlayerId,
           startAt: state.currentMinigame.startAt,
           durationMs: state.currentMinigame.durationMs,
+          score: state.currentMinigame.score,
         }
       : null,
   };
@@ -176,6 +183,17 @@ function broadcastLobby(code) {
   const room = rooms.get(code);
   if (!room) return;
   io.to(code).emit("lobby_update", { players: room.lobby });
+}
+
+function maybeStartWhoSaidItAfterTurnAdvance(code, previousRound) {
+  const room = rooms.get(code);
+  if (!room) return;
+  const shouldStartWhoSaidIt =
+    room.state.phase === "playing" &&
+    room.state.currentRound > previousRound &&
+    !room.state.currentQuestion &&
+    !room.state.currentMinigame;
+  if (shouldStartWhoSaidIt) startWhoSaidItMinigame(code);
 }
 
 function clearDisconnectTimer(room, sessionId) {
@@ -558,15 +576,7 @@ io.on("connection", (socket) => {
     const previousRound = room.state.currentRound;
     room.state = validateQuestion(room.state, socket.id);
     broadcastState(code);
-
-    const shouldStartWhoSaidIt =
-      room.state.phase === "playing" &&
-      room.state.currentRound > previousRound &&
-      !room.state.currentQuestion &&
-      !room.state.currentMinigame;
-    if (shouldStartWhoSaidIt) {
-      startWhoSaidItMinigame(code);
-    }
+    maybeStartWhoSaidItAfterTurnAdvance(code, previousRound);
   });
 
   socket.on("BUG_SMASH_COMPLETE", ({ score }) => {
@@ -579,15 +589,18 @@ io.on("connection", (socket) => {
     const previousRound = room.state.currentRound;
     room.state = completeBugSmash(room.state, socket.id, score);
     broadcastState(code);
+    maybeStartWhoSaidItAfterTurnAdvance(code, previousRound);
+  });
 
-    const shouldStartWhoSaidIt =
-      room.state.phase === "playing" &&
-      room.state.currentRound > previousRound &&
-      !room.state.currentQuestion &&
-      !room.state.currentMinigame;
-    if (shouldStartWhoSaidIt) {
-      startWhoSaidItMinigame(code);
-    }
+  socket.on("BUG_SMASH_PROGRESS", ({ score }) => {
+    const code = socketToRoom.get(socket.id);
+    if (!code) return;
+    const room = rooms.get(code);
+    if (!room) return;
+    if (isWhoSaidItActive(room)) return;
+
+    room.state = updateBugSmashProgress(room.state, socket.id, score);
+    broadcastState(code);
   });
 
   socket.on("WSI_SUBMIT", ({ roundIndex, role }) => {

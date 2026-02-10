@@ -316,6 +316,9 @@ export function useOnlineGameState() {
   const completeBugSmash = useCallback((score: number) => {
     socket.emit("BUG_SMASH_COMPLETE", { score });
   }, []);
+  const updateBugSmashProgress = useCallback((score: number) => {
+    socket.emit("BUG_SMASH_PROGRESS", { score });
+  }, []);
   const submitWhoSaidIt = useCallback((role: WhoSaidItRole) => {
     setWhoSaidIt((prev) => {
       if (!prev || prev.phase !== "answer") return prev;
@@ -345,6 +348,7 @@ export function useOnlineGameState() {
     voteQuestion,
     validateQuestion,
     completeBugSmash,
+    updateBugSmashProgress,
     resetGame,
     whoSaidIt,
     submitWhoSaidIt,

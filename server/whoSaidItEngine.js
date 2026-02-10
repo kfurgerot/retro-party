@@ -3,7 +3,7 @@ import { WHO_SAID_IT_ROLES, whoSaidItBank } from "./whoSaidItBank.js";
 export const WHO_SAID_IT_MINIGAME_ID = "WHO_SAID_IT";
 export const WHO_SAID_IT_DEFAULTS = {
   rounds: 3,
-  answerDurationMs: 20000,
+  answerDurationMs: 10000,
   revealDurationMs: 3000,
   betweenRoundsMs: 1000,
 };

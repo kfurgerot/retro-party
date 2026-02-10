@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 import { RetroScreenBackground } from "./RetroScreenBackground";
 import { WhoSaidItMinigame } from "../game/WhoSaidItMinigame";
 import { BugSmashMinigame } from "../game/BugSmashMinigame";
+import { LaunchAnnouncement } from "../game/LaunchAnnouncement";
 
 interface GameScreenProps {
   gameState: GameState;
@@ -38,6 +39,7 @@ interface GameScreenProps {
   onVoteQuestion: (vote: "up" | "down") => void;
   onValidateQuestion: () => void;
   onCompleteBugSmash?: (score: number) => void;
+  onBugSmashProgress?: (score: number) => void;
   whoSaidItState?: WhoSaidItViewState | null;
   onWhoSaidItSubmit?: (role: WhoSaidItRole) => void;
 }
@@ -52,6 +54,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   onVoteQuestion,
   onValidateQuestion,
   onCompleteBugSmash,
+  onBugSmashProgress,
   whoSaidItState,
   onWhoSaidItSubmit,
 }) => {
@@ -61,15 +64,23 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const [playersOpen, setPlayersOpen] = useState(false);
   const [legendOpen, setLegendOpen] = useState(false);
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
+  const [whoSaidItIntroAt, setWhoSaidItIntroAt] = useState<number | null>(null);
+  const [turnIntroEndsAt, setTurnIntroEndsAt] = useState<number | null>(null);
+  const [bugIntroEndsAt, setBugIntroEndsAt] = useState<number | null>(null);
 
   const autoMoveKeyRef = useRef<string | null>(null);
   const moveAnimationFallbackRef = useRef<number | null>(null);
+  const lastWhoSaidItIdleRef = useRef<string | null>(null);
+  const turnIntroTimerRef = useRef<number | null>(null);
+  const bugIntroTimerRef = useRef<number | null>(null);
 
   const currentPlayer = gameState.players[gameState.currentPlayerIndex];
   const bugSmashState = gameState.currentMinigame?.minigameId === "BUG_SMASH" ? gameState.currentMinigame : null;
   const isMinigameActive = !!whoSaidItState || !!bugSmashState;
   const isMyTurn =
     !!currentPlayer && !!myPlayerId && currentPlayer.id === myPlayerId;
+  const isTurnIntroActive = turnIntroEndsAt != null;
+  const isBugIntroActive = bugIntroEndsAt != null;
 
   const myIndex = useMemo(() => {
     const idx = gameState.players.findIndex(
@@ -91,6 +102,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const canRoll =
     gameState.phase === "playing" &&
     !isMinigameActive &&
+    !isTurnIntroActive &&
     isMyTurn &&
     !gameState.currentQuestion &&
     gameState.diceValue == null &&
@@ -160,6 +172,87 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       }
     };
   }, [gameState.currentQuestion, isMoveAnimating]);
+
+  useEffect(() => {
+    if (!whoSaidItState || whoSaidItState.phase !== "idle") {
+      lastWhoSaidItIdleRef.current = null;
+      setWhoSaidItIntroAt(null);
+      return;
+    }
+    const key = `${whoSaidItState.minigameId}-${gameState.currentRound}`;
+    if (lastWhoSaidItIdleRef.current === key && whoSaidItIntroAt) return;
+    lastWhoSaidItIdleRef.current = key;
+    setWhoSaidItIntroAt(Date.now() + 4000);
+  }, [gameState.currentRound, whoSaidItIntroAt, whoSaidItState]);
+
+  useEffect(() => {
+    if (turnIntroTimerRef.current) {
+      window.clearTimeout(turnIntroTimerRef.current);
+      turnIntroTimerRef.current = null;
+    }
+    const shouldShowTurnIntro =
+      gameState.phase === "playing" &&
+      isMyTurn &&
+      !gameState.currentQuestion &&
+      !bugSmashState &&
+      !whoSaidItState &&
+      gameState.diceValue == null &&
+      !gameState.isRolling;
+    if (!shouldShowTurnIntro) {
+      setTurnIntroEndsAt(null);
+      return;
+    }
+
+    const endAt = Date.now() + 4000;
+    setTurnIntroEndsAt(endAt);
+    turnIntroTimerRef.current = window.setTimeout(() => {
+      setTurnIntroEndsAt(null);
+      turnIntroTimerRef.current = null;
+    }, 4000);
+
+    return () => {
+      if (turnIntroTimerRef.current) {
+        window.clearTimeout(turnIntroTimerRef.current);
+        turnIntroTimerRef.current = null;
+      }
+    };
+  }, [
+    gameState.phase,
+    gameState.currentPlayerIndex,
+    gameState.currentRound,
+    gameState.currentQuestion,
+    gameState.diceValue,
+    gameState.isRolling,
+    isMyTurn,
+    bugSmashState,
+    whoSaidItState,
+  ]);
+
+  useEffect(() => {
+    if (bugIntroTimerRef.current) {
+      window.clearTimeout(bugIntroTimerRef.current);
+      bugIntroTimerRef.current = null;
+    }
+    if (!bugSmashState) {
+      setBugIntroEndsAt(null);
+      return;
+    }
+
+    const endAt = bugSmashState.startAt ?? Date.now() + 4000;
+    const delay = Math.max(0, endAt - Date.now());
+    setBugIntroEndsAt(endAt);
+    bugIntroTimerRef.current = window.setTimeout(() => {
+      setBugIntroEndsAt(null);
+      bugIntroTimerRef.current = null;
+    }, delay);
+
+    return () => {
+      if (bugIntroTimerRef.current) {
+        window.clearTimeout(bugIntroTimerRef.current);
+        bugIntroTimerRef.current = null;
+      }
+    };
+  }, [bugSmashState?.targetPlayerId, bugSmashState?.startAt]);
 
   const isMobile = () => {
     if (typeof window === "undefined") return true;
@@ -530,7 +623,31 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         />
       )}
 
-      {whoSaidItState && onWhoSaidItSubmit && (
+      {isTurnIntroActive && !gameState.currentQuestion && !isMinigameActive && (
+        <LaunchAnnouncement
+          title="A toi de jouer"
+          subtitle="Prepares-toi a lancer le de."
+          startAt={turnIntroEndsAt ?? undefined}
+        />
+      )}
+
+      {isBugIntroActive && bugSmashState && (
+        <LaunchAnnouncement
+          title="Bug Smash"
+          subtitle="Mini-jeu rouge imminent."
+          startAt={bugIntroEndsAt ?? bugSmashState.startAt}
+        />
+      )}
+
+      {whoSaidItState?.phase === "idle" && (
+        <LaunchAnnouncement
+          title="Qui a dit ca ?"
+          subtitle="Le mini-jeu de roles Agile va commencer."
+          startAt={whoSaidItIntroAt ?? undefined}
+        />
+      )}
+
+      {whoSaidItState && whoSaidItState.phase !== "idle" && onWhoSaidItSubmit && (
         <WhoSaidItMinigame
           state={whoSaidItState}
           players={gameState.players}
@@ -539,14 +656,16 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         />
       )}
 
-      {bugSmashState && onCompleteBugSmash && (
+      {bugSmashState && onCompleteBugSmash && !isBugIntroActive && (
         <BugSmashMinigame
           players={gameState.players}
           targetPlayerId={bugSmashState.targetPlayerId}
           myPlayerId={myPlayerId}
           startAt={bugSmashState.startAt}
           durationMs={bugSmashState.durationMs}
+          liveScore={bugSmashState.score}
           canPlay={!onLeave}
+          onProgress={onBugSmashProgress}
           onComplete={onCompleteBugSmash}
         />
       )}

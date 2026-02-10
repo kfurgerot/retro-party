@@ -103,6 +103,7 @@ const Index: React.FC = () => {
         onVoteQuestion={online.voteQuestion}
         onValidateQuestion={online.validateQuestion}
         onCompleteBugSmash={online.completeBugSmash}
+        onBugSmashProgress={online.updateBugSmashProgress}
         whoSaidItState={online.whoSaidIt}
         onWhoSaidItSubmit={online.submitWhoSaidIt}
       />
@@ -140,6 +141,11 @@ const Index: React.FC = () => {
         const current = local.gameState.players[local.gameState.currentPlayerIndex];
         if (!current) return;
         local.completeBugSmash(score, current.id);
+      }}
+      onBugSmashProgress={(score) => {
+        const current = local.gameState.players[local.gameState.currentPlayerIndex];
+        if (!current) return;
+        local.updateBugSmashProgress(score, current.id);
       }}
     />
   );

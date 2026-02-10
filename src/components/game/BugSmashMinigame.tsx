@@ -11,6 +11,8 @@ interface BugSmashMinigameProps {
   startAt?: number;
   durationMs?: number;
   canPlay?: boolean;
+  liveScore?: number;
+  onProgress?: (score: number) => void;
   onComplete: (score: number) => void;
 }
 
@@ -32,6 +34,8 @@ export const BugSmashMinigame: React.FC<BugSmashMinigameProps> = ({
   startAt,
   durationMs = DEFAULT_DURATION_MS,
   canPlay = false,
+  liveScore = 0,
+  onProgress,
   onComplete,
 }) => {
   const [phase, setPhase] = useState<"intro" | "playing" | "done">("intro");
@@ -69,7 +73,7 @@ export const BugSmashMinigame: React.FC<BugSmashMinigameProps> = ({
 
   useEffect(() => {
     if (phase !== "playing") return;
-    const endAt = Date.now() + durationMs;
+    const endAt = (startAt ?? Date.now()) + durationMs;
 
     const timer = window.setInterval(() => {
       const remaining = Math.max(0, endAt - Date.now());
@@ -80,7 +84,12 @@ export const BugSmashMinigame: React.FC<BugSmashMinigameProps> = ({
     }, 100);
 
     return () => window.clearInterval(timer);
-  }, [durationMs, phase]);
+  }, [durationMs, phase, startAt]);
+
+  useEffect(() => {
+    if (!canControl || !onProgress) return;
+    onProgress(score);
+  }, [canControl, onProgress, score]);
 
   useEffect(() => {
     if (phase !== "playing" || !canControl) return;
@@ -114,24 +123,6 @@ export const BugSmashMinigame: React.FC<BugSmashMinigameProps> = ({
   }, [canControl, phase]);
 
   useEffect(() => {
-    if (phase !== "playing" || !canControl) return;
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== " " && event.key !== "Enter") return;
-      event.preventDefault();
-      setBugs((prev) => {
-        if (!prev.length) return prev;
-        const [first, ...rest] = prev;
-        if (first) setScore((value) => value + 1);
-        return rest;
-      });
-    };
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [canControl, phase]);
-
-  useEffect(() => {
     if (phase !== "done" || completedRef.current || !canControl) return;
     completedRef.current = true;
     onComplete(score);
@@ -145,6 +136,7 @@ export const BugSmashMinigame: React.FC<BugSmashMinigameProps> = ({
 
   const countdown = startAt ? Math.max(0, Math.ceil((startAt - Date.now()) / 1000)) : null;
   const timeLabel = Math.max(0, Math.ceil(timeLeftMs / 1000));
+  const displayedScore = canControl ? score : liveScore;
 
   return (
     <div className="absolute inset-0 z-50 flex h-full w-full flex-col overflow-hidden bg-slate-950/95 p-3 sm:p-6">
@@ -163,7 +155,7 @@ export const BugSmashMinigame: React.FC<BugSmashMinigameProps> = ({
             <span>
               Joueur: {targetPlayer ? `${AVATARS[targetPlayer.avatar] ?? "?"} ${targetPlayer.name}` : "?"}
             </span>
-            <span>Score: {score}</span>
+            <span>Score: {displayedScore}</span>
           </div>
 
           <div
@@ -202,7 +194,7 @@ export const BugSmashMinigame: React.FC<BugSmashMinigameProps> = ({
             Ecrase un maximum de bugs avant la fin du chrono.
           </p>
           <div className="mt-3 text-xs text-cyan-100/80">
-            {canControl ? "Controles: clic ou Espace/Entree." : "Mode spectateur en cours."}
+            {canControl ? "Controles: clic souris uniquement." : "Mode spectateur en cours."}
           </div>
 
           <div className="mt-4 space-y-1 text-xs text-slate-200">

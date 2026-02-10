@@ -30,6 +30,10 @@ export interface QuestionState {
   targetPlayerId: string;
   votes: { up: string[]; down: string[] };
   status: 'pending' | 'open';
+  startAt?: number;
+  endsAt?: number;
+  durationMs?: number;
+  nextMinigame?: "BUG_SMASH" | null;
 }
 
 export interface QuestionSummary {
@@ -45,6 +49,7 @@ export interface BugSmashState {
   targetPlayerId: string;
   startAt: number;
   durationMs: number;
+  score: number;
 }
 
 export interface GameState {
