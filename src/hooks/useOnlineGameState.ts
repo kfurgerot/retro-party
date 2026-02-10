@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { GameState } from "@/types/game";
+import {
+  GameState,
+  WhoSaidItRole,
+  WhoSaidItRoundRevealPayload,
+  WhoSaidItRoundStartPayload,
+  WhoSaidItSummaryPayload,
+  WhoSaidItViewState,
+} from "@/types/game";
 import { socket } from "@/net/socket";
 
 type LobbyPlayer = { socketId?: string; name: string; avatar: number; isHost: boolean };
@@ -71,6 +78,7 @@ export function useOnlineGameState() {
   const [gameState, setGameState] = useState<GameState>(EMPTY_STATE);
   const [myPlayerId, setMyPlayerId] = useState<string | null>(null);
   const [connected, setConnected] = useState<boolean>(socket.connected);
+  const [whoSaidIt, setWhoSaidIt] = useState<WhoSaidItViewState | null>(null);
 
   const sessionRef = useRef<OnlineSession | null>(initialSession);
   const pendingProfileRef = useRef<{ name: string; avatar: number; sessionId: string } | null>(
@@ -78,6 +86,7 @@ export function useOnlineGameState() {
       ? { name: initialSession.name, avatar: initialSession.avatar, sessionId: initialSession.sessionId }
       : null
   );
+  const minigameCleanupRef = useRef<number | null>(null);
 
   useEffect(() => {
     const onState = (state: GameState) => setGameState(state);
@@ -108,12 +117,17 @@ export function useOnlineGameState() {
     };
     const onDisconnect = () => setConnected(false);
     const onRoomClosed = () => {
+      if (minigameCleanupRef.current) {
+        window.clearTimeout(minigameCleanupRef.current);
+        minigameCleanupRef.current = null;
+      }
       sessionRef.current = null;
       pendingProfileRef.current = null;
       storeSession(null);
       setCode(null);
       setLobby([]);
       setGameState(EMPTY_STATE);
+      setWhoSaidIt(null);
     };
     const onError = ({ message }: { message?: string }) => {
       const normalized = message?.toLowerCase() ?? "";
@@ -121,12 +135,106 @@ export function useOnlineGameState() {
         normalized.includes("room introuvable") ||
         normalized.includes("session introuvable");
       if (!shouldResetSession) return;
+      if (minigameCleanupRef.current) {
+        window.clearTimeout(minigameCleanupRef.current);
+        minigameCleanupRef.current = null;
+      }
       sessionRef.current = null;
       pendingProfileRef.current = null;
       storeSession(null);
       setCode(null);
       setLobby([]);
       setGameState(EMPTY_STATE);
+      setWhoSaidIt(null);
+    };
+    const onWhoSaidItStart = ({
+      minigameId,
+      rounds,
+    }: {
+      minigameId: "WHO_SAID_IT";
+      rounds: number;
+    }) => {
+      if (minigameCleanupRef.current) {
+        window.clearTimeout(minigameCleanupRef.current);
+        minigameCleanupRef.current = null;
+      }
+      setWhoSaidIt({
+        minigameId,
+        totalRounds: rounds,
+        phase: "idle",
+        roundIndex: 1,
+        quoteId: null,
+        quoteText: "",
+        endsAtServerTs: null,
+        selectedRole: null,
+        answerRole: null,
+        distribution: {
+          MANAGER: 0,
+          PO: 0,
+          DEV: 0,
+          SCRUM_MASTER: 0,
+          QA_SUPPORT: 0,
+        },
+        winners: [],
+        pointsDelta: {},
+        summary: null,
+      });
+    };
+    const onWhoSaidItRoundStart = (payload: WhoSaidItRoundStartPayload) => {
+      setWhoSaidIt((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          phase: "answer",
+          roundIndex: payload.roundIndex,
+          quoteId: payload.quoteId,
+          quoteText: payload.text,
+          endsAtServerTs: payload.endsAtServerTs,
+          selectedRole: null,
+          answerRole: null,
+          winners: [],
+          pointsDelta: {},
+          distribution: {
+            MANAGER: 0,
+            PO: 0,
+            DEV: 0,
+            SCRUM_MASTER: 0,
+            QA_SUPPORT: 0,
+          },
+        };
+      });
+    };
+    const onWhoSaidItRoundReveal = (payload: WhoSaidItRoundRevealPayload) => {
+      setWhoSaidIt((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          phase: "reveal",
+          roundIndex: payload.roundIndex,
+          answerRole: payload.answerRole,
+          distribution: payload.distribution,
+          winners: payload.winners,
+          pointsDelta: payload.pointsDelta,
+        };
+      });
+    };
+    const onWhoSaidItEnd = ({ summary }: { summary: WhoSaidItSummaryPayload }) => {
+      setWhoSaidIt((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          phase: "done",
+          summary,
+        };
+      });
+
+      if (minigameCleanupRef.current) {
+        window.clearTimeout(minigameCleanupRef.current);
+      }
+      minigameCleanupRef.current = window.setTimeout(() => {
+        setWhoSaidIt(null);
+        minigameCleanupRef.current = null;
+      }, 2500);
     };
 
     socket.on("state_update", onState);
@@ -138,6 +246,10 @@ export function useOnlineGameState() {
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
     socket.on("error_msg", onError);
+    socket.on("MINIGAME_START", onWhoSaidItStart);
+    socket.on("WSI_ROUND_START", onWhoSaidItRoundStart);
+    socket.on("WSI_ROUND_REVEAL", onWhoSaidItRoundReveal);
+    socket.on("MINIGAME_END", onWhoSaidItEnd);
 
     if (socket.connected) onConnect();
 
@@ -151,6 +263,14 @@ export function useOnlineGameState() {
       socket.off("connect", onConnect);
       socket.off("disconnect", onDisconnect);
       socket.off("error_msg", onError);
+      socket.off("MINIGAME_START", onWhoSaidItStart);
+      socket.off("WSI_ROUND_START", onWhoSaidItRoundStart);
+      socket.off("WSI_ROUND_REVEAL", onWhoSaidItRoundReveal);
+      socket.off("MINIGAME_END", onWhoSaidItEnd);
+      if (minigameCleanupRef.current) {
+        window.clearTimeout(minigameCleanupRef.current);
+        minigameCleanupRef.current = null;
+      }
     };
   }, []);
 
@@ -172,12 +292,17 @@ export function useOnlineGameState() {
 
   const leaveRoom = useCallback(() => {
     if (socket.connected) socket.emit("leave_room");
+    if (minigameCleanupRef.current) {
+      window.clearTimeout(minigameCleanupRef.current);
+      minigameCleanupRef.current = null;
+    }
     sessionRef.current = null;
     pendingProfileRef.current = null;
     storeSession(null);
     setCode(null);
     setLobby([]);
     setGameState(EMPTY_STATE);
+    setWhoSaidIt(null);
   }, []);
 
   const startGame = useCallback(() => socket.emit("start_game"), []);
@@ -187,6 +312,13 @@ export function useOnlineGameState() {
   const voteQuestion = useCallback((vote: "up" | "down") => socket.emit("vote_question", { vote }), []);
   const validateQuestion = useCallback(() => socket.emit("validate_question"), []);
   const resetGame = useCallback(() => socket.emit("reset_game"), []);
+  const submitWhoSaidIt = useCallback((role: WhoSaidItRole) => {
+    setWhoSaidIt((prev) => {
+      if (!prev || prev.phase !== "answer") return prev;
+      socket.emit("WSI_SUBMIT", { roundIndex: prev.roundIndex, role });
+      return { ...prev, selectedRole: role };
+    });
+  }, []);
 
   const isHost = useMemo(() => {
     if (!myPlayerId) return false;
@@ -209,6 +341,8 @@ export function useOnlineGameState() {
     voteQuestion,
     validateQuestion,
     resetGame,
+    whoSaidIt,
+    submitWhoSaidIt,
     isHost,
   };
 }

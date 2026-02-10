@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { GameState } from "@/types/game";
+import { GameState, WhoSaidItRole, WhoSaidItViewState } from "@/types/game";
 import { GameBoard } from "../game/GameBoard";
 import { PlayerCard } from "../game/PlayerCard";
 import { Dice } from "../game/Dice";
@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { RetroScreenBackground } from "./RetroScreenBackground";
+import { WhoSaidItMinigame } from "../game/WhoSaidItMinigame";
 
 interface GameScreenProps {
   gameState: GameState;
@@ -35,6 +36,8 @@ interface GameScreenProps {
   onOpenQuestionCard: () => void;
   onVoteQuestion: (vote: "up" | "down") => void;
   onValidateQuestion: () => void;
+  whoSaidItState?: WhoSaidItViewState | null;
+  onWhoSaidItSubmit?: (role: WhoSaidItRole) => void;
 }
 
 export const GameScreen: React.FC<GameScreenProps> = ({
@@ -46,6 +49,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   onOpenQuestionCard,
   onVoteQuestion,
   onValidateQuestion,
+  whoSaidItState,
+  onWhoSaidItSubmit,
 }) => {
   const [hasMovedThisTurn, setHasMovedThisTurn] = useState(false);
   const [isMoveAnimating, setIsMoveAnimating] = useState(false);
@@ -58,6 +63,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const moveAnimationFallbackRef = useRef<number | null>(null);
 
   const currentPlayer = gameState.players[gameState.currentPlayerIndex];
+  const isMinigameActive = !!whoSaidItState;
   const isMyTurn =
     !!currentPlayer && !!myPlayerId && currentPlayer.id === myPlayerId;
 
@@ -80,6 +86,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 
   const canRoll =
     gameState.phase === "playing" &&
+    !isMinigameActive &&
     isMyTurn &&
     !gameState.currentQuestion &&
     gameState.diceValue == null &&
@@ -87,6 +94,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 
   const canMove =
     gameState.phase === "playing" &&
+    !isMinigameActive &&
     isMyTurn &&
     !gameState.currentQuestion &&
     !gameState.isRolling &&
@@ -210,6 +218,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const canOpenQuestionCard =
     !!gameState.currentQuestion &&
     gameState.currentQuestion.status === "pending" &&
+    !isMinigameActive &&
     !isMoveAnimating &&
     !!currentPlayer &&
     !!myPlayerId &&
@@ -507,13 +516,22 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         </AlertDialogContent>
       </AlertDialog>
 
-      {gameState.currentQuestion?.status === "open" && !isMoveAnimating && (
+      {gameState.currentQuestion?.status === "open" && !isMoveAnimating && !isMinigameActive && (
         <QuestionModal
           question={gameState.currentQuestion}
           players={gameState.players}
           myPlayerId={myPlayerId}
           onVote={onVoteQuestion}
           onValidate={onValidateQuestion}
+        />
+      )}
+
+      {whoSaidItState && onWhoSaidItSubmit && (
+        <WhoSaidItMinigame
+          state={whoSaidItState}
+          players={gameState.players}
+          myPlayerId={myPlayerId}
+          onSubmit={onWhoSaidItSubmit}
         />
       )}
     </div>

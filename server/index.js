@@ -15,6 +15,19 @@ import {
   nextTurn,
   resetGame,
 } from "./gameLogic.js";
+import {
+  WHO_SAID_IT_MINIGAME_ID,
+  applyWhoSaidItPointsToState,
+  advanceWhoSaidItSession,
+  createWhoSaidItSession,
+  getWhoSaidItEndPayload,
+  getWhoSaidItStartPayload,
+  remapWhoSaidItPlayerId,
+  removeWhoSaidItPlayer,
+  revealWhoSaidItRound,
+  startWhoSaidItRound,
+  submitWhoSaidItAnswer,
+} from "./whoSaidItEngine.js";
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3001;
 const ORIGIN = process.env.ORIGIN || true; // in prod set to your https domain
@@ -41,6 +54,81 @@ function makeSessionId() {
 
 const rooms = new Map(); // code -> { state, hostSocketId, clients, lobby, disconnectTimers }
 const socketToRoom = new Map(); // socketId -> code
+
+function setWhoSaidItTimer(room, callback, delayMs) {
+  const timeout = setTimeout(() => {
+    room.wsiTimers.delete(timeout);
+    callback();
+  }, delayMs);
+  room.wsiTimers.add(timeout);
+  return timeout;
+}
+
+function clearWhoSaidItTimers(room) {
+  if (!room?.wsiTimers) return;
+  room.wsiTimers.forEach((timeout) => clearTimeout(timeout));
+  room.wsiTimers.clear();
+}
+
+function isWhoSaidItActive(room) {
+  return !!room?.wsi && room.wsi.minigameId === WHO_SAID_IT_MINIGAME_ID;
+}
+
+function startWhoSaidItRoundLoop(code) {
+  const room = rooms.get(code);
+  if (!room || !isWhoSaidItActive(room)) return;
+
+  const startPayload = startWhoSaidItRound(room.wsi);
+  io.to(code).emit("WSI_ROUND_START", startPayload);
+
+  setWhoSaidItTimer(
+    room,
+    () => {
+      const activeRoom = rooms.get(code);
+      if (!activeRoom || !isWhoSaidItActive(activeRoom)) return;
+
+      const revealPayload = revealWhoSaidItRound(activeRoom.wsi);
+      if (!revealPayload) return;
+
+      io.to(code).emit("WSI_ROUND_REVEAL", revealPayload);
+
+      setWhoSaidItTimer(
+        activeRoom,
+        () => {
+          const postRevealRoom = rooms.get(code);
+          if (!postRevealRoom || !isWhoSaidItActive(postRevealRoom)) return;
+
+          const { done } = advanceWhoSaidItSession(postRevealRoom.wsi);
+
+          if (done) {
+            postRevealRoom.state = applyWhoSaidItPointsToState(postRevealRoom.state, postRevealRoom.wsi);
+            io.to(code).emit("MINIGAME_END", getWhoSaidItEndPayload(postRevealRoom.wsi));
+            postRevealRoom.wsi = null;
+            clearWhoSaidItTimers(postRevealRoom);
+            broadcastState(code);
+            return;
+          }
+
+          setWhoSaidItTimer(postRevealRoom, () => startWhoSaidItRoundLoop(code), postRevealRoom.wsi.betweenRoundsMs);
+        },
+        activeRoom.wsi.revealDurationMs
+      );
+    },
+    room.wsi.answerDurationMs
+  );
+}
+
+function startWhoSaidItMinigame(code) {
+  const room = rooms.get(code);
+  if (!room || isWhoSaidItActive(room)) return;
+  if (!room.state?.players?.length) return;
+
+  clearWhoSaidItTimers(room);
+  room.wsi = createWhoSaidItSession(room.state.players.map((player) => player.id));
+
+  io.to(code).emit("MINIGAME_START", getWhoSaidItStartPayload(room.wsi));
+  startWhoSaidItRoundLoop(code);
+}
 
 function sanitizeState(state) {
   return {
@@ -175,6 +263,7 @@ function closeRoomForAll(code, reason = "Le host a quitte la partie") {
 
   room.disconnectTimers.forEach((timer) => clearTimeout(timer));
   room.disconnectTimers.clear();
+  clearWhoSaidItTimers(room);
 
   room.clients.forEach((clientId) => {
     socketToRoom.delete(clientId);
@@ -205,6 +294,13 @@ function removePlayerNow(code, socketId) {
   }
 
   room.state = removePlayerFromState(room.state, socketId);
+  if (isWhoSaidItActive(room)) {
+    removeWhoSaidItPlayer(room.wsi, socketId);
+    if (!room.wsi.playerIds.length) {
+      clearWhoSaidItTimers(room);
+      room.wsi = null;
+    }
+  }
 
   syncHostFlags(room);
 
@@ -246,6 +342,9 @@ function attachSocketToExistingPlayer(code, room, player, socket) {
     if (room.hostSocketId === oldSocketId) {
       room.hostSocketId = socket.id;
     }
+    if (isWhoSaidItActive(room)) {
+      remapWhoSaidItPlayerId(room.wsi, oldSocketId, socket.id);
+    }
   }
 
   player.socketId = socket.id;
@@ -271,6 +370,8 @@ io.on("connection", (socket) => {
       hostSocketId: socket.id,
       clients: new Set([socket.id]),
       disconnectTimers: new Map(),
+      wsi: null,
+      wsiTimers: new Set(),
       lobby: [
         {
           socketId: socket.id,
@@ -368,6 +469,7 @@ io.on("connection", (socket) => {
     if (!code) return;
     const room = rooms.get(code);
     if (!room) return;
+    if (isWhoSaidItActive(room)) return;
 
     room.state = rollDice(room.state, socket.id);
     broadcastState(code);
@@ -386,6 +488,7 @@ io.on("connection", (socket) => {
     if (!code) return;
     const room = rooms.get(code);
     if (!room) return;
+    if (isWhoSaidItActive(room)) return;
 
     room.state = movePlayer(room.state, socket.id, steps);
     // after move, trigger the question popup
@@ -398,6 +501,7 @@ io.on("connection", (socket) => {
     if (!code) return;
     const room = rooms.get(code);
     if (!room) return;
+    if (isWhoSaidItActive(room)) return;
 
     room.state = voteQuestion(room.state, socket.id, vote);
     broadcastState(code);
@@ -408,6 +512,7 @@ io.on("connection", (socket) => {
     if (!code) return;
     const room = rooms.get(code);
     if (!room) return;
+    if (isWhoSaidItActive(room)) return;
 
     room.state = openQuestion(room.state, socket.id);
     broadcastState(code);
@@ -418,9 +523,29 @@ io.on("connection", (socket) => {
     if (!code) return;
     const room = rooms.get(code);
     if (!room) return;
+    if (isWhoSaidItActive(room)) return;
 
+    const previousRound = room.state.currentRound;
     room.state = validateQuestion(room.state, socket.id);
     broadcastState(code);
+
+    const shouldStartWhoSaidIt =
+      room.state.phase === "playing" &&
+      room.state.currentRound > previousRound &&
+      !room.state.currentQuestion;
+    if (shouldStartWhoSaidIt) {
+      startWhoSaidItMinigame(code);
+    }
+  });
+
+  socket.on("WSI_SUBMIT", ({ roundIndex, role }) => {
+    const code = socketToRoom.get(socket.id);
+    if (!code) return;
+    const room = rooms.get(code);
+    if (!room) return;
+    if (!isWhoSaidItActive(room)) return;
+
+    submitWhoSaidItAnswer(room.wsi, socket.id, roundIndex, role);
   });
 
   // Optional manual next turn (host debugging)
@@ -430,6 +555,7 @@ io.on("connection", (socket) => {
     const room = rooms.get(code);
     if (!room) return;
     if (room.hostSocketId !== socket.id) return;
+    if (isWhoSaidItActive(room)) return;
 
     room.state = nextTurn(room.state);
     broadcastState(code);
@@ -442,6 +568,8 @@ io.on("connection", (socket) => {
     if (!room) return;
     if (room.hostSocketId !== socket.id) return;
 
+    clearWhoSaidItTimers(room);
+    room.wsi = null;
     room.state = resetGame(room.state);
     broadcastLobby(code);
     broadcastState(code);

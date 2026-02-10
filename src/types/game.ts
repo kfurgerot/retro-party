@@ -57,6 +57,49 @@ export interface GameState {
   questionHistory: QuestionSummary[];
 }
 
+export type WhoSaidItRole =
+  | "MANAGER"
+  | "PO"
+  | "DEV"
+  | "SCRUM_MASTER"
+  | "QA_SUPPORT";
+
+export interface WhoSaidItRoundStartPayload {
+  roundIndex: number;
+  totalRounds: number;
+  quoteId: string;
+  text: string;
+  endsAtServerTs: number;
+}
+
+export interface WhoSaidItRoundRevealPayload {
+  roundIndex: number;
+  answerRole: WhoSaidItRole;
+  distribution: Record<WhoSaidItRole, number>;
+  winners: string[];
+  pointsDelta: Record<string, number>;
+}
+
+export interface WhoSaidItSummaryPayload {
+  pointsGained: Record<string, number>;
+}
+
+export interface WhoSaidItViewState {
+  minigameId: "WHO_SAID_IT";
+  totalRounds: number;
+  phase: "idle" | "answer" | "reveal" | "done";
+  roundIndex: number;
+  quoteId: string | null;
+  quoteText: string;
+  endsAtServerTs: number | null;
+  selectedRole: WhoSaidItRole | null;
+  answerRole: WhoSaidItRole | null;
+  distribution: Record<WhoSaidItRole, number>;
+  winners: string[];
+  pointsDelta: Record<string, number>;
+  summary: WhoSaidItSummaryPayload | null;
+}
+
 export const AVATARS = [
   "🧙", "🧝", "🧛", "🧟", "🧞",
   "🧑‍🚀", "🧑‍🎤", "🧑‍🍳", "🧑‍🔧", "🧑‍🎨",

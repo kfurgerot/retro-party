@@ -111,6 +111,8 @@ return true;
         onOpenQuestionCard={online.openQuestionCard}
         onVoteQuestion={online.voteQuestion}
         onValidateQuestion={online.validateQuestion}
+        whoSaidItState={online.whoSaidIt}
+        onWhoSaidItSubmit={online.submitWhoSaidIt}
       />
     );
   }
