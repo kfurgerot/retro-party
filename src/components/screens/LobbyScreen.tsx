@@ -16,6 +16,7 @@ interface PlayerSetup {
 export const LobbyScreen: React.FC<LobbyScreenProps> = ({ onStartGame }) => {
   const [playerCount, setPlayerCount] = useState<number | null>(null);
   const [players, setPlayers] = useState<PlayerSetup[]>([]);
+  const selectableCounts = Array.from({ length: 19 }, (_, i) => i + 2);
 
   const handlePlayerCountSelect = (count: number) => {
     setPlayerCount(count);
@@ -49,7 +50,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({ onStartGame }) => {
       <PixelCard className="w-full max-w-3xl p-6">
         <div className="font-pixel text-lg mb-4">Nombre de joueurs</div>
         <div className="flex flex-wrap gap-2">
-          {[2,3,4,5,6,7,8,9,10].map(n => (
+          {selectableCounts.map(n => (
             <button
               key={n}
               onClick={() => handlePlayerCountSelect(n)}

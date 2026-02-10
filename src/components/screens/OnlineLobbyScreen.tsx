@@ -39,6 +39,7 @@ interface OnlineLobbyScreenProps {
 }
 
 type Pending = "idle" | "hosting" | "joining" | "starting";
+const MAX_PLAYERS = 20;
 
 const cleanName = (v: string) => v.replace(/\s+/g, " ").trim().slice(0, 16);
 const cleanCode = (v: string) =>
@@ -85,7 +86,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
   const subtitle = useMemo(() => {
     if (!connected) return "Connexion au serveur...";
     if (roomCode) return `Room active : ${roomCode}`;
-    return "Multijoueur en ligne (2-10 joueurs)";
+    return `Multijoueur en ligne (2-${MAX_PLAYERS} joueurs)`;
   }, [connected, roomCode]);
 
   useEffect(() => {
@@ -230,7 +231,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
             {connected ? "Connecte" : "Connexion..."}
           </span>
           <span className="rounded-full border border-cyan-300/35 bg-slate-900/40 px-3 py-1 text-cyan-100">
-            {lobbyPlayers.length}/10 joueurs
+            {lobbyPlayers.length}/{MAX_PLAYERS} joueurs
           </span>
         </div>
 
@@ -364,7 +365,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
             <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-cyan-100/80">
               Joueurs
             </h2>
-            <span className="text-xs text-slate-300">{lobbyPlayers.length}/10</span>
+            <span className="text-xs text-slate-300">{lobbyPlayers.length}/{MAX_PLAYERS}</span>
           </div>
 
           <div className="grid gap-2 sm:grid-cols-2">

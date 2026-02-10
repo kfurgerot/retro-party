@@ -32,6 +32,7 @@ import {
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3001;
 const ORIGIN = process.env.ORIGIN || true; // in prod set to your https domain
 const RECONNECT_GRACE_MS = 30000;
+const MAX_PLAYERS = 20;
 
 const app = express();
 app.use(cors({ origin: ORIGIN, credentials: false }));
@@ -408,6 +409,9 @@ io.on("connection", (socket) => {
 
     if (room.state.phase !== "lobby") {
       return socket.emit("error_msg", { message: "Partie deja demarree" });
+    }
+    if (room.lobby.length >= MAX_PLAYERS) {
+      return socket.emit("error_msg", { message: "Room pleine (20 joueurs max)" });
     }
 
     const resolvedSessionId = requestedSessionId ?? makeSessionId();

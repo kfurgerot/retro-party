@@ -41,6 +41,7 @@ export const BugSmashMinigame: React.FC<BugSmashMinigameProps> = ({
   durationMs,
   onComplete,
 }) => {
+  const MAX_DISPLAYED_PLAYERS = 20;
   const [phase, setPhase] = useState<"intro" | "playing" | "results">("intro");
   const [timeLeft, setTimeLeft] = useState<number>(Math.ceil((durationMs ?? 45000) / 1000));
   const [bugs, setBugs] = useState<Bug[]>([]);
@@ -209,7 +210,7 @@ export const BugSmashMinigame: React.FC<BugSmashMinigameProps> = ({
           </p>
 
           <div className="grid grid-cols-2 gap-2 mb-4">
-            {players.slice(0, 10).map((p, idx) => {
+            {players.slice(0, MAX_DISPLAYED_PLAYERS).map((p, idx) => {
               const [l, r] = MINIGAME_KEYS[idx] || ["?", "?"];
               return (
                 <div key={p.id} className="flex items-center gap-2 p-2 bg-muted rounded">
@@ -292,7 +293,7 @@ export const BugSmashMinigame: React.FC<BugSmashMinigameProps> = ({
       </div>
 
       <div className="p-4 grid grid-cols-2 md:grid-cols-5 gap-2">
-        {players.slice(0, 10).map((p) => (
+        {players.slice(0, MAX_DISPLAYED_PLAYERS).map((p) => (
           <div key={p.id} className="p-2 bg-muted rounded flex items-center justify-between">
             <span className="font-pixel text-xs">{p.name}</span>
             <span className="font-pixel text-xs">{scores[p.id] ?? 0}</span>
