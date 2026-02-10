@@ -26,6 +26,14 @@ type Bug = {
 const DEFAULT_DURATION_MS = 20000;
 const SPAWN_EVERY_MS = 320;
 const BUG_LIFETIME_MS = 1300;
+const RESULT_SCREEN_MS = 4000;
+
+const getBugSmashStars = (value: number) => {
+  if (value >= 18) return 3;
+  if (value >= 12) return 2;
+  if (value >= 6) return 1;
+  return 0;
+};
 
 export const BugSmashMinigame: React.FC<BugSmashMinigameProps> = ({
   players,
@@ -45,6 +53,7 @@ export const BugSmashMinigame: React.FC<BugSmashMinigameProps> = ({
   const areaRef = useRef<HTMLDivElement | null>(null);
   const bugIdRef = useRef(1);
   const completedRef = useRef(false);
+  const completeTimerRef = useRef<number | null>(null);
 
   const targetPlayer = useMemo(
     () => players.find((player) => player.id === targetPlayerId) ?? null,
@@ -59,6 +68,10 @@ export const BugSmashMinigame: React.FC<BugSmashMinigameProps> = ({
     setTimeLeftMs(durationMs);
     setBugs([]);
     completedRef.current = false;
+    if (completeTimerRef.current) {
+      window.clearTimeout(completeTimerRef.current);
+      completeTimerRef.current = null;
+    }
     bugIdRef.current = 1;
   }, [durationMs, targetPlayerId]);
 
@@ -124,9 +137,28 @@ export const BugSmashMinigame: React.FC<BugSmashMinigameProps> = ({
 
   useEffect(() => {
     if (phase !== "done" || completedRef.current || !canControl) return;
-    completedRef.current = true;
-    onComplete(score);
+    completeTimerRef.current = window.setTimeout(() => {
+      if (completedRef.current) return;
+      completedRef.current = true;
+      onComplete(score);
+      completeTimerRef.current = null;
+    }, RESULT_SCREEN_MS);
+    return () => {
+      if (completeTimerRef.current) {
+        window.clearTimeout(completeTimerRef.current);
+        completeTimerRef.current = null;
+      }
+    };
   }, [canControl, onComplete, phase, score]);
+
+  useEffect(() => {
+    return () => {
+      if (completeTimerRef.current) {
+        window.clearTimeout(completeTimerRef.current);
+        completeTimerRef.current = null;
+      }
+    };
+  }, []);
 
   const smashBug = (id: number) => {
     if (!canControl || phase !== "playing") return;
@@ -137,6 +169,17 @@ export const BugSmashMinigame: React.FC<BugSmashMinigameProps> = ({
   const countdown = startAt ? Math.max(0, Math.ceil((startAt - Date.now()) / 1000)) : null;
   const timeLabel = Math.max(0, Math.ceil(timeLeftMs / 1000));
   const displayedScore = canControl ? score : liveScore;
+  const starsEarned = getBugSmashStars(displayedScore);
+
+  const continueAfterResults = () => {
+    if (!canControl || completedRef.current || phase !== "done") return;
+    if (completeTimerRef.current) {
+      window.clearTimeout(completeTimerRef.current);
+      completeTimerRef.current = null;
+    }
+    completedRef.current = true;
+    onComplete(score);
+  };
 
   return (
     <div className="absolute inset-0 z-50 flex h-full w-full flex-col overflow-hidden bg-slate-950/95 p-3 sm:p-6">
@@ -176,11 +219,35 @@ export const BugSmashMinigame: React.FC<BugSmashMinigameProps> = ({
                   style={{ left: bug.x, top: bug.y }}
                 />
               ))
+            ) : phase === "done" ? (
+              <div className="flex h-full items-center justify-center px-4">
+                <Card className="w-full max-w-md border-cyan-300/35 bg-slate-900/85 p-4 text-cyan-50 shadow-[0_0_24px_rgba(34,211,238,0.18)]">
+                  <h4 className="text-center text-base font-bold">Resultat Bug Smash</h4>
+                  <div className="mt-3 grid gap-2 text-center">
+                    <div className="rounded border border-cyan-300/35 bg-slate-950/70 px-3 py-2 text-sm">
+                      Bugs elimines: <span className="font-bold">{displayedScore}</span>
+                    </div>
+                    <div className="rounded border border-amber-300/35 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
+                      Etoiles gagnees: <span className="font-bold">+{starsEarned}</span>
+                    </div>
+                  </div>
+                  {canControl ? (
+                    <Button
+                      className="mt-4 w-full border-cyan-300 bg-cyan-500 text-slate-950 hover:bg-cyan-400"
+                      onClick={continueAfterResults}
+                    >
+                      Continuer
+                    </Button>
+                  ) : (
+                    <div className="mt-4 text-center text-xs text-cyan-100/75">
+                      En attente de la validation du joueur actif...
+                    </div>
+                  )}
+                </Card>
+              </div>
             ) : (
               <div className="flex h-full items-center justify-center px-4 text-center text-sm text-cyan-100/80">
-                {phase === "done"
-                  ? "Mini-jeu termine."
-                  : canControl
+                {canControl
                   ? "Attends le top depart..."
                   : "Le joueur actif est en train de jouer."}
               </div>
