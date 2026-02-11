@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { GameState, WhoSaidItRole, WhoSaidItViewState } from "@/types/game";
+import { BuzzwordCategory, GameState, WhoSaidItRole, WhoSaidItViewState } from "@/types/game";
 import { GameBoard } from "../game/GameBoard";
 import { PlayerCard } from "../game/PlayerCard";
 import { Dice } from "../game/Dice";
@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 import { RetroScreenBackground } from "./RetroScreenBackground";
 import { WhoSaidItMinigame } from "../game/WhoSaidItMinigame";
 import { BugSmashMinigame } from "../game/BugSmashMinigame";
+import { BuzzwordDuelMinigame } from "../game/BuzzwordDuelMinigame";
 import { LaunchAnnouncement } from "../game/LaunchAnnouncement";
 
 interface GameScreenProps {
@@ -42,6 +43,7 @@ interface GameScreenProps {
   onBugSmashProgress?: (score: number) => void;
   whoSaidItState?: WhoSaidItViewState | null;
   onWhoSaidItSubmit?: (role: WhoSaidItRole) => void;
+  onBuzzwordSubmit?: (category: BuzzwordCategory) => void;
 }
 
 export const GameScreen: React.FC<GameScreenProps> = ({
@@ -57,6 +59,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   onBugSmashProgress,
   whoSaidItState,
   onWhoSaidItSubmit,
+  onBuzzwordSubmit,
 }) => {
   const [hasMovedThisTurn, setHasMovedThisTurn] = useState(false);
   const [isMoveAnimating, setIsMoveAnimating] = useState(false);
@@ -76,7 +79,14 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 
   const currentPlayer = gameState.players[gameState.currentPlayerIndex];
   const bugSmashState = gameState.currentMinigame?.minigameId === "BUG_SMASH" ? gameState.currentMinigame : null;
-  const isMinigameActive = !!whoSaidItState || !!bugSmashState;
+  const buzzwordState = gameState.currentMinigame?.minigameId === "BUZZWORD_DUEL" ? gameState.currentMinigame : null;
+  const isBuzzwordIntroActive =
+    !!buzzwordState &&
+    buzzwordState.phase === "between" &&
+    buzzwordState.roundType === "main" &&
+    buzzwordState.currentWordIndex === 1 &&
+    !!buzzwordState.nextWordAt;
+  const isMinigameActive = !!whoSaidItState || !!bugSmashState || !!buzzwordState;
   const isMyTurn =
     !!currentPlayer && !!myPlayerId && currentPlayer.id === myPlayerId;
   const isTurnIntroActive = turnIntroEndsAt != null;
@@ -195,6 +205,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       isMyTurn &&
       !gameState.currentQuestion &&
       !bugSmashState &&
+      !buzzwordState &&
       !whoSaidItState &&
       gameState.diceValue == null &&
       !gameState.isRolling;
@@ -225,6 +236,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     gameState.isRolling,
     isMyTurn,
     bugSmashState,
+    buzzwordState,
     whoSaidItState,
   ]);
 
@@ -639,6 +651,14 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         />
       )}
 
+      {isBuzzwordIntroActive && buzzwordState && (
+        <LaunchAnnouncement
+          title="Buzzword Duel"
+          subtitle="Duel 1v1 imminent."
+          startAt={buzzwordState.nextWordAt ?? undefined}
+        />
+      )}
+
       {whoSaidItState?.phase === "idle" && (
         <LaunchAnnouncement
           title="Qui a dit ca ?"
@@ -667,6 +687,16 @@ export const GameScreen: React.FC<GameScreenProps> = ({
           canPlay={!onLeave}
           onProgress={onBugSmashProgress}
           onComplete={onCompleteBugSmash}
+        />
+      )}
+
+      {buzzwordState && onBuzzwordSubmit && !isBuzzwordIntroActive && (
+        <BuzzwordDuelMinigame
+          players={gameState.players}
+          state={buzzwordState}
+          myPlayerId={myPlayerId}
+          canInteract
+          onSubmit={onBuzzwordSubmit}
         />
       )}
     </div>

@@ -258,6 +258,9 @@ export function useGameState() {
   }, []);
 
   const resetGame = useCallback(() => setGameState(createInitialState()), []);
+  const submitBuzzwordAnswer = useCallback((_playerId: string, _category: "LEGIT" | "BULLSHIT") => {
+    // Local mode currently does not run server-authoritative Buzzword Duel.
+  }, []);
 
   return {
     gameState,
@@ -269,6 +272,7 @@ export function useGameState() {
     validateQuestion,
     completeBugSmash,
     updateBugSmashProgress,
+    submitBuzzwordAnswer,
     resetGame,
   };
 }

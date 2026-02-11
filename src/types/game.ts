@@ -52,6 +52,35 @@ export interface BugSmashState {
   score: number;
 }
 
+export type BuzzwordCategory = "LEGIT" | "BULLSHIT";
+
+export interface BuzzwordDuelTransfer {
+  winnerId: string;
+  loserId: string;
+  amount: number;
+  startedAt: number;
+}
+
+export interface BuzzwordDuelState {
+  minigameId: "BUZZWORD_DUEL";
+  duelists: [string, string];
+  phase: "word" | "between" | "sudden_death" | "transfer";
+  roundType: "main" | "sudden_death";
+  totalWords: number;
+  currentWordIndex: number;
+  suddenDeathRound: number;
+  wordText: string;
+  isDouble: boolean;
+  wordStartedAt: number;
+  wordEndsAt: number;
+  nextWordAt: number | null;
+  scores: Record<string, number>;
+  submittedPlayerIds: string[];
+  transfer: BuzzwordDuelTransfer | null;
+}
+
+export type ActiveMinigameState = BugSmashState | BuzzwordDuelState;
+
 export interface GameState {
   phase: 'lobby' | 'playing' | 'results';
   players: Player[];
@@ -66,7 +95,7 @@ export interface GameState {
   isRolling: boolean;
 
   currentQuestion: QuestionState | null;
-  currentMinigame: BugSmashState | null;
+  currentMinigame: ActiveMinigameState | null;
   questionHistory: QuestionSummary[];
 }
 

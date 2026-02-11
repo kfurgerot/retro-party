@@ -326,6 +326,9 @@ export function useOnlineGameState() {
       return { ...prev, selectedRole: role };
     });
   }, []);
+  const submitBuzzwordDuel = useCallback((category: "LEGIT" | "BULLSHIT") => {
+    socket.emit("BUZZWORD_SUBMIT", { category });
+  }, []);
 
   const isHost = useMemo(() => {
     if (!myPlayerId) return false;
@@ -352,6 +355,7 @@ export function useOnlineGameState() {
     resetGame,
     whoSaidIt,
     submitWhoSaidIt,
+    submitBuzzwordDuel,
     isHost,
   };
 }

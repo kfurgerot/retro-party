@@ -106,6 +106,7 @@ const Index: React.FC = () => {
         onBugSmashProgress={online.updateBugSmashProgress}
         whoSaidItState={online.whoSaidIt}
         onWhoSaidItSubmit={online.submitWhoSaidIt}
+        onBuzzwordSubmit={online.submitBuzzwordDuel}
       />
     );
   }
@@ -146,6 +147,9 @@ const Index: React.FC = () => {
         const current = local.gameState.players[local.gameState.currentPlayerIndex];
         if (!current) return;
         local.updateBugSmashProgress(score, current.id);
+      }}
+      onBuzzwordSubmit={(category) => {
+        local.submitBuzzwordAnswer(localCurrentPlayerId, category);
       }}
     />
   );
