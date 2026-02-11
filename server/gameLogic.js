@@ -415,6 +415,17 @@ function getBuzzwordDuelists(minigame) {
   return Array.isArray(minigame.duelists) && minigame.duelists.length === 2 ? minigame.duelists : null;
 }
 
+function applyBuzzwordDirectGains(players, scores, duelists) {
+  if (!scores || !duelists) return;
+
+  duelists.forEach((playerId) => {
+    const player = players.find((p) => p.id === playerId);
+    if (!player) return;
+    const gained = Math.max(0, Math.floor(Number(scores[playerId] ?? 0)));
+    player.stars += gained;
+  });
+}
+
 function computeSteal(players, winnerId, loserId) {
   const winner = players.find((p) => p.id === winnerId);
   const loser = players.find((p) => p.id === loserId);
@@ -430,7 +441,9 @@ function toTransferState(state, winnerId, loserId, now = Date.now()) {
   if (!isBuzzwordDuelActive(state)) return state;
 
   const minigame = state.currentMinigame;
+  const duelists = getBuzzwordDuelists(minigame);
   const players = state.players.map((p) => ({ ...p }));
+  applyBuzzwordDirectGains(players, minigame.scores, duelists);
   const transfer = computeSteal(players, winnerId, loserId);
 
   return {
