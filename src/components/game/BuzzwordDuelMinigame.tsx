@@ -49,6 +49,12 @@ export const BuzzwordDuelMinigame: React.FC<BuzzwordDuelMinigameProps> = ({
 
   const leftScore = state.scores[leftId] ?? 0;
   const rightScore = state.scores[rightId] ?? 0;
+  const transferWinner = state.transfer
+    ? players.find((p) => p.id === state.transfer?.winnerId) ?? null
+    : null;
+  const transferLoser = state.transfer
+    ? players.find((p) => p.id === state.transfer?.loserId) ?? null
+    : null;
 
   const statusLabel = useMemo(() => {
     if (state.phase === "transfer" && state.transfer) {
@@ -114,6 +120,15 @@ export const BuzzwordDuelMinigame: React.FC<BuzzwordDuelMinigameProps> = ({
             <div className="w-full max-w-xl">
               <div className="text-xs uppercase tracking-[0.18em] text-cyan-200/70">Transfert en cours</div>
               <div className="mt-3 text-2xl font-black sm:text-4xl">{state.transfer?.amount ?? 0} POINTS VOLES</div>
+              <div className="mt-4 rounded border border-cyan-300/35 bg-slate-950/55 px-4 py-3 text-sm text-cyan-50">
+                <div>
+                  <span className="font-semibold">{transferWinner?.name ?? "?"}</span>
+                  {" "}vole{" "}
+                  <span className="font-black text-emerald-300">{state.transfer?.amount ?? 0}</span>
+                  {" "}points a{" "}
+                  <span className="font-semibold">{transferLoser?.name ?? "?"}</span>
+                </div>
+              </div>
               <div className="mt-4 h-2 w-full overflow-hidden rounded bg-slate-700/70">
                 <div className="h-full w-full animate-[pulse_1s_ease-in-out_infinite] bg-emerald-400" />
               </div>

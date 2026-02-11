@@ -30,6 +30,8 @@ import { BugSmashMinigame } from "../game/BugSmashMinigame";
 import { BuzzwordDuelMinigame } from "../game/BuzzwordDuelMinigame";
 import { LaunchAnnouncement } from "../game/LaunchAnnouncement";
 
+const TURN_ANNOUNCE_MS = 2000;
+
 interface GameScreenProps {
   gameState: GameState;
   myPlayerId?: string | null;
@@ -214,12 +216,12 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       return;
     }
 
-    const endAt = Date.now() + 4000;
+    const endAt = Date.now() + TURN_ANNOUNCE_MS;
     setTurnIntroEndsAt(endAt);
     turnIntroTimerRef.current = window.setTimeout(() => {
       setTurnIntroEndsAt(null);
       turnIntroTimerRef.current = null;
-    }, 4000);
+    }, TURN_ANNOUNCE_MS);
 
     return () => {
       if (turnIntroTimerRef.current) {
