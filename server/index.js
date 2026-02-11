@@ -102,6 +102,39 @@ function isWhoSaidItActive(room) {
   return !!room?.wsi && room.wsi.minigameId === WHO_SAID_IT_MINIGAME_ID;
 }
 
+function runWhoSaidItReveal(code) {
+  const room = rooms.get(code);
+  if (!room || !isWhoSaidItActive(room)) return;
+  if (!room.wsi?.currentRound || room.wsi.status !== "answer") return;
+
+  const revealPayload = revealWhoSaidItRound(room.wsi);
+  if (!revealPayload) return;
+
+  io.to(code).emit("WSI_ROUND_REVEAL", revealPayload);
+
+  setWhoSaidItTimer(
+    room,
+    () => {
+      const postRevealRoom = rooms.get(code);
+      if (!postRevealRoom || !isWhoSaidItActive(postRevealRoom)) return;
+
+      const { done } = advanceWhoSaidItSession(postRevealRoom.wsi);
+
+      if (done) {
+        postRevealRoom.state = applyWhoSaidItPointsToState(postRevealRoom.state, postRevealRoom.wsi);
+        io.to(code).emit("MINIGAME_END", getWhoSaidItEndPayload(postRevealRoom.wsi));
+        postRevealRoom.wsi = null;
+        clearWhoSaidItTimers(postRevealRoom);
+        broadcastState(code);
+        return;
+      }
+
+      setWhoSaidItTimer(postRevealRoom, () => startWhoSaidItRoundLoop(code), postRevealRoom.wsi.betweenRoundsMs);
+    },
+    room.wsi.revealDurationMs
+  );
+}
+
 function startWhoSaidItRoundLoop(code) {
   const room = rooms.get(code);
   if (!room || !isWhoSaidItActive(room)) return;
@@ -109,41 +142,7 @@ function startWhoSaidItRoundLoop(code) {
   const startPayload = startWhoSaidItRound(room.wsi);
   io.to(code).emit("WSI_ROUND_START", startPayload);
 
-  setWhoSaidItTimer(
-    room,
-    () => {
-      const activeRoom = rooms.get(code);
-      if (!activeRoom || !isWhoSaidItActive(activeRoom)) return;
-
-      const revealPayload = revealWhoSaidItRound(activeRoom.wsi);
-      if (!revealPayload) return;
-
-      io.to(code).emit("WSI_ROUND_REVEAL", revealPayload);
-
-      setWhoSaidItTimer(
-        activeRoom,
-        () => {
-          const postRevealRoom = rooms.get(code);
-          if (!postRevealRoom || !isWhoSaidItActive(postRevealRoom)) return;
-
-          const { done } = advanceWhoSaidItSession(postRevealRoom.wsi);
-
-          if (done) {
-            postRevealRoom.state = applyWhoSaidItPointsToState(postRevealRoom.state, postRevealRoom.wsi);
-            io.to(code).emit("MINIGAME_END", getWhoSaidItEndPayload(postRevealRoom.wsi));
-            postRevealRoom.wsi = null;
-            clearWhoSaidItTimers(postRevealRoom);
-            broadcastState(code);
-            return;
-          }
-
-          setWhoSaidItTimer(postRevealRoom, () => startWhoSaidItRoundLoop(code), postRevealRoom.wsi.betweenRoundsMs);
-        },
-        activeRoom.wsi.revealDurationMs
-      );
-    },
-    room.wsi.answerDurationMs
-  );
+  setWhoSaidItTimer(room, () => runWhoSaidItReveal(code), room.wsi.answerDurationMs);
 }
 
 function startWhoSaidItMinigame(code) {
@@ -786,7 +785,17 @@ io.on("connection", (socket) => {
     if (!room) return;
     if (!isWhoSaidItActive(room)) return;
 
-    submitWhoSaidItAnswer(room.wsi, socket.id, roundIndex, role);
+    const result = submitWhoSaidItAnswer(room.wsi, socket.id, roundIndex, role);
+    if (!result?.accepted) return;
+
+    if (!room.wsi?.currentRound || room.wsi.status !== "answer") return;
+    const totalPlayers = room.wsi.playerIds.length;
+    if (totalPlayers <= 0) return;
+    const submittedCount = Object.keys(room.wsi.currentRound.submissions ?? {}).length;
+    if (submittedCount >= totalPlayers) {
+      clearWhoSaidItTimers(room);
+      runWhoSaidItReveal(code);
+    }
   });
 
   // Optional manual next turn (host debugging)
