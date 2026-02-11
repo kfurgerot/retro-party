@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Tile, Player, AVATARS } from "@/types/game";
 import { cn } from "@/lib/utils";
 
@@ -38,6 +38,11 @@ function isCoarsePointer() {
 }
 
 const MOVE_STEP_MS = 320;
+const TILE_SIZE = 64;
+const TILE_CENTER = TILE_SIZE / 2;
+const BOARD_MARGIN = 96;
+const FOLLOW_MOBILE_SCALE = 1.2;
+const FOLLOW_DESKTOP_SCALE = 1.05;
 
 export const GameBoard: React.FC<GameBoardProps> = ({
   tiles,
@@ -48,10 +53,10 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     if (!tiles.length) return { minX: 0, minY: 0, maxX: 800, maxY: 500 };
     const xs = tiles.map((t) => t.x);
     const ys = tiles.map((t) => t.y);
-    const minX = Math.min(...xs) - 80;
-    const minY = Math.min(...ys) - 80;
-    const maxX = Math.max(...xs) + 120;
-    const maxY = Math.max(...ys) + 120;
+    const minX = Math.min(...xs) - BOARD_MARGIN;
+    const minY = Math.min(...ys) - BOARD_MARGIN;
+    const maxX = Math.max(...xs) + BOARD_MARGIN + TILE_SIZE;
+    const maxY = Math.max(...ys) + BOARD_MARGIN + TILE_SIZE;
     return { minX, minY, maxX, maxY };
   }, [tiles]);
 
@@ -70,6 +75,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   const displayPositionsRef = useRef<Record<string, number>>({});
 
   const [displayPositions, setDisplayPositions] = useState<Record<string, number>>({});
+  const [movingPlayerId, setMovingPlayerId] = useState<string | null>(null);
 
   // Keep latest values for resize callbacks / pointer handlers.
   const scaleRef = useRef(1);
@@ -135,6 +141,36 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     };
   };
 
+  const focusOnPosition = useCallback(
+    (position: number, boostScale: boolean) => {
+      const tile = tiles[position];
+      const el = containerRef.current;
+      if (!tile || !el) return;
+
+      const rect = el.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return;
+
+      const coarse = isCoarsePointer();
+      const fit = computeFitScale(rect.width, rect.height);
+      const minScale = coarse ? Math.min(1, fit) : Math.min(0.5, fit);
+      const followFloor = coarse ? Math.max(minScale, FOLLOW_MOBILE_SCALE) : Math.max(minScale, FOLLOW_DESKTOP_SCALE);
+      const nextScale = boostScale
+        ? clamp(Math.max(scaleRef.current, followFloor), minScale, 2.75)
+        : scaleRef.current;
+
+      const centerX = tile.x - bounds.minX + TILE_CENTER;
+      const centerY = tile.y - bounds.minY + TILE_CENTER;
+      const nextOffset = {
+        x: rect.width * 0.5 - centerX * nextScale,
+        y: rect.height * 0.48 - centerY * nextScale,
+      };
+
+      setScale(nextScale);
+      setOffset(clampOffset(nextScale, nextOffset, rect.width, rect.height));
+    },
+    [bounds.minX, bounds.minY, tiles]
+  );
+
   const resetView = () => {
     const el = containerRef.current;
     if (!el) return;
@@ -147,7 +183,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     // Mobile: start slightly zoomed OUT so the whole board is visible immediately.
     // (Players can pinch / use +/- to zoom back in.)
     const nextScale = clamp(
-      coarse ? Math.min(fit * 0.92, 1) : Math.min(fit, 2),
+      coarse ? Math.min(fit * 0.96, 1.05) : Math.min(fit * 1.04, 2.2),
       0.5,
       2.75
     );
@@ -180,7 +216,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         if (!isFresh) return prev;
 
         const initial = clamp(
-          coarse ? Math.min(fit * 0.92, 1) : Math.min(fit, 2),
+          coarse ? Math.min(fit * 0.96, 1.05) : Math.min(fit * 1.04, 2.2),
           0.5,
           2.75
         );
@@ -352,6 +388,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
 
     clearMoveTimeouts();
     let hasAnimatedMove = false;
+    let followedPlayerId: string | null = null;
 
     players.forEach((p) => {
       const from =
@@ -364,22 +401,37 @@ export const GameBoard: React.FC<GameBoardProps> = ({
       const steps = ((to - from) % tilesLen + tilesLen) % tilesLen;
       if (steps <= 0) return;
       hasAnimatedMove = true;
+      if (!followedPlayerId) followedPlayerId = p.id;
 
       for (let step = 1; step <= steps; step += 1) {
         const timeoutId = window.setTimeout(() => {
           const position = (from + step) % tilesLen;
           setDisplayPositions((prev) => ({ ...prev, [p.id]: position }));
-          if (step === steps) onMoveAnimationEndRef.current?.(p.id);
+          if (followedPlayerId === p.id) {
+            focusOnPosition(position, true);
+          }
+          if (step === steps) {
+            if (followedPlayerId === p.id) setMovingPlayerId(null);
+            onMoveAnimationEndRef.current?.(p.id);
+          }
         }, MOVE_STEP_MS * step);
         moveTimeoutsRef.current.push(timeoutId);
       }
     });
 
-    if (!hasAnimatedMove) setDisplayPositions(nextActual);
+    if (hasAnimatedMove) {
+      setMovingPlayerId(followedPlayerId);
+    } else {
+      setDisplayPositions(nextActual);
+      setMovingPlayerId(null);
+    }
     previousPositionsRef.current = nextActual;
 
-    return () => clearMoveTimeouts();
-  }, [players, tiles.length]);
+    return () => {
+      clearMoveTimeouts();
+      setMovingPlayerId(null);
+    };
+  }, [focusOnPosition, players, tiles.length]);
 
   return (
     <div
@@ -401,6 +453,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
             height,
             transform: `translate3d(${offset.x}px, ${offset.y}px, 0) scale(${scale})`,
             transformOrigin: "top left",
+            transition: movingPlayerId ? "transform 220ms ease-out" : undefined,
           }}
         >
           {/* Path lines */}
@@ -409,16 +462,26 @@ export const GameBoard: React.FC<GameBoardProps> = ({
               if (i === 0) return null;
               const prev = points[i - 1];
               return (
-                <line
-                  key={`l-${i}`}
-                  x1={prev.x + 28}
-                  y1={prev.y + 28}
-                  x2={p.x + 28}
-                  y2={p.y + 28}
-                  stroke="rgba(255,255,255,0.35)"
-                  strokeWidth="8"
-                  strokeLinecap="round"
-                />
+                <g key={`l-${i}`}>
+                  <line
+                    x1={prev.x + TILE_CENTER}
+                    y1={prev.y + TILE_CENTER}
+                    x2={p.x + TILE_CENTER}
+                    y2={p.y + TILE_CENTER}
+                    stroke="rgba(15, 23, 42, 0.75)"
+                    strokeWidth="12"
+                    strokeLinecap="round"
+                  />
+                  <line
+                    x1={prev.x + TILE_CENTER}
+                    y1={prev.y + TILE_CENTER}
+                    x2={p.x + TILE_CENTER}
+                    y2={p.y + TILE_CENTER}
+                    stroke="rgba(125, 211, 252, 0.6)"
+                    strokeWidth="5"
+                    strokeLinecap="round"
+                  />
+                </g>
               );
             })}
           </svg>
@@ -437,9 +500,9 @@ export const GameBoard: React.FC<GameBoardProps> = ({
               <div
                 key={tile.id}
                 className={cn(
-                  "absolute flex h-14 w-14 items-center justify-center rounded-md border-4 border-black text-base font-bold shadow-[4px_4px_0_0_rgba(0,0,0,0.6)]",
+                  "absolute flex h-16 w-16 items-center justify-center rounded-lg border-4 border-black text-lg font-bold shadow-[4px_4px_0_0_rgba(0,0,0,0.65)]",
                   TileColors[tile.type] ?? "bg-slate-800",
-                  isLastTile && "border-yellow-300 bg-amber-300 text-black ring-4 ring-yellow-500/60"
+                  isLastTile && "border-yellow-300 bg-amber-300 text-black ring-4 ring-yellow-500/70"
                 )}
                 style={{ left: px, top: py }}
                 title={`${idx + 1} — ${tile.type}`}
@@ -450,21 +513,28 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                   </span>
                 )}
                 <span>{TileIcon[tile.type] ?? "⬜"}</span>
+                <span className="absolute bottom-0.5 right-1 rounded bg-black/55 px-1 text-[10px] font-semibold leading-3 text-white">
+                  {idx + 1}
+                </span>
 
                 {/* Players on tile */}
                 {playersHere.length > 0 && (
-                  <div className="absolute -bottom-4 left-1/2 flex -translate-x-1/2 gap-1">
+                  <div className="absolute -top-6 left-1/2 z-10 flex -translate-x-1/2 gap-1">
                     {playersHere.slice(0, 3).map(({ p }, k) => (
                       <div
                         key={`${p.id}-${k}`}
-                        className="flex h-7 w-7 items-center justify-center rounded border-2 border-black bg-white text-sm"
+                        className={cn(
+                          "flex h-8 w-8 items-center justify-center rounded-full border-2 bg-white text-base shadow-[0_0_0_2px_rgba(15,23,42,0.6)]",
+                          movingPlayerId === p.id && "animate-bounce ring-2 ring-cyan-300"
+                        )}
+                        style={{ borderColor: p.color }}
                         title={p.name}
                       >
                         {AVATARS[p.avatar] ?? "🙂"}
                       </div>
                     ))}
                     {playersHere.length > 3 && (
-                      <div className="flex h-7 w-7 items-center justify-center rounded border-2 border-black bg-white text-sm">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-black bg-white text-xs font-bold shadow-[0_0_0_2px_rgba(15,23,42,0.6)]">
                         +{playersHere.length - 3}
                       </div>
                     )}
