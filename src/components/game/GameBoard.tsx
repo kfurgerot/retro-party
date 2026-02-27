@@ -1,11 +1,14 @@
 import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Tile, Player, AVATARS } from "@/types/game";
+import { Tile, Player, AVATARS, PendingPathChoice } from "@/types/game";
 import { cn } from "@/lib/utils";
 
 interface GameBoardProps {
   tiles: Tile[];
   players: Player[];
   onMoveAnimationEnd?: (playerId: string) => void;
+  pendingPathChoice?: PendingPathChoice | null;
+  canChoosePath?: boolean;
+  onChoosePath?: (nextTileId: number) => void;
 }
 
 const TileIcon: Record<string, string> = {
@@ -47,6 +50,9 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   tiles,
   players,
   onMoveAnimationEnd,
+  pendingPathChoice,
+  canChoosePath = false,
+  onChoosePath,
 }) => {
   const bounds = useMemo(() => {
     if (!tiles.length) return { minX: 0, minY: 0, maxX: 800, maxY: 500 };
@@ -523,6 +529,52 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                   );
                 });
             })}
+
+            {/* Intersection directional hints */}
+            {pendingPathChoice && (() => {
+              const from = points[pendingPathChoice.atTileId];
+              if (!from) return null;
+              return pendingPathChoice.options
+                .filter((id) => id >= 0 && id < points.length)
+                .map((nextId) => {
+                  const to = points[nextId];
+                  if (!to) return null;
+                  const fromX = from.x + TILE_CENTER;
+                  const fromY = from.y + TILE_CENTER;
+                  const toX = to.x + TILE_CENTER;
+                  const toY = to.y + TILE_CENTER;
+                  const dx = toX - fromX;
+                  const dy = toY - fromY;
+                  const len = Math.hypot(dx, dy) || 1;
+                  const ux = dx / len;
+                  const uy = dy / len;
+                  const tailX = fromX + ux * 20;
+                  const tailY = fromY + uy * 20;
+                  const headX = toX - ux * 22;
+                  const headY = toY - uy * 22;
+                  const leftX = headX - ux * 10 + -uy * 7;
+                  const leftY = headY - uy * 10 + ux * 7;
+                  const rightX = headX - ux * 10 - -uy * 7;
+                  const rightY = headY - uy * 10 - ux * 7;
+                  return (
+                    <g key={`hint-${pendingPathChoice.atTileId}-${nextId}`}>
+                      <line
+                        x1={tailX}
+                        y1={tailY}
+                        x2={headX}
+                        y2={headY}
+                        stroke={canChoosePath ? "rgba(251, 191, 36, 0.95)" : "rgba(148, 163, 184, 0.9)"}
+                        strokeWidth="6"
+                        strokeLinecap="round"
+                      />
+                      <polygon
+                        points={`${headX},${headY} ${leftX},${leftY} ${rightX},${rightY}`}
+                        fill={canChoosePath ? "rgba(251, 191, 36, 0.98)" : "rgba(148, 163, 184, 0.95)"}
+                      />
+                    </g>
+                  );
+                });
+            })()}
           </svg>
 
           {/* Tiles */}
@@ -572,6 +624,54 @@ export const GameBoard: React.FC<GameBoardProps> = ({
               </div>
             );
           })}
+
+          {pendingPathChoice && (() => {
+            const from = points[pendingPathChoice.atTileId];
+            if (!from) return null;
+            return pendingPathChoice.options
+              .filter((id) => id >= 0 && id < points.length)
+              .map((nextId) => {
+                const to = points[nextId];
+                if (!to) return null;
+                const fromX = from.x + TILE_CENTER;
+                const fromY = from.y + TILE_CENTER;
+                const toX = to.x + TILE_CENTER;
+                const toY = to.y + TILE_CENTER;
+                const x = fromX + (toX - fromX) * 0.52;
+                const y = fromY + (toY - fromY) * 0.52;
+                const angleDeg = (Math.atan2(toY - fromY, toX - fromX) * 180) / Math.PI;
+                return (
+                  <button
+                    key={`choose-${pendingPathChoice.atTileId}-${nextId}`}
+                    type="button"
+                    disabled={!canChoosePath}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onPointerMove={(e) => e.stopPropagation()}
+                    onPointerUp={(e) => e.stopPropagation()}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (!canChoosePath) return;
+                      onChoosePath?.(nextId);
+                    }}
+                    className={cn(
+                      "absolute z-20 flex h-9 w-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 text-sm font-black shadow-[3px_3px_0_0_rgba(0,0,0,0.6)]",
+                      canChoosePath
+                        ? "border-amber-200 bg-amber-400 text-slate-900 hover:bg-amber-300"
+                        : "cursor-not-allowed border-slate-300 bg-slate-400 text-slate-700"
+                    )}
+                    style={{ left: x, top: y }}
+                    title={canChoosePath ? "Choisir cette direction" : "Direction indisponible"}
+                  >
+                    <span
+                      className="block"
+                      style={{ transform: `rotate(${angleDeg}deg)` }}
+                    >
+                      &gt;
+                    </span>
+                  </button>
+                );
+              });
+          })()}
         </div>
       </div>
 

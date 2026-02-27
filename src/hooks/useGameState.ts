@@ -50,9 +50,7 @@ const advancePlayerAlongBoard = (
   while (remaining > 0) {
     const rawOptions = getNextTileOptions(state, position);
     const options =
-      rawOptions.length > 1
-        ? rawOptions.filter((id) => id !== previous)
-        : rawOptions;
+      rawOptions.length > 1 ? rawOptions.filter((id) => id !== previous) : rawOptions;
     if (!options.length) break;
 
     let chosen: number | null = null;

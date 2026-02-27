@@ -200,9 +200,7 @@ function advancePlayerAlongBoard(state, player, steps, firstChoice = null) {
   while (remaining > 0) {
     const rawOptions = getNextTileOptions(state.tiles, position);
     const options =
-      rawOptions.length > 1
-        ? rawOptions.filter((id) => id !== previous)
-        : rawOptions;
+      rawOptions.length > 1 ? rawOptions.filter((id) => id !== previous) : rawOptions;
     if (options.length === 0) break;
 
     let chosen = null;

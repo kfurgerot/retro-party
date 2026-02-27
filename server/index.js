@@ -364,6 +364,16 @@ function remapSocketIdInState(state, oldSocketId, newSocketId) {
     }
   }
 
+  if (nextState.pendingPathChoice) {
+    nextState.pendingPathChoice = {
+      ...nextState.pendingPathChoice,
+      playerId:
+        nextState.pendingPathChoice.playerId === oldSocketId
+          ? newSocketId
+          : nextState.pendingPathChoice.playerId,
+    };
+  }
+
   return nextState;
 }
 

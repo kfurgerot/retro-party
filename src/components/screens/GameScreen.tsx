@@ -404,6 +404,9 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               <GameBoard
                 tiles={gameState.tiles}
                 players={gameState.players}
+                pendingPathChoice={pendingPathChoice}
+                canChoosePath={canChoosePath}
+                onChoosePath={onChoosePath}
                 onMoveAnimationEnd={(playerId) => {
                   if (playerId === currentPlayer?.id) setIsMoveAnimating(false);
                 }}
@@ -655,34 +658,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
           onVote={onVoteQuestion}
           onValidate={onValidateQuestion}
         />
-      )}
-
-      {pendingPathChoice && !isMoveAnimating && (
-        <div className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center p-4">
-          <Card className="pointer-events-auto w-full max-w-lg border-cyan-300/35 bg-slate-950/95 p-4 text-cyan-50">
-            <div className="text-lg font-bold">Intersection</div>
-            <div className="mt-1 text-sm text-slate-300">
-              {canChoosePath
-                ? "Choisis le chemin a suivre pour continuer ton deplacement."
-                : "Le joueur actif choisit actuellement son chemin."}
-            </div>
-            <div className="mt-3 grid gap-2 sm:grid-cols-2">
-              {pendingPathChoice.options.map((tileId) => {
-                const tile = gameState.tiles[tileId];
-                return (
-                  <Button
-                    key={tileId}
-                    disabled={!canChoosePath}
-                    onClick={() => onChoosePath?.(tileId)}
-                    className="h-11 border-cyan-300 bg-cyan-500 text-slate-950 hover:bg-cyan-400"
-                  >
-                    {`Route ${tileId + 1}${tile ? ` (${tile.type})` : ""}`}
-                  </Button>
-                );
-              })}
-            </div>
-          </Card>
-        </div>
       )}
 
       {isTurnIntroActive && !isPathChoiceActive && !gameState.currentQuestion && !isMinigameActive && (
