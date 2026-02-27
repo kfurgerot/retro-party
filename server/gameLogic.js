@@ -8,6 +8,8 @@ import { BUZZWORD_DUEL_BANK } from "./buzzwordBank.js";
 
 const BUG_SMASH_DURATION_MS = 20000;
 const BUG_SMASH_ANNOUNCE_MS = 4000;
+const ENABLE_RED_TILE_MINIGAME = false;
+const ENABLE_COLLISION_DUEL_MINIGAME = false;
 
 const BUZZWORD_MAIN_WORDS = 10;
 const BUZZWORD_WORD_DURATION_MS = 3000;
@@ -265,7 +267,7 @@ export function onPlayerLanded(state, socketId) {
     diceValue: null,
   };
 
-  if (collidedPlayer) {
+  if (ENABLE_COLLISION_DUEL_MINIGAME && collidedPlayer) {
     return startBuzzwordDuel(withBonus, curPlayer.id, collidedPlayer.id);
   }
 
@@ -284,7 +286,7 @@ export function onPlayerLanded(state, socketId) {
       targetPlayerId: curPlayer.id,
       votes: { up: [], down: [] },
       status: "pending",
-      nextMinigame: type === "red" ? "BUG_SMASH" : null,
+      nextMinigame: type === "red" && ENABLE_RED_TILE_MINIGAME ? "BUG_SMASH" : null,
     },
   };
 }
@@ -332,7 +334,7 @@ export function validateQuestion(state, socketId) {
     },
   ];
 
-  if (state.currentQuestion.nextMinigame === "BUG_SMASH") {
+  if (ENABLE_RED_TILE_MINIGAME && state.currentQuestion.nextMinigame === "BUG_SMASH") {
     return {
       ...state,
       questionHistory,

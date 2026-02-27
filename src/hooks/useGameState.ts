@@ -5,6 +5,7 @@ import { pickQuestion } from "@/data/questions";
 
 const BUG_SMASH_DURATION_MS = 20000;
 const BUG_SMASH_ANNOUNCE_MS = 4000;
+const ENABLE_RED_TILE_MINIGAME = false;
 
 const getBugSmashStars = (score: number) => {
   if (score >= 18) return 3;
@@ -103,7 +104,7 @@ export function useGameState() {
           targetPlayerId: cur.id,
           votes: { up: [], down: [] },
           status: "pending",
-          nextMinigame: type === "red" ? "BUG_SMASH" : null,
+          nextMinigame: type === "red" && ENABLE_RED_TILE_MINIGAME ? "BUG_SMASH" : null,
         },
       };
     });
@@ -150,7 +151,7 @@ export function useGameState() {
         },
       ];
 
-      if (prev.currentQuestion.nextMinigame === "BUG_SMASH") {
+      if (ENABLE_RED_TILE_MINIGAME && prev.currentQuestion.nextMinigame === "BUG_SMASH") {
         return {
           ...prev,
           questionHistory,
