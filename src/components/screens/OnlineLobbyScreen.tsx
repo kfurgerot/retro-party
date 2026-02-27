@@ -29,7 +29,7 @@ interface OnlineLobbyScreenProps {
   onHost: (name: string, avatar: number) => void;
   onJoin: (code: string, name: string, avatar: number) => void;
   onLeave: () => void;
-  onStartGame: () => void;
+  onStartGame: (maxRounds: number) => void;
   canStart: boolean;
   initialName?: string;
   initialAvatar?: number;
@@ -71,6 +71,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
+  const [maxRounds, setMaxRounds] = useState(12);
   const copiedTimer = useRef<number | null>(null);
   const lastAutoSubmittedKeyRef = useRef<number | null>(null);
 
@@ -156,7 +157,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
     if (!canLaunch) return;
     setError(null);
     setPending("starting");
-    onStartGame();
+    onStartGame(maxRounds);
   };
 
   const submitLeave = () => {
@@ -341,6 +342,26 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
                   ? "Tu es host. Lance la partie quand tout le monde est pret."
                   : "En attente du host pour lancer la partie."}
               </p>
+              {canStart && (
+                <div className="space-y-1">
+                  <label className="text-xs text-cyan-100/85">Nombre de tours</label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={30}
+                    step={1}
+                    value={maxRounds}
+                    onChange={(e) => {
+                      const raw = Number(e.target.value);
+                      const bounded = Number.isFinite(raw)
+                        ? Math.max(1, Math.min(30, Math.floor(raw)))
+                        : 12;
+                      setMaxRounds(bounded);
+                    }}
+                    className="h-11 border-cyan-300/20 bg-slate-900/50 text-cyan-50"
+                  />
+                </div>
+              )}
               <Button
                 onClick={submitStart}
                 disabled={!canLaunch || pending !== "idle"}

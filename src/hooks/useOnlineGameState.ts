@@ -28,6 +28,7 @@ const EMPTY_STATE: GameState = {
   isRolling: false,
   currentQuestion: null,
   currentMinigame: null,
+  pendingPathChoice: null,
   questionHistory: [],
 };
 
@@ -306,9 +307,10 @@ export function useOnlineGameState() {
     setWhoSaidIt(null);
   }, []);
 
-  const startGame = useCallback(() => socket.emit("start_game"), []);
+  const startGame = useCallback((maxRounds: number) => socket.emit("start_game", { maxRounds }), []);
   const rollDice = useCallback(() => socket.emit("roll_dice"), []);
   const movePlayer = useCallback((steps: number) => socket.emit("move_player", { steps }), []);
+  const choosePath = useCallback((nextTileId: number) => socket.emit("choose_path", { nextTileId }), []);
   const openQuestionCard = useCallback(() => socket.emit("open_question"), []);
   const voteQuestion = useCallback((vote: "up" | "down") => socket.emit("vote_question", { vote }), []);
   const validateQuestion = useCallback(() => socket.emit("validate_question"), []);
@@ -347,6 +349,7 @@ export function useOnlineGameState() {
     startGame,
     rollDice,
     movePlayer,
+    choosePath,
     openQuestionCard,
     voteQuestion,
     validateQuestion,

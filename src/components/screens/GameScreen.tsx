@@ -38,6 +38,7 @@ interface GameScreenProps {
   onLeave?: () => void;
   onRollDice: () => void;
   onMovePlayer: (steps: number) => void;
+  onChoosePath?: (nextTileId: number) => void;
   onOpenQuestionCard: () => void;
   onVoteQuestion: (vote: "up" | "down") => void;
   onValidateQuestion: () => void;
@@ -54,6 +55,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   onLeave,
   onRollDice,
   onMovePlayer,
+  onChoosePath,
   onOpenQuestionCard,
   onVoteQuestion,
   onValidateQuestion,
@@ -91,6 +93,13 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const isMinigameActive = !!whoSaidItState || !!bugSmashState || !!buzzwordState;
   const isMyTurn =
     !!currentPlayer && !!myPlayerId && currentPlayer.id === myPlayerId;
+  const pendingPathChoice = gameState.pendingPathChoice;
+  const isPathChoiceActive = !!pendingPathChoice;
+  const canChoosePath =
+    !!pendingPathChoice &&
+    !!myPlayerId &&
+    pendingPathChoice.playerId === myPlayerId &&
+    !!onChoosePath;
   const isTurnIntroActive = turnIntroEndsAt != null;
   const isBugIntroActive = bugIntroEndsAt != null;
 
@@ -115,6 +124,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     gameState.phase === "playing" &&
     !isMinigameActive &&
     !isTurnIntroActive &&
+    !isPathChoiceActive &&
     isMyTurn &&
     !gameState.currentQuestion &&
     gameState.diceValue == null &&
@@ -123,6 +133,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const canMove =
     gameState.phase === "playing" &&
     !isMinigameActive &&
+    !isPathChoiceActive &&
     isMyTurn &&
     !gameState.currentQuestion &&
     !gameState.isRolling &&
@@ -165,6 +176,12 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     gameState.diceValue,
     handleMove,
   ]);
+
+  useEffect(() => {
+    if (isPathChoiceActive) {
+      setIsMoveAnimating(false);
+    }
+  }, [isPathChoiceActive]);
 
   useEffect(() => {
     if (!isMoveAnimating || !gameState.currentQuestion) return;
@@ -287,11 +304,17 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     ? gameState.currentQuestion.status === "pending"
       ? "Question prete"
       : "Question en cours..."
+    : isPathChoiceActive
+    ? "Intersection"
     : isMyTurn
     ? "A toi de jouer"
     : "En attente...";
 
-  const infoHint = canRoll
+  const infoHint = isPathChoiceActive
+    ? canChoosePath
+      ? "Choisis une route"
+      : "En attente du choix..."
+    : canRoll
     ? "Lance le de"
     : isMoveAnimating
     ? "Deplacement en cours..."
@@ -330,6 +353,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     !!gameState.currentQuestion &&
     gameState.currentQuestion.status === "pending" &&
     !isMinigameActive &&
+    !isPathChoiceActive &&
     !isMoveAnimating &&
     !!currentPlayer &&
     !!myPlayerId &&
@@ -384,9 +408,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               <GameBoard
                 tiles={gameState.tiles}
                 players={gameState.players}
-                onMoveAnimationEnd={(playerId) => {
-                  if (playerId === currentPlayer?.id) setIsMoveAnimating(false);
-                }}
               />
             </div>
 
@@ -635,6 +656,34 @@ export const GameScreen: React.FC<GameScreenProps> = ({
           onVote={onVoteQuestion}
           onValidate={onValidateQuestion}
         />
+      )}
+
+      {pendingPathChoice && (
+        <div className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center p-4">
+          <Card className="pointer-events-auto w-full max-w-lg border-cyan-300/35 bg-slate-950/95 p-4 text-cyan-50">
+            <div className="text-lg font-bold">Intersection</div>
+            <div className="mt-1 text-sm text-slate-300">
+              {canChoosePath
+                ? "Choisis le chemin a suivre pour continuer ton deplacement."
+                : "Le joueur actif choisit actuellement son chemin."}
+            </div>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              {pendingPathChoice.options.map((tileId) => {
+                const tile = gameState.tiles[tileId];
+                return (
+                  <Button
+                    key={tileId}
+                    disabled={!canChoosePath}
+                    onClick={() => onChoosePath?.(tileId)}
+                    className="h-11 border-cyan-300 bg-cyan-500 text-slate-950 hover:bg-cyan-400"
+                  >
+                    {`Route ${tileId + 1}${tile ? ` (${tile.type})` : ""}`}
+                  </Button>
+                );
+              })}
+            </div>
+          </Card>
+        </div>
       )}
 
       {isTurnIntroActive && !gameState.currentQuestion && !isMinigameActive && (

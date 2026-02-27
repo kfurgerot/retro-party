@@ -1,7 +1,7 @@
 
 // server/boardGenerator.js
 // Deterministic random board generator (shared by all clients in a room via server state).
-// Generates a grid-based random-walk path, then assigns tile types + specials.
+// Generates a loop board with branching intersections.
 
 function mulberry32(seed) {
   return function () {
@@ -12,80 +12,131 @@ function mulberry32(seed) {
   };
 }
 
-function key(x, y) {
-  return `${x},${y}`;
-}
-
 export function generateRandomBoard(seed, opts = {}) {
   const rng = mulberry32(seed);
 
   const cols = opts.cols ?? 20;
   const rows = opts.rows ?? 6;
-  const targetLen = opts.length ?? 45;
+  const targetLen = Math.max(36, opts.length ?? 45);
 
   const cellSize = opts.cellSize ?? 72;
   const offsetX = opts.offsetX ?? 60;
   const offsetY = opts.offsetY ?? 60;
+  const flipX = rng() < 0.5;
+  const flipY = rng() < 0.5;
+  const baseMaxX = 19;
+  const baseMaxY = 5;
+  const tx = (x) => (flipX ? baseMaxX - x : x);
+  const ty = (y) => (flipY ? baseMaxY - y : y);
 
-  const dirs = [
-    { dx: 1, dy: 0 },
-    { dx: -1, dy: 0 },
-    { dx: 0, dy: 1 },
-    { dx: 0, dy: -1 },
+  const line = (from, to) => {
+    const [x1, y1] = from;
+    const [x2, y2] = to;
+    const out = [];
+    const dx = Math.sign(x2 - x1);
+    const dy = Math.sign(y2 - y1);
+    let x = x1;
+    let y = y1;
+    out.push({ x, y });
+    while (x !== x2 || y !== y2) {
+      if (x !== x2) x += dx;
+      if (y !== y2) y += dy;
+      out.push({ x, y });
+    }
+    return out;
+  };
+
+  const mainSegments = [
+    [[15, 5], [4, 5]],
+    [[4, 5], [4, 1]],
+    [[4, 1], [14, 1]],
+    [[14, 1], [14, 4]],
+    [[14, 4], [6, 4]],
+    [[6, 4], [6, 2]],
+    [[6, 2], [13, 2]],
   ];
 
-  const inBounds = (x, y) => x >= 0 && x < cols && y >= 0 && y < rows;
-
-  // Try several attempts; random-walk can get stuck.
-  for (let attempt = 0; attempt < 250; attempt++) {
-    const startX = Math.floor(rng() * cols);
-    const startY = Math.floor(rng() * rows);
-
-    const visited = new Set();
-    const path = [{ x: startX, y: startY }];
-    visited.add(key(startX, startY));
-
-    while (path.length < targetLen) {
-      const cur = path[path.length - 1];
-
-      const candidates = dirs
-        .map(d => ({ x: cur.x + d.dx, y: cur.y + d.dy }))
-        .filter(p => inBounds(p.x, p.y) && !visited.has(key(p.x, p.y)));
-
-      if (candidates.length === 0) break;
-
-      // Prefer a "wide" board: bias horizontal moves so the path spreads across width
-      // (still allows vertical moves to keep it interesting).
-      const weighted = [];
-      for (const c of candidates) {
-        const dx = c.x - cur.x;
-        const dy = c.y - cur.y;
-        const weight = Math.abs(dx) === 1 ? 3 : 1; // horizontal x3
-        for (let k = 0; k < weight; k++) weighted.push(c);
-      }
-      const next = weighted[Math.floor(rng() * weighted.length)];
-      path.push(next);
-      visited.add(key(next.x, next.y));
+  const mainCoords = [];
+  mainSegments.forEach((seg, idx) => {
+    const pts = line(seg[0], seg[1]);
+    if (idx === 0) {
+      mainCoords.push(...pts);
+      return;
     }
+    mainCoords.push(...pts.slice(1));
+  });
 
-    if (path.length >= targetLen) {
-      const tiles = path.map((p, id) => ({
-        id,
-        gridX: p.x,
-        gridY: p.y,
-        x: offsetX + p.x * cellSize,
-        y: offsetY + p.y * cellSize,
-        type: "blue",
-        
-      }));
-
-      paintTileTypes(tiles, rng);
-      return { seed, cols, rows, length: tiles.length, tiles };
-    }
+  const transformedMain = mainCoords.map((p) => ({ x: tx(p.x), y: ty(p.y) }));
+  const tiles = transformedMain.map((p, id) => ({
+    id,
+    gridX: p.x,
+    gridY: p.y,
+    x: offsetX + p.x * cellSize,
+    y: offsetY + p.y * cellSize,
+    type: "blue",
+    nextTileIds: [id + 1],
+  }));
+  if (tiles.length) {
+    tiles[tiles.length - 1].nextTileIds = [Math.max(0, Math.floor(tiles.length * 0.6))];
   }
 
-  // Fallback: empty board (should be rare).
-  return { seed, cols, rows, length: 0, tiles: [] };
+  const byCoord = new Map();
+  tiles.forEach((tile) => byCoord.set(`${tile.gridX},${tile.gridY}`, tile.id));
+  const addTile = (x, y, nextTileIds) => {
+    const id = tiles.length;
+    tiles.push({
+      id,
+      gridX: x,
+      gridY: y,
+      x: offsetX + x * cellSize,
+      y: offsetY + y * cellSize,
+      type: "blue",
+      nextTileIds,
+    });
+    byCoord.set(`${x},${y}`, id);
+    return id;
+  };
+
+  const branches = [
+    { source: [4, 3], path: [[5, 3], [6, 3], [7, 3]], join: [7, 2] },
+    { source: [14, 3], path: [[13, 3], [12, 3]], join: [12, 2] },
+    { source: [8, 4], path: [[8, 3]], join: [8, 2] },
+    { source: [11, 4], path: [[11, 3], [10, 3], [9, 3]], join: [9, 2] },
+  ];
+
+  branches.forEach((branch) => {
+    if (tiles.length > targetLen + 12) return;
+
+    const sourceKey = `${tx(branch.source[0])},${ty(branch.source[1])}`;
+    const joinKey = `${tx(branch.join[0])},${ty(branch.join[1])}`;
+    const sourceId = byCoord.get(sourceKey);
+    const joinId = byCoord.get(joinKey);
+    if (sourceId == null || joinId == null) return;
+
+    const chain = [];
+    for (const [px, py] of branch.path) {
+      const x = tx(px);
+      const y = ty(py);
+      const key = `${x},${y}`;
+      let id = byCoord.get(key);
+      if (id == null) id = addTile(x, y, []);
+      chain.push(id);
+    }
+
+    if (!chain.length) {
+      tiles[sourceId].nextTileIds = [...(tiles[sourceId].nextTileIds ?? []), joinId];
+      return;
+    }
+
+    tiles[sourceId].nextTileIds = [...(tiles[sourceId].nextTileIds ?? []), chain[0]];
+    for (let i = 0; i < chain.length - 1; i += 1) {
+      tiles[chain[i]].nextTileIds = [chain[i + 1]];
+    }
+    tiles[chain[chain.length - 1]].nextTileIds = [joinId];
+  });
+
+  paintTileTypes(tiles, rng);
+  return { seed, cols, rows, length: tiles.length, tiles };
 }
 
 function paintTileTypes(tiles, rng) {

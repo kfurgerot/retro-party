@@ -21,6 +21,14 @@ export interface Tile {
   y: number;
   gridX?: number;
   gridY?: number;
+  nextTileIds?: number[];
+}
+
+export interface PendingPathChoice {
+  playerId: string;
+  atTileId: number;
+  options: number[];
+  remainingSteps: number;
 }
 
 export interface QuestionState {
@@ -96,6 +104,7 @@ export interface GameState {
 
   currentQuestion: QuestionState | null;
   currentMinigame: ActiveMinigameState | null;
+  pendingPathChoice: PendingPathChoice | null;
   questionHistory: QuestionSummary[];
 }
 

@@ -8,7 +8,7 @@ import {
   rollDice,
   settleDice,
   movePlayer,
-  onPlayerLanded,
+  choosePath,
   completeBugSmash,
   updateBugSmashProgress,
   openQuestion,
@@ -253,6 +253,14 @@ function sanitizeState(state) {
             transfer: state.currentMinigame.transfer ?? null,
           }
       : null,
+    pendingPathChoice: state.pendingPathChoice
+      ? {
+          playerId: state.pendingPathChoice.playerId,
+          atTileId: state.pendingPathChoice.atTileId,
+          options: state.pendingPathChoice.options,
+          remainingSteps: state.pendingPathChoice.remainingSteps,
+        }
+      : null,
   };
 }
 
@@ -414,12 +422,21 @@ function removePlayerFromState(state, socketId) {
     }
   }
 
+  let pendingPathChoice = state.pendingPathChoice ?? null;
+  if (pendingPathChoice) {
+    const pendingPlayerStillThere = players.some((p) => p.id === pendingPathChoice.playerId);
+    if (!pendingPlayerStillThere) {
+      pendingPathChoice = null;
+    }
+  }
+
   return {
     ...state,
     players,
     currentPlayerIndex,
     currentQuestion,
     currentMinigame,
+    pendingPathChoice,
   };
 }
 
@@ -633,7 +650,7 @@ io.on("connection", (socket) => {
     removePlayerNow(code, socket.id);
   });
 
-  socket.on("start_game", () => {
+  socket.on("start_game", ({ maxRounds } = {}) => {
     const code = socketToRoom.get(socket.id);
     if (!code) return;
     const room = rooms.get(code);
@@ -641,10 +658,9 @@ io.on("connection", (socket) => {
 
     if (room.hostSocketId !== socket.id) return;
 
-    room.state = initializePlayers(
-      room.state,
-      room.lobby.filter((p) => p.connected !== false)
-    );
+    const connectedPlayers = room.lobby.filter((p) => p.connected !== false);
+    const rounds = Number.isFinite(maxRounds) ? Math.max(1, Math.min(30, Math.floor(maxRounds))) : 12;
+    room.state = initializePlayers(room.state, connectedPlayers, rounds);
     broadcastState(code);
   });
 
@@ -675,8 +691,24 @@ io.on("connection", (socket) => {
     if (isWhoSaidItActive(room) || isBuzzwordDuelActive(room)) return;
 
     room.state = movePlayer(room.state, socket.id, steps);
-    // after move, trigger the question popup or duel
-    room.state = onPlayerLanded(room.state, socket.id);
+    broadcastState(code);
+    if (isBuzzwordDuelActive(room)) {
+      const dueAt =
+        room.state.currentMinigame.phase === "between"
+          ? room.state.currentMinigame.nextWordAt
+          : room.state.currentMinigame.wordEndsAt;
+      scheduleBuzzwordTick(code, Math.max(30, (dueAt ?? Date.now()) - Date.now() + 5));
+    }
+  });
+
+  socket.on("choose_path", ({ nextTileId }) => {
+    const code = socketToRoom.get(socket.id);
+    if (!code) return;
+    const room = rooms.get(code);
+    if (!room) return;
+    if (isWhoSaidItActive(room) || isBuzzwordDuelActive(room)) return;
+
+    room.state = choosePath(room.state, socket.id, Number(nextTileId));
     broadcastState(code);
     if (isBuzzwordDuelActive(room)) {
       const dueAt =

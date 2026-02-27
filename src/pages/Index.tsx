@@ -99,6 +99,7 @@ const Index: React.FC = () => {
         onLeave={online.leaveRoom}
         onRollDice={online.rollDice}
         onMovePlayer={online.movePlayer}
+        onChoosePath={online.choosePath}
         onOpenQuestionCard={online.openQuestionCard}
         onVoteQuestion={online.voteQuestion}
         onValidateQuestion={online.validateQuestion}
@@ -135,6 +136,7 @@ const Index: React.FC = () => {
       myPlayerId={localCurrentPlayerId}
       onRollDice={local.rollDice}
       onMovePlayer={local.movePlayer}
+      onChoosePath={(nextTileId) => local.choosePath(nextTileId, localCurrentPlayerId)}
       onOpenQuestionCard={() => local.openQuestionCard(localCurrentPlayerId)}
       onVoteQuestion={(vote) => local.voteQuestion(vote, localCurrentPlayerId)}
       onValidateQuestion={local.validateQuestion}

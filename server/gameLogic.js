@@ -110,6 +110,7 @@ export function createInitialState() {
     // question flow
     currentQuestion: null,
     currentMinigame: null,
+    pendingPathChoice: null,
     questionHistory: [],
   };
 }
@@ -124,7 +125,7 @@ export function regenerateBoard(state) {
   };
 }
 
-export function initializePlayers(state, lobbyPlayers) {
+export function initializePlayers(state, lobbyPlayers, maxRounds = 12) {
   const colors = ["#3b82f6", "#ef4444", "#22c55e", "#a855f7", "#f97316", "#14b8a6", "#eab308", "#ec4899", "#0ea5e9", "#84cc16"];
 
   const players = lobbyPlayers.map((p, idx) => ({
@@ -144,10 +145,12 @@ export function initializePlayers(state, lobbyPlayers) {
     players,
     currentPlayerIndex: 0,
     currentRound: 1,
+    maxRounds,
     diceValue: null,
     isRolling: false,
     currentQuestion: null,
     currentMinigame: null,
+    pendingPathChoice: null,
     questionHistory: [],
   };
 }
@@ -161,6 +164,7 @@ export function rollDice(state, socketId) {
   if (state.phase !== "playing") return state;
   if (state.currentQuestion) return state;
   if (state.currentMinigame) return state;
+  if (state.pendingPathChoice) return state;
   if (!isPlayersTurn(state, socketId)) return state;
 
   const dice = 1 + Math.floor(Math.random() * 6);
@@ -179,25 +183,160 @@ export function settleDice(state, socketId) {
   return { ...state, isRolling: false };
 }
 
+function getNextTileOptions(tiles, tileId) {
+  const tile = tiles[tileId];
+  if (!tile) return [];
+  const options = Array.isArray(tile.nextTileIds) ? tile.nextTileIds : [tileId + 1];
+  return options.filter((id) => Number.isInteger(id) && id >= 0 && id < tiles.length);
+}
+
+function advancePlayerAlongBoard(state, player, steps, firstChoice = null) {
+  let remaining = steps;
+  let position = player.position;
+  let forced = firstChoice;
+
+  while (remaining > 0) {
+    const options = getNextTileOptions(state.tiles, position);
+    if (options.length === 0) break;
+
+    let chosen = null;
+    if (options.length > 1 && forced != null) {
+      chosen = options.includes(forced) ? forced : null;
+      forced = null;
+    } else if (options.length === 1) {
+      chosen = options[0];
+    }
+
+    if (options.length > 1 && chosen == null) {
+      player.position = position;
+      return {
+        finished: false,
+        pendingPathChoice: {
+          playerId: player.id,
+          atTileId: position,
+          options,
+          remainingSteps: remaining,
+        },
+      };
+    }
+
+    position = chosen;
+    remaining -= 1;
+  }
+
+  player.position = position;
+  return { finished: true, pendingPathChoice: null };
+}
+
+function buildLandingState(state, players) {
+  const curPlayer = players[state.currentPlayerIndex];
+  const tile = state.tiles[curPlayer.position];
+  if (!tile) {
+    return {
+      ...state,
+      players,
+      isRolling: false,
+      diceValue: null,
+      pendingPathChoice: null,
+    };
+  }
+
+  const collidedPlayer = players.find(
+    (player, idx) => idx !== state.currentPlayerIndex && player.position === curPlayer.position
+  );
+
+  const type = tile.type === "bonus" ? "bonus" : tile.type;
+  if (type === "bonus") {
+    players[state.currentPlayerIndex].stars += 1;
+  }
+
+  const withBonus = {
+    ...state,
+    players,
+    isRolling: false,
+    diceValue: null,
+    pendingPathChoice: null,
+  };
+
+  if (ENABLE_COLLISION_DUEL_MINIGAME && collidedPlayer) {
+    return startBuzzwordDuel(withBonus, curPlayer.id, collidedPlayer.id);
+  }
+
+  const seed = (state.board?.seed ?? 0) + curPlayer.position + state.currentRound * 1000;
+  const rng = mulberry32(seed);
+  const text = pickQuestion(type, rng) || "(Question manquante)";
+  const qId = `${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+
+  return {
+    ...withBonus,
+    currentMinigame: null,
+    currentQuestion: {
+      id: qId,
+      type,
+      text,
+      targetPlayerId: curPlayer.id,
+      votes: { up: [], down: [] },
+      status: "pending",
+      nextMinigame: type === "red" && ENABLE_RED_TILE_MINIGAME ? "BUG_SMASH" : null,
+    },
+  };
+}
+
 export function movePlayer(state, socketId, steps) {
   if (state.phase !== "playing") return state;
   if (!isPlayersTurn(state, socketId)) return state;
   if (state.currentQuestion) return state;
   if (state.currentMinigame) return state;
+  if (state.pendingPathChoice) return state;
   if (typeof steps !== "number" || steps <= 0) return state;
   if (state.diceValue == null) return state;
 
-  const tilesLen = state.tiles.length || 1;
   const players = state.players.map((p) => ({ ...p }));
   const cur = players[state.currentPlayerIndex];
-  const lastTileIndex = Math.max(0, tilesLen - 1);
+  const moved = advancePlayerAlongBoard(state, cur, steps);
 
-  cur.position = Math.min(cur.position + steps, lastTileIndex);
+  if (!moved.finished) {
+    return {
+      ...state,
+      players,
+      isRolling: false,
+      diceValue: null,
+      pendingPathChoice: moved.pendingPathChoice,
+    };
+  }
 
-  return {
-    ...state,
-    players,
-  };
+  return buildLandingState(state, players);
+}
+
+export function choosePath(state, socketId, nextTileId) {
+  if (state.phase !== "playing") return state;
+  if (state.currentQuestion || state.currentMinigame) return state;
+  if (!state.pendingPathChoice) return state;
+  if (state.pendingPathChoice.playerId !== socketId) return state;
+  if (!state.pendingPathChoice.options.includes(nextTileId)) return state;
+
+  const players = state.players.map((p) => ({ ...p }));
+  const cur = players[state.currentPlayerIndex];
+  if (!cur || cur.id !== socketId) return state;
+
+  const moved = advancePlayerAlongBoard(
+    state,
+    cur,
+    state.pendingPathChoice.remainingSteps,
+    nextTileId
+  );
+
+  if (!moved.finished) {
+    return {
+      ...state,
+      players,
+      pendingPathChoice: moved.pendingPathChoice,
+      isRolling: false,
+      diceValue: null,
+    };
+  }
+
+  return buildLandingState(state, players);
 }
 
 export function startBuzzwordDuel(state, firstPlayerId, secondPlayerId, now = Date.now()) {
@@ -241,58 +380,12 @@ export function startBuzzwordDuel(state, firstPlayerId, secondPlayerId, now = Da
 }
 
 export function onPlayerLanded(state, socketId) {
-  if (state.phase !== "playing") return state;
-  if (!isPlayersTurn(state, socketId)) return state;
-  if (state.currentQuestion) return state;
-  if (state.currentMinigame) return state;
-
-  const players = state.players.map((p) => ({ ...p }));
-  const curPlayer = players[state.currentPlayerIndex];
-  const tile = state.tiles[curPlayer.position];
-  if (!tile) return state;
-
-  const collidedPlayer = players.find(
-    (player, idx) => idx !== state.currentPlayerIndex && player.position === curPlayer.position
-  );
-
-  const type = tile.type === "bonus" ? "bonus" : tile.type;
-  if (type === "bonus") {
-    players[state.currentPlayerIndex].stars += 1;
-  }
-
-  const withBonus = {
-    ...state,
-    players,
-    isRolling: false,
-    diceValue: null,
-  };
-
-  if (ENABLE_COLLISION_DUEL_MINIGAME && collidedPlayer) {
-    return startBuzzwordDuel(withBonus, curPlayer.id, collidedPlayer.id);
-  }
-
-  const seed = (state.board?.seed ?? 0) + curPlayer.position + state.currentRound * 1000;
-  const rng = mulberry32(seed);
-  const text = pickQuestion(type, rng) || "(Question manquante)";
-  const qId = `${Date.now()}-${Math.floor(Math.random() * 100000)}`;
-
-  return {
-    ...withBonus,
-    currentMinigame: null,
-    currentQuestion: {
-      id: qId,
-      type,
-      text,
-      targetPlayerId: curPlayer.id,
-      votes: { up: [], down: [] },
-      status: "pending",
-      nextMinigame: type === "red" && ENABLE_RED_TILE_MINIGAME ? "BUG_SMASH" : null,
-    },
-  };
+  return state;
 }
 
 export function openQuestion(state, socketId) {
   if (state.currentMinigame) return state;
+  if (state.pendingPathChoice) return state;
   if (!state.currentQuestion || state.currentQuestion.status !== "pending") return state;
   if (state.currentQuestion.targetPlayerId !== socketId) return state;
   return {
@@ -306,6 +399,7 @@ export function openQuestion(state, socketId) {
 
 export function voteQuestion(state, socketId, vote) {
   if (state.currentMinigame) return state;
+  if (state.pendingPathChoice) return state;
   if (!state.currentQuestion || state.currentQuestion.status !== "open") return state;
   if (vote !== "up" && vote !== "down") return state;
 
@@ -320,6 +414,7 @@ export function voteQuestion(state, socketId, vote) {
 
 export function validateQuestion(state, socketId) {
   if (state.currentMinigame) return state;
+  if (state.pendingPathChoice) return state;
   if (!state.currentQuestion || state.currentQuestion.status !== "open") return state;
   if (state.currentQuestion.targetPlayerId !== socketId) return state;
 
@@ -348,6 +443,7 @@ export function validateQuestion(state, socketId) {
       },
       diceValue: null,
       isRolling: false,
+      pendingPathChoice: null,
     };
   }
 
@@ -356,6 +452,7 @@ export function validateQuestion(state, socketId) {
     currentQuestion: null,
     diceValue: null,
     isRolling: false,
+    pendingPathChoice: null,
     questionHistory,
   };
   return nextTurn(cleared);
@@ -366,6 +463,7 @@ export function nextTurn(state) {
   if (state.players.length === 0) return state;
   if (state.currentQuestion) return state;
   if (state.currentMinigame) return state;
+  if (state.pendingPathChoice) return state;
 
   const players = state.players.map((p) => ({ ...p }));
   let nextIndex = state.currentPlayerIndex + 1;
@@ -396,6 +494,7 @@ export function nextTurn(state) {
       currentPlayerIndex: state.currentPlayerIndex,
       diceValue: null,
       isRolling: false,
+      pendingPathChoice: null,
     };
   }
 
@@ -406,6 +505,7 @@ export function nextTurn(state) {
     currentRound: nextRound,
     diceValue: null,
     isRolling: false,
+    pendingPathChoice: null,
   };
 }
 
@@ -652,6 +752,7 @@ export function completeBuzzwordTransfer(state) {
     currentQuestion: null,
     diceValue: null,
     isRolling: false,
+    pendingPathChoice: null,
   };
   return nextTurn(cleared);
 }
@@ -681,6 +782,7 @@ export function completeBugSmash(state, socketId, score) {
     currentQuestion: null,
     diceValue: null,
     isRolling: false,
+    pendingPathChoice: null,
   };
   return nextTurn(cleared);
 }

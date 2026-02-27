@@ -28,6 +28,95 @@ const makePlayers = (names: string[], avatars: number[]): Player[] => {
   }));
 };
 
+const getNextTileOptions = (state: GameState, tileId: number): number[] => {
+  const tile = state.tiles[tileId];
+  if (!tile) return [];
+  const options = Array.isArray(tile.nextTileIds) ? tile.nextTileIds : [tileId + 1];
+  return options.filter((id) => Number.isInteger(id) && id >= 0 && id < state.tiles.length);
+};
+
+const advancePlayerAlongBoard = (
+  state: GameState,
+  player: Player,
+  steps: number,
+  firstChoice: number | null = null
+) => {
+  let remaining = steps;
+  let position = player.position;
+  let forced = firstChoice;
+
+  while (remaining > 0) {
+    const options = getNextTileOptions(state, position);
+    if (!options.length) break;
+
+    let chosen: number | null = null;
+    if (options.length > 1 && forced != null) {
+      chosen = options.includes(forced) ? forced : null;
+      forced = null;
+    } else if (options.length === 1) {
+      chosen = options[0];
+    }
+
+    if (options.length > 1 && chosen == null) {
+      player.position = position;
+      return {
+        finished: false,
+        pendingPathChoice: {
+          playerId: player.id,
+          atTileId: position,
+          options,
+          remainingSteps: remaining,
+        },
+      };
+    }
+
+    position = chosen as number;
+    remaining -= 1;
+  }
+
+  player.position = position;
+  return { finished: true, pendingPathChoice: null };
+};
+
+const buildLandingState = (prev: GameState, players: Player[]): GameState => {
+  const cur = players[prev.currentPlayerIndex];
+  const tile = prev.tiles[cur.position];
+  if (!tile) {
+    return {
+      ...prev,
+      players,
+      currentQuestion: null,
+      currentMinigame: null,
+      pendingPathChoice: null,
+      diceValue: null,
+      isRolling: false,
+    };
+  }
+
+  const type = tile.type === "bonus" ? "bonus" : tile.type;
+  if (type === "bonus") cur.stars += 1;
+
+  const text = pickQuestion(type as any);
+
+  return {
+    ...prev,
+    players,
+    currentMinigame: null,
+    pendingPathChoice: null,
+    currentQuestion: {
+      id: `${Date.now()}`,
+      type: type as any,
+      text,
+      targetPlayerId: cur.id,
+      votes: { up: [], down: [] },
+      status: "pending",
+      nextMinigame: type === "red" && ENABLE_RED_TILE_MINIGAME ? "BUG_SMASH" : null,
+    },
+    diceValue: null,
+    isRolling: false,
+  };
+};
+
 const createInitialState = (): GameState => {
   const seed = Math.floor(Math.random() * 1_000_000_000);
   const board = generateRandomBoard(seed, { cols: 20, rows: 6, length: 45 });
@@ -43,6 +132,7 @@ const createInitialState = (): GameState => {
     isRolling: false,
     currentQuestion: null,
     currentMinigame: null,
+    pendingPathChoice: null,
     questionHistory: [],
   };
 };
@@ -61,6 +151,7 @@ export function useGameState() {
       isRolling: false,
       currentQuestion: null,
       currentMinigame: null,
+      pendingPathChoice: null,
       questionHistory: [],
     }));
   }, []);
@@ -68,6 +159,7 @@ export function useGameState() {
   const rollDice = useCallback(() => {
     setGameState((prev) => {
       if (prev.phase !== "playing" || prev.currentQuestion || prev.currentMinigame) return prev;
+      if (prev.pendingPathChoice) return prev;
       const dice = 1 + Math.floor(Math.random() * 6);
       return { ...prev, diceValue: dice, isRolling: true };
     });
@@ -79,40 +171,64 @@ export function useGameState() {
   const movePlayer = useCallback((steps: number) => {
     setGameState((prev) => {
       if (prev.phase !== "playing" || prev.currentQuestion || prev.currentMinigame) return prev;
+      if (prev.pendingPathChoice) return prev;
       if (prev.diceValue == null) return prev;
-      const tilesLen = prev.tiles.length || 1;
       const players = prev.players.map((p) => ({ ...p }));
       const cur = players[prev.currentPlayerIndex];
-      const lastTileIndex = Math.max(0, tilesLen - 1);
-      cur.position = Math.min(cur.position + steps, lastTileIndex);
+      const moved = advancePlayerAlongBoard(prev, cur, steps);
+      if (!moved.finished) {
+        return {
+          ...prev,
+          players,
+          pendingPathChoice: moved.pendingPathChoice,
+          currentQuestion: null,
+          currentMinigame: null,
+          diceValue: null,
+          isRolling: false,
+        };
+      }
+      return buildLandingState(prev, players);
+    });
+  }, []);
 
-      const tile = prev.tiles[cur.position];
-      const type = tile.type === "bonus" ? "bonus" : tile.type;
+  const choosePath = useCallback((nextTileId: number, playerId: string) => {
+    setGameState((prev) => {
+      if (prev.phase !== "playing" || prev.currentQuestion || prev.currentMinigame) return prev;
+      if (!prev.pendingPathChoice) return prev;
+      if (prev.pendingPathChoice.playerId !== playerId) return prev;
+      if (!prev.pendingPathChoice.options.includes(nextTileId)) return prev;
 
-      if (type === "bonus") cur.stars += 1;
+      const players = prev.players.map((p) => ({ ...p }));
+      const cur = players[prev.currentPlayerIndex];
+      if (!cur || cur.id !== playerId) return prev;
 
-      const text = pickQuestion(type as any);
+      const moved = advancePlayerAlongBoard(
+        prev,
+        cur,
+        prev.pendingPathChoice.remainingSteps,
+        nextTileId
+      );
 
-      return {
-        ...prev,
-        players,
-        currentMinigame: null,
-        currentQuestion: {
-          id: `${Date.now()}`,
-          type: type as any,
-          text,
-          targetPlayerId: cur.id,
-          votes: { up: [], down: [] },
-          status: "pending",
-          nextMinigame: type === "red" && ENABLE_RED_TILE_MINIGAME ? "BUG_SMASH" : null,
-        },
-      };
+      if (!moved.finished) {
+        return {
+          ...prev,
+          players,
+          pendingPathChoice: moved.pendingPathChoice,
+          currentQuestion: null,
+          currentMinigame: null,
+          diceValue: null,
+          isRolling: false,
+        };
+      }
+
+      return buildLandingState(prev, players);
     });
   }, []);
 
   const openQuestionCard = useCallback((playerId: string) => {
     setGameState((prev) => {
       if (prev.currentMinigame) return prev;
+      if (prev.pendingPathChoice) return prev;
       const q = prev.currentQuestion;
       if (!q || q.status !== "pending") return prev;
       if (q.targetPlayerId !== playerId) return prev;
@@ -123,6 +239,7 @@ export function useGameState() {
   const voteQuestion = useCallback((vote: "up" | "down", voterId: string) => {
     setGameState((prev) => {
       if (prev.currentMinigame) return prev;
+      if (prev.pendingPathChoice) return prev;
       if (!prev.currentQuestion) return prev;
       const q = { ...prev.currentQuestion, votes: { up: [...prev.currentQuestion.votes.up], down: [...prev.currentQuestion.votes.down] } };
       q.votes.up = q.votes.up.filter((id) => id !== voterId);
@@ -135,6 +252,7 @@ export function useGameState() {
   const validateQuestion = useCallback(() => {
     setGameState((prev) => {
       if (prev.currentMinigame) return prev;
+      if (prev.pendingPathChoice) return prev;
       if (prev.phase !== "playing" || prev.currentQuestion) {
         // allow validate if question open
       }
@@ -163,6 +281,7 @@ export function useGameState() {
             durationMs: BUG_SMASH_DURATION_MS,
             score: 0,
           },
+          pendingPathChoice: null,
           diceValue: null,
           isRolling: false,
         };
@@ -189,6 +308,7 @@ export function useGameState() {
         ...prev,
         currentQuestion: null,
         currentMinigame: null,
+        pendingPathChoice: null,
         diceValue: null,
         isRolling: false,
         currentPlayerIndex: nextIndex,
@@ -223,6 +343,7 @@ export function useGameState() {
           players,
           currentRound: prev.maxRounds,
           currentMinigame: null,
+          pendingPathChoice: null,
           currentQuestion: null,
           diceValue: null,
           isRolling: false,
@@ -235,6 +356,7 @@ export function useGameState() {
         currentPlayerIndex: nextIndex,
         currentRound: nextRound,
         currentMinigame: null,
+        pendingPathChoice: null,
         currentQuestion: null,
         diceValue: null,
         isRolling: false,
@@ -268,6 +390,7 @@ export function useGameState() {
     startGame,
     rollDice,
     movePlayer,
+    choosePath,
     openQuestionCard,
     voteQuestion,
     validateQuestion,
