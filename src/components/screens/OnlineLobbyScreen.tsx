@@ -81,12 +81,12 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
   const canJoin =
     connected && !roomCode && mode === "join" && validName && validCode;
   const canLaunch =
-    connected && !!roomCode && canStart && lobbyPlayers.length >= 2;
+    connected && !!roomCode && canStart && lobbyPlayers.length >= 1;
 
   const subtitle = useMemo(() => {
     if (!connected) return "Connexion au serveur...";
     if (roomCode) return `Room active : ${roomCode}`;
-    return `Multijoueur en ligne (2-${MAX_PLAYERS} joueurs)`;
+    return `Multijoueur en ligne (1-${MAX_PLAYERS} joueurs)`;
   }, [connected, roomCode]);
 
   useEffect(() => {

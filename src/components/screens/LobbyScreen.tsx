@@ -16,7 +16,7 @@ interface PlayerSetup {
 export const LobbyScreen: React.FC<LobbyScreenProps> = ({ onStartGame }) => {
   const [playerCount, setPlayerCount] = useState<number | null>(null);
   const [players, setPlayers] = useState<PlayerSetup[]>([]);
-  const selectableCounts = Array.from({ length: 19 }, (_, i) => i + 2);
+  const selectableCounts = Array.from({ length: 20 }, (_, i) => i + 1);
 
   const handlePlayerCountSelect = (count: number) => {
     setPlayerCount(count);
@@ -94,7 +94,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({ onStartGame }) => {
           </div>
 
           <div className="mt-6 flex justify-end">
-            <PixelButton onClick={start} variant="primary" disabled={players.length < 2}>
+            <PixelButton onClick={start} variant="primary" disabled={players.length < 1}>
               🚀 Lancer la partie
             </PixelButton>
           </div>
