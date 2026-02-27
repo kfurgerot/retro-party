@@ -21,6 +21,7 @@ const makePlayers = (names: string[], avatars: number[]): Player[] => {
     name,
     avatar: avatars[idx] ?? 0,
     position: 0,
+    lastPosition: -1,
     stars: 0,
     skipNextTurn: false,
     color: colors[idx % colors.length],
@@ -43,10 +44,15 @@ const advancePlayerAlongBoard = (
 ) => {
   let remaining = steps;
   let position = player.position;
+  let previous = player.lastPosition ?? -1;
   let forced = firstChoice;
 
   while (remaining > 0) {
-    const options = getNextTileOptions(state, position);
+    const rawOptions = getNextTileOptions(state, position);
+    const options =
+      rawOptions.length > 1
+        ? rawOptions.filter((id) => id !== previous)
+        : rawOptions;
     if (!options.length) break;
 
     let chosen: number | null = null;
@@ -59,6 +65,7 @@ const advancePlayerAlongBoard = (
 
     if (options.length > 1 && chosen == null) {
       player.position = position;
+      player.lastPosition = previous;
       return {
         finished: false,
         pendingPathChoice: {
@@ -70,11 +77,13 @@ const advancePlayerAlongBoard = (
       };
     }
 
+    previous = position;
     position = chosen as number;
     remaining -= 1;
   }
 
   player.position = position;
+  player.lastPosition = previous;
   return { finished: true, pendingPathChoice: null };
 };
 
@@ -119,7 +128,7 @@ const buildLandingState = (prev: GameState, players: Player[]): GameState => {
 
 const createInitialState = (): GameState => {
   const seed = Math.floor(Math.random() * 1_000_000_000);
-  const board = generateRandomBoard(seed, { cols: 20, rows: 6, length: 45 });
+  const board = generateRandomBoard(seed, { cols: 30, rows: 20, length: 85 });
   return {
     phase: "lobby",
     players: [],

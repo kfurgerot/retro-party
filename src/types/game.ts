@@ -5,6 +5,7 @@ export interface Player {
   name: string;
   avatar: number;
   position: number;
+  lastPosition?: number;
   /** Kudobox / bonus stars */
   stars: number;
   skipNextTurn: boolean;

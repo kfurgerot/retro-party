@@ -15,74 +15,29 @@ function mulberry32(seed) {
 export function generateRandomBoard(seed, opts = {}) {
   const rng = mulberry32(seed);
 
-  const cols = opts.cols ?? 20;
-  const rows = opts.rows ?? 6;
-  const targetLen = Math.max(36, opts.length ?? 45);
+  const cols = opts.cols ?? 30;
+  const rows = opts.rows ?? 20;
+  const targetLen = Math.max(50, opts.length ?? 85);
 
   const cellSize = opts.cellSize ?? 72;
   const offsetX = opts.offsetX ?? 60;
   const offsetY = opts.offsetY ?? 60;
   const flipX = rng() < 0.5;
   const flipY = rng() < 0.5;
-  const baseMaxX = 19;
-  const baseMaxY = 5;
+  const baseMaxX = 27;
+  const baseMaxY = 17;
   const tx = (x) => (flipX ? baseMaxX - x : x);
   const ty = (y) => (flipY ? baseMaxY - y : y);
 
-  const line = (from, to) => {
-    const [x1, y1] = from;
-    const [x2, y2] = to;
-    const out = [];
-    const dx = Math.sign(x2 - x1);
-    const dy = Math.sign(y2 - y1);
-    let x = x1;
-    let y = y1;
-    out.push({ x, y });
-    while (x !== x2 || y !== y2) {
-      if (x !== x2) x += dx;
-      if (y !== y2) y += dy;
-      out.push({ x, y });
-    }
-    return out;
-  };
-
-  const mainSegments = [
-    [[15, 5], [4, 5]],
-    [[4, 5], [4, 1]],
-    [[4, 1], [14, 1]],
-    [[14, 1], [14, 4]],
-    [[14, 4], [6, 4]],
-    [[6, 4], [6, 2]],
-    [[6, 2], [13, 2]],
-  ];
-
-  const mainCoords = [];
-  mainSegments.forEach((seg, idx) => {
-    const pts = line(seg[0], seg[1]);
-    if (idx === 0) {
-      mainCoords.push(...pts);
-      return;
-    }
-    mainCoords.push(...pts.slice(1));
-  });
-
-  const transformedMain = mainCoords.map((p) => ({ x: tx(p.x), y: ty(p.y) }));
-  const tiles = transformedMain.map((p, id) => ({
-    id,
-    gridX: p.x,
-    gridY: p.y,
-    x: offsetX + p.x * cellSize,
-    y: offsetY + p.y * cellSize,
-    type: "blue",
-    nextTileIds: [id + 1],
-  }));
-  if (tiles.length) {
-    tiles[tiles.length - 1].nextTileIds = [Math.max(0, Math.floor(tiles.length * 0.6))];
-  }
-
+  const tiles = [];
   const byCoord = new Map();
-  tiles.forEach((tile) => byCoord.set(`${tile.gridX},${tile.gridY}`, tile.id));
-  const addTile = (x, y, nextTileIds) => {
+  const keyOf = (x, y) => `${x},${y}`;
+  const ensureNode = (rawX, rawY) => {
+    const x = tx(rawX);
+    const y = ty(rawY);
+    const key = keyOf(x, y);
+    const existing = byCoord.get(key);
+    if (existing != null) return existing;
     const id = tiles.length;
     tiles.push({
       id,
@@ -91,52 +46,91 @@ export function generateRandomBoard(seed, opts = {}) {
       x: offsetX + x * cellSize,
       y: offsetY + y * cellSize,
       type: "blue",
-      nextTileIds,
+      nextTileIds: [],
     });
-    byCoord.set(`${x},${y}`, id);
+    byCoord.set(key, id);
     return id;
   };
-
-  const branches = [
-    { source: [4, 3], path: [[5, 3], [6, 3], [7, 3]], join: [7, 2] },
-    { source: [14, 3], path: [[13, 3], [12, 3]], join: [12, 2] },
-    { source: [8, 4], path: [[8, 3]], join: [8, 2] },
-    { source: [11, 4], path: [[11, 3], [10, 3], [9, 3]], join: [9, 2] },
-  ];
-
-  branches.forEach((branch) => {
-    if (tiles.length > targetLen + 12) return;
-
-    const sourceKey = `${tx(branch.source[0])},${ty(branch.source[1])}`;
-    const joinKey = `${tx(branch.join[0])},${ty(branch.join[1])}`;
-    const sourceId = byCoord.get(sourceKey);
-    const joinId = byCoord.get(joinKey);
-    if (sourceId == null || joinId == null) return;
-
-    const chain = [];
-    for (const [px, py] of branch.path) {
-      const x = tx(px);
-      const y = ty(py);
-      const key = `${x},${y}`;
-      let id = byCoord.get(key);
-      if (id == null) id = addTile(x, y, []);
-      chain.push(id);
+  const connect = (fromId, toId) => {
+    const list = tiles[fromId].nextTileIds ?? [];
+    if (!list.includes(toId)) list.push(toId);
+    tiles[fromId].nextTileIds = list;
+  };
+  const walk = (from, to) => {
+    const [x1, y1] = from;
+    const [x2, y2] = to;
+    const out = [[x1, y1]];
+    let x = x1;
+    let y = y1;
+    const dx = Math.sign(x2 - x1);
+    const dy = Math.sign(y2 - y1);
+    while (x !== x2 || y !== y2) {
+      if (x !== x2) x += dx;
+      if (y !== y2) y += dy;
+      out.push([x, y]);
     }
+    return out;
+  };
+  const pathByWaypoints = (points) => {
+    let prevId = null;
+    points.forEach((pt, idx) => {
+      const segment = idx === 0 ? [pt] : walk(points[idx - 1], pt).slice(1);
+      segment.forEach(([x, y]) => {
+        const id = ensureNode(x, y);
+        if (prevId != null) connect(prevId, id);
+        prevId = id;
+      });
+    });
+  };
 
-    if (!chain.length) {
-      tiles[sourceId].nextTileIds = [...(tiles[sourceId].nextTileIds ?? []), joinId];
-      return;
-    }
+  pathByWaypoints([
+    [3, 3], [11, 3], [11, 8], [3, 8], [3, 15], [7, 17], [13, 17], [17, 15], [17, 13], [14, 13], [3, 13], [3, 3],
+  ]);
 
-    tiles[sourceId].nextTileIds = [...(tiles[sourceId].nextTileIds ?? []), chain[0]];
-    for (let i = 0; i < chain.length - 1; i += 1) {
-      tiles[chain[i]].nextTileIds = [chain[i + 1]];
-    }
-    tiles[chain[chain.length - 1]].nextTileIds = [joinId];
-  });
+  pathByWaypoints([
+    [11, 3], [18, 3], [20, 2], [22, 2], [24, 3], [24, 5], [23, 7], [21, 8], [19, 8], [18, 8],
+  ]);
+
+  pathByWaypoints([
+    [3, 8], [23, 8], [23, 13], [17, 13],
+  ]);
+
+  pathByWaypoints([
+    [17, 13], [20, 13], [20, 11], [23, 11], [25, 13], [25, 16], [23, 17], [20, 17], [18, 17], [17, 15],
+  ]);
+
+  pathByWaypoints([
+    [3, 15], [6, 15], [8, 13], [10, 11], [12, 11], [14, 13],
+  ]);
+
+  const ensureNoDeadEnds = () => {
+    if (!tiles.length) return;
+    tiles.forEach((tile) => {
+      const exits = (tile.nextTileIds ?? []).filter((id) => id >= 0 && id < tiles.length && id !== tile.id);
+      if (exits.length > 0) {
+        tile.nextTileIds = exits;
+        return;
+      }
+
+      let bestId = 0;
+      let bestDist = Number.POSITIVE_INFINITY;
+      for (const candidate of tiles) {
+        if (candidate.id === tile.id) continue;
+        const dx = (candidate.gridX ?? 0) - (tile.gridX ?? 0);
+        const dy = (candidate.gridY ?? 0) - (tile.gridY ?? 0);
+        const dist = dx * dx + dy * dy;
+        if (dist < bestDist) {
+          bestDist = dist;
+          bestId = candidate.id;
+        }
+      }
+      tile.nextTileIds = [bestId];
+    });
+  };
+  ensureNoDeadEnds();
 
   paintTileTypes(tiles, rng);
-  return { seed, cols, rows, length: tiles.length, tiles };
+  return { seed, cols, rows, length: Math.max(targetLen, tiles.length), tiles };
 }
 
 function paintTileTypes(tiles, rng) {

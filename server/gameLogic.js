@@ -86,7 +86,7 @@ function isBuzzwordDuelActive(state) {
 
 export function createInitialState() {
   const seed = Math.floor(Math.random() * 1_000_000_000);
-  const board = generateRandomBoard(seed, { cols: 20, rows: 6, length: 45 });
+  const board = generateRandomBoard(seed, { cols: 30, rows: 20, length: 85 });
 
   return {
     phase: "lobby",
@@ -117,7 +117,7 @@ export function createInitialState() {
 
 export function regenerateBoard(state) {
   const seed = Math.floor(Math.random() * 1_000_000_000);
-  const board = generateRandomBoard(seed, { cols: 20, rows: 6, length: 45 });
+  const board = generateRandomBoard(seed, { cols: 30, rows: 20, length: 85 });
   return {
     ...state,
     board: { seed: board.seed, cols: board.cols, rows: board.rows, length: board.length },
@@ -133,6 +133,7 @@ export function initializePlayers(state, lobbyPlayers, maxRounds = 12) {
     name: p.name,
     avatar: p.avatar ?? 0,
     position: 0,
+    lastPosition: -1,
     stars: 0,
     skipNextTurn: false,
     color: colors[idx % colors.length],
@@ -193,10 +194,15 @@ function getNextTileOptions(tiles, tileId) {
 function advancePlayerAlongBoard(state, player, steps, firstChoice = null) {
   let remaining = steps;
   let position = player.position;
+  let previous = player.lastPosition ?? -1;
   let forced = firstChoice;
 
   while (remaining > 0) {
-    const options = getNextTileOptions(state.tiles, position);
+    const rawOptions = getNextTileOptions(state.tiles, position);
+    const options =
+      rawOptions.length > 1
+        ? rawOptions.filter((id) => id !== previous)
+        : rawOptions;
     if (options.length === 0) break;
 
     let chosen = null;
@@ -209,6 +215,7 @@ function advancePlayerAlongBoard(state, player, steps, firstChoice = null) {
 
     if (options.length > 1 && chosen == null) {
       player.position = position;
+      player.lastPosition = previous;
       return {
         finished: false,
         pendingPathChoice: {
@@ -220,11 +227,13 @@ function advancePlayerAlongBoard(state, player, steps, firstChoice = null) {
       };
     }
 
+    previous = position;
     position = chosen;
     remaining -= 1;
   }
 
   player.position = position;
+  player.lastPosition = previous;
   return { finished: true, pendingPathChoice: null };
 }
 

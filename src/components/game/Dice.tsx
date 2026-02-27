@@ -64,6 +64,12 @@ export const Dice: React.FC<DiceProps> = ({
   onOpenQuestionCard,
   playerIndex = 0,
 }) => {
+  const [lastRolledValue, setLastRolledValue] = React.useState<number>(1);
+
+  useEffect(() => {
+    if (value != null) setLastRolledValue(value);
+  }, [value]);
+
   const playerKey = getPlayerBoardKey(playerIndex);
   const canOpen = canOpenQuestionCard && !!onOpenQuestionCard;
 
@@ -105,7 +111,7 @@ export const Dice: React.FC<DiceProps> = ({
   return (
     <div className="flex flex-col items-center gap-4">
       <div className={cn("transition-transform", isRolling && "animate-dice-roll")}>
-        <DiceFace value={value || 1} />
+        <DiceFace value={value ?? lastRolledValue} />
       </div>
 
       <button

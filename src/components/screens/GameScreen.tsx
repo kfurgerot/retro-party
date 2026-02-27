@@ -178,12 +178,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   ]);
 
   useEffect(() => {
-    if (isPathChoiceActive) {
-      setIsMoveAnimating(false);
-    }
-  }, [isPathChoiceActive]);
-
-  useEffect(() => {
     if (!isMoveAnimating || !gameState.currentQuestion) return;
 
     if (moveAnimationFallbackRef.current) {
@@ -222,6 +216,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     const shouldShowTurnIntro =
       gameState.phase === "playing" &&
       isMyTurn &&
+      !isPathChoiceActive &&
       !gameState.currentQuestion &&
       !bugSmashState &&
       !buzzwordState &&
@@ -254,6 +249,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     gameState.diceValue,
     gameState.isRolling,
     isMyTurn,
+    isPathChoiceActive,
     bugSmashState,
     buzzwordState,
     whoSaidItState,
@@ -408,6 +404,9 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               <GameBoard
                 tiles={gameState.tiles}
                 players={gameState.players}
+                onMoveAnimationEnd={(playerId) => {
+                  if (playerId === currentPlayer?.id) setIsMoveAnimating(false);
+                }}
               />
             </div>
 
@@ -658,7 +657,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         />
       )}
 
-      {pendingPathChoice && (
+      {pendingPathChoice && !isMoveAnimating && (
         <div className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center p-4">
           <Card className="pointer-events-auto w-full max-w-lg border-cyan-300/35 bg-slate-950/95 p-4 text-cyan-50">
             <div className="text-lg font-bold">Intersection</div>
@@ -686,7 +685,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         </div>
       )}
 
-      {isTurnIntroActive && !gameState.currentQuestion && !isMinigameActive && (
+      {isTurnIntroActive && !isPathChoiceActive && !gameState.currentQuestion && !isMinigameActive && (
         <LaunchAnnouncement
           title="A toi de jouer"
           subtitle="Prepares-toi a lancer le de."

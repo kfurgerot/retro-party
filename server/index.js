@@ -41,6 +41,7 @@ const ORIGIN = process.env.ORIGIN || true; // in prod set to your https domain
 const RECONNECT_GRACE_MS = 30000;
 const MAX_PLAYERS = 20;
 const WHO_SAID_IT_ANNOUNCE_MS = 4000;
+const ENABLE_WHO_SAID_IT_MINIGAME = false;
 
 const app = express();
 app.use(cors({ origin: ORIGIN, credentials: false }));
@@ -277,6 +278,7 @@ function broadcastLobby(code) {
 }
 
 function maybeStartWhoSaidItAfterTurnAdvance(code, previousRound) {
+  if (!ENABLE_WHO_SAID_IT_MINIGAME) return;
   const room = rooms.get(code);
   if (!room) return;
   const shouldStartWhoSaidIt =

@@ -1,10 +1,11 @@
-import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Tile, Player, AVATARS } from "@/types/game";
 import { cn } from "@/lib/utils";
 
 interface GameBoardProps {
   tiles: Tile[];
   players: Player[];
+  onMoveAnimationEnd?: (playerId: string) => void;
 }
 
 const TileIcon: Record<string, string> = {
@@ -39,9 +40,13 @@ function isCoarsePointer() {
 const TILE_SIZE = 64;
 const TILE_CENTER = TILE_SIZE / 2;
 const BOARD_MARGIN = 96;
+const FOLLOW_MOBILE_SCALE = 1.2;
+const FOLLOW_DESKTOP_SCALE = 1.05;
+const MOVE_STEP_MS = 320;
 export const GameBoard: React.FC<GameBoardProps> = ({
   tiles,
   players,
+  onMoveAnimationEnd,
 }) => {
   const bounds = useMemo(() => {
     if (!tiles.length) return { minX: 0, minY: 0, maxX: 800, maxY: 500 };
@@ -63,6 +68,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   );
 
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const previousPositionsRef = useRef<Record<string, number>>({});
+  const moveTimeoutsRef = useRef<number[]>([]);
   const [displayPositions, setDisplayPositions] = useState<Record<string, number>>({});
   const [movingPlayerId, setMovingPlayerId] = useState<string | null>(null);
 
@@ -121,6 +128,36 @@ export const GameBoard: React.FC<GameBoardProps> = ({
       y: clamp(nextOffset.y, minY, maxY),
     };
   };
+
+  const focusOnPosition = useCallback(
+    (position: number, boostScale: boolean) => {
+      const tile = tiles[position];
+      const el = containerRef.current;
+      if (!tile || !el) return;
+
+      const rect = el.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return;
+
+      const coarse = isCoarsePointer();
+      const fit = computeFitScale(rect.width, rect.height);
+      const minScale = coarse ? Math.min(1, fit) : Math.min(0.5, fit);
+      const followFloor = coarse ? Math.max(minScale, FOLLOW_MOBILE_SCALE) : Math.max(minScale, FOLLOW_DESKTOP_SCALE);
+      const nextScale = boostScale
+        ? clamp(Math.max(scaleRef.current, followFloor), minScale, 2.75)
+        : scaleRef.current;
+
+      const centerX = tile.x - bounds.minX + TILE_CENTER;
+      const centerY = tile.y - bounds.minY + TILE_CENTER;
+      const nextOffset = {
+        x: rect.width * 0.5 - centerX * nextScale,
+        y: rect.height * 0.48 - centerY * nextScale,
+      };
+
+      setScale(nextScale);
+      setOffset(clampOffset(nextScale, nextOffset, rect.width, rect.height));
+    },
+    [bounds.minX, bounds.minY, tiles]
+  );
 
   const resetView = () => {
     const el = containerRef.current;
@@ -322,11 +359,113 @@ export const GameBoard: React.FC<GameBoardProps> = ({
 
   const showControls = true;
 
+  const getNextIds = useCallback(
+    (tileId: number) => {
+      const tile = tiles[tileId];
+      if (!tile) return [] as number[];
+      const next = Array.isArray(tile.nextTileIds) ? tile.nextTileIds : [tileId + 1];
+      return next.filter((id) => id >= 0 && id < tiles.length);
+    },
+    [tiles]
+  );
+
+  const findPath = useCallback(
+    (from: number, to: number) => {
+      if (from === to) return [from];
+      if (from < 0 || to < 0 || from >= tiles.length || to >= tiles.length) return [to];
+
+      const q: number[] = [from];
+      const visited = new Set<number>([from]);
+      const parent = new Map<number, number>();
+
+      while (q.length > 0) {
+        const cur = q.shift() as number;
+        const nextIds = getNextIds(cur);
+        for (const nxt of nextIds) {
+          if (visited.has(nxt)) continue;
+          visited.add(nxt);
+          parent.set(nxt, cur);
+          if (nxt === to) {
+            const path: number[] = [to];
+            let node = to;
+            while (parent.has(node)) {
+              node = parent.get(node) as number;
+              path.push(node);
+            }
+            path.reverse();
+            return path;
+          }
+          q.push(nxt);
+        }
+      }
+
+      return [to];
+    },
+    [getNextIds, tiles.length]
+  );
+
   useLayoutEffect(() => {
+    const clearMoveTimeouts = () => {
+      moveTimeoutsRef.current.forEach((id) => window.clearTimeout(id));
+      moveTimeoutsRef.current = [];
+    };
+
     const nextActual = Object.fromEntries(players.map((p) => [p.id, p.position]));
-    setDisplayPositions(nextActual);
-    setMovingPlayerId(null);
-  }, [players]);
+    if (Object.keys(previousPositionsRef.current).length === 0) {
+      previousPositionsRef.current = nextActual;
+      setDisplayPositions(nextActual);
+      setMovingPlayerId(null);
+      return;
+    }
+
+    clearMoveTimeouts();
+    let hasAnimatedMove = false;
+    let followedPlayerId: string | null = null;
+
+    players.forEach((p) => {
+      const from = previousPositionsRef.current[p.id];
+      const to = p.position;
+      if (from == null || from === to) return;
+
+      const path = findPath(from, to);
+      const steps = path.slice(1);
+      if (!steps.length) return;
+
+      hasAnimatedMove = true;
+      if (!followedPlayerId) followedPlayerId = p.id;
+
+      steps.forEach((position, idx) => {
+        const timeoutId = window.setTimeout(() => {
+          setDisplayPositions((prev) => ({ ...prev, [p.id]: position }));
+          if (followedPlayerId === p.id) focusOnPosition(position, true);
+          if (idx === steps.length - 1 && followedPlayerId === p.id) {
+            setMovingPlayerId(null);
+          }
+          if (idx === steps.length - 1) {
+            onMoveAnimationEnd?.(p.id);
+          }
+        }, MOVE_STEP_MS * (idx + 1));
+        moveTimeoutsRef.current.push(timeoutId);
+      });
+    });
+
+    if (hasAnimatedMove) {
+      setMovingPlayerId(followedPlayerId);
+    } else {
+      setDisplayPositions(nextActual);
+      setMovingPlayerId(null);
+    }
+    previousPositionsRef.current = nextActual;
+
+    return () => clearMoveTimeouts();
+  }, [findPath, focusOnPosition, players]);
+
+  useLayoutEffect(() => {
+    return () => {
+      moveTimeoutsRef.current.forEach((id) => window.clearTimeout(id));
+      moveTimeoutsRef.current = [];
+    };
+  }, []);
 
   return (
     <div

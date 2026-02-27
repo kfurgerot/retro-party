@@ -14,128 +14,128 @@ function mulberry32(seed: number) {
 
 export function generateRandomBoard(seed: number, opts?: { cols?: number; rows?: number; length?: number }) {
   const rng = mulberry32(seed);
-  const cols = opts?.cols ?? 20;
-  const rows = opts?.rows ?? 6;
-  const targetLen = Math.max(36, opts?.length ?? 45);
+  const cols = opts?.cols ?? 30;
+  const rows = opts?.rows ?? 20;
+  const targetLen = Math.max(50, opts?.length ?? 85);
 
   const CELL_SIZE = 72;
   const OFFSET_X = 80;
   const OFFSET_Y = 100;
   const flipX = rng() < 0.5;
   const flipY = rng() < 0.5;
-  const baseMaxX = 19;
-  const baseMaxY = 5;
+  const baseMaxX = 27;
+  const baseMaxY = 17;
   const tx = (x: number) => (flipX ? baseMaxX - x : x);
   const ty = (y: number) => (flipY ? baseMaxY - y : y);
 
-  const line = (from: [number, number], to: [number, number]) => {
-    const [x1, y1] = from;
-    const [x2, y2] = to;
-    const out: Array<{ x: number; y: number }> = [];
-    const dx = Math.sign(x2 - x1);
-    const dy = Math.sign(y2 - y1);
-    let x = x1;
-    let y = y1;
-    out.push({ x, y });
-    while (x !== x2 || y !== y2) {
-      if (x !== x2) x += dx;
-      if (y !== y2) y += dy;
-      out.push({ x, y });
-    }
-    return out;
-  };
-
-  const mainSegments: Array<[[number, number], [number, number]]> = [
-    [[15, 5], [4, 5]],
-    [[4, 5], [4, 1]],
-    [[4, 1], [14, 1]],
-    [[14, 1], [14, 4]],
-    [[14, 4], [6, 4]],
-    [[6, 4], [6, 2]],
-    [[6, 2], [13, 2]],
-  ];
-
-  const mainCoords: Array<{ x: number; y: number }> = [];
-  mainSegments.forEach((seg, idx) => {
-    const pts = line(seg[0], seg[1]);
-    if (idx === 0) {
-      mainCoords.push(...pts);
-      return;
-    }
-    mainCoords.push(...pts.slice(1));
-  });
-
-  const transformedMain = mainCoords.map((p) => ({ x: tx(p.x), y: ty(p.y) }));
-  const tiles: Tile[] = transformedMain.map((p, id) => ({
-    id,
-    type: 'blue',
-    x: OFFSET_X + p.x * CELL_SIZE,
-    y: OFFSET_Y + p.y * CELL_SIZE,
-    gridX: p.x,
-    gridY: p.y,
-    nextTileIds: [id + 1],
-  }));
-  if (tiles.length) {
-    tiles[tiles.length - 1].nextTileIds = [Math.max(0, Math.floor(tiles.length * 0.6))];
-  }
-
+  const tiles: Tile[] = [];
   const byCoord = new Map<string, number>();
-  tiles.forEach((tile) => byCoord.set(`${tile.gridX},${tile.gridY}`, tile.id));
-  const addTile = (x: number, y: number, nextTileIds: number[]) => {
+  const keyOf = (x: number, y: number) => `${x},${y}`;
+  const ensureNode = (rawX: number, rawY: number) => {
+    const x = tx(rawX);
+    const y = ty(rawY);
+    const key = keyOf(x, y);
+    const existing = byCoord.get(key);
+    if (existing != null) return existing;
     const id = tiles.length;
     tiles.push({
       id,
-      type: 'blue',
+      type: "blue",
       x: OFFSET_X + x * CELL_SIZE,
       y: OFFSET_Y + y * CELL_SIZE,
       gridX: x,
       gridY: y,
-      nextTileIds,
+      nextTileIds: [],
     });
-    byCoord.set(`${x},${y}`, id);
+    byCoord.set(key, id);
     return id;
   };
-
-  const branches = [
-    { source: [4, 3], path: [[5, 3], [6, 3], [7, 3]], join: [7, 2] },
-    { source: [14, 3], path: [[13, 3], [12, 3]], join: [12, 2] },
-    { source: [8, 4], path: [[8, 3]], join: [8, 2] },
-    { source: [11, 4], path: [[11, 3], [10, 3], [9, 3]], join: [9, 2] },
-  ] as const;
-
-  branches.forEach((branch) => {
-    if (tiles.length > targetLen + 12) return;
-
-    const sourceKey = `${tx(branch.source[0])},${ty(branch.source[1])}`;
-    const joinKey = `${tx(branch.join[0])},${ty(branch.join[1])}`;
-    const sourceId = byCoord.get(sourceKey);
-    const joinId = byCoord.get(joinKey);
-    if (sourceId == null || joinId == null) return;
-
-    const chain: number[] = [];
-    for (const [px, py] of branch.path) {
-      const x = tx(px);
-      const y = ty(py);
-      const key = `${x},${y}`;
-      let id = byCoord.get(key);
-      if (id == null) id = addTile(x, y, []);
-      chain.push(id);
+  const connect = (fromId: number, toId: number) => {
+    const list = tiles[fromId].nextTileIds ?? [];
+    if (!list.includes(toId)) list.push(toId);
+    tiles[fromId].nextTileIds = list;
+  };
+  const walk = (from: [number, number], to: [number, number]) => {
+    const [x1, y1] = from;
+    const [x2, y2] = to;
+    const out: Array<[number, number]> = [[x1, y1]];
+    let x = x1;
+    let y = y1;
+    const dx = Math.sign(x2 - x1);
+    const dy = Math.sign(y2 - y1);
+    while (x !== x2 || y !== y2) {
+      if (x !== x2) x += dx;
+      if (y !== y2) y += dy;
+      out.push([x, y]);
     }
+    return out;
+  };
+  const pathByWaypoints = (points: Array<[number, number]>) => {
+    let prevId: number | null = null;
+    points.forEach((pt, idx) => {
+      const segment = idx === 0 ? [pt] : walk(points[idx - 1], pt).slice(1);
+      segment.forEach(([x, y]) => {
+        const id = ensureNode(x, y);
+        if (prevId != null) connect(prevId, id);
+        prevId = id;
+      });
+    });
+  };
 
-    if (!chain.length) {
-      tiles[sourceId].nextTileIds = [...(tiles[sourceId].nextTileIds ?? []), joinId];
-      return;
-    }
+  // Main route inspired by the provided map.
+  pathByWaypoints([
+    [3, 3], [11, 3], [11, 8], [3, 8], [3, 15], [7, 17], [13, 17], [17, 15], [17, 13], [14, 13], [3, 13], [3, 3],
+  ]);
 
-    tiles[sourceId].nextTileIds = [...(tiles[sourceId].nextTileIds ?? []), chain[0]];
-    for (let i = 0; i < chain.length - 1; i += 1) {
-      tiles[chain[i]].nextTileIds = [chain[i + 1]];
-    }
-    tiles[chain[chain.length - 1]].nextTileIds = [joinId];
-  });
+  // Branch 1: top-right loop entry from top bar.
+  pathByWaypoints([
+    [11, 3], [18, 3], [20, 2], [22, 2], [24, 3], [24, 5], [23, 7], [21, 8], [19, 8], [18, 8],
+  ]);
+
+  // Branch 2: middle lane to right column.
+  pathByWaypoints([
+    [3, 8], [23, 8], [23, 13], [17, 13],
+  ]);
+
+  // Branch 3: bottom-right loop.
+  pathByWaypoints([
+    [17, 13], [20, 13], [20, 11], [23, 11], [25, 13], [25, 16], [23, 17], [20, 17], [18, 17], [17, 15],
+  ]);
+
+  // Branch 4: left-bottom shortcut back to lower center.
+  pathByWaypoints([
+    [3, 15], [6, 15], [8, 13], [10, 11], [12, 11], [14, 13],
+  ]);
+
+  const ensureNoDeadEnds = () => {
+    if (!tiles.length) return;
+    tiles.forEach((tile) => {
+      const exits = (tile.nextTileIds ?? []).filter((id) => id >= 0 && id < tiles.length && id !== tile.id);
+      if (exits.length > 0) {
+        tile.nextTileIds = exits;
+        return;
+      }
+
+      // No cul-de-sac: fallback to the nearest tile.
+      let bestId = 0;
+      let bestDist = Number.POSITIVE_INFINITY;
+      for (const candidate of tiles) {
+        if (candidate.id === tile.id) continue;
+        const dx = (candidate.gridX ?? 0) - (tile.gridX ?? 0);
+        const dy = (candidate.gridY ?? 0) - (tile.gridY ?? 0);
+        const dist = dx * dx + dy * dy;
+        if (dist < bestDist) {
+          bestDist = dist;
+          bestId = candidate.id;
+        }
+      }
+      tile.nextTileIds = [bestId];
+    });
+  };
+  ensureNoDeadEnds();
 
   paintTileTypes(tiles, rng);
-  return { seed, cols, rows, length: tiles.length, tiles };
+  return { seed, cols, rows, length: Math.max(targetLen, tiles.length), tiles };
 }
 
 function paintTileTypes(tiles: Tile[], rng: () => number) {
