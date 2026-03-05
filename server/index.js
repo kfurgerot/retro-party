@@ -208,6 +208,8 @@ function sanitizeState(state) {
       name: p.name,
       avatar: p.avatar,
       position: p.position,
+      positionNodeId: p.positionNodeId ?? String(p.position ?? 0),
+      points: p.points ?? 0,
       stars: p.stars,
       skipNextTurn: p.skipNextTurn,
       color: p.color,
@@ -260,6 +262,14 @@ function sanitizeState(state) {
           atTileId: state.pendingPathChoice.atTileId,
           options: state.pendingPathChoice.options,
           remainingSteps: state.pendingPathChoice.remainingSteps,
+        }
+      : null,
+    lastMoveTrace: state.lastMoveTrace
+      ? {
+          id: state.lastMoveTrace.id,
+          playerId: state.lastMoveTrace.playerId,
+          path: state.lastMoveTrace.path,
+          pointDeltas: state.lastMoveTrace.pointDeltas,
         }
       : null,
   };

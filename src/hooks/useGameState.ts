@@ -21,7 +21,9 @@ const makePlayers = (names: string[], avatars: number[]): Player[] => {
     name,
     avatar: avatars[idx] ?? 0,
     position: 0,
+    positionNodeId: "0",
     lastPosition: -1,
+    points: 0,
     stars: 0,
     skipNextTurn: false,
     color: colors[idx % colors.length],
@@ -36,6 +38,29 @@ const getNextTileOptions = (state: GameState, tileId: number): number[] => {
   return options.filter((id) => Number.isInteger(id) && id >= 0 && id < state.tiles.length);
 };
 
+const normalizeTileType = (type: string) => {
+  const value = String(type ?? "").toLowerCase();
+  if (value === "purple") return "violet";
+  if (value === "kudobox" || value === "star") return "bonus";
+  return value;
+};
+
+const getTilePointDelta = (tileType: string) => {
+  const normalized = normalizeTileType(tileType);
+  if (normalized === "red") return -2;
+  if (normalized === "blue" || normalized === "green" || normalized === "violet" || normalized === "yellow") return 2;
+  return 0;
+};
+
+const applyKudoboxOnVisit = (player: Player, tileType: string) => {
+  const normalized = normalizeTileType(tileType);
+  if (normalized === "bonus" && (player.points ?? 0) >= 10) {
+    player.points -= 10;
+    player.stars += 1;
+  }
+  player.points = Math.max(0, Math.floor(Number(player.points) || 0));
+};
+
 const advancePlayerAlongBoard = (
   state: GameState,
   player: Player,
@@ -46,6 +71,8 @@ const advancePlayerAlongBoard = (
   let position = player.position;
   let previous = player.lastPosition ?? -1;
   let forced = firstChoice;
+  const path = [position];
+  const pointDeltas: number[] = [];
 
   while (remaining > 0) {
     const rawOptions = getNextTileOptions(state, position);
@@ -63,9 +90,16 @@ const advancePlayerAlongBoard = (
 
     if (options.length > 1 && chosen == null) {
       player.position = position;
+      player.positionNodeId = String(position);
       player.lastPosition = previous;
       return {
         finished: false,
+        moveTrace: {
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          playerId: player.id,
+          path,
+          pointDeltas,
+        },
         pendingPathChoice: {
           playerId: player.id,
           atTileId: position,
@@ -77,12 +111,33 @@ const advancePlayerAlongBoard = (
 
     previous = position;
     position = chosen as number;
+    player.position = position;
+    player.positionNodeId = String(position);
+    player.lastPosition = previous;
+    path.push(position);
+    const visitedTile = state.tiles[position];
+    pointDeltas.push(0);
+    if (visitedTile) applyKudoboxOnVisit(player, visitedTile.type);
     remaining -= 1;
   }
 
   player.position = position;
+  player.positionNodeId = String(position);
   player.lastPosition = previous;
-  return { finished: true, pendingPathChoice: null };
+  const finalTile = state.tiles[position];
+  const finalDelta = finalTile ? getTilePointDelta(finalTile.type) : 0;
+  player.points = Math.max(0, Math.floor(Number(player.points ?? 0) + finalDelta));
+  if (pointDeltas.length > 0) pointDeltas[pointDeltas.length - 1] = finalDelta;
+  return {
+    finished: true,
+    moveTrace: {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      playerId: player.id,
+      path,
+      pointDeltas,
+    },
+    pendingPathChoice: null,
+  };
 };
 
 const buildLandingState = (prev: GameState, players: Player[]): GameState => {
@@ -101,7 +156,6 @@ const buildLandingState = (prev: GameState, players: Player[]): GameState => {
   }
 
   const type = tile.type === "bonus" ? "bonus" : tile.type;
-  if (type === "bonus") cur.stars += 1;
 
   const text = pickQuestion(type as any);
 
@@ -140,6 +194,7 @@ const createInitialState = (): GameState => {
     currentQuestion: null,
     currentMinigame: null,
     pendingPathChoice: null,
+    lastMoveTrace: null,
     questionHistory: [],
   };
 };
@@ -159,6 +214,7 @@ export function useGameState() {
       currentQuestion: null,
       currentMinigame: null,
       pendingPathChoice: null,
+      lastMoveTrace: null,
       questionHistory: [],
     }));
   }, []);
@@ -188,13 +244,14 @@ export function useGameState() {
           ...prev,
           players,
           pendingPathChoice: moved.pendingPathChoice,
+          lastMoveTrace: moved.moveTrace,
           currentQuestion: null,
           currentMinigame: null,
           diceValue: null,
           isRolling: false,
         };
       }
-      return buildLandingState(prev, players);
+      return { ...buildLandingState(prev, players), lastMoveTrace: moved.moveTrace };
     });
   }, []);
 
@@ -221,6 +278,7 @@ export function useGameState() {
           ...prev,
           players,
           pendingPathChoice: moved.pendingPathChoice,
+          lastMoveTrace: moved.moveTrace,
           currentQuestion: null,
           currentMinigame: null,
           diceValue: null,
@@ -228,7 +286,7 @@ export function useGameState() {
         };
       }
 
-      return buildLandingState(prev, players);
+      return { ...buildLandingState(prev, players), lastMoveTrace: moved.moveTrace };
     });
   }, []);
 

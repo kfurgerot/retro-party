@@ -5,7 +5,10 @@ export interface Player {
   name: string;
   avatar: number;
   position: number;
+  positionNodeId?: string;
   lastPosition?: number;
+  /** Board points used for Kudobox purchases */
+  points: number;
   /** Kudobox / bonus stars */
   stars: number;
   skipNextTurn: boolean;
@@ -30,6 +33,13 @@ export interface PendingPathChoice {
   atTileId: number;
   options: number[];
   remainingSteps: number;
+}
+
+export interface MoveTrace {
+  id: string;
+  playerId: string;
+  path: number[];
+  pointDeltas: number[];
 }
 
 export interface QuestionState {
@@ -106,6 +116,7 @@ export interface GameState {
   currentQuestion: QuestionState | null;
   currentMinigame: ActiveMinigameState | null;
   pendingPathChoice: PendingPathChoice | null;
+  lastMoveTrace: MoveTrace | null;
   questionHistory: QuestionSummary[];
 }
 

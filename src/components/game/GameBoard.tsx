@@ -1,5 +1,5 @@
 import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Tile, Player, AVATARS, PendingPathChoice } from "@/types/game";
+import { Tile, Player, AVATARS, PendingPathChoice, MoveTrace } from "@/types/game";
 import { cn } from "@/lib/utils";
 
 interface GameBoardProps {
@@ -7,6 +7,7 @@ interface GameBoardProps {
   players: Player[];
   onMoveAnimationEnd?: (playerId: string) => void;
   pendingPathChoice?: PendingPathChoice | null;
+  lastMoveTrace?: MoveTrace | null;
   canChoosePath?: boolean;
   onChoosePath?: (nextTileId: number) => void;
 }
@@ -30,6 +31,13 @@ const TileColors: Record<string, string> = {
 };
 
 type Point = { x: number; y: number };
+type FloatingDelta = {
+  id: string;
+  x: number;
+  y: number;
+  text: string;
+  positive: boolean;
+};
 
 function clamp(v: number, min: number, max: number) {
   return Math.max(min, Math.min(max, v));
@@ -51,6 +59,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   players,
   onMoveAnimationEnd,
   pendingPathChoice,
+  lastMoveTrace,
   canChoosePath = false,
   onChoosePath,
 }) => {
@@ -76,8 +85,10 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const previousPositionsRef = useRef<Record<string, number>>({});
   const moveTimeoutsRef = useRef<number[]>([]);
+  const floatingTimeoutsRef = useRef<number[]>([]);
   const [displayPositions, setDisplayPositions] = useState<Record<string, number>>({});
   const [movingPlayerId, setMovingPlayerId] = useState<string | null>(null);
+  const [floatingDeltas, setFloatingDeltas] = useState<FloatingDelta[]>([]);
 
   // Keep latest values for resize callbacks / pointer handlers.
   const scaleRef = useRef(1);
@@ -365,6 +376,33 @@ export const GameBoard: React.FC<GameBoardProps> = ({
 
   const showControls = true;
 
+  const tilePointDelta = useCallback((tileType: string) => {
+    const normalized = String(tileType ?? "").toLowerCase();
+    if (normalized === "red") return -2;
+    if (normalized === "blue" || normalized === "green" || normalized === "violet" || normalized === "purple") return 2;
+    return 0;
+  }, []);
+
+  const pushFloatingDelta = useCallback((tileId: number, delta: number) => {
+    if (!delta) return;
+    const pt = points[tileId];
+    if (!pt) return;
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const text = delta > 0 ? `+${delta}` : `${delta}`;
+    const next: FloatingDelta = {
+      id,
+      x: pt.x + TILE_CENTER,
+      y: pt.y + TILE_CENTER - 12,
+      text,
+      positive: delta > 0,
+    };
+    setFloatingDeltas((prev) => [...prev, next]);
+    const timeoutId = window.setTimeout(() => {
+      setFloatingDeltas((prev) => prev.filter((entry) => entry.id !== id));
+    }, 900);
+    floatingTimeoutsRef.current.push(timeoutId);
+  }, [points]);
+
   const getNextIds = useCallback(
     (tileId: number) => {
       const tile = tiles[tileId];
@@ -433,7 +471,15 @@ export const GameBoard: React.FC<GameBoardProps> = ({
       const to = p.position;
       if (from == null || from === to) return;
 
-      const path = findPath(from, to);
+      const traceMatchesPlayer =
+        !!lastMoveTrace &&
+        lastMoveTrace.playerId === p.id &&
+        lastMoveTrace.path[0] === from &&
+        lastMoveTrace.path[lastMoveTrace.path.length - 1] === to;
+      const path = traceMatchesPlayer ? lastMoveTrace.path : findPath(from, to);
+      const stepDeltas = traceMatchesPlayer
+        ? lastMoveTrace.pointDeltas
+        : path.slice(1).map((_tileId, idx) => (idx === path.length - 2 ? tilePointDelta(tiles[to]?.type ?? "") : 0));
       const steps = path.slice(1);
       if (!steps.length) return;
 
@@ -442,7 +488,9 @@ export const GameBoard: React.FC<GameBoardProps> = ({
 
       steps.forEach((position, idx) => {
         const timeoutId = window.setTimeout(() => {
+          const delta = stepDeltas[idx] ?? 0;
           setDisplayPositions((prev) => ({ ...prev, [p.id]: position }));
+          pushFloatingDelta(position, delta);
           if (followedPlayerId === p.id) focusOnPosition(position, true);
           if (idx === steps.length - 1 && followedPlayerId === p.id) {
             setMovingPlayerId(null);
@@ -464,12 +512,14 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     previousPositionsRef.current = nextActual;
 
     return () => clearMoveTimeouts();
-  }, [findPath, focusOnPosition, players]);
+  }, [findPath, focusOnPosition, lastMoveTrace, players, pushFloatingDelta, tilePointDelta, tiles]);
 
   useLayoutEffect(() => {
     return () => {
       moveTimeoutsRef.current.forEach((id) => window.clearTimeout(id));
       moveTimeoutsRef.current = [];
+      floatingTimeoutsRef.current.forEach((id) => window.clearTimeout(id));
+      floatingTimeoutsRef.current = [];
     };
   }, []);
 
@@ -672,6 +722,19 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                 );
               });
           })()}
+
+          {floatingDeltas.map((fx) => (
+            <div
+              key={fx.id}
+              className={cn(
+                "pointer-events-none absolute z-30 -translate-x-1/2 -translate-y-1/2 text-xl font-black drop-shadow-[0_2px_0_rgba(0,0,0,0.75)] animate-[ping_0.9s_ease-out_1]",
+                fx.positive ? "text-emerald-300" : "text-rose-300"
+              )}
+              style={{ left: fx.x, top: fx.y }}
+            >
+              {fx.text}
+            </div>
+          ))}
         </div>
       </div>
 

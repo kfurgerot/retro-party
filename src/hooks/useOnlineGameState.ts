@@ -29,6 +29,7 @@ const EMPTY_STATE: GameState = {
   currentQuestion: null,
   currentMinigame: null,
   pendingPathChoice: null,
+  lastMoveTrace: null,
   questionHistory: [],
 };
 

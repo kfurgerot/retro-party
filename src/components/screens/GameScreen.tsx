@@ -361,7 +361,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       <RetroScreenBackground />
 
       <div className="relative z-10 flex h-svh w-full flex-col overflow-hidden p-2 sm:p-3">
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:flex lg:flex-wrap lg:items-center lg:justify-between lg:gap-3">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:flex lg:flex-wrap lg:items-center lg:justify-between lg:gap-3">
           <Card className={cn(neonCard, "px-3 py-2 sm:px-4 sm:py-3")}>
             <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">
               Manche
@@ -376,6 +376,15 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               Tour de
             </div>
             <div className="truncate text-xl font-bold">{currentPlayer?.name ?? "-"}</div>
+          </Card>
+
+          <Card className={cn(neonCard, "px-3 py-2 sm:px-4 sm:py-3")}>
+            <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">
+              Points
+            </div>
+            <div className="text-xl font-bold">
+              {gameState.players.find((p) => p.id === myPlayerId)?.points ?? 0}
+            </div>
           </Card>
 
           <Card className={cn(neonCard, "px-3 py-2 sm:px-4 sm:py-3")}>
@@ -405,6 +414,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 tiles={gameState.tiles}
                 players={gameState.players}
                 pendingPathChoice={pendingPathChoice}
+                lastMoveTrace={gameState.lastMoveTrace}
                 canChoosePath={canChoosePath}
                 onChoosePath={onChoosePath}
                 onMoveAnimationEnd={(playerId) => {
