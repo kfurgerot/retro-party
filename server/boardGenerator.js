@@ -177,10 +177,10 @@ function paintTileTypes(tiles, rng) {
   // Start tile
   tiles[0].type = "start";
 
-  // Base distribution (weighted by repetition)
-  const baseTypes = ["blue","blue","blue","blue","green","green","red","violet"];
+  // Balanced distribution across board colors.
+  const balancedColors = ["blue", "green", "red", "violet"].sort(() => (rng() < 0.5 ? -1 : 1));
   for (let i = 1; i < tiles.length; i++) {
-    tiles[i].type = baseTypes[Math.floor(rng() * baseTypes.length)];
+    tiles[i].type = balancedColors[(i - 1) % balancedColors.length];
   }
 
   // Place BONUS tiles away from the start (avoid first few tiles)
@@ -200,9 +200,8 @@ function paintTileTypes(tiles, rng) {
     return null;
   };
 
-  // 4 bonus tiles by default (you can tune)
-  place("bonus");
-  place("bonus");
+  // Keep 2 bonus/star tiles on the board.
   place("bonus");
   place("bonus");
 }
+

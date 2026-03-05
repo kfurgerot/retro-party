@@ -35,6 +35,14 @@ export interface PendingPathChoice {
   remainingSteps: number;
 }
 
+export interface PendingKudoPurchase {
+  playerId: string;
+  atTileId: number;
+  remainingSteps: number;
+  cost: number;
+  canAfford: boolean;
+}
+
 export interface MoveTrace {
   id: string;
   playerId: string;
@@ -116,6 +124,7 @@ export interface GameState {
   currentQuestion: QuestionState | null;
   currentMinigame: ActiveMinigameState | null;
   pendingPathChoice: PendingPathChoice | null;
+  pendingKudoPurchase: PendingKudoPurchase | null;
   lastMoveTrace: MoveTrace | null;
   questionHistory: QuestionSummary[];
 }

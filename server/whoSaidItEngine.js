@@ -194,7 +194,7 @@ export function getWhoSaidItEndPayload(session) {
 export function applyWhoSaidItPointsToState(state, session) {
   const players = state.players.map((player) => ({
     ...player,
-    stars: player.stars + (session.pointsGained[player.id] ?? 0),
+    points: Math.max(0, Math.floor((player.points ?? 0) + (session.pointsGained[player.id] ?? 0))),
   }));
 
   return {

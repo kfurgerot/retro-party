@@ -6,6 +6,8 @@ import { pickQuestion } from "@/data/questions";
 const BUG_SMASH_DURATION_MS = 20000;
 const BUG_SMASH_ANNOUNCE_MS = 4000;
 const ENABLE_RED_TILE_MINIGAME = false;
+const KUDO_COST = 10;
+const BOARD_COLORS = ["blue", "green", "red", "violet"] as const;
 
 const getBugSmashStars = (score: number) => {
   if (score >= 18) return 3;
@@ -52,13 +54,56 @@ const getTilePointDelta = (tileType: string) => {
   return 0;
 };
 
-const applyKudoboxOnVisit = (player: Player, tileType: string) => {
-  const normalized = normalizeTileType(tileType);
-  if (normalized === "bonus" && (player.points ?? 0) >= 10) {
-    player.points -= 10;
-    player.stars += 1;
+const shuffleInPlace = <T,>(list: T[]) => {
+  for (let i = list.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [list[i], list[j]] = [list[j], list[i]];
   }
-  player.points = Math.max(0, Math.floor(Number(player.points) || 0));
+  return list;
+};
+
+const buildIncomingByTile = (tiles: GameState["tiles"]) => {
+  const incoming = new Map<number, number[]>();
+  tiles.forEach((tile) => incoming.set(tile.id, []));
+  tiles.forEach((tile) => {
+    const next = Array.isArray(tile.nextTileIds) ? tile.nextTileIds : [];
+    next.forEach((toId) => {
+      if (!incoming.has(toId)) incoming.set(toId, []);
+      incoming.get(toId)?.push(tile.id);
+    });
+  });
+  return incoming;
+};
+
+const pickReplacementColor = (tiles: GameState["tiles"], tileId: number) => {
+  const incomingByTile = buildIncomingByTile(tiles);
+  const blocked = new Set<string>();
+  const outgoing = Array.isArray(tiles[tileId]?.nextTileIds) ? tiles[tileId].nextTileIds : [];
+  const incoming = incomingByTile.get(tileId) ?? [];
+  [...incoming, ...outgoing].forEach((id) => {
+    const t = normalizeTileType(tiles[id]?.type ?? "");
+    if (t === "blue" || t === "green" || t === "red" || t === "violet") blocked.add(t);
+  });
+
+  const ordered = shuffleInPlace([...BOARD_COLORS]);
+  return (ordered.find((color) => !blocked.has(color)) ?? ordered[0] ?? "blue");
+};
+
+const relocatePurchasedStar = (tiles: GameState["tiles"], purchasedStarTileId: number) => {
+  const fromTile = tiles[purchasedStarTileId];
+  if (!fromTile || normalizeTileType(fromTile.type ?? "") !== "bonus") return;
+
+  const candidates = tiles.filter(
+    (tile) =>
+      tile.id !== purchasedStarTileId &&
+      normalizeTileType(tile.type ?? "") !== "bonus" &&
+      normalizeTileType(tile.type ?? "") !== "start"
+  );
+  if (!candidates.length) return;
+
+  const target = candidates[Math.floor(Math.random() * candidates.length)];
+  fromTile.type = pickReplacementColor(tiles, purchasedStarTileId);
+  target.type = "bonus";
 };
 
 const advancePlayerAlongBoard = (
@@ -106,6 +151,7 @@ const advancePlayerAlongBoard = (
           options,
           remainingSteps: remaining,
         },
+        pendingKudoPurchase: null,
       };
     }
 
@@ -117,8 +163,27 @@ const advancePlayerAlongBoard = (
     path.push(position);
     const visitedTile = state.tiles[position];
     pointDeltas.push(0);
-    if (visitedTile) applyKudoboxOnVisit(player, visitedTile.type);
     remaining -= 1;
+    const visitedType = normalizeTileType(visitedTile?.type ?? "");
+    if (visitedType === "bonus") {
+      return {
+        finished: false,
+        moveTrace: {
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          playerId: player.id,
+          path,
+          pointDeltas,
+        },
+        pendingPathChoice: null,
+        pendingKudoPurchase: {
+          playerId: player.id,
+          atTileId: position,
+          remainingSteps: remaining,
+          cost: KUDO_COST,
+          canAfford: (player.points ?? 0) >= KUDO_COST,
+        },
+      };
+    }
   }
 
   player.position = position;
@@ -137,6 +202,7 @@ const advancePlayerAlongBoard = (
       pointDeltas,
     },
     pendingPathChoice: null,
+    pendingKudoPurchase: null,
   };
 };
 
@@ -150,6 +216,7 @@ const buildLandingState = (prev: GameState, players: Player[]): GameState => {
       currentQuestion: null,
       currentMinigame: null,
       pendingPathChoice: null,
+      pendingKudoPurchase: null,
       diceValue: null,
       isRolling: false,
     };
@@ -194,6 +261,7 @@ const createInitialState = (): GameState => {
     currentQuestion: null,
     currentMinigame: null,
     pendingPathChoice: null,
+    pendingKudoPurchase: null,
     lastMoveTrace: null,
     questionHistory: [],
   };
@@ -214,6 +282,7 @@ export function useGameState() {
       currentQuestion: null,
       currentMinigame: null,
       pendingPathChoice: null,
+      pendingKudoPurchase: null,
       lastMoveTrace: null,
       questionHistory: [],
     }));
@@ -222,7 +291,7 @@ export function useGameState() {
   const rollDice = useCallback(() => {
     setGameState((prev) => {
       if (prev.phase !== "playing" || prev.currentQuestion || prev.currentMinigame) return prev;
-      if (prev.pendingPathChoice) return prev;
+      if (prev.pendingPathChoice || prev.pendingKudoPurchase) return prev;
       const dice = 1 + Math.floor(Math.random() * 6);
       return { ...prev, diceValue: dice, isRolling: true };
     });
@@ -234,7 +303,7 @@ export function useGameState() {
   const movePlayer = useCallback((steps: number) => {
     setGameState((prev) => {
       if (prev.phase !== "playing" || prev.currentQuestion || prev.currentMinigame) return prev;
-      if (prev.pendingPathChoice) return prev;
+      if (prev.pendingPathChoice || prev.pendingKudoPurchase) return prev;
       if (prev.diceValue == null) return prev;
       const players = prev.players.map((p) => ({ ...p }));
       const cur = players[prev.currentPlayerIndex];
@@ -244,6 +313,7 @@ export function useGameState() {
           ...prev,
           players,
           pendingPathChoice: moved.pendingPathChoice,
+          pendingKudoPurchase: moved.pendingKudoPurchase,
           lastMoveTrace: moved.moveTrace,
           currentQuestion: null,
           currentMinigame: null,
@@ -258,6 +328,7 @@ export function useGameState() {
   const choosePath = useCallback((nextTileId: number, playerId: string) => {
     setGameState((prev) => {
       if (prev.phase !== "playing" || prev.currentQuestion || prev.currentMinigame) return prev;
+      if (prev.pendingKudoPurchase) return prev;
       if (!prev.pendingPathChoice) return prev;
       if (prev.pendingPathChoice.playerId !== playerId) return prev;
       if (!prev.pendingPathChoice.options.includes(nextTileId)) return prev;
@@ -278,6 +349,7 @@ export function useGameState() {
           ...prev,
           players,
           pendingPathChoice: moved.pendingPathChoice,
+          pendingKudoPurchase: moved.pendingKudoPurchase,
           lastMoveTrace: moved.moveTrace,
           currentQuestion: null,
           currentMinigame: null,
@@ -290,10 +362,60 @@ export function useGameState() {
     });
   }, []);
 
+  const resolveKudoPurchase = useCallback((buyKudo: boolean, playerId: string) => {
+    setGameState((prev) => {
+      if (prev.phase !== "playing" || prev.currentQuestion || prev.currentMinigame) return prev;
+      if (prev.pendingPathChoice) return prev;
+      if (!prev.pendingKudoPurchase) return prev;
+      if (prev.pendingKudoPurchase.playerId !== playerId) return prev;
+
+      const players = prev.players.map((p) => ({ ...p }));
+      const tiles = prev.tiles.map((tile) => ({ ...tile }));
+      const stateWithTiles = { ...prev, tiles };
+      const cur = players[prev.currentPlayerIndex];
+      if (!cur || cur.id !== playerId) return prev;
+
+      if (buyKudo && (cur.points ?? 0) >= KUDO_COST) {
+        cur.points = Math.max(0, Math.floor(Number(cur.points ?? 0) - KUDO_COST));
+        cur.stars = Math.max(0, Math.floor(Number(cur.stars ?? 0) + 1));
+        relocatePurchasedStar(tiles, prev.pendingKudoPurchase.atTileId);
+      }
+
+      const remaining = Math.max(0, Math.floor(Number(prev.pendingKudoPurchase.remainingSteps ?? 0)));
+      if (remaining <= 0) {
+        return {
+          ...buildLandingState(stateWithTiles, players),
+          pendingKudoPurchase: null,
+        };
+      }
+
+      const moved = advancePlayerAlongBoard(stateWithTiles, cur, remaining);
+      if (!moved.finished) {
+        return {
+          ...stateWithTiles,
+          players,
+          pendingPathChoice: moved.pendingPathChoice,
+          pendingKudoPurchase: moved.pendingKudoPurchase,
+          lastMoveTrace: moved.moveTrace,
+          currentQuestion: null,
+          currentMinigame: null,
+          diceValue: null,
+          isRolling: false,
+        };
+      }
+
+      return {
+        ...buildLandingState(stateWithTiles, players),
+        pendingKudoPurchase: null,
+        lastMoveTrace: moved.moveTrace,
+      };
+    });
+  }, []);
+
   const openQuestionCard = useCallback((playerId: string) => {
     setGameState((prev) => {
       if (prev.currentMinigame) return prev;
-      if (prev.pendingPathChoice) return prev;
+      if (prev.pendingPathChoice || prev.pendingKudoPurchase) return prev;
       const q = prev.currentQuestion;
       if (!q || q.status !== "pending") return prev;
       if (q.targetPlayerId !== playerId) return prev;
@@ -304,7 +426,7 @@ export function useGameState() {
   const voteQuestion = useCallback((vote: "up" | "down", voterId: string) => {
     setGameState((prev) => {
       if (prev.currentMinigame) return prev;
-      if (prev.pendingPathChoice) return prev;
+      if (prev.pendingPathChoice || prev.pendingKudoPurchase) return prev;
       if (!prev.currentQuestion) return prev;
       const q = { ...prev.currentQuestion, votes: { up: [...prev.currentQuestion.votes.up], down: [...prev.currentQuestion.votes.down] } };
       q.votes.up = q.votes.up.filter((id) => id !== voterId);
@@ -317,7 +439,7 @@ export function useGameState() {
   const validateQuestion = useCallback(() => {
     setGameState((prev) => {
       if (prev.currentMinigame) return prev;
-      if (prev.pendingPathChoice) return prev;
+      if (prev.pendingPathChoice || prev.pendingKudoPurchase) return prev;
       if (prev.phase !== "playing" || prev.currentQuestion) {
         // allow validate if question open
       }
@@ -347,6 +469,7 @@ export function useGameState() {
             score: 0,
           },
           pendingPathChoice: null,
+          pendingKudoPurchase: null,
           diceValue: null,
           isRolling: false,
         };
@@ -374,6 +497,7 @@ export function useGameState() {
         currentQuestion: null,
         currentMinigame: null,
         pendingPathChoice: null,
+        pendingKudoPurchase: null,
         diceValue: null,
         isRolling: false,
         currentPlayerIndex: nextIndex,
@@ -409,6 +533,7 @@ export function useGameState() {
           currentRound: prev.maxRounds,
           currentMinigame: null,
           pendingPathChoice: null,
+          pendingKudoPurchase: null,
           currentQuestion: null,
           diceValue: null,
           isRolling: false,
@@ -422,6 +547,7 @@ export function useGameState() {
         currentRound: nextRound,
         currentMinigame: null,
         pendingPathChoice: null,
+        pendingKudoPurchase: null,
         currentQuestion: null,
         diceValue: null,
         isRolling: false,
@@ -456,6 +582,7 @@ export function useGameState() {
     rollDice,
     movePlayer,
     choosePath,
+    resolveKudoPurchase,
     openQuestionCard,
     voteQuestion,
     validateQuestion,

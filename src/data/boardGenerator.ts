@@ -180,9 +180,9 @@ function paintTileTypes(tiles: Tile[], rng: () => number) {
 
   tiles[0].type = 'start';
 
-  const baseTypes: TileType[] = ['blue','blue','blue','blue','green','green','red','violet'];
+  const balancedColors: TileType[] = ['blue', 'green', 'red', 'violet'].sort(() => (rng() < 0.5 ? -1 : 1));
   for (let i = 1; i < tiles.length; i++) {
-    tiles[i].type = baseTypes[Math.floor(rng() * baseTypes.length)];
+    tiles[i].type = balancedColors[(i - 1) % balancedColors.length];
   }
 
   const minIdx = Math.min(6, tiles.length - 1);
@@ -200,8 +200,6 @@ function paintTileTypes(tiles: Tile[], rng: () => number) {
     }
   };
 
-  place('bonus');
-  place('bonus');
   place('bonus');
   place('bonus');
 }
