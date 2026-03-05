@@ -7,6 +7,7 @@ const BUG_SMASH_DURATION_MS = 20000;
 const BUG_SMASH_ANNOUNCE_MS = 4000;
 const ENABLE_RED_TILE_MINIGAME = false;
 const KUDO_COST = 10;
+const BOARD_COLORS = ["blue", "green", "red", "violet"] as const;
 
 const getBugSmashStars = (score: number) => {
   if (score >= 18) return 3;
@@ -41,86 +42,68 @@ const getNextTileOptions = (state: GameState, tileId: number): number[] => {
 
 const normalizeTileType = (type: string) => {
   const value = String(type ?? "").toLowerCase();
-  if (value === "violet") return "purple";
-  if (value === "kudobox" || value === "bonus") return "star";
+  if (value === "purple") return "violet";
+  if (value === "kudobox" || value === "star") return "bonus";
   return value;
 };
 
 const getTilePointDelta = (tileType: string) => {
   const normalized = normalizeTileType(tileType);
   if (normalized === "red") return -2;
-  if (normalized === "blue" || normalized === "green" || normalized === "purple") return 2;
+  if (normalized === "blue" || normalized === "green" || normalized === "violet" || normalized === "yellow") return 2;
   return 0;
 };
 
-const getIncomingTileIds = (state: GameState, tileId: number): number[] => {
-  const incoming: number[] = [];
-  state.tiles.forEach((tile) => {
+const shuffleInPlace = <T,>(list: T[]) => {
+  for (let i = list.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [list[i], list[j]] = [list[j], list[i]];
+  }
+  return list;
+};
+
+const buildIncomingByTile = (tiles: GameState["tiles"]) => {
+  const incoming = new Map<number, number[]>();
+  tiles.forEach((tile) => incoming.set(tile.id, []));
+  tiles.forEach((tile) => {
     const next = Array.isArray(tile.nextTileIds) ? tile.nextTileIds : [];
-    if (next.includes(tileId)) incoming.push(tile.id);
+    next.forEach((toId) => {
+      if (!incoming.has(toId)) incoming.set(toId, []);
+      incoming.get(toId)?.push(tile.id);
+    });
   });
   return incoming;
 };
 
-const pickColorForTile = (state: GameState, tileId: number): "blue" | "green" | "purple" | "red" => {
-  const allowed: Array<"blue" | "green" | "purple" | "red"> = ["blue", "green", "purple", "red"];
-  const tile = state.tiles[tileId];
-  if (!tile) return allowed[0];
-
+const pickReplacementColor = (tiles: GameState["tiles"], tileId: number) => {
+  const incomingByTile = buildIncomingByTile(tiles);
   const blocked = new Set<string>();
-  getIncomingTileIds(state, tileId).forEach((inId) => {
-    const inType = normalizeTileType(state.tiles[inId]?.type ?? "");
-    if (allowed.includes(inType as any)) blocked.add(inType);
-  });
-  (tile.nextTileIds ?? []).forEach((outId) => {
-    const outType = normalizeTileType(state.tiles[outId]?.type ?? "");
-    if (allowed.includes(outType as any)) blocked.add(outType);
+  const outgoing = Array.isArray(tiles[tileId]?.nextTileIds) ? tiles[tileId].nextTileIds : [];
+  const incoming = incomingByTile.get(tileId) ?? [];
+  [...incoming, ...outgoing].forEach((id) => {
+    const t = normalizeTileType(tiles[id]?.type ?? "");
+    if (t === "blue" || t === "green" || t === "red" || t === "violet") blocked.add(t);
   });
 
-  const candidates = allowed.filter((c) => !blocked.has(c));
-  const pool = candidates.length ? candidates : allowed;
-  return pool[Math.floor(Math.random() * pool.length)];
+  const ordered = shuffleInPlace([...BOARD_COLORS]);
+  return (ordered.find((color) => !blocked.has(color)) ?? ordered[0] ?? "blue");
 };
 
-const moveStarToAnotherTile = (
-  state: GameState,
-  avoidTileIds: number[] = [],
-  sourceStarTileId: number | null = null
-) => {
-  const tiles = state.tiles;
-  if (!tiles.length) return null;
-  const avoid = new Set<number>(avoidTileIds.filter((id) => Number.isInteger(id)));
+const relocatePurchasedStar = (tiles: GameState["tiles"], purchasedStarTileId: number) => {
+  const fromTile = tiles[purchasedStarTileId];
+  if (!fromTile || normalizeTileType(fromTile.type ?? "") !== "bonus") return;
 
-  const currentStarId = Number.isInteger(sourceStarTileId)
-    ? sourceStarTileId
-    : tiles.find((tile) => normalizeTileType(tile.type) === "star")?.id;
-  if (Number.isInteger(currentStarId)) avoid.add(currentStarId as number);
+  const candidates = tiles.filter(
+    (tile) =>
+      tile.id !== purchasedStarTileId &&
+      normalizeTileType(tile.type ?? "") !== "bonus" &&
+      normalizeTileType(tile.type ?? "") !== "start"
+  );
+  if (!candidates.length) return;
 
-  const candidates = tiles.filter((tile) => {
-    const normalized = normalizeTileType(tile.type);
-    if (avoid.has(tile.id)) return false;
-    if (normalized === "start" || normalized === "star") return false;
-    return true;
-  });
-  if (!candidates.length) return null;
-
-  const nextStar = candidates[Math.floor(Math.random() * candidates.length)];
-  if (!nextStar) return null;
-
-  if (Number.isInteger(currentStarId)) {
-    const oldStar = tiles[currentStarId as number];
-    if (normalizeTileType(oldStar.type) === "star") {
-      oldStar.type = pickColorForTile(state, currentStarId as number);
-      (oldStar as any).color = oldStar.type;
-      delete (oldStar as any).label;
-    }
-  }
-
-  const nextTile = tiles[nextStar.id];
-  nextTile.type = "star";
-  (nextTile as any).color = "yellow";
-  (nextTile as any).label = "Kudo";
-  return nextStar.id;
+  const target = candidates[Math.floor(Math.random() * candidates.length)];
+  fromTile.type = pickReplacementColor(tiles, purchasedStarTileId);
+  target.type = "bonus";
 };
 
 const advancePlayerAlongBoard = (
@@ -181,9 +164,8 @@ const advancePlayerAlongBoard = (
     const visitedTile = state.tiles[position];
     pointDeltas.push(0);
     remaining -= 1;
-
     const visitedType = normalizeTileType(visitedTile?.type ?? "");
-    if (visitedType === "star") {
+    if (visitedType === "bonus") {
       return {
         finished: false,
         moveTrace: {
@@ -240,8 +222,7 @@ const buildLandingState = (prev: GameState, players: Player[]): GameState => {
     };
   }
 
-  const normalizedTileType = normalizeTileType(tile.type);
-  const type = normalizedTileType === "star" ? "bonus" : normalizedTileType;
+  const type = tile.type === "bonus" ? "bonus" : tile.type;
 
   const text = pickQuestion(type as any);
 
@@ -250,7 +231,6 @@ const buildLandingState = (prev: GameState, players: Player[]): GameState => {
     players,
     currentMinigame: null,
     pendingPathChoice: null,
-    pendingKudoPurchase: null,
     currentQuestion: {
       id: `${Date.now()}`,
       type: type as any,
@@ -390,27 +370,29 @@ export function useGameState() {
       if (prev.pendingKudoPurchase.playerId !== playerId) return prev;
 
       const players = prev.players.map((p) => ({ ...p }));
+      const tiles = prev.tiles.map((tile) => ({ ...tile }));
+      const stateWithTiles = { ...prev, tiles };
       const cur = players[prev.currentPlayerIndex];
       if (!cur || cur.id !== playerId) return prev;
 
       if (buyKudo && (cur.points ?? 0) >= KUDO_COST) {
         cur.points = Math.max(0, Math.floor(Number(cur.points ?? 0) - KUDO_COST));
         cur.stars = Math.max(0, Math.floor(Number(cur.stars ?? 0) + 1));
-        moveStarToAnotherTile(prev, [cur.position], cur.position);
+        relocatePurchasedStar(tiles, prev.pendingKudoPurchase.atTileId);
       }
 
       const remaining = Math.max(0, Math.floor(Number(prev.pendingKudoPurchase.remainingSteps ?? 0)));
       if (remaining <= 0) {
         return {
-          ...buildLandingState(prev, players),
+          ...buildLandingState(stateWithTiles, players),
           pendingKudoPurchase: null,
         };
       }
 
-      const moved = advancePlayerAlongBoard(prev, cur, remaining);
+      const moved = advancePlayerAlongBoard(stateWithTiles, cur, remaining);
       if (!moved.finished) {
         return {
-          ...prev,
+          ...stateWithTiles,
           players,
           pendingPathChoice: moved.pendingPathChoice,
           pendingKudoPurchase: moved.pendingKudoPurchase,
@@ -423,7 +405,7 @@ export function useGameState() {
       }
 
       return {
-        ...buildLandingState(prev, players),
+        ...buildLandingState(stateWithTiles, players),
         pendingKudoPurchase: null,
         lastMoveTrace: moved.moveTrace,
       };

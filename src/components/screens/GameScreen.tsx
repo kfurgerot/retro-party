@@ -96,20 +96,19 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const isMyTurn =
     !!currentPlayer && !!myPlayerId && currentPlayer.id === myPlayerId;
   const pendingPathChoice = gameState.pendingPathChoice;
-  const isPathChoiceActive = !!pendingPathChoice;
   const pendingKudoPurchase = gameState.pendingKudoPurchase;
+  const isPathChoiceActive = !!pendingPathChoice;
   const isKudoPurchaseActive = !!pendingKudoPurchase;
-  const showKudoPurchaseModal = isKudoPurchaseActive && !isMoveAnimating;
-  const canResolveKudoPurchase =
-    !!pendingKudoPurchase &&
-    !!myPlayerId &&
-    pendingKudoPurchase.playerId === myPlayerId &&
-    !!onResolveKudoPurchase;
   const canChoosePath =
     !!pendingPathChoice &&
     !!myPlayerId &&
     pendingPathChoice.playerId === myPlayerId &&
     !!onChoosePath;
+  const canResolveKudoPurchase =
+    !!pendingKudoPurchase &&
+    !!myPlayerId &&
+    pendingKudoPurchase.playerId === myPlayerId &&
+    !!onResolveKudoPurchase;
   const isTurnIntroActive = turnIntroEndsAt != null;
   const isBugIntroActive = bugIntroEndsAt != null;
 
@@ -157,8 +156,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       { k: "blue", label: "BLEU - Comprendre", icon: "B" },
       { k: "green", label: "VERT - Ameliorer", icon: "V" },
       { k: "red", label: "ROUGE - Frictions", icon: "R" },
-      { k: "purple", label: "PURPLE - Vision", icon: "I" },
-      { k: "star", label: "YELLOW STAR - Kudo", icon: "*" },
+      { k: "violet", label: "VIOLET - Vision", icon: "I" },
+      { k: "bonus", label: "BONUS - Kudobox", icon: "*" },
     ],
     []
   );
@@ -229,6 +228,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       gameState.phase === "playing" &&
       isMyTurn &&
       !isPathChoiceActive &&
+      !isKudoPurchaseActive &&
       !gameState.currentQuestion &&
       !bugSmashState &&
       !buzzwordState &&
@@ -262,6 +262,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     gameState.isRolling,
     isMyTurn,
     isPathChoiceActive,
+    isKudoPurchaseActive,
     bugSmashState,
     buzzwordState,
     whoSaidItState,
@@ -315,7 +316,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     : isPathChoiceActive
     ? "Intersection"
     : isKudoPurchaseActive
-    ? "Case Kudo"
+    ? "Case Kudobox"
     : isMyTurn
     ? "A toi de jouer"
     : "En attente...";
@@ -324,14 +325,14 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     ? canChoosePath
       ? "Choisis une route"
       : "En attente du choix..."
-    : isMoveAnimating
-    ? "Deplacement en cours..."
     : isKudoPurchaseActive
     ? canResolveKudoPurchase
       ? "Acheter Kudo ?"
       : "En attente de la decision..."
     : canRoll
     ? "Lance le de"
+    : isMoveAnimating
+    ? "Deplacement en cours..."
     : canMove
     ? "Avance auto..."
     : isMyTurn
@@ -678,45 +679,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         </AlertDialogContent>
       </AlertDialog>
 
-      {showKudoPurchaseModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-[1px]">
-          <Card className={cn(neonCard, "w-full max-w-md border-4 p-6")}>
-            <div className="text-lg font-bold text-cyan-50">Acheter Kudo (10 points) ?</div>
-            <div className="mt-3 text-sm text-slate-300">
-              {pendingKudoPurchase?.canAfford
-                ? "Tu peux convertir 10 points en 1 Kudo."
-                : "Points insuffisants pour acheter un Kudo."}
-            </div>
-
-            <div className="mt-5 flex items-center justify-end gap-2">
-              {canResolveKudoPurchase ? (
-                <>
-                  <Button
-                    variant="secondary"
-                    className={cn(neutralSecondaryBtn, "text-cyan-100")}
-                    onClick={() => onResolveKudoPurchase?.(false)}
-                  >
-                    Continuer
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    className={activeCyanBtn}
-                    disabled={!pendingKudoPurchase?.canAfford}
-                    onClick={() => onResolveKudoPurchase?.(true)}
-                  >
-                    Acheter Kudo
-                  </Button>
-                </>
-              ) : (
-                <Button variant="secondary" className={cn(neutralSecondaryBtn, "text-cyan-100")} disabled>
-                  En attente...
-                </Button>
-              )}
-            </div>
-          </Card>
-        </div>
-      )}
-
       {gameState.currentQuestion?.status === "open" && !isMoveAnimating && !isMinigameActive && !isKudoPurchaseActive && (
         <QuestionModal
           question={gameState.currentQuestion}
@@ -726,6 +688,42 @@ export const GameScreen: React.FC<GameScreenProps> = ({
           onValidate={onValidateQuestion}
         />
       )}
+
+      <AlertDialog open={isKudoPurchaseActive && !isMoveAnimating} onOpenChange={() => {}}>
+        <AlertDialogContent className="border-cyan-300/30 bg-slate-950/95 text-cyan-50">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Acheter Kudo (10 points) ?</AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-300">
+              {pendingKudoPurchase?.canAfford
+                ? "Tu peux convertir 10 points en 1 Kudo."
+                : "Points insuffisants: achat impossible."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            {canResolveKudoPurchase ? (
+              <>
+                <AlertDialogCancel
+                  className={cn(neutralSecondaryBtn, "text-cyan-100")}
+                  onClick={() => onResolveKudoPurchase?.(false)}
+                >
+                  Continuer
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  className={activeCyanBtn}
+                  disabled={!pendingKudoPurchase?.canAfford}
+                  onClick={() => onResolveKudoPurchase?.(true)}
+                >
+                  Acheter Kudo
+                </AlertDialogAction>
+              </>
+            ) : (
+              <AlertDialogCancel className={cn(neutralSecondaryBtn, "text-cyan-100")}>
+                En attente...
+              </AlertDialogCancel>
+            )}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {isTurnIntroActive && !isPathChoiceActive && !isKudoPurchaseActive && !gameState.currentQuestion && !isMinigameActive && (
         <LaunchAnnouncement

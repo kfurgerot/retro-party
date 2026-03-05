@@ -18,6 +18,7 @@ const BUZZWORD_ANNOUNCE_MS = 4000;
 const BUZZWORD_TRANSFER_ANIMATION_MS = 4500;
 const BUZZWORD_MAX_STEAL = 5;
 const KUDO_COST = 10;
+const BOARD_COLORS = ["blue", "green", "red", "violet"];
 
 function getBugSmashStars(score) {
   if (score >= 18) return 3;
@@ -225,15 +226,15 @@ function normalizeBoardForRules(board) {
 
 function normalizeColorType(type) {
   const value = String(type ?? "").toLowerCase();
-  if (value === "violet") return "purple";
-  if (value === "kudobox" || value === "bonus") return "star";
+  if (value === "purple") return "violet";
+  if (value === "kudobox" || value === "star") return "bonus";
   return value;
 }
 
 function applyTilePoints(type, currentPoints) {
   const normalized = normalizeColorType(type);
   if (normalized === "red") return Math.max(0, currentPoints - 2);
-  if (normalized === "blue" || normalized === "green" || normalized === "purple") {
+  if (normalized === "blue" || normalized === "green" || normalized === "violet" || normalized === "yellow") {
     return Math.max(0, currentPoints + 2);
   }
   return Math.max(0, currentPoints);
@@ -242,77 +243,8 @@ function applyTilePoints(type, currentPoints) {
 function getTilePointDelta(type) {
   const normalized = normalizeColorType(type);
   if (normalized === "red") return -2;
-  if (normalized === "blue" || normalized === "green" || normalized === "purple") return 2;
+  if (normalized === "blue" || normalized === "green" || normalized === "violet" || normalized === "yellow") return 2;
   return 0;
-}
-
-function getIncomingTileIds(tiles, tileId) {
-  const incoming = [];
-  for (const tile of tiles) {
-    const next = Array.isArray(tile?.nextTileIds) ? tile.nextTileIds : [];
-    if (next.includes(tileId)) incoming.push(tile.id);
-  }
-  return incoming;
-}
-
-function pickColorForTile(tiles, tileId) {
-  const allowed = ["blue", "green", "purple", "red"];
-  const blocked = new Set();
-  const tile = tiles[tileId];
-  if (!tile) return allowed[0];
-
-  const incoming = getIncomingTileIds(tiles, tileId);
-  for (const inId of incoming) {
-    const inType = normalizeColorType(tiles[inId]?.type);
-    if (allowed.includes(inType)) blocked.add(inType);
-  }
-
-  const next = Array.isArray(tile.nextTileIds) ? tile.nextTileIds : [];
-  for (const outId of next) {
-    const outType = normalizeColorType(tiles[outId]?.type);
-    if (allowed.includes(outType)) blocked.add(outType);
-  }
-
-  const candidates = allowed.filter((color) => !blocked.has(color));
-  const pool = candidates.length ? candidates : allowed;
-  return pool[Math.floor(Math.random() * pool.length)];
-}
-
-function moveStarToAnotherTile(tiles, avoidTileIds = [], sourceStarTileId = null) {
-  if (!Array.isArray(tiles) || !tiles.length) return null;
-  const avoid = new Set(avoidTileIds.filter((id) => Number.isInteger(id)));
-
-  const currentStarId = Number.isInteger(sourceStarTileId)
-    ? sourceStarTileId
-    : tiles.find((tile) => normalizeColorType(tile?.type) === "star")?.id ?? null;
-  if (Number.isInteger(currentStarId)) avoid.add(currentStarId);
-
-  const candidates = tiles.filter((tile) => {
-    const normalized = normalizeColorType(tile?.type);
-    if (!Number.isInteger(tile?.id)) return false;
-    if (avoid.has(tile.id)) return false;
-    if (normalized === "start" || normalized === "star") return false;
-    return true;
-  });
-
-  if (!candidates.length) return null;
-  const picked = candidates[Math.floor(Math.random() * candidates.length)];
-  if (!picked || !Number.isInteger(picked.id)) return null;
-
-  if (Number.isInteger(currentStarId) && currentStarId >= 0 && currentStarId < tiles.length) {
-    const previousStarTile = tiles[currentStarId];
-    if (normalizeColorType(previousStarTile?.type) === "star") {
-      previousStarTile.type = pickColorForTile(tiles, currentStarId);
-      previousStarTile.color = previousStarTile.type;
-      delete previousStarTile.label;
-    }
-  }
-
-  const nextStarTile = tiles[picked.id];
-  nextStarTile.type = "star";
-  nextStarTile.color = "yellow";
-  nextStarTile.label = "Kudo";
-  return picked.id;
 }
 
 export function movePlayerWithRules(board, playerId, roll, chooseFn) {
@@ -392,41 +324,33 @@ export function movePlayerWithRules(board, playerId, roll, chooseFn) {
     const landedNode = nodeById.get(currentNodeId);
     const normalizedType = normalizeColorType(landedNode?.type);
 
-    if (normalizedType === "star") {
+    if (normalizedType === "bonus") {
       events.push({
         type: "kudobox_stop",
         nodeId: currentNodeId,
         remainingStepsAfterStop: remaining,
       });
-
-      let wantsToBuy = points >= KUDO_COST;
-      if (typeof chooseFn === "function") {
-        const decision = chooseFn({
-          kind: "kudo_purchase",
-          playerId,
-          nodeId: currentNodeId,
-          points,
-          stars,
-          cost: KUDO_COST,
-          remainingSteps: remaining,
-        });
-        if (typeof decision === "boolean") wantsToBuy = decision;
-      }
+      const wantsToBuy =
+        typeof chooseFn === "function"
+          ? chooseFn({
+              kind: "kudo_purchase",
+              playerId,
+              nodeId: currentNodeId,
+              points,
+              stars,
+              cost: KUDO_COST,
+              remainingSteps: remaining,
+            }) !== false
+          : points >= KUDO_COST;
 
       if (wantsToBuy && points >= KUDO_COST) {
         points -= KUDO_COST;
         stars += 1;
-        const movedStarToTileId = moveStarToAnotherTile(
-          board?.tiles,
-          [Number(currentNodeId)],
-          Number(currentNodeId)
-        );
         events.push({
           type: "kudobox_buy_star",
           nodeId: currentNodeId,
           pointsAfter: points,
           starsAfter: stars,
-          movedStarToTileId,
         });
       } else {
         events.push({
@@ -523,9 +447,8 @@ function advancePlayerAlongBoard(state, player, steps, firstChoice = null) {
     const visitedTile = state.tiles[position];
     pointDeltas.push(0);
     remaining -= 1;
-
     const visitedType = normalizeColorType(visitedTile?.type);
-    if (visitedType === "star") {
+    if (visitedType === "bonus") {
       return {
         finished: false,
         moveTrace: {
@@ -566,6 +489,61 @@ function advancePlayerAlongBoard(state, player, steps, firstChoice = null) {
   };
 }
 
+function shuffleInPlace(list) {
+  for (let i = list.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [list[i], list[j]] = [list[j], list[i]];
+  }
+  return list;
+}
+
+function buildIncomingByTile(tiles) {
+  const incoming = new Map();
+  tiles.forEach((tile) => incoming.set(tile.id, []));
+  tiles.forEach((tile) => {
+    const next = Array.isArray(tile.nextTileIds) ? tile.nextTileIds : [];
+    next.forEach((toId) => {
+      if (!incoming.has(toId)) incoming.set(toId, []);
+      incoming.get(toId).push(tile.id);
+    });
+  });
+  return incoming;
+}
+
+function pickReplacementColor(tiles, tileId) {
+  const incomingByTile = buildIncomingByTile(tiles);
+  const blocked = new Set();
+  const outgoing = Array.isArray(tiles[tileId]?.nextTileIds) ? tiles[tileId].nextTileIds : [];
+  const incoming = incomingByTile.get(tileId) ?? [];
+  const neighborIds = [...incoming, ...outgoing];
+  neighborIds.forEach((id) => {
+    const t = normalizeColorType(tiles[id]?.type);
+    if (t === "blue" || t === "green" || t === "red" || t === "violet") blocked.add(t);
+  });
+
+  const ordered = shuffleInPlace([...BOARD_COLORS]);
+  const selected = ordered.find((color) => !blocked.has(color));
+  return selected ?? ordered[0] ?? "blue";
+}
+
+function relocatePurchasedStar(tiles, purchasedStarTileId) {
+  if (!Array.isArray(tiles) || !tiles.length) return;
+  const fromTile = tiles[purchasedStarTileId];
+  if (!fromTile || normalizeColorType(fromTile.type) !== "bonus") return;
+
+  const candidates = tiles.filter(
+    (tile) =>
+      tile.id !== purchasedStarTileId &&
+      normalizeColorType(tile.type) !== "bonus" &&
+      normalizeColorType(tile.type) !== "start"
+  );
+  if (!candidates.length) return;
+
+  const target = candidates[Math.floor(Math.random() * candidates.length)];
+  fromTile.type = pickReplacementColor(tiles, purchasedStarTileId);
+  target.type = "bonus";
+}
+
 function buildLandingState(state, players) {
   const curPlayer = players[state.currentPlayerIndex];
   const tile = state.tiles[curPlayer.position];
@@ -584,8 +562,7 @@ function buildLandingState(state, players) {
     (player, idx) => idx !== state.currentPlayerIndex && player.position === curPlayer.position
   );
 
-  const normalizedTileType = normalizeColorType(tile.type);
-  const type = normalizedTileType === "star" ? "bonus" : normalizedTileType;
+  const type = tile.type === "bonus" ? "bonus" : tile.type;
 
   const withBonus = {
     ...state,
@@ -697,28 +674,29 @@ export function resolveKudoPurchase(state, socketId, buyKudo) {
   if (state.pendingKudoPurchase.playerId !== socketId) return state;
 
   const players = state.players.map((p) => ({ ...p }));
+  const tiles = state.tiles.map((tile) => ({ ...tile }));
+  const stateWithTiles = { ...state, tiles };
   const cur = players[state.currentPlayerIndex];
   if (!cur || cur.id !== socketId) return state;
 
-  const shouldBuy = !!buyKudo;
-  if (shouldBuy && cur.points >= KUDO_COST) {
+  if (buyKudo && cur.points >= KUDO_COST) {
     cur.points = Math.max(0, Math.floor(Number(cur.points ?? 0) - KUDO_COST));
     cur.stars = Math.max(0, Math.floor(Number(cur.stars ?? 0) + 1));
-    moveStarToAnotherTile(state.tiles, [cur.position], cur.position);
+    relocatePurchasedStar(tiles, state.pendingKudoPurchase.atTileId);
   }
 
   const remaining = Math.max(0, Math.floor(Number(state.pendingKudoPurchase.remainingSteps ?? 0)));
   if (remaining <= 0) {
     return {
-      ...buildLandingState(state, players),
+      ...buildLandingState(stateWithTiles, players),
       pendingKudoPurchase: null,
     };
   }
 
-  const moved = advancePlayerAlongBoard(state, cur, remaining);
+  const moved = advancePlayerAlongBoard(stateWithTiles, cur, remaining);
   if (!moved.finished) {
     return {
-      ...state,
+      ...stateWithTiles,
       players,
       lastMoveTrace: moved.moveTrace,
       pendingPathChoice: moved.pendingPathChoice,
@@ -731,9 +709,9 @@ export function resolveKudoPurchase(state, socketId, buyKudo) {
   }
 
   return {
-    ...buildLandingState(state, players),
-    lastMoveTrace: moved.moveTrace,
+    ...buildLandingState(stateWithTiles, players),
     pendingKudoPurchase: null,
+    lastMoveTrace: moved.moveTrace,
   };
 }
 
@@ -755,8 +733,6 @@ export function startBuzzwordDuel(state, firstPlayerId, secondPlayerId, now = Da
     currentQuestion: null,
     diceValue: null,
     isRolling: false,
-    pendingPathChoice: null,
-    pendingKudoPurchase: null,
     currentMinigame: {
       minigameId: "BUZZWORD_DUEL",
       duelists: [playerA.id, playerB.id],

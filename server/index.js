@@ -153,7 +153,9 @@ function startWhoSaidItMinigame(code) {
   if (!room.state?.players?.length) return;
 
   clearWhoSaidItTimers(room);
-  room.wsi = createWhoSaidItSession(room.state.players.map((player) => player.id));
+  room.wsi = createWhoSaidItSession(room.state.players.map((player) => player.id), {
+    rounds: 1,
+  });
 
   io.to(code).emit("MINIGAME_START", getWhoSaidItStartPayload(room.wsi));
   setWhoSaidItTimer(room, () => startWhoSaidItRoundLoop(code), WHO_SAID_IT_ANNOUNCE_MS);
@@ -395,7 +397,6 @@ function remapSocketIdInState(state, oldSocketId, newSocketId) {
           : nextState.pendingPathChoice.playerId,
     };
   }
-
   if (nextState.pendingKudoPurchase) {
     nextState.pendingKudoPurchase = {
       ...nextState.pendingKudoPurchase,
@@ -475,7 +476,6 @@ function removePlayerFromState(state, socketId) {
       pendingPathChoice = null;
     }
   }
-
   let pendingKudoPurchase = state.pendingKudoPurchase ?? null;
   if (pendingKudoPurchase) {
     const pendingPlayerStillThere = players.some((p) => p.id === pendingKudoPurchase.playerId);
@@ -783,13 +783,6 @@ io.on("connection", (socket) => {
 
     room.state = resolveKudoPurchase(room.state, socket.id, !!buyKudo);
     broadcastState(code);
-    if (isBuzzwordDuelActive(room)) {
-      const dueAt =
-        room.state.currentMinigame.phase === "between"
-          ? room.state.currentMinigame.nextWordAt
-          : room.state.currentMinigame.wordEndsAt;
-      scheduleBuzzwordTick(code, Math.max(30, (dueAt ?? Date.now()) - Date.now() + 5));
-    }
   });
 
   socket.on("vote_question", ({ vote }) => {
@@ -912,10 +905,8 @@ io.on("connection", (socket) => {
     if (room.hostSocketId !== socket.id) return;
     if (isWhoSaidItActive(room) || isBuzzwordDuelActive(room)) return;
 
-    const previousRound = room.state.currentRound;
     room.state = nextTurn(room.state);
     broadcastState(code);
-    maybeStartWhoSaidItAfterTurnAdvance(code, previousRound);
   });
 
   socket.on("reset_game", () => {
