@@ -5,65 +5,46 @@ import { AVATARS } from "@/types/game";
 import { cn } from "@/lib/utils";
 import { RetroScreenBackground } from "./RetroScreenBackground";
 
-type SetupMode = "host" | "join";
-
 interface OnlineOnboardingScreenProps {
   connected: boolean;
   initialName?: string;
   initialAvatar?: number;
-  initialMode?: SetupMode;
-  initialCode?: string;
-  onSubmit: (payload: { name: string; avatar: number; mode: SetupMode; code: string }) => void;
+  onSubmit: (payload: { name: string; avatar: number }) => void;
   onBack: () => void;
 }
 
 const cleanName = (v: string) => v.replace(/\s+/g, " ").trim().slice(0, 16);
-const cleanCode = (v: string) => v.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
 
 export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
   connected,
   initialName,
   initialAvatar,
-  initialMode,
-  initialCode,
   onSubmit,
   onBack,
 }) => {
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<1 | 2>(1);
   const [name, setName] = useState(() => cleanName(initialName ?? ""));
   const [avatar, setAvatar] = useState(() => {
     const next = Number.isFinite(initialAvatar) ? Number(initialAvatar) : 0;
     return Math.max(0, Math.min(AVATARS.length - 1, next));
   });
-  const [mode, setMode] = useState<SetupMode>(initialMode ?? "host");
-  const [code, setCode] = useState(() => cleanCode(initialCode ?? ""));
 
   const validName = name.length >= 2;
-  const validCode = cleanCode(code).length >= 4;
-  const canSubmit = connected && validName && (mode === "host" || validCode);
+  const canSubmit = connected && validName;
 
   const stepTitle = useMemo(() => {
-    if (step === 1) return "Choisi ton nickname";
-    if (step === 2) return "Choisi ton personnage";
-    return "Heberger ou rejoindre";
+    if (step === 1) return "Choose your nickname";
+    return "Choose your avatar";
   }, [step]);
 
   const goNext = () => {
     if (step === 1 && !validName) return;
-    if (step === 2) {
-      setStep(3);
-      return;
-    }
-    if (step === 1) setStep(2);
+    setStep(2);
   };
 
   const goBack = () => {
     if (step === 1) {
       onBack();
-      return;
-    }
-    if (step === 3) {
-      setStep(2);
       return;
     }
     setStep(1);
@@ -75,8 +56,8 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
 
       <div className="relative z-10 w-full max-w-2xl rounded border border-cyan-300/60 bg-card/88 p-5 shadow-[0_0_0_2px_rgba(34,211,238,0.3),0_0_34px_rgba(34,211,238,0.32)] backdrop-blur sm:p-8">
         <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-cyan-200/80">
-          <span>Retro Party Online</span>
-          <span>Etape {step}/3</span>
+          <span>Retro Agile Toolbox</span>
+          <span>Step {step}/2</span>
         </div>
 
         <h1 className="mt-4 text-center text-xl text-cyan-200 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)] sm:text-3xl">
@@ -85,24 +66,24 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
 
         {step === 1 && (
           <div className="mt-8 space-y-2">
-            <p className="text-xs text-slate-300 sm:text-sm">Entre ton pseudo joueur</p>
+            <p className="text-xs text-slate-300 sm:text-sm">Enter your display name</p>
             <Input
               autoFocus
               value={name}
               maxLength={16}
-              placeholder="Ton nickname"
+              placeholder="Your nickname"
               onChange={(e) => setName(cleanName(e.target.value))}
               onKeyDown={(e) => e.key === "Enter" && validName && goNext()}
             />
             {!validName && name.length > 0 && (
-              <p className="text-xs text-amber-300">Min. 2 caracteres</p>
+              <p className="text-xs text-amber-300">Min. 2 characters</p>
             )}
           </div>
         )}
 
         {step === 2 && (
           <div className="mt-8">
-            <p className="mb-3 text-xs text-slate-300 sm:text-sm">Choisis ton avatar</p>
+            <p className="mb-3 text-xs text-slate-300 sm:text-sm">Pick your avatar</p>
             <div className="grid grid-cols-5 gap-2 sm:grid-cols-6">
               {AVATARS.map((a, i) => (
                 <button
@@ -119,72 +100,18 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
                 </button>
               ))}
             </div>
-          </div>
-        )}
-
-        {step === 3 && (
-          <div className="mt-8 space-y-4">
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => setMode("host")}
-                className={cn(
-                  "h-11 border-border/70 bg-background/50 font-semibold text-foreground transition-all hover:bg-background/70",
-                  mode === "host"
-                    ? "border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_0_2px_rgba(34,211,238,0.35)] hover:bg-cyan-400"
-                    : "opacity-95"
-                )}
-              >
-                Heberger
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => setMode("join")}
-                className={cn(
-                  "h-11 border-border/70 bg-background/50 font-semibold text-foreground transition-all hover:bg-background/70",
-                  mode === "join"
-                    ? "border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_0_2px_rgba(34,211,238,0.35)] hover:bg-cyan-400"
-                    : "opacity-95"
-                )}
-              >
-                Rejoindre
-              </Button>
-            </div>
-
-            {mode === "join" && (
-              <div className="space-y-1">
-                <Input
-                  value={code}
-                  maxLength={6}
-                  placeholder="Code room"
-                  onChange={(e) => setCode(cleanCode(e.target.value))}
-                />
-                {!validCode && code.length > 0 && (
-                  <p className="text-xs text-amber-300">Min. 4 caracteres (A-Z0-9)</p>
-                )}
-              </div>
-            )}
 
             {!connected && (
-              <p className="text-xs text-amber-300">Connexion au serveur...</p>
+              <p className="mt-4 text-xs text-amber-300">Connecting to server...</p>
             )}
 
             <Button
               type="button"
               disabled={!canSubmit}
-              onClick={() =>
-                onSubmit({
-                  name: cleanName(name),
-                  avatar,
-                  mode,
-                  code: cleanCode(code),
-                })
-              }
-              className="h-12 w-full border border-cyan-300 bg-cyan-500 text-sm font-semibold uppercase tracking-wide text-slate-950 shadow-[0_0_12px_rgba(34,211,238,0.45)] hover:bg-cyan-400"
+              onClick={() => onSubmit({ name: cleanName(name), avatar })}
+              className="mt-6 h-12 w-full border border-cyan-300 bg-cyan-500 text-sm font-semibold uppercase tracking-wide text-slate-950 shadow-[0_0_12px_rgba(34,211,238,0.45)] hover:bg-cyan-400"
             >
-              {mode === "host" ? "Creer la room" : "Rejoindre la room"}
+              Continue
             </Button>
           </div>
         )}
@@ -196,17 +123,17 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
             className="border-border/70 bg-background/50 text-foreground hover:bg-background/70"
             onClick={goBack}
           >
-            {step === 1 ? "Retour" : "Precedent"}
+            {step === 1 ? "Back" : "Previous"}
           </Button>
 
-          {step < 3 && (
+          {step < 2 && (
             <Button
               type="button"
               onClick={goNext}
               disabled={step === 1 && !validName}
               className="border border-cyan-300 bg-cyan-500 font-semibold text-slate-950 hover:bg-cyan-400"
             >
-              Suivant
+              Next
             </Button>
           )}
         </div>
