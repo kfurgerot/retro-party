@@ -62,11 +62,12 @@ export function generateRandomBoard(seed, opts = {}) {
     const out = [[x1, y1]];
     let x = x1;
     let y = y1;
-    const dx = Math.sign(x2 - x1);
-    const dy = Math.sign(y2 - y1);
-    while (x !== x2 || y !== y2) {
-      if (x !== x2) x += dx;
-      if (y !== y2) y += dy;
+    while (x !== x2) {
+      x += Math.sign(x2 - x);
+      out.push([x, y]);
+    }
+    while (y !== y2) {
+      y += Math.sign(y2 - y);
       out.push([x, y]);
     }
     return out;
@@ -83,54 +84,91 @@ export function generateRandomBoard(seed, opts = {}) {
     });
   };
 
+  // Main directed loop (clockwise).
+  pathByWaypoints([[2, 2], [18, 2], [18, 10], [2, 10], [2, 2]]);
+
+  // Branch 1: top lane detour.
   pathByWaypoints([
-    [3, 3], [11, 3], [11, 8], [3, 8], [3, 15], [7, 17], [13, 17], [17, 15], [17, 13], [14, 13], [3, 13], [3, 3],
+    [8, 2], [8, 6], [14, 6], [14, 2],
   ]);
 
+  // Branch 2: right-side middle detour.
   pathByWaypoints([
-    [11, 3], [18, 3], [20, 2], [22, 2], [24, 3], [24, 5], [23, 7], [21, 8], [19, 8], [18, 8],
+    [18, 5], [15, 5], [15, 8], [18, 8],
   ]);
 
+  // Branch 3: bottom-middle detour.
   pathByWaypoints([
-    [3, 8], [23, 8], [23, 13], [17, 13],
+    [12, 10], [12, 7], [10, 7], [10, 10],
   ]);
 
+  // Branch 4: left-side shortcut.
   pathByWaypoints([
-    [17, 13], [20, 13], [20, 11], [23, 11], [25, 13], [25, 16], [23, 17], [20, 17], [18, 17], [17, 15],
+    [2, 7], [5, 7], [5, 4], [2, 4],
   ]);
-
-  pathByWaypoints([
-    [3, 15], [6, 15], [8, 13], [10, 11], [12, 11], [14, 13],
-  ]);
-
-  const ensureNoDeadEnds = () => {
-    if (!tiles.length) return;
-    tiles.forEach((tile) => {
-      const exits = (tile.nextTileIds ?? []).filter((id) => id >= 0 && id < tiles.length && id !== tile.id);
-      if (exits.length > 0) {
-        tile.nextTileIds = exits;
-        return;
-      }
-
-      let bestId = 0;
-      let bestDist = Number.POSITIVE_INFINITY;
-      for (const candidate of tiles) {
-        if (candidate.id === tile.id) continue;
-        const dx = (candidate.gridX ?? 0) - (tile.gridX ?? 0);
-        const dy = (candidate.gridY ?? 0) - (tile.gridY ?? 0);
-        const dist = dx * dx + dy * dy;
-        if (dist < bestDist) {
-          bestDist = dist;
-          bestId = candidate.id;
-        }
-      }
-      tile.nextTileIds = [bestId];
-    });
-  };
-  ensureNoDeadEnds();
+  validateBoardGraph(tiles);
 
   paintTileTypes(tiles, rng);
   return { seed, cols, rows, length: Math.max(targetLen, tiles.length), tiles };
+}
+
+function hasDirectedCycle(tiles) {
+  const visiting = new Set();
+  const visited = new Set();
+
+  const dfs = (nodeId) => {
+    if (visiting.has(nodeId)) return true;
+    if (visited.has(nodeId)) return false;
+    visiting.add(nodeId);
+    const nextIds = tiles[nodeId]?.nextTileIds ?? [];
+    for (const nextId of nextIds) {
+      if (dfs(nextId)) return true;
+    }
+    visiting.delete(nodeId);
+    visited.add(nodeId);
+    return false;
+  };
+
+  for (const tile of tiles) {
+    if (dfs(tile.id)) return true;
+  }
+  return false;
+}
+
+function validateBoardGraph(tiles) {
+  if (!tiles.length) throw new Error("Board must contain at least one tile");
+
+  const indegree = new Array(tiles.length).fill(0);
+  let branchCount = 0;
+  const directedEdges = new Set();
+
+  for (const tile of tiles) {
+    const next = (tile.nextTileIds ?? []).filter((id) => Number.isInteger(id) && id >= 0 && id < tiles.length && id !== tile.id);
+    if (next.length < 1) throw new Error(`Tile ${tile.id} has no outgoing edge`);
+    if (next.length >= 2) branchCount += 1;
+    tile.nextTileIds = next;
+
+    for (const to of next) {
+      directedEdges.add(`${tile.id}->${to}`);
+      indegree[to] += 1;
+
+      if (directedEdges.has(`${to}->${tile.id}`)) {
+        throw new Error(`Direct backward edge detected between ${tile.id} and ${to}`);
+      }
+
+      const fromX = tile.gridX ?? 0;
+      const fromY = tile.gridY ?? 0;
+      const toX = tiles[to].gridX ?? 0;
+      const toY = tiles[to].gridY ?? 0;
+      const manhattan = Math.abs(fromX - toX) + Math.abs(fromY - toY);
+      if (manhattan > 1) throw new Error(`Non-continuous edge detected: ${tile.id} -> ${to}`);
+    }
+  }
+
+  const joinCount = indegree.filter((value) => value >= 2).length;
+  if (branchCount < 4) throw new Error(`Board requires >=4 branches (got ${branchCount})`);
+  if (joinCount < 3) throw new Error(`Board requires >=3 joins (got ${joinCount})`);
+  if (!hasDirectedCycle(tiles)) throw new Error("Board requires at least one loop");
 }
 
 function paintTileTypes(tiles, rng) {
