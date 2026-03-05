@@ -15,8 +15,11 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
   questionHistory,
   onPlayAgain,
 }) => {
-  const sorted = [...players].sort((a, b) => b.stars - a.stars);
+  const sorted = [...players].sort(
+    (a, b) => b.stars - a.stars || (b.points ?? 0) - (a.points ?? 0)
+  );
   const totalStars = players.reduce((sum, p) => sum + p.stars, 0);
+  const totalPoints = players.reduce((sum, p) => sum + (p.points ?? 0), 0);
   const topQuestions = [...questionHistory]
     .filter((q) => q.upVotes > 0)
     .sort((a, b) => b.upVotes - a.upVotes || a.downVotes - b.downVotes)
@@ -27,6 +30,7 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
       <PixelCard className="w-full max-w-3xl p-6 text-center">
         <div className="font-pixel text-2xl">Fin de partie</div>
         <div className="mt-2 text-sm opacity-80">Total kudobox: {totalStars}</div>
+        <div className="mt-1 text-sm opacity-80">Total points: {totalPoints}</div>
       </PixelCard>
 
       <div className="grid w-full max-w-3xl grid-cols-1 gap-4 md:grid-cols-2">
@@ -43,6 +47,7 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
               <div className="flex-1">
                 <div className="font-pixel text-lg">{p.name}</div>
                 <div className="text-sm opacity-80">Stars: {p.stars}</div>
+                <div className="text-sm opacity-80">Points: {p.points ?? 0}</div>
               </div>
               {idx === 0 && <div className="text-xl">#1</div>}
             </div>
