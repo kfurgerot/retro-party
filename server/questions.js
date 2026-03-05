@@ -86,7 +86,9 @@ export const QUESTIONS = {
 };
 
 export function pickQuestion(type, rng=Math.random) {
-  const list = QUESTIONS[type] || [];
+  const normalized =
+    type === "purple" ? "violet" : type === "star" || type === "yellow" ? "bonus" : type;
+  const list = QUESTIONS[normalized] || [];
   if (!list.length) return "";
   const idx = Math.floor(rng() * list.length);
   return list[idx];

@@ -16,11 +16,22 @@ export interface Player {
   isHost?: boolean;
 }
 
-export type TileType = 'blue' | 'red' | 'green' | 'violet' | 'bonus' | 'start';
+export type TileType =
+  | 'blue'
+  | 'red'
+  | 'green'
+  | 'purple'
+  | 'yellow'
+  | 'star'
+  | 'start'
+  | 'violet'
+  | 'bonus';
 
 export interface Tile {
   id: number;
   type: TileType;
+  color?: 'blue' | 'green' | 'purple' | 'red' | 'yellow';
+  label?: string;
   x: number;
   y: number;
   gridX?: number;
@@ -35,6 +46,14 @@ export interface PendingPathChoice {
   remainingSteps: number;
 }
 
+export interface PendingKudoPurchase {
+  playerId: string;
+  atTileId: number;
+  remainingSteps: number;
+  cost: number;
+  canAfford: boolean;
+}
+
 export interface MoveTrace {
   id: string;
   playerId: string;
@@ -44,7 +63,7 @@ export interface MoveTrace {
 
 export interface QuestionState {
   id: string;
-  type: 'blue' | 'red' | 'green' | 'violet' | 'bonus';
+  type: 'blue' | 'red' | 'green' | 'purple' | 'violet' | 'bonus';
   text: string;
   targetPlayerId: string;
   votes: { up: string[]; down: string[] };
@@ -57,7 +76,7 @@ export interface QuestionState {
 
 export interface QuestionSummary {
   id: string;
-  type: 'blue' | 'red' | 'green' | 'violet' | 'bonus';
+  type: 'blue' | 'red' | 'green' | 'purple' | 'violet' | 'bonus';
   text: string;
   upVotes: number;
   downVotes: number;
@@ -116,6 +135,7 @@ export interface GameState {
   currentQuestion: QuestionState | null;
   currentMinigame: ActiveMinigameState | null;
   pendingPathChoice: PendingPathChoice | null;
+  pendingKudoPurchase: PendingKudoPurchase | null;
   lastMoveTrace: MoveTrace | null;
   questionHistory: QuestionSummary[];
 }

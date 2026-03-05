@@ -39,6 +39,14 @@ const TYPE_THEME: Record<
     badge: "bg-[hsl(var(--tile-red))] text-white",
     panel: "bg-[linear-gradient(180deg,hsl(var(--tile-red)/0.25)_0%,hsl(var(--card))_40%)]",
   },
+  purple: {
+    title: "PURPLE | Vision, projection et sens",
+    icon: "I",
+    border: "border-[hsl(var(--tile-violet))]",
+    glow: "shadow-[6px_6px_0_rgba(0,0,0,0.55),0_0_24px_hsl(var(--tile-violet)/0.45)]",
+    badge: "bg-[hsl(var(--tile-violet))] text-black",
+    panel: "bg-[linear-gradient(180deg,hsl(var(--tile-violet)/0.25)_0%,hsl(var(--card))_40%)]",
+  },
   violet: {
     title: "VIOLET | Vision, projection et sens",
     icon: "I",

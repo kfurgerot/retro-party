@@ -112,6 +112,10 @@ export function generateRandomBoard(seed, opts = {}) {
   return { seed, cols, rows, length: Math.max(targetLen, tiles.length), tiles };
 }
 
+function isRegularColor(type) {
+  return type === "blue" || type === "green" || type === "purple" || type === "red";
+}
+
 function hasDirectedCycle(tiles) {
   const visiting = new Set();
   const visited = new Set();
@@ -177,12 +181,6 @@ function paintTileTypes(tiles, rng) {
   // Start tile
   tiles[0].type = "start";
 
-  // Base distribution (weighted by repetition)
-  const baseTypes = ["blue","blue","blue","blue","green","green","red","violet"];
-  for (let i = 1; i < tiles.length; i++) {
-    tiles[i].type = baseTypes[Math.floor(rng() * baseTypes.length)];
-  }
-
   // Place BONUS tiles away from the start (avoid first few tiles)
   const minIdx = Math.min(6, tiles.length - 1);
   const pickIndex = () => minIdx + Math.floor(rng() * (tiles.length - minIdx));
@@ -200,9 +198,168 @@ function paintTileTypes(tiles, rng) {
     return null;
   };
 
-  // 4 bonus tiles by default (you can tune)
-  place("bonus");
-  place("bonus");
-  place("bonus");
-  place("bonus");
+  // Two star tiles (yellow only)
+  for (let i = 0; i < 2; i += 1) {
+    const starIndex = place("star");
+    if (starIndex != null) {
+      tiles[starIndex].label = "Kudo";
+      tiles[starIndex].color = "yellow";
+    }
+  }
+
+  recolorBoard({ tiles }, ["blue", "green", "purple", "red"], rng);
+}
+
+function buildIncoming(tiles) {
+  const incoming = new Map();
+  tiles.forEach((tile) => incoming.set(tile.id, []));
+  tiles.forEach((tile) => {
+    for (const nextId of tile.nextTileIds ?? []) {
+      if (!incoming.has(nextId)) continue;
+      incoming.get(nextId).push(tile.id);
+    }
+  });
+  return incoming;
+}
+
+function bfsStableOrder(tiles, startId = 0) {
+  const order = [];
+  const visited = new Set();
+  const queue = [];
+  const enqueue = (id) => {
+    if (visited.has(id) || id < 0 || id >= tiles.length) return;
+    visited.add(id);
+    queue.push(id);
+  };
+
+  enqueue(startId);
+  while (queue.length) {
+    const id = queue.shift();
+    order.push(id);
+    const next = [...(tiles[id]?.nextTileIds ?? [])].sort((a, b) => a - b);
+    next.forEach(enqueue);
+  }
+
+  tiles
+    .map((t) => t.id)
+    .sort((a, b) => a - b)
+    .forEach(enqueue);
+
+  while (queue.length) {
+    const id = queue.shift();
+    order.push(id);
+    const next = [...(tiles[id]?.nextTileIds ?? [])].sort((a, b) => a - b);
+    next.forEach(enqueue);
+  }
+
+  return order;
+}
+
+export function validateBoardColors(board) {
+  const tiles = Array.isArray(board?.tiles) ? board.tiles : [];
+  const violations = [];
+  for (const tile of tiles) {
+    const fromType = String(tile?.type ?? "").toLowerCase();
+    const from = fromType === "violet" ? "purple" : fromType;
+    const nextIds = Array.isArray(tile?.nextTileIds) ? tile.nextTileIds : [];
+    for (const nextId of nextIds) {
+      const target = tiles[nextId];
+      if (!target) continue;
+      const rawTo = String(target.type ?? "").toLowerCase();
+      const to = rawTo === "violet" ? "purple" : rawTo;
+      if (isRegularColor(from) && isRegularColor(to) && from === to) {
+        violations.push({
+          fromId: tile.id,
+          toId: nextId,
+          color: from,
+        });
+      }
+    }
+  }
+  return violations;
+}
+
+export function recolorBoard(board, allowedColors = ["blue", "green", "purple", "red"], rngFn = Math.random) {
+  const tiles = Array.isArray(board?.tiles) ? board.tiles : [];
+  if (!tiles.length) return board;
+
+  const allowed = allowedColors.filter((c) => isRegularColor(String(c).toLowerCase()));
+  if (!allowed.length) throw new Error("allowedColors must include at least one regular color");
+
+  const incoming = buildIncoming(tiles);
+  const order = bfsStableOrder(tiles, 0).filter((id) => {
+    const type = String(tiles[id]?.type ?? "").toLowerCase();
+    return type !== "start" && type !== "star";
+  });
+
+  const original = new Map(order.map((id) => [id, tiles[id].type]));
+  const assignment = new Map();
+
+  const shuffledColors = () =>
+    [...allowed].sort(() => (rngFn() < 0.5 ? -1 : 1));
+
+  let backtracks = 0;
+  const maxBacktracks = Math.max(200, order.length * 40);
+  const solve = (idx) => {
+    if (idx >= order.length) return true;
+    if (backtracks > maxBacktracks) return false;
+
+    const tileId = order[idx];
+    const tile = tiles[tileId];
+    const blocked = new Set();
+
+    const inNeighbors = incoming.get(tileId) ?? [];
+    for (const inId of inNeighbors) {
+      const inType = String(assignment.get(inId) ?? tiles[inId]?.type ?? "").toLowerCase();
+      const normalized = inType === "violet" ? "purple" : inType;
+      if (isRegularColor(normalized)) blocked.add(normalized);
+    }
+
+    const outNeighbors = tile.nextTileIds ?? [];
+    for (const outId of outNeighbors) {
+      const outType = String(assignment.get(outId) ?? tiles[outId]?.type ?? "").toLowerCase();
+      const normalized = outType === "violet" ? "purple" : outType;
+      if (isRegularColor(normalized)) blocked.add(normalized);
+    }
+
+    for (const color of shuffledColors()) {
+      if (blocked.has(color)) continue;
+      assignment.set(tileId, color);
+      if (solve(idx + 1)) return true;
+      assignment.delete(tileId);
+      backtracks += 1;
+      if (backtracks > maxBacktracks) return false;
+    }
+
+    return false;
+  };
+
+  const solved = solve(0);
+  if (!solved) {
+    for (const [id, type] of original.entries()) {
+      tiles[id].type = type;
+    }
+    throw new Error("Unable to recolor board without consecutive colors");
+  }
+
+  for (const [id, color] of assignment.entries()) {
+    tiles[id].type = color;
+  }
+
+  for (const tile of tiles) {
+    if (tile.type === "star") {
+      tile.color = "yellow";
+      tile.label = tile.label || "Kudo";
+      continue;
+    }
+    tile.color = tile.type;
+    if (tile.type !== "start") delete tile.label;
+  }
+
+  const violations = validateBoardColors({ tiles });
+  if (violations.length) {
+    throw new Error(`Invalid board colors after recolor (${violations.length} violations)`);
+  }
+
+  return board;
 }

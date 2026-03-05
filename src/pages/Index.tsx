@@ -126,6 +126,7 @@ const Index: React.FC = () => {
         onRollDice={online.rollDice}
         onMovePlayer={online.movePlayer}
         onChoosePath={online.choosePath}
+        onResolveKudoPurchase={online.resolveKudoPurchase}
         onOpenQuestionCard={online.openQuestionCard}
         onVoteQuestion={online.voteQuestion}
         onValidateQuestion={online.validateQuestion}
@@ -163,6 +164,7 @@ const Index: React.FC = () => {
       onRollDice={local.rollDice}
       onMovePlayer={local.movePlayer}
       onChoosePath={(nextTileId) => local.choosePath(nextTileId, localCurrentPlayerId)}
+      onResolveKudoPurchase={(buyKudo) => local.resolveKudoPurchase(buyKudo, localCurrentPlayerId)}
       onOpenQuestionCard={() => local.openQuestionCard(localCurrentPlayerId)}
       onVoteQuestion={(vote) => local.voteQuestion(vote, localCurrentPlayerId)}
       onValidateQuestion={local.validateQuestion}

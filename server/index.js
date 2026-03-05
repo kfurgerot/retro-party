@@ -9,6 +9,7 @@ import {
   settleDice,
   movePlayer,
   choosePath,
+  resolveKudoPurchase,
   completeBugSmash,
   updateBugSmashProgress,
   openQuestion,
@@ -41,7 +42,7 @@ const ORIGIN = process.env.ORIGIN || true; // in prod set to your https domain
 const RECONNECT_GRACE_MS = 30000;
 const MAX_PLAYERS = 20;
 const WHO_SAID_IT_ANNOUNCE_MS = 4000;
-const ENABLE_WHO_SAID_IT_MINIGAME = false;
+const ENABLE_WHO_SAID_IT_MINIGAME = true;
 
 const app = express();
 app.use(cors({ origin: ORIGIN, credentials: false }));
@@ -264,6 +265,15 @@ function sanitizeState(state) {
           remainingSteps: state.pendingPathChoice.remainingSteps,
         }
       : null,
+    pendingKudoPurchase: state.pendingKudoPurchase
+      ? {
+          playerId: state.pendingKudoPurchase.playerId,
+          atTileId: state.pendingKudoPurchase.atTileId,
+          remainingSteps: state.pendingKudoPurchase.remainingSteps,
+          cost: state.pendingKudoPurchase.cost,
+          canAfford: state.pendingKudoPurchase.canAfford,
+        }
+      : null,
     lastMoveTrace: state.lastMoveTrace
       ? {
           id: state.lastMoveTrace.id,
@@ -295,7 +305,9 @@ function maybeStartWhoSaidItAfterTurnAdvance(code, previousRound) {
     room.state.phase === "playing" &&
     room.state.currentRound > previousRound &&
     !room.state.currentQuestion &&
-    !room.state.currentMinigame;
+    !room.state.currentMinigame &&
+    !room.state.pendingPathChoice &&
+    !room.state.pendingKudoPurchase;
   if (shouldStartWhoSaidIt) startWhoSaidItMinigame(code);
 }
 
@@ -384,6 +396,16 @@ function remapSocketIdInState(state, oldSocketId, newSocketId) {
     };
   }
 
+  if (nextState.pendingKudoPurchase) {
+    nextState.pendingKudoPurchase = {
+      ...nextState.pendingKudoPurchase,
+      playerId:
+        nextState.pendingKudoPurchase.playerId === oldSocketId
+          ? newSocketId
+          : nextState.pendingKudoPurchase.playerId,
+    };
+  }
+
   return nextState;
 }
 
@@ -403,6 +425,8 @@ function removePlayerFromState(state, socketId) {
       currentMinigame: null,
       diceValue: null,
       isRolling: false,
+      pendingPathChoice: null,
+      pendingKudoPurchase: null,
     };
   }
 
@@ -452,6 +476,14 @@ function removePlayerFromState(state, socketId) {
     }
   }
 
+  let pendingKudoPurchase = state.pendingKudoPurchase ?? null;
+  if (pendingKudoPurchase) {
+    const pendingPlayerStillThere = players.some((p) => p.id === pendingKudoPurchase.playerId);
+    if (!pendingPlayerStillThere) {
+      pendingKudoPurchase = null;
+    }
+  }
+
   return {
     ...state,
     players,
@@ -459,6 +491,7 @@ function removePlayerFromState(state, socketId) {
     currentQuestion,
     currentMinigame,
     pendingPathChoice,
+    pendingKudoPurchase,
   };
 }
 
@@ -741,6 +774,24 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("resolve_kudo_purchase", ({ buyKudo }) => {
+    const code = socketToRoom.get(socket.id);
+    if (!code) return;
+    const room = rooms.get(code);
+    if (!room) return;
+    if (isWhoSaidItActive(room) || isBuzzwordDuelActive(room)) return;
+
+    room.state = resolveKudoPurchase(room.state, socket.id, !!buyKudo);
+    broadcastState(code);
+    if (isBuzzwordDuelActive(room)) {
+      const dueAt =
+        room.state.currentMinigame.phase === "between"
+          ? room.state.currentMinigame.nextWordAt
+          : room.state.currentMinigame.wordEndsAt;
+      scheduleBuzzwordTick(code, Math.max(30, (dueAt ?? Date.now()) - Date.now() + 5));
+    }
+  });
+
   socket.on("vote_question", ({ vote }) => {
     const code = socketToRoom.get(socket.id);
     if (!code) return;
@@ -861,8 +912,10 @@ io.on("connection", (socket) => {
     if (room.hostSocketId !== socket.id) return;
     if (isWhoSaidItActive(room) || isBuzzwordDuelActive(room)) return;
 
+    const previousRound = room.state.currentRound;
     room.state = nextTurn(room.state);
     broadcastState(code);
+    maybeStartWhoSaidItAfterTurnAdvance(code, previousRound);
   });
 
   socket.on("reset_game", () => {

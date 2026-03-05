@@ -29,6 +29,7 @@ const EMPTY_STATE: GameState = {
   currentQuestion: null,
   currentMinigame: null,
   pendingPathChoice: null,
+  pendingKudoPurchase: null,
   lastMoveTrace: null,
   questionHistory: [],
 };
@@ -312,6 +313,9 @@ export function useOnlineGameState() {
   const rollDice = useCallback(() => socket.emit("roll_dice"), []);
   const movePlayer = useCallback((steps: number) => socket.emit("move_player", { steps }), []);
   const choosePath = useCallback((nextTileId: number) => socket.emit("choose_path", { nextTileId }), []);
+  const resolveKudoPurchase = useCallback((buyKudo: boolean) => {
+    socket.emit("resolve_kudo_purchase", { buyKudo });
+  }, []);
   const openQuestionCard = useCallback(() => socket.emit("open_question"), []);
   const voteQuestion = useCallback((vote: "up" | "down") => socket.emit("vote_question", { vote }), []);
   const validateQuestion = useCallback(() => socket.emit("validate_question"), []);
@@ -351,6 +355,7 @@ export function useOnlineGameState() {
     rollDice,
     movePlayer,
     choosePath,
+    resolveKudoPurchase,
     openQuestionCard,
     voteQuestion,
     validateQuestion,

@@ -16,7 +16,10 @@ const TileIcon: Record<string, string> = {
   blue: "🔵",
   red: "🔴",
   green: "🟢",
+  purple: "🟣",
   violet: "🟣",
+  star: "⭐",
+  yellow: "⭐",
   bonus: "⭐",
   start: "🏁",
 };
@@ -25,7 +28,10 @@ const TileColors: Record<string, string> = {
   blue: "bg-tile-blue",
   red: "bg-tile-red",
   green: "bg-tile-green",
+  purple: "bg-tile-violet",
   violet: "bg-tile-violet",
+  star: "bg-tile-star",
+  yellow: "bg-tile-star",
   bonus: "bg-tile-star",
   start: "bg-slate-700",
 };
@@ -776,3 +782,4 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     </div>
   );
 };
+

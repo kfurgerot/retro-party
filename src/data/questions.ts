@@ -85,10 +85,12 @@ export const QUESTIONS = {
   ]
 } as const;
 
-export type QuestionType = keyof typeof QUESTIONS;
+export type QuestionType = keyof typeof QUESTIONS | "purple" | "star" | "yellow";
 
 export function pickQuestion(type: QuestionType): string {
-  const list = QUESTIONS[type];
+  const normalized =
+    type === "purple" ? "violet" : type === "star" || type === "yellow" ? "bonus" : type;
+  const list = QUESTIONS[normalized as keyof typeof QUESTIONS];
   const idx = Math.floor(Math.random() * list.length);
   return list[idx];
 }
