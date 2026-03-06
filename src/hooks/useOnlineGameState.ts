@@ -26,10 +26,15 @@ const EMPTY_STATE: GameState = {
   tiles: [],
   diceValue: null,
   isRolling: false,
+  turnPhase: "finished",
+  preRollActionUsed: false,
+  preRollEffect: null,
   currentQuestion: null,
   currentMinigame: null,
   pendingPathChoice: null,
   pendingKudoPurchase: null,
+  pendingShop: null,
+  actionLogs: [],
   lastMoveTrace: null,
   questionHistory: [],
 };
@@ -316,6 +321,14 @@ export function useOnlineGameState() {
   const resolveKudoPurchase = useCallback((buyKudo: boolean) => {
     socket.emit("resolve_kudo_purchase", { buyKudo });
   }, []);
+  const openShop = useCallback(() => socket.emit("open_shop"), []);
+  const closeShop = useCallback(() => socket.emit("close_shop"), []);
+  const buyShopItem = useCallback((itemType: string) => {
+    socket.emit("buy_shop_item", { itemType });
+  }, []);
+  const useShopItem = useCallback((itemInstanceId: string, payload?: Record<string, unknown>) => {
+    socket.emit("use_shop_item", { itemInstanceId, payload: payload ?? {} });
+  }, []);
   const openQuestionCard = useCallback(() => socket.emit("open_question"), []);
   const voteQuestion = useCallback((vote: "up" | "down") => socket.emit("vote_question", { vote }), []);
   const validateQuestion = useCallback(() => socket.emit("validate_question"), []);
@@ -356,6 +369,10 @@ export function useOnlineGameState() {
     movePlayer,
     choosePath,
     resolveKudoPurchase,
+    openShop,
+    closeShop,
+    buyShopItem,
+    useShopItem,
     openQuestionCard,
     voteQuestion,
     validateQuestion,

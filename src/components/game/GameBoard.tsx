@@ -21,6 +21,7 @@ const TileIcon: Record<string, string> = {
   star: "⭐",
   yellow: "⭐",
   bonus: "⭐",
+  shop: "🛒",
   start: "🏁",
 };
 
@@ -33,6 +34,7 @@ const TileColors: Record<string, string> = {
   star: "bg-tile-star",
   yellow: "bg-tile-star",
   bonus: "bg-tile-star",
+  shop: "bg-tile-shop",
   start: "bg-slate-700",
 };
 

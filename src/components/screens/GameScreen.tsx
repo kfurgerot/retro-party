@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { BuzzwordCategory, GameState, WhoSaidItRole, WhoSaidItViewState } from "@/types/game";
+import { BuzzwordCategory, GameState, ShopItemInstance, ShopItemType, WhoSaidItRole, WhoSaidItViewState } from "@/types/game";
 import { GameBoard } from "../game/GameBoard";
 import { PlayerCard } from "../game/PlayerCard";
 import { Dice } from "../game/Dice";
@@ -29,6 +29,10 @@ import { WhoSaidItMinigame } from "../game/WhoSaidItMinigame";
 import { BugSmashMinigame } from "../game/BugSmashMinigame";
 import { BuzzwordDuelMinigame } from "../game/BuzzwordDuelMinigame";
 import { LaunchAnnouncement } from "../game/LaunchAnnouncement";
+import { PreRollActionPanel } from "../game/PreRollActionPanel";
+import { ShopModal } from "../game/ShopModal";
+import { TargetPlayerModal } from "../game/TargetPlayerModal";
+import { SHOP_CATALOG } from "@/data/shopCatalog";
 
 const TURN_ANNOUNCE_MS = 2000;
 
@@ -40,6 +44,9 @@ interface GameScreenProps {
   onMovePlayer: (steps: number) => void;
   onChoosePath?: (nextTileId: number) => void;
   onResolveKudoPurchase?: (buyKudo: boolean) => void;
+  onBuyShopItem?: (itemType: ShopItemType) => void;
+  onCloseShop?: () => void;
+  onUseShopItem?: (itemInstanceId: string, payload?: Record<string, unknown>) => void;
   onOpenQuestionCard: () => void;
   onVoteQuestion: (vote: "up" | "down") => void;
   onValidateQuestion: () => void;
@@ -58,6 +65,9 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   onMovePlayer,
   onChoosePath,
   onResolveKudoPurchase,
+  onBuyShopItem,
+  onCloseShop,
+  onUseShopItem,
   onOpenQuestionCard,
   onVoteQuestion,
   onValidateQuestion,
@@ -73,9 +83,14 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const [playersOpen, setPlayersOpen] = useState(false);
   const [legendOpen, setLegendOpen] = useState(false);
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
+  const [showPreRollPanel, setShowPreRollPanel] = useState(false);
   const [whoSaidItIntroAt, setWhoSaidItIntroAt] = useState<number | null>(null);
   const [turnIntroEndsAt, setTurnIntroEndsAt] = useState<number | null>(null);
   const [bugIntroEndsAt, setBugIntroEndsAt] = useState<number | null>(null);
+  const [pendingTargetSelection, setPendingTargetSelection] = useState<{
+    item: ShopItemInstance;
+    targetType: "swap_position" | "steal_points";
+  } | null>(null);
 
   const autoMoveKeyRef = useRef<string | null>(null);
   const moveAnimationFallbackRef = useRef<number | null>(null);
@@ -97,8 +112,10 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     !!currentPlayer && !!myPlayerId && currentPlayer.id === myPlayerId;
   const pendingPathChoice = gameState.pendingPathChoice;
   const pendingKudoPurchase = gameState.pendingKudoPurchase;
+  const pendingShop = gameState.pendingShop ?? null;
   const isPathChoiceActive = !!pendingPathChoice;
   const isKudoPurchaseActive = !!pendingKudoPurchase;
+  const isShopActive = !!pendingShop;
   const canChoosePath =
     !!pendingPathChoice &&
     !!myPlayerId &&
@@ -111,6 +128,20 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     !!onResolveKudoPurchase;
   const isTurnIntroActive = turnIntroEndsAt != null;
   const isBugIntroActive = bugIntroEndsAt != null;
+  const myPlayer = gameState.players.find((p) => p.id === myPlayerId) ?? null;
+  const myInventory = myPlayer?.inventory ?? [];
+  const canUsePreRollAction =
+    gameState.phase === "playing" &&
+    isMyTurn &&
+    gameState.turnPhase === "pre_roll" &&
+    !gameState.preRollActionUsed &&
+    !isPathChoiceActive &&
+    !isKudoPurchaseActive &&
+    !isShopActive &&
+    !gameState.currentQuestion &&
+    !isMinigameActive &&
+    !gameState.isRolling &&
+    gameState.diceValue == null;
 
   const myIndex = useMemo(() => {
     const idx = gameState.players.findIndex(
@@ -135,7 +166,9 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     !isTurnIntroActive &&
     !isPathChoiceActive &&
     !isKudoPurchaseActive &&
+    !isShopActive &&
     isMyTurn &&
+    gameState.turnPhase === "pre_roll" &&
     !gameState.currentQuestion &&
     gameState.diceValue == null &&
     !gameState.isRolling;
@@ -145,7 +178,9 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     !isMinigameActive &&
     !isPathChoiceActive &&
     !isKudoPurchaseActive &&
+    !isShopActive &&
     isMyTurn &&
+    gameState.turnPhase === "moving" &&
     !gameState.currentQuestion &&
     !gameState.isRolling &&
     gameState.diceValue != null &&
@@ -158,6 +193,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       { k: "red", label: "ROUGE - Frictions", icon: "R" },
       { k: "violet", label: "VIOLET - Vision", icon: "I" },
       { k: "bonus", label: "BONUS - Kudobox", icon: "*" },
+      { k: "shop", label: "SHOP - Boutique", icon: "$" },
     ],
     []
   );
@@ -229,10 +265,12 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       isMyTurn &&
       !isPathChoiceActive &&
       !isKudoPurchaseActive &&
+      !isShopActive &&
       !gameState.currentQuestion &&
       !bugSmashState &&
       !buzzwordState &&
       !whoSaidItState &&
+      gameState.turnPhase === "pre_roll" &&
       gameState.diceValue == null &&
       !gameState.isRolling;
     if (!shouldShowTurnIntro) {
@@ -263,9 +301,11 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     isMyTurn,
     isPathChoiceActive,
     isKudoPurchaseActive,
+    isShopActive,
     bugSmashState,
     buzzwordState,
     whoSaidItState,
+    gameState.turnPhase,
   ]);
 
   useEffect(() => {
@@ -317,6 +357,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     ? "Intersection"
     : isKudoPurchaseActive
     ? "Case Kudobox"
+    : isShopActive
+    ? "Boutique"
     : isMyTurn
     ? "A toi de jouer"
     : "En attente...";
@@ -329,6 +371,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     ? canResolveKudoPurchase
       ? "Acheter Kudo ?"
       : "En attente de la decision..."
+    : isShopActive
+    ? "Achete une action ou continue"
     : canRoll
     ? "Lance le de"
     : isMoveAnimating
@@ -369,11 +413,28 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     gameState.currentQuestion.status === "pending" &&
     !isMinigameActive &&
     !isPathChoiceActive &&
+    !isShopActive &&
     !isMoveAnimating &&
     !!currentPlayer &&
     !!myPlayerId &&
     currentPlayer.id === myPlayerId &&
     gameState.currentQuestion.targetPlayerId === myPlayerId;
+
+  useEffect(() => {
+    if (!canUsePreRollAction) setShowPreRollPanel(false);
+  }, [canUsePreRollAction]);
+
+  const catalogByType = SHOP_CATALOG;
+  const handleUseInventoryItem = (item: ShopItemInstance) => {
+    if (!onUseShopItem) return;
+    if (item.type === "swap_position" || item.type === "steal_points") {
+      setPendingTargetSelection({ item, targetType: item.type });
+      return;
+    }
+    onUseShopItem(item.id, {});
+  };
+  const targetCandidates = gameState.players.filter((p) => !!myPlayerId && p.id !== myPlayerId);
+  const pendingTargetAction = pendingTargetSelection ? catalogByType[pendingTargetSelection.item.type] : null;
 
   return (
     <div className="scanlines relative min-h-svh w-full overflow-hidden">
@@ -441,10 +502,30 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 }}
               />
             </div>
+            {!!(gameState.actionLogs?.length) && (
+              <Card className={cn(neonCard, "px-3 py-2 text-xs")}>
+                <div className="mb-1 text-[11px] uppercase tracking-[0.08em] text-cyan-100/70">Logs</div>
+                <div className="grid gap-1 max-h-20 overflow-auto text-slate-200">
+                  {(gameState.actionLogs ?? []).slice(-4).map((entry, idx) => (
+                    <div key={`${idx}-${entry}`} className="truncate">{entry}</div>
+                  ))}
+                </div>
+              </Card>
+            )}
 
             <Card className={cn(neonCard, "hidden shrink-0 px-4 py-3 lg:block")}>
               <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-6">
-                <div />
+                <div>
+                  {canUsePreRollAction && (
+                    <button
+                      type="button"
+                      className={cn("rounded border px-3 py-2 text-xs font-semibold", neutralSecondaryBtn)}
+                      onClick={() => setShowPreRollPanel((prev) => !prev)}
+                    >
+                      Actions ({myInventory.length})
+                    </button>
+                  )}
+                </div>
                 <div className="flex justify-center">
                   <Dice
                     value={gameState.diceValue}
@@ -469,6 +550,16 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                   <div className="truncate text-xs text-slate-300">{infoHint}</div>
                 </div>
               </div>
+              <PreRollActionPanel
+                open={canUsePreRollAction && showPreRollPanel}
+                inventory={myInventory}
+                catalogByType={catalogByType}
+                canUseAction={canUsePreRollAction && !!onUseShopItem}
+                onUse={handleUseInventoryItem}
+                onPass={() => setShowPreRollPanel(false)}
+                activeBtnClass={activeCyanBtn}
+                neutralBtnClass={neutralSecondaryBtn}
+              />
             </Card>
           </div>
 
@@ -532,7 +623,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
             </Card>
           </div>
         </div>
-
         <div className="sticky bottom-0 z-30 mt-2 pb-[env(safe-area-inset-bottom)] lg:hidden">
           <Card className={cn(neonCard, "border px-2 py-2")}>
             <div className="flex flex-col gap-3">
@@ -563,6 +653,16 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               </div>
 
               <div className={`grid gap-2 ${onLeave ? "grid-cols-3" : "grid-cols-2"}`}>
+                {canUsePreRollAction && (
+                  <Button
+                    className="h-10 w-full border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_0_2px_rgba(34,211,238,0.35)] hover:bg-cyan-400"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => setShowPreRollPanel((prev) => !prev)}
+                  >
+                    Actions ({myInventory.length})
+                  </Button>
+                )}
                 <Button
                   className="h-10 w-full border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_0_2px_rgba(34,211,238,0.35)] hover:bg-cyan-400"
                   size="sm"
@@ -593,6 +693,16 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                   </Button>
                 )}
               </div>
+              <PreRollActionPanel
+                open={canUsePreRollAction && showPreRollPanel}
+                inventory={myInventory}
+                catalogByType={catalogByType}
+                canUseAction={canUsePreRollAction && !!onUseShopItem}
+                onUse={handleUseInventoryItem}
+                onPass={() => setShowPreRollPanel(false)}
+                activeBtnClass={activeCyanBtn}
+                neutralBtnClass={neutralSecondaryBtn}
+              />
             </div>
           </Card>
         </div>
@@ -679,7 +789,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         </AlertDialogContent>
       </AlertDialog>
 
-      {gameState.currentQuestion?.status === "open" && !isMoveAnimating && !isMinigameActive && !isKudoPurchaseActive && (
+      {gameState.currentQuestion?.status === "open" && !isMoveAnimating && !isMinigameActive && !isKudoPurchaseActive && !isShopActive && (
         <QuestionModal
           question={gameState.currentQuestion}
           players={gameState.players}
@@ -725,7 +835,31 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         </AlertDialogContent>
       </AlertDialog>
 
-      {isTurnIntroActive && !isPathChoiceActive && !isKudoPurchaseActive && !gameState.currentQuestion && !isMinigameActive && (
+      <ShopModal
+        open={isShopActive && !isMoveAnimating}
+        canInteract={!!myPlayerId && pendingShop?.playerId === myPlayerId && !!onBuyShopItem}
+        points={myPlayer?.points ?? 0}
+        items={Object.values(catalogByType)}
+        onBuy={(itemType) => onBuyShopItem?.(itemType)}
+        onClose={() => onCloseShop?.()}
+        activeBtnClass={activeCyanBtn}
+        neutralBtnClass={neutralSecondaryBtn}
+      />
+
+      <TargetPlayerModal
+        open={!!pendingTargetSelection}
+        action={pendingTargetAction}
+        players={targetCandidates}
+        onCancel={() => setPendingTargetSelection(null)}
+        onSelect={(targetPlayerId) => {
+          if (!pendingTargetSelection) return;
+          onUseShopItem?.(pendingTargetSelection.item.id, { targetPlayerId });
+          setPendingTargetSelection(null);
+        }}
+        neutralBtnClass={neutralSecondaryBtn}
+      />
+
+      {isTurnIntroActive && !isPathChoiceActive && !isKudoPurchaseActive && !isShopActive && !gameState.currentQuestion && !isMinigameActive && (
         <LaunchAnnouncement
           title="A toi de jouer"
           subtitle="Prepares-toi a lancer le de."

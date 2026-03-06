@@ -11,6 +11,7 @@ export interface Player {
   points: number;
   /** Kudobox / bonus stars */
   stars: number;
+  inventory: ShopItemInstance[];
   skipNextTurn: boolean;
   color: string;
   isHost?: boolean;
@@ -23,9 +24,32 @@ export type TileType =
   | 'purple'
   | 'yellow'
   | 'star'
+  | 'shop'
   | 'start'
   | 'violet'
   | 'bonus';
+
+export type ShopItemType =
+  | "double_roll"
+  | "swap_position"
+  | "plus_two_roll"
+  | "go_to_star"
+  | "steal_points";
+
+export type ShopCatalogItem = {
+  type: ShopItemType;
+  label: string;
+  cost: number;
+  description: string;
+};
+
+export type ShopItemInstance = {
+  id: string;
+  type: ShopItemType;
+  purchasedAtTurn?: number;
+};
+
+export type TurnPhase = "pre_roll" | "rolling" | "moving" | "resolving" | "finished";
 
 export interface Tile {
   id: number;
@@ -52,6 +76,13 @@ export interface PendingKudoPurchase {
   remainingSteps: number;
   cost: number;
   canAfford: boolean;
+  turnEndsAfterResolve?: boolean;
+}
+
+export interface PendingShop {
+  playerId: string;
+  atTileId: number;
+  remainingSteps: number;
 }
 
 export interface MoveTrace {
@@ -121,6 +152,7 @@ export type ActiveMinigameState = BugSmashState | BuzzwordDuelState;
 
 export interface GameState {
   phase: 'lobby' | 'playing' | 'results';
+  turnPhase?: TurnPhase;
   players: Player[];
   currentPlayerIndex: number;
   currentRound: number;
@@ -136,6 +168,10 @@ export interface GameState {
   currentMinigame: ActiveMinigameState | null;
   pendingPathChoice: PendingPathChoice | null;
   pendingKudoPurchase: PendingKudoPurchase | null;
+  pendingShop?: PendingShop | null;
+  preRollActionUsed?: boolean;
+  preRollEffect?: { kind: "double_roll" | "plus_two_roll" } | null;
+  actionLogs?: string[];
   lastMoveTrace: MoveTrace | null;
   questionHistory: QuestionSummary[];
 }

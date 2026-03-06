@@ -27,6 +27,7 @@ const makePlayers = (names: string[], avatars: number[]): Player[] => {
     lastPosition: -1,
     points: 0,
     stars: 0,
+    inventory: [],
     skipNextTurn: false,
     color: colors[idx % colors.length],
     isHost: idx === 0,
@@ -217,8 +218,10 @@ const buildLandingState = (prev: GameState, players: Player[]): GameState => {
       currentMinigame: null,
       pendingPathChoice: null,
       pendingKudoPurchase: null,
+      pendingShop: null,
       diceValue: null,
       isRolling: false,
+      turnPhase: "resolving",
     };
   }
 
@@ -231,6 +234,7 @@ const buildLandingState = (prev: GameState, players: Player[]): GameState => {
     players,
     currentMinigame: null,
     pendingPathChoice: null,
+    pendingShop: null,
     currentQuestion: {
       id: `${Date.now()}`,
       type: type as any,
@@ -242,6 +246,7 @@ const buildLandingState = (prev: GameState, players: Player[]): GameState => {
     },
     diceValue: null,
     isRolling: false,
+    turnPhase: "resolving",
   };
 };
 
@@ -258,10 +263,15 @@ const createInitialState = (): GameState => {
     tiles: board.tiles,
     diceValue: null,
     isRolling: false,
+    turnPhase: "finished",
+    preRollActionUsed: false,
+    preRollEffect: null,
     currentQuestion: null,
     currentMinigame: null,
     pendingPathChoice: null,
     pendingKudoPurchase: null,
+    pendingShop: null,
+    actionLogs: [],
     lastMoveTrace: null,
     questionHistory: [],
   };
@@ -279,10 +289,15 @@ export function useGameState() {
       currentRound: 1,
       diceValue: null,
       isRolling: false,
+      turnPhase: "pre_roll",
+      preRollActionUsed: false,
+      preRollEffect: null,
       currentQuestion: null,
       currentMinigame: null,
       pendingPathChoice: null,
       pendingKudoPurchase: null,
+      pendingShop: null,
+      actionLogs: [],
       lastMoveTrace: null,
       questionHistory: [],
     }));
@@ -291,19 +306,20 @@ export function useGameState() {
   const rollDice = useCallback(() => {
     setGameState((prev) => {
       if (prev.phase !== "playing" || prev.currentQuestion || prev.currentMinigame) return prev;
-      if (prev.pendingPathChoice || prev.pendingKudoPurchase) return prev;
+      if (prev.pendingPathChoice || prev.pendingKudoPurchase || prev.pendingShop) return prev;
+      if (prev.turnPhase && prev.turnPhase !== "pre_roll") return prev;
       const dice = 1 + Math.floor(Math.random() * 6);
-      return { ...prev, diceValue: dice, isRolling: true };
+      return { ...prev, diceValue: dice, isRolling: true, turnPhase: "rolling" };
     });
     setTimeout(() => {
-      setGameState((prev) => ({ ...prev, isRolling: false }));
+      setGameState((prev) => ({ ...prev, isRolling: false, turnPhase: "moving" }));
     }, 650);
   }, []);
 
   const movePlayer = useCallback((steps: number) => {
     setGameState((prev) => {
       if (prev.phase !== "playing" || prev.currentQuestion || prev.currentMinigame) return prev;
-      if (prev.pendingPathChoice || prev.pendingKudoPurchase) return prev;
+      if (prev.pendingPathChoice || prev.pendingKudoPurchase || prev.pendingShop) return prev;
       if (prev.diceValue == null) return prev;
       const players = prev.players.map((p) => ({ ...p }));
       const cur = players[prev.currentPlayerIndex];
@@ -319,6 +335,7 @@ export function useGameState() {
           currentMinigame: null,
           diceValue: null,
           isRolling: false,
+          turnPhase: "resolving",
         };
       }
       return { ...buildLandingState(prev, players), lastMoveTrace: moved.moveTrace };
@@ -355,6 +372,7 @@ export function useGameState() {
           currentMinigame: null,
           diceValue: null,
           isRolling: false,
+          turnPhase: "resolving",
         };
       }
 
@@ -401,6 +419,7 @@ export function useGameState() {
           currentMinigame: null,
           diceValue: null,
           isRolling: false,
+          turnPhase: "resolving",
         };
       }
 
@@ -415,7 +434,7 @@ export function useGameState() {
   const openQuestionCard = useCallback((playerId: string) => {
     setGameState((prev) => {
       if (prev.currentMinigame) return prev;
-      if (prev.pendingPathChoice || prev.pendingKudoPurchase) return prev;
+      if (prev.pendingPathChoice || prev.pendingKudoPurchase || prev.pendingShop) return prev;
       const q = prev.currentQuestion;
       if (!q || q.status !== "pending") return prev;
       if (q.targetPlayerId !== playerId) return prev;
@@ -426,7 +445,7 @@ export function useGameState() {
   const voteQuestion = useCallback((vote: "up" | "down", voterId: string) => {
     setGameState((prev) => {
       if (prev.currentMinigame) return prev;
-      if (prev.pendingPathChoice || prev.pendingKudoPurchase) return prev;
+      if (prev.pendingPathChoice || prev.pendingKudoPurchase || prev.pendingShop) return prev;
       if (!prev.currentQuestion) return prev;
       const q = { ...prev.currentQuestion, votes: { up: [...prev.currentQuestion.votes.up], down: [...prev.currentQuestion.votes.down] } };
       q.votes.up = q.votes.up.filter((id) => id !== voterId);
@@ -439,7 +458,7 @@ export function useGameState() {
   const validateQuestion = useCallback(() => {
     setGameState((prev) => {
       if (prev.currentMinigame) return prev;
-      if (prev.pendingPathChoice || prev.pendingKudoPurchase) return prev;
+      if (prev.pendingPathChoice || prev.pendingKudoPurchase || prev.pendingShop) return prev;
       if (prev.phase !== "playing" || prev.currentQuestion) {
         // allow validate if question open
       }
@@ -470,8 +489,10 @@ export function useGameState() {
           },
           pendingPathChoice: null,
           pendingKudoPurchase: null,
+          pendingShop: null,
           diceValue: null,
           isRolling: false,
+          turnPhase: "resolving",
         };
       }
 
@@ -489,6 +510,7 @@ export function useGameState() {
           currentQuestion: null,
           diceValue: null,
           isRolling: false,
+          turnPhase: "finished",
           questionHistory,
         };
       }
@@ -498,8 +520,10 @@ export function useGameState() {
         currentMinigame: null,
         pendingPathChoice: null,
         pendingKudoPurchase: null,
+        pendingShop: null,
         diceValue: null,
         isRolling: false,
+        turnPhase: "pre_roll",
         currentPlayerIndex: nextIndex,
         currentRound: nextRound,
         questionHistory,
@@ -534,9 +558,11 @@ export function useGameState() {
           currentMinigame: null,
           pendingPathChoice: null,
           pendingKudoPurchase: null,
+          pendingShop: null,
           currentQuestion: null,
           diceValue: null,
           isRolling: false,
+          turnPhase: "finished",
         };
       }
 
@@ -548,9 +574,11 @@ export function useGameState() {
         currentMinigame: null,
         pendingPathChoice: null,
         pendingKudoPurchase: null,
+        pendingShop: null,
         currentQuestion: null,
         diceValue: null,
         isRolling: false,
+        turnPhase: "pre_roll",
       };
     });
   }, []);

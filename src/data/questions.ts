@@ -91,6 +91,7 @@ export function pickQuestion(type: QuestionType): string {
   const normalized =
     type === "purple" ? "violet" : type === "star" || type === "yellow" ? "bonus" : type;
   const list = QUESTIONS[normalized as keyof typeof QUESTIONS];
+  if (!list?.length) return "";
   const idx = Math.floor(Math.random() * list.length);
   return list[idx];
 }

@@ -29,6 +29,7 @@ export function generateRandomBoard(seed: number, opts?: { cols?: number; rows?:
   const ty = (y: number) => (flipY ? baseMaxY - y : y);
 
   const tiles: Tile[] = [];
+  const mainPathIds = new Set<number>();
   const byCoord = new Map<string, number>();
   const keyOf = (x: number, y: number) => `${x},${y}`;
   const ensureNode = (rawX: number, rawY: number) => {
@@ -78,6 +79,7 @@ export function generateRandomBoard(seed: number, opts?: { cols?: number; rows?:
       segment.forEach(([x, y]) => {
         const id = ensureNode(x, y);
         if (prevId != null) connect(prevId, id);
+        mainPathIds.add(id);
         prevId = id;
       });
     });
@@ -87,6 +89,8 @@ export function generateRandomBoard(seed: number, opts?: { cols?: number; rows?:
   pathByWaypoints([
     [2, 2], [18, 2], [18, 10], [2, 10], [2, 2],
   ]);
+  const stableMainPathIds = new Set(mainPathIds);
+  mainPathIds.clear();
 
   // Branch 1: top lane detour.
   pathByWaypoints([
@@ -109,7 +113,7 @@ export function generateRandomBoard(seed: number, opts?: { cols?: number; rows?:
   ]);
   validateBoardGraph(tiles);
 
-  paintTileTypes(tiles, rng);
+  paintTileTypes(tiles, rng, stableMainPathIds);
   return { seed, cols, rows, length: Math.max(targetLen, tiles.length), tiles };
 }
 
@@ -175,7 +179,90 @@ function validateBoardGraph(tiles: Tile[]) {
   if (!hasDirectedCycle(tiles)) throw new Error("Board requires at least one loop");
 }
 
-function paintTileTypes(tiles: Tile[], rng: () => number) {
+function buildIncomingMap(tiles: Tile[]) {
+  const incoming = new Map<number, number[]>();
+  tiles.forEach((tile) => incoming.set(tile.id, []));
+  tiles.forEach((tile) => {
+    const next = Array.isArray(tile.nextTileIds) ? tile.nextTileIds : [];
+    next.forEach((toId) => {
+      if (!incoming.has(toId)) incoming.set(toId, []);
+      incoming.get(toId)?.push(tile.id);
+    });
+  });
+  return incoming;
+}
+
+function chooseShopCandidate(
+  candidates: number[],
+  selected: number[],
+  starIds: Set<number>,
+  tiles: Tile[],
+  minGap: number,
+  rng: () => number
+) {
+  const shuffled = [...candidates].sort(() => (rng() < 0.5 ? -1 : 1));
+  for (const tileId of shuffled) {
+    if (selected.some((otherId) => Math.abs(otherId - tileId) < minGap)) continue;
+    const next = Array.isArray(tiles[tileId]?.nextTileIds) ? tiles[tileId].nextTileIds : [];
+    if (next.some((id) => starIds.has(id))) continue;
+    return tileId;
+  }
+  return null;
+}
+
+type ShopViolation =
+  | { type: "invalid_shop_count"; expected: number; actual: number }
+  | { type: "shop_on_forbidden_tile"; tileId: number; tileType: string }
+  | { type: "shops_too_close"; fromTileId: number; toTileId: number }
+  | { type: "shop_before_star"; tileId: number };
+
+function validateBoardShopsInternal(tiles: Tile[]): ShopViolation[] {
+  const violations: ShopViolation[] = [];
+  const shopTiles = tiles.filter((tile) => String(tile.type).toLowerCase() === "shop");
+  const boardSize = tiles.length;
+  if (boardSize >= 40 && boardSize <= 60 && shopTiles.length !== 3) {
+    violations.push({ type: "invalid_shop_count", expected: 3, actual: shopTiles.length });
+  }
+
+  const forbidden = new Set(["start", "star", "bonus", "warp", "vs"]);
+  for (const tile of shopTiles) {
+    const normalized = String(tile.type).toLowerCase();
+    if (forbidden.has(normalized)) {
+      violations.push({ type: "shop_on_forbidden_tile", tileId: tile.id, tileType: tile.type });
+    }
+  }
+
+  for (let i = 0; i < shopTiles.length; i += 1) {
+    for (let j = i + 1; j < shopTiles.length; j += 1) {
+      if (Math.abs(shopTiles[i].id - shopTiles[j].id) < 6) {
+        violations.push({
+          type: "shops_too_close",
+          fromTileId: shopTiles[i].id,
+          toTileId: shopTiles[j].id,
+        });
+      }
+    }
+  }
+
+  const starIds = new Set(
+    tiles.filter((tile) => String(tile.type).toLowerCase() === "bonus").map((tile) => tile.id)
+  );
+  for (const tile of shopTiles) {
+    const next = Array.isArray(tile.nextTileIds) ? tile.nextTileIds : [];
+    if (next.some((id) => starIds.has(id))) {
+      violations.push({ type: "shop_before_star", tileId: tile.id });
+    }
+  }
+
+  return violations;
+}
+
+export function validateBoardShops(board: { tiles?: Tile[] } | Tile[]) {
+  const tiles = Array.isArray(board) ? board : board.tiles ?? [];
+  return validateBoardShopsInternal(tiles);
+}
+
+function paintTileTypes(tiles: Tile[], rng: () => number, mainPathIds: Set<number> = new Set()) {
   if (!tiles.length) return;
 
   tiles[0].type = 'start';
@@ -189,17 +276,71 @@ function paintTileTypes(tiles: Tile[], rng: () => number) {
   const pickIndex = () => minIdx + Math.floor(rng() * (tiles.length - minIdx));
 
   const used = new Set<number>([0]);
-  const place = (type: TileType) => {
+  const place = (type: TileType): number | null => {
     for (let tries = 0; tries < 400; tries++) {
       const idx = pickIndex();
       if (!used.has(idx)) {
         used.add(idx);
         tiles[idx].type = type;
-        return;
+        return idx;
       }
     }
+    return null;
   };
 
-  place('bonus');
-  place('bonus');
+  const starA = place('bonus');
+  const starB = place('bonus');
+  const starIds = new Set<number>([starA, starB].filter((id): id is number => typeof id === "number"));
+
+  const count = 3;
+  const n = tiles.length;
+  const firstZoneMax = Math.max(minIdx + 1, Math.floor(n * 0.33));
+  const middleZoneMin = Math.max(minIdx + 1, Math.floor(n * 0.34));
+  const middleZoneMax = Math.max(middleZoneMin + 1, Math.floor(n * 0.72));
+  const minGap = 7;
+  const selected: number[] = [];
+
+  const firstZone = tiles
+    .map((tile) => tile.id)
+    .filter((id) => id >= minIdx && id <= firstZoneMax && !used.has(id));
+  const middleZone = tiles
+    .map((tile) => tile.id)
+    .filter((id) => id >= middleZoneMin && id <= middleZoneMax && !used.has(id));
+  const incoming = buildIncomingMap(tiles);
+  const branchZone = tiles
+    .map((tile) => tile.id)
+    .filter((id) => {
+      if (used.has(id)) return false;
+      if (mainPathIds.has(id)) return false;
+      const incomingCount = (incoming.get(id) ?? []).length;
+      const outgoingCount = Array.isArray(tiles[id]?.nextTileIds) ? tiles[id].nextTileIds.length : 0;
+      return incomingCount >= 1 && outgoingCount >= 1;
+    });
+
+  [firstZone, middleZone, branchZone].forEach((zone) => {
+    const chosen = chooseShopCandidate(zone, selected, starIds, tiles, minGap, rng);
+    if (chosen != null) {
+      selected.push(chosen);
+      used.add(chosen);
+    }
+  });
+
+  const fallback = tiles
+    .map((tile) => tile.id)
+    .filter((id) => id >= minIdx && !used.has(id));
+  while (selected.length < count) {
+    const chosen = chooseShopCandidate(fallback, selected, starIds, tiles, minGap, rng);
+    if (chosen == null) break;
+    selected.push(chosen);
+    used.add(chosen);
+  }
+
+  selected.forEach((id) => {
+    tiles[id].type = "shop";
+  });
+
+  const violations = validateBoardShopsInternal(tiles);
+  if (violations.length > 0) {
+    throw new Error(`Invalid shop layout: ${JSON.stringify(violations[0])}`);
+  }
 }

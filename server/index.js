@@ -10,6 +10,10 @@ import {
   movePlayer,
   choosePath,
   resolveKudoPurchase,
+  openShopForPlayer,
+  closeShopForPlayer,
+  buyShopItem,
+  useShopItem,
   completeBugSmash,
   updateBugSmashProgress,
   openQuestion,
@@ -214,10 +218,15 @@ function sanitizeState(state) {
       positionNodeId: p.positionNodeId ?? String(p.position ?? 0),
       points: p.points ?? 0,
       stars: p.stars,
+      inventory: Array.isArray(p.inventory) ? p.inventory : [],
       skipNextTurn: p.skipNextTurn,
       color: p.color,
       isHost: p.isHost,
     })),
+    turnPhase: state.turnPhase ?? "finished",
+    preRollActionUsed: !!state.preRollActionUsed,
+    preRollEffect: state.preRollEffect ?? null,
+    actionLogs: Array.isArray(state.actionLogs) ? state.actionLogs : [],
     currentQuestion: state.currentQuestion
       ? {
           id: state.currentQuestion.id,
@@ -274,6 +283,14 @@ function sanitizeState(state) {
           remainingSteps: state.pendingKudoPurchase.remainingSteps,
           cost: state.pendingKudoPurchase.cost,
           canAfford: state.pendingKudoPurchase.canAfford,
+          turnEndsAfterResolve: !!state.pendingKudoPurchase.turnEndsAfterResolve,
+        }
+      : null,
+    pendingShop: state.pendingShop
+      ? {
+          playerId: state.pendingShop.playerId,
+          atTileId: state.pendingShop.atTileId,
+          remainingSteps: state.pendingShop.remainingSteps ?? 0,
         }
       : null,
     lastMoveTrace: state.lastMoveTrace
@@ -309,7 +326,8 @@ function maybeStartWhoSaidItAfterTurnAdvance(code, previousRound) {
     !room.state.currentQuestion &&
     !room.state.currentMinigame &&
     !room.state.pendingPathChoice &&
-    !room.state.pendingKudoPurchase;
+    !room.state.pendingKudoPurchase &&
+    !room.state.pendingShop;
   if (shouldStartWhoSaidIt) startWhoSaidItMinigame(code);
 }
 
@@ -406,6 +424,15 @@ function remapSocketIdInState(state, oldSocketId, newSocketId) {
           : nextState.pendingKudoPurchase.playerId,
     };
   }
+  if (nextState.pendingShop) {
+    nextState.pendingShop = {
+      ...nextState.pendingShop,
+      playerId:
+        nextState.pendingShop.playerId === oldSocketId
+          ? newSocketId
+          : nextState.pendingShop.playerId,
+    };
+  }
 
   return nextState;
 }
@@ -428,6 +455,7 @@ function removePlayerFromState(state, socketId) {
       isRolling: false,
       pendingPathChoice: null,
       pendingKudoPurchase: null,
+      pendingShop: null,
     };
   }
 
@@ -483,6 +511,13 @@ function removePlayerFromState(state, socketId) {
       pendingKudoPurchase = null;
     }
   }
+  let pendingShop = state.pendingShop ?? null;
+  if (pendingShop) {
+    const pendingPlayerStillThere = players.some((p) => p.id === pendingShop.playerId);
+    if (!pendingPlayerStillThere) {
+      pendingShop = null;
+    }
+  }
 
   return {
     ...state,
@@ -492,6 +527,7 @@ function removePlayerFromState(state, socketId) {
     currentMinigame,
     pendingPathChoice,
     pendingKudoPurchase,
+    pendingShop,
   };
 }
 
@@ -783,6 +819,56 @@ io.on("connection", (socket) => {
 
     room.state = resolveKudoPurchase(room.state, socket.id, !!buyKudo);
     broadcastState(code);
+  });
+
+  socket.on("open_shop", () => {
+    const code = socketToRoom.get(socket.id);
+    if (!code) return;
+    const room = rooms.get(code);
+    if (!room) return;
+    if (isWhoSaidItActive(room) || isBuzzwordDuelActive(room)) return;
+
+    room.state = openShopForPlayer(room.state, socket.id);
+    broadcastState(code);
+  });
+
+  socket.on("close_shop", () => {
+    const code = socketToRoom.get(socket.id);
+    if (!code) return;
+    const room = rooms.get(code);
+    if (!room) return;
+    if (isWhoSaidItActive(room) || isBuzzwordDuelActive(room)) return;
+
+    const previousRound = room.state.currentRound;
+    room.state = closeShopForPlayer(room.state, socket.id);
+    broadcastState(code);
+    maybeStartWhoSaidItAfterTurnAdvance(code, previousRound);
+  });
+
+  socket.on("buy_shop_item", ({ itemType }) => {
+    const code = socketToRoom.get(socket.id);
+    if (!code) return;
+    const room = rooms.get(code);
+    if (!room) return;
+    if (isWhoSaidItActive(room) || isBuzzwordDuelActive(room)) return;
+
+    const previousRound = room.state.currentRound;
+    room.state = buyShopItem(room.state, socket.id, String(itemType ?? ""));
+    broadcastState(code);
+    maybeStartWhoSaidItAfterTurnAdvance(code, previousRound);
+  });
+
+  socket.on("use_shop_item", ({ itemInstanceId, payload }) => {
+    const code = socketToRoom.get(socket.id);
+    if (!code) return;
+    const room = rooms.get(code);
+    if (!room) return;
+    if (isWhoSaidItActive(room) || isBuzzwordDuelActive(room)) return;
+
+    const beforeRound = room.state.currentRound;
+    room.state = useShopItem(room.state, socket.id, String(itemInstanceId ?? ""), payload ?? {});
+    broadcastState(code);
+    maybeStartWhoSaidItAfterTurnAdvance(code, beforeRound);
   });
 
   socket.on("vote_question", ({ vote }) => {

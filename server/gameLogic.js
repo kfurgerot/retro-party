@@ -5,6 +5,7 @@
 import { generateRandomBoard } from "./boardGenerator.js";
 import { pickQuestion } from "./questions.js";
 import { BUZZWORD_DUEL_BANK } from "./buzzwordBank.js";
+import { SHOP_CATALOG } from "./shopCatalog.js";
 
 const BUG_SMASH_DURATION_MS = 20000;
 const BUG_SMASH_ANNOUNCE_MS = 4000;
@@ -19,6 +20,8 @@ const BUZZWORD_TRANSFER_ANIMATION_MS = 4500;
 const BUZZWORD_MAX_STEAL = 5;
 const KUDO_COST = 10;
 const BOARD_COLORS = ["blue", "green", "red", "violet"];
+const STEAL_POINTS_AMOUNT = 5;
+const MAX_ACTION_LOGS = 12;
 
 function getBugSmashStars(score) {
   if (score >= 18) return 3;
@@ -86,6 +89,18 @@ function isBuzzwordDuelActive(state) {
   return state.currentMinigame?.minigameId === "BUZZWORD_DUEL";
 }
 
+function makeInventoryItemId(itemType) {
+  return `${itemType}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function appendActionLog(state, message) {
+  const nextLogs = [...(state.actionLogs ?? []), message];
+  return {
+    ...state,
+    actionLogs: nextLogs.slice(-MAX_ACTION_LOGS),
+  };
+}
+
 export function createInitialState() {
   const seed = Math.floor(Math.random() * 1_000_000_000);
   const board = generateRandomBoard(seed, { cols: 30, rows: 20, length: 85 });
@@ -108,14 +123,19 @@ export function createInitialState() {
     // dice / UX
     diceValue: null,
     isRolling: false,
+    turnPhase: "finished",
+    preRollActionUsed: false,
+    preRollEffect: null,
 
     // question flow
     currentQuestion: null,
     currentMinigame: null,
     pendingPathChoice: null,
     pendingKudoPurchase: null,
+    pendingShop: null,
     lastMoveTrace: null,
     questionHistory: [],
+    actionLogs: [],
   };
 }
 
@@ -141,6 +161,7 @@ export function initializePlayers(state, lobbyPlayers, maxRounds = 12) {
     lastPosition: -1,
     points: 0,
     stars: 0,
+    inventory: [],
     skipNextTurn: false,
     color: colors[idx % colors.length],
     isHost: !!p.isHost,
@@ -155,12 +176,17 @@ export function initializePlayers(state, lobbyPlayers, maxRounds = 12) {
     maxRounds,
     diceValue: null,
     isRolling: false,
+    turnPhase: "pre_roll",
+    preRollActionUsed: false,
+    preRollEffect: null,
     currentQuestion: null,
     currentMinigame: null,
     pendingPathChoice: null,
     pendingKudoPurchase: null,
+    pendingShop: null,
     lastMoveTrace: null,
     questionHistory: [],
+    actionLogs: [],
   };
 }
 
@@ -175,13 +201,21 @@ export function rollDice(state, socketId) {
   if (state.currentMinigame) return state;
   if (state.pendingPathChoice) return state;
   if (state.pendingKudoPurchase) return state;
+  if (state.pendingShop) return state;
+  if (state.turnPhase !== "pre_roll") return state;
   if (!isPlayersTurn(state, socketId)) return state;
 
-  const dice = 1 + Math.floor(Math.random() * 6);
+  const d1 = 1 + Math.floor(Math.random() * 6);
+  const d2 = 1 + Math.floor(Math.random() * 6);
+  let dice = d1;
+  if (state.preRollEffect?.kind === "double_roll") dice = d1 + d2;
+  if (state.preRollEffect?.kind === "plus_two_roll") dice = d1 + 2;
   return {
     ...state,
     diceValue: dice,
     isRolling: true,
+    turnPhase: "rolling",
+    preRollEffect: null,
   };
 }
 
@@ -190,7 +224,7 @@ export function settleDice(state, socketId) {
   if (!isPlayersTurn(state, socketId)) return state;
   if (state.diceValue == null) return state;
 
-  return { ...state, isRolling: false };
+  return { ...state, isRolling: false, turnPhase: "moving" };
 }
 
 function getNextTileOptions(tiles, tileId) {
@@ -435,6 +469,7 @@ function advancePlayerAlongBoard(state, player, steps, firstChoice = null) {
           remainingSteps: remaining,
         },
         pendingKudoPurchase: null,
+        pendingShop: null,
       };
     }
 
@@ -448,6 +483,24 @@ function advancePlayerAlongBoard(state, player, steps, firstChoice = null) {
     pointDeltas.push(0);
     remaining -= 1;
     const visitedType = normalizeColorType(visitedTile?.type);
+    if (visitedType === "shop") {
+      return {
+        finished: false,
+        moveTrace: {
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          playerId: player.id,
+          path,
+          pointDeltas,
+        },
+        pendingPathChoice: null,
+        pendingKudoPurchase: null,
+        pendingShop: {
+          playerId: player.id,
+          atTileId: position,
+          remainingSteps: remaining,
+        },
+      };
+    }
     if (visitedType === "bonus") {
       return {
         finished: false,
@@ -464,7 +517,9 @@ function advancePlayerAlongBoard(state, player, steps, firstChoice = null) {
           remainingSteps: remaining,
           cost: KUDO_COST,
           canAfford: player.points >= KUDO_COST,
+          turnEndsAfterResolve: false,
         },
+        pendingShop: null,
       };
     }
   }
@@ -486,6 +541,7 @@ function advancePlayerAlongBoard(state, player, steps, firstChoice = null) {
     },
     pendingPathChoice: null,
     pendingKudoPurchase: null,
+    pendingShop: null,
   };
 }
 
@@ -555,6 +611,8 @@ function buildLandingState(state, players) {
       diceValue: null,
       pendingPathChoice: null,
       pendingKudoPurchase: null,
+      pendingShop: null,
+      turnPhase: "resolving",
     };
   }
 
@@ -571,6 +629,8 @@ function buildLandingState(state, players) {
     diceValue: null,
     pendingPathChoice: null,
     pendingKudoPurchase: null,
+    pendingShop: null,
+    turnPhase: "resolving",
   };
 
   if (ENABLE_COLLISION_DUEL_MINIGAME && collidedPlayer) {
@@ -604,6 +664,7 @@ export function movePlayer(state, socketId, steps) {
   if (state.currentMinigame) return state;
   if (state.pendingPathChoice) return state;
   if (state.pendingKudoPurchase) return state;
+  if (state.pendingShop) return state;
   if (typeof steps !== "number" || steps <= 0) return state;
   if (state.diceValue == null) return state;
 
@@ -620,6 +681,8 @@ export function movePlayer(state, socketId, steps) {
       lastMoveTrace: moved.moveTrace,
       pendingPathChoice: moved.pendingPathChoice,
       pendingKudoPurchase: moved.pendingKudoPurchase,
+      pendingShop: moved.pendingShop,
+      turnPhase: "resolving",
     };
   }
 
@@ -633,6 +696,7 @@ export function choosePath(state, socketId, nextTileId) {
   if (state.phase !== "playing") return state;
   if (state.currentQuestion || state.currentMinigame) return state;
   if (state.pendingKudoPurchase) return state;
+  if (state.pendingShop) return state;
   if (!state.pendingPathChoice) return state;
   if (state.pendingPathChoice.playerId !== socketId) return state;
   if (!state.pendingPathChoice.options.includes(nextTileId)) return state;
@@ -655,8 +719,10 @@ export function choosePath(state, socketId, nextTileId) {
       lastMoveTrace: moved.moveTrace,
       pendingPathChoice: moved.pendingPathChoice,
       pendingKudoPurchase: moved.pendingKudoPurchase,
+      pendingShop: moved.pendingShop,
       isRolling: false,
       diceValue: null,
+      turnPhase: "resolving",
     };
   }
 
@@ -670,6 +736,7 @@ export function resolveKudoPurchase(state, socketId, buyKudo) {
   if (state.phase !== "playing") return state;
   if (state.currentQuestion || state.currentMinigame) return state;
   if (state.pendingPathChoice) return state;
+  if (state.pendingShop) return state;
   if (!state.pendingKudoPurchase) return state;
   if (state.pendingKudoPurchase.playerId !== socketId) return state;
 
@@ -687,6 +754,21 @@ export function resolveKudoPurchase(state, socketId, buyKudo) {
 
   const remaining = Math.max(0, Math.floor(Number(state.pendingKudoPurchase.remainingSteps ?? 0)));
   if (remaining <= 0) {
+    if (state.pendingKudoPurchase.turnEndsAfterResolve) {
+      const cleared = {
+        ...stateWithTiles,
+        players,
+        currentQuestion: null,
+        currentMinigame: null,
+        diceValue: null,
+        isRolling: false,
+        pendingPathChoice: null,
+        pendingKudoPurchase: null,
+        pendingShop: null,
+        turnPhase: "finished",
+      };
+      return nextTurn(cleared);
+    }
     return {
       ...buildLandingState(stateWithTiles, players),
       pendingKudoPurchase: null,
@@ -701,10 +783,12 @@ export function resolveKudoPurchase(state, socketId, buyKudo) {
       lastMoveTrace: moved.moveTrace,
       pendingPathChoice: moved.pendingPathChoice,
       pendingKudoPurchase: moved.pendingKudoPurchase,
+      pendingShop: moved.pendingShop,
       isRolling: false,
       diceValue: null,
       currentQuestion: null,
       currentMinigame: null,
+      turnPhase: "resolving",
     };
   }
 
@@ -718,7 +802,7 @@ export function resolveKudoPurchase(state, socketId, buyKudo) {
 export function startBuzzwordDuel(state, firstPlayerId, secondPlayerId, now = Date.now()) {
   if (state.phase !== "playing") return state;
   if (state.currentQuestion || state.currentMinigame) return state;
-  if (state.pendingPathChoice || state.pendingKudoPurchase) return state;
+  if (state.pendingPathChoice || state.pendingKudoPurchase || state.pendingShop) return state;
 
   const playerA = state.players.find((p) => p.id === firstPlayerId);
   const playerB = state.players.find((p) => p.id === secondPlayerId);
@@ -764,6 +848,7 @@ export function openQuestion(state, socketId) {
   if (state.currentMinigame) return state;
   if (state.pendingPathChoice) return state;
   if (state.pendingKudoPurchase) return state;
+  if (state.pendingShop) return state;
   if (!state.currentQuestion || state.currentQuestion.status !== "pending") return state;
   if (state.currentQuestion.targetPlayerId !== socketId) return state;
   return {
@@ -779,6 +864,7 @@ export function voteQuestion(state, socketId, vote) {
   if (state.currentMinigame) return state;
   if (state.pendingPathChoice) return state;
   if (state.pendingKudoPurchase) return state;
+  if (state.pendingShop) return state;
   if (!state.currentQuestion || state.currentQuestion.status !== "open") return state;
   if (vote !== "up" && vote !== "down") return state;
 
@@ -795,6 +881,7 @@ export function validateQuestion(state, socketId) {
   if (state.currentMinigame) return state;
   if (state.pendingPathChoice) return state;
   if (state.pendingKudoPurchase) return state;
+  if (state.pendingShop) return state;
   if (!state.currentQuestion || state.currentQuestion.status !== "open") return state;
   if (state.currentQuestion.targetPlayerId !== socketId) return state;
 
@@ -825,6 +912,8 @@ export function validateQuestion(state, socketId) {
       isRolling: false,
       pendingPathChoice: null,
       pendingKudoPurchase: null,
+      pendingShop: null,
+      turnPhase: "resolving",
     };
   }
 
@@ -835,9 +924,248 @@ export function validateQuestion(state, socketId) {
     isRolling: false,
     pendingPathChoice: null,
     pendingKudoPurchase: null,
+    pendingShop: null,
     questionHistory,
+    turnPhase: "finished",
   };
   return nextTurn(cleared);
+}
+
+export function openShopForPlayer(state, socketId) {
+  if (state.phase !== "playing") return state;
+  if (!isPlayersTurn(state, socketId)) return state;
+  const cur = state.players[state.currentPlayerIndex];
+  if (!cur) return state;
+  const tile = state.tiles[cur.position];
+  if (!tile || String(tile.type).toLowerCase() !== "shop") return state;
+  if (state.pendingPathChoice || state.pendingKudoPurchase || state.currentQuestion || state.currentMinigame) {
+    return state;
+  }
+  return {
+    ...state,
+    pendingShop: {
+      playerId: socketId,
+      atTileId: cur.position,
+      remainingSteps: 0,
+    },
+    turnPhase: "resolving",
+  };
+}
+
+function continueFromPendingShop(state, players, socketId) {
+  const cur = players[state.currentPlayerIndex];
+  if (!cur || cur.id !== socketId) return state;
+
+  const remaining = Math.max(0, Math.floor(Number(state.pendingShop?.remainingSteps ?? 0)));
+  if (remaining <= 0) {
+    const cleared = {
+      ...state,
+      players,
+      currentQuestion: null,
+      currentMinigame: null,
+      diceValue: null,
+      isRolling: false,
+      pendingPathChoice: null,
+      pendingKudoPurchase: null,
+      pendingShop: null,
+      turnPhase: "finished",
+    };
+    return nextTurn(cleared);
+  }
+
+  const moved = advancePlayerAlongBoard(state, cur, remaining);
+  if (!moved.finished) {
+    return {
+      ...state,
+      players,
+      lastMoveTrace: moved.moveTrace,
+      pendingPathChoice: moved.pendingPathChoice,
+      pendingKudoPurchase: moved.pendingKudoPurchase,
+      pendingShop: moved.pendingShop,
+      isRolling: false,
+      diceValue: null,
+      currentQuestion: null,
+      currentMinigame: null,
+      turnPhase: "resolving",
+    };
+  }
+
+  return {
+    ...buildLandingState(state, players),
+    pendingShop: null,
+    lastMoveTrace: moved.moveTrace,
+  };
+}
+
+export function closeShopForPlayer(state, socketId) {
+  if (!state.pendingShop || state.pendingShop.playerId !== socketId) return state;
+  const players = state.players.map((p) => ({ ...p, inventory: [...(p.inventory ?? [])] }));
+  return continueFromPendingShop(state, players, socketId);
+}
+
+export function buyShopItem(state, socketId, itemType) {
+  if (state.phase !== "playing") return state;
+  if (!state.pendingShop || state.pendingShop.playerId !== socketId) return state;
+  if (!isPlayersTurn(state, socketId)) return state;
+  const catalogEntry = SHOP_CATALOG[itemType];
+  if (!catalogEntry) return state;
+
+  const players = state.players.map((p) => ({ ...p, inventory: [...(p.inventory ?? [])] }));
+  const cur = players[state.currentPlayerIndex];
+  if (!cur || cur.id !== socketId) return state;
+  if (cur.points < catalogEntry.cost) return state;
+
+  cur.points = Math.max(0, Math.floor(Number(cur.points ?? 0) - catalogEntry.cost));
+  cur.inventory.push({
+    id: makeInventoryItemId(catalogEntry.type),
+    type: catalogEntry.type,
+    purchasedAtTurn: state.currentRound,
+  });
+  const logged = appendActionLog(
+    {
+      ...state,
+      players,
+      turnPhase: "resolving",
+    },
+    `${cur.name} achete ${catalogEntry.label} pour ${catalogEntry.cost} points`
+  );
+  return continueFromPendingShop(logged, players, socketId);
+}
+
+export function getUsableItemsForTurn(state, socketId) {
+  if (state.phase !== "playing") return [];
+  if (!isPlayersTurn(state, socketId)) return [];
+  if (state.turnPhase !== "pre_roll") return [];
+  if (state.preRollActionUsed) return [];
+  if (state.pendingPathChoice || state.pendingKudoPurchase || state.pendingShop || state.currentQuestion || state.currentMinigame) {
+    return [];
+  }
+  const cur = state.players[state.currentPlayerIndex];
+  if (!cur || cur.id !== socketId) return [];
+  const inv = Array.isArray(cur.inventory) ? cur.inventory : [];
+  return inv.filter((item) => item && SHOP_CATALOG[item.type]);
+}
+
+export function consumeInventoryItem(state, socketId, itemInstanceId) {
+  const players = state.players.map((p) => ({ ...p, inventory: [...(p.inventory ?? [])] }));
+  const cur = players[state.currentPlayerIndex];
+  if (!cur || cur.id !== socketId) return { state, consumed: null };
+  const idx = cur.inventory.findIndex((item) => item.id === itemInstanceId);
+  if (idx < 0) return { state, consumed: null };
+  const [consumed] = cur.inventory.splice(idx, 1);
+  return {
+    state: { ...state, players },
+    consumed,
+  };
+}
+
+export function useShopItem(state, socketId, itemInstanceId, payload = {}) {
+  if (state.phase !== "playing") return state;
+  if (!isPlayersTurn(state, socketId)) return state;
+  if (state.turnPhase !== "pre_roll") return state;
+  if (state.preRollActionUsed) return state;
+  if (state.pendingPathChoice || state.pendingKudoPurchase || state.pendingShop || state.currentQuestion || state.currentMinigame) {
+    return state;
+  }
+
+  const { state: afterConsume, consumed } = consumeInventoryItem(state, socketId, itemInstanceId);
+  if (!consumed) return state;
+
+  const players = afterConsume.players.map((p) => ({ ...p, inventory: [...(p.inventory ?? [])] }));
+  const cur = players[afterConsume.currentPlayerIndex];
+  if (!cur || cur.id !== socketId) return state;
+  const itemDef = SHOP_CATALOG[consumed.type];
+  if (!itemDef) return state;
+
+  let nextState = {
+    ...afterConsume,
+    players,
+    preRollActionUsed: true,
+    pendingShop: null,
+  };
+
+  if (consumed.type === "double_roll" || consumed.type === "plus_two_roll") {
+    nextState = {
+      ...nextState,
+      preRollEffect: { kind: consumed.type },
+      turnPhase: "pre_roll",
+    };
+    return appendActionLog(nextState, `${cur.name} utilise ${itemDef.label}`);
+  }
+
+  if (consumed.type === "swap_position") {
+    const targetPlayerId = String(payload.targetPlayerId ?? "");
+    const target = players.find((p) => p.id === targetPlayerId);
+    if (!target || target.id === cur.id) return state;
+    const fromPos = cur.position;
+    const fromNodeId = cur.positionNodeId ?? String(cur.position ?? 0);
+    const fromPrev = cur.lastPosition ?? -1;
+    cur.position = target.position;
+    cur.positionNodeId = target.positionNodeId ?? String(target.position ?? 0);
+    cur.lastPosition = target.lastPosition ?? -1;
+    target.position = fromPos;
+    target.positionNodeId = fromNodeId;
+    target.lastPosition = fromPrev;
+    return appendActionLog(
+      {
+        ...nextState,
+        players,
+        turnPhase: "pre_roll",
+      },
+      `${cur.name} utilise ${itemDef.label} sur ${target.name}`
+    );
+  }
+
+  if (consumed.type === "steal_points") {
+    const targetPlayerId = String(payload.targetPlayerId ?? "");
+    const target = players.find((p) => p.id === targetPlayerId);
+    if (!target || target.id === cur.id) return state;
+    const targetPoints = Math.max(0, Math.floor(Number(target.points ?? 0)));
+    const stolen = Math.min(STEAL_POINTS_AMOUNT, targetPoints);
+    target.points = targetPoints - stolen;
+    cur.points = Math.max(0, Math.floor(Number(cur.points ?? 0) + stolen));
+    return appendActionLog(
+      {
+        ...nextState,
+        players,
+        turnPhase: "pre_roll",
+      },
+      `${cur.name} vole ${stolen} points a ${target.name}`
+    );
+  }
+
+  if (consumed.type === "go_to_star") {
+    const starTile = nextState.tiles.find((tile) => normalizeColorType(tile.type) === "bonus");
+    if (!starTile) return state;
+    const fromPos = cur.position;
+    cur.position = starTile.id;
+    cur.positionNodeId = String(starTile.id);
+    nextState = {
+      ...nextState,
+      players,
+      diceValue: null,
+      isRolling: false,
+      lastMoveTrace: {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        playerId: cur.id,
+        path: [fromPos, starTile.id],
+        pointDeltas: [0],
+      },
+      pendingKudoPurchase: {
+        playerId: cur.id,
+        atTileId: starTile.id,
+        remainingSteps: 0,
+        cost: KUDO_COST,
+        canAfford: cur.points >= KUDO_COST,
+        turnEndsAfterResolve: true,
+      },
+      turnPhase: "resolving",
+      preRollEffect: null,
+    };
+    return appendActionLog(nextState, `${cur.name} utilise ${itemDef.label}`);
+  }
+
+  return state;
 }
 
 export function nextTurn(state) {
@@ -847,6 +1175,7 @@ export function nextTurn(state) {
   if (state.currentMinigame) return state;
   if (state.pendingPathChoice) return state;
   if (state.pendingKudoPurchase) return state;
+  if (state.pendingShop) return state;
 
   const players = state.players.map((p) => ({ ...p }));
   let nextIndex = state.currentPlayerIndex + 1;
@@ -879,6 +1208,8 @@ export function nextTurn(state) {
       isRolling: false,
       pendingPathChoice: null,
       pendingKudoPurchase: null,
+      pendingShop: null,
+      turnPhase: "finished",
     };
   }
 
@@ -891,6 +1222,10 @@ export function nextTurn(state) {
     isRolling: false,
     pendingPathChoice: null,
     pendingKudoPurchase: null,
+    pendingShop: null,
+    turnPhase: "pre_roll",
+    preRollActionUsed: false,
+    preRollEffect: null,
   };
 }
 
@@ -1139,6 +1474,8 @@ export function completeBuzzwordTransfer(state) {
     isRolling: false,
     pendingPathChoice: null,
     pendingKudoPurchase: null,
+    pendingShop: null,
+    turnPhase: "finished",
   };
   return nextTurn(cleared);
 }
@@ -1170,6 +1507,8 @@ export function completeBugSmash(state, socketId, score) {
     isRolling: false,
     pendingPathChoice: null,
     pendingKudoPurchase: null,
+    pendingShop: null,
+    turnPhase: "finished",
   };
   return nextTurn(cleared);
 }

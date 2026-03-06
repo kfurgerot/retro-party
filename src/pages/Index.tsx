@@ -127,6 +127,9 @@ const Index: React.FC = () => {
         onMovePlayer={online.movePlayer}
         onChoosePath={online.choosePath}
         onResolveKudoPurchase={online.resolveKudoPurchase}
+        onBuyShopItem={online.buyShopItem}
+        onCloseShop={online.closeShop}
+        onUseShopItem={online.useShopItem}
         onOpenQuestionCard={online.openQuestionCard}
         onVoteQuestion={online.voteQuestion}
         onValidateQuestion={online.validateQuestion}
