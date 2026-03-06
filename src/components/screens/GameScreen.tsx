@@ -502,17 +502,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 }}
               />
             </div>
-            {!!(gameState.actionLogs?.length) && (
-              <Card className={cn(neonCard, "px-3 py-2 text-xs")}>
-                <div className="mb-1 text-[11px] uppercase tracking-[0.08em] text-cyan-100/70">Logs</div>
-                <div className="grid gap-1 max-h-20 overflow-auto text-slate-200">
-                  {(gameState.actionLogs ?? []).slice(-4).map((entry, idx) => (
-                    <div key={`${idx}-${entry}`} className="truncate">{entry}</div>
-                  ))}
-                </div>
-              </Card>
-            )}
-
             <Card className={cn(neonCard, "hidden shrink-0 px-4 py-3 lg:block")}>
               <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-6">
                 <div>
