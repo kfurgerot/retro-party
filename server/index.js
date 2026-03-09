@@ -226,6 +226,7 @@ function sanitizeState(state) {
     turnPhase: state.turnPhase ?? "finished",
     preRollActionUsed: !!state.preRollActionUsed,
     pendingPreRollEffect: state.pendingPreRollEffect ?? null,
+    pendingDoubleRoll: state.pendingDoubleRoll ?? null,
     lastRollResult: state.lastRollResult ?? null,
     actionLogs: Array.isArray(state.actionLogs) ? state.actionLogs : [],
     currentQuestion: state.currentQuestion
@@ -454,6 +455,8 @@ function removePlayerFromState(state, socketId) {
       currentMinigame: null,
       diceValue: null,
       isRolling: false,
+      pendingPreRollEffect: null,
+      pendingDoubleRoll: null,
       pendingPathChoice: null,
       pendingKudoPurchase: null,
       pendingShop: null,

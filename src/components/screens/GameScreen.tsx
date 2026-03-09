@@ -129,6 +129,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const isTurnIntroActive = turnIntroEndsAt != null;
   const isBugIntroActive = bugIntroEndsAt != null;
   const myPlayer = gameState.players.find((p) => p.id === myPlayerId) ?? null;
+  const pendingDoubleRollFirstDie = gameState.pendingDoubleRoll?.firstDie ?? null;
   const myInventory = myPlayer?.inventory ?? [];
   const canUsePreRollAction =
     gameState.phase === "playing" &&
@@ -373,6 +374,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       : "En attente de la decision..."
     : isShopActive
     ? "Achete une action ou continue"
+    : pendingDoubleRollFirstDie != null
+    ? `Double lancer: De 1 = ${pendingDoubleRollFirstDie}, lance De 2`
     : gameState.pendingPreRollEffect?.type === "double_roll"
     ? "Effet pret: Double lancer"
     : gameState.pendingPreRollEffect?.type === "plus_two_roll"
@@ -523,6 +526,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                   <Dice
                     value={gameState.diceValue}
                     rollResult={gameState.lastRollResult ?? null}
+                    pendingDoubleRollFirstDie={pendingDoubleRollFirstDie}
                     isRolling={gameState.isRolling}
                     canRoll={canRoll}
                     canMove={canMove}
@@ -625,6 +629,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                   <Dice
                     value={gameState.diceValue}
                     rollResult={gameState.lastRollResult ?? null}
+                    pendingDoubleRollFirstDie={pendingDoubleRollFirstDie}
                     isRolling={gameState.isRolling}
                     canRoll={canRoll}
                     canMove={canMove}

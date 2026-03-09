@@ -6,6 +6,7 @@ import { RollResult } from "@/types/game";
 interface DiceProps {
   value: number | null;
   rollResult?: RollResult | null;
+  pendingDoubleRollFirstDie?: number | null;
   isRolling: boolean;
 
   canRoll: boolean;
@@ -45,6 +46,7 @@ const DiceFace: React.FC<{ value: number }> = ({ value }) => {
       "bottom-2 right-3",
     ],
   };
+
   if (!dotPositions[value]) {
     return (
       <div className="relative w-20 h-20 bg-foreground border-4 border-primary flex items-center justify-center">
@@ -65,6 +67,7 @@ const DiceFace: React.FC<{ value: number }> = ({ value }) => {
 export const Dice: React.FC<DiceProps> = ({
   value,
   rollResult = null,
+  pendingDoubleRollFirstDie = null,
   isRolling,
   canRoll,
   canMove,
@@ -80,6 +83,12 @@ export const Dice: React.FC<DiceProps> = ({
     if (value != null) setLastRolledValue(value);
   }, [value]);
 
+  useEffect(() => {
+    if (!rollResult || !Array.isArray(rollResult.dice) || rollResult.dice.length === 0) return;
+    const latestDie = rollResult.dice[rollResult.dice.length - 1];
+    if (Number.isFinite(latestDie)) setLastRolledValue(latestDie);
+  }, [rollResult]);
+
   const playerKey = getPlayerBoardKey(playerIndex);
   const canOpen = canOpenQuestionCard && !!onOpenQuestionCard;
   const hasInvalidRollResult = !!rollResult && (!Array.isArray(rollResult.dice) || rollResult.dice.length === 0);
@@ -93,35 +102,54 @@ export const Dice: React.FC<DiceProps> = ({
   };
 
   const label = (() => {
-    if (isRolling) return "🎲 ...";
-    if (canRoll) return `🎲 Lancer [${playerKey}]`;
-    if (canMove && value != null) return `➡️ Avancer (${value})`;
-    if (canOpen) return "🃏 Ouvrir carte";
-    return "⏳ Attente";
+    if (isRolling) return "Lancer...";
+    if (canRoll && pendingDoubleRollFirstDie != null) return `Lancer De 2 [${playerKey}]`;
+    if (canRoll) return `Lancer [${playerKey}]`;
+    if (canMove && value != null) return `Avancer (${value})`;
+    if (canOpen) return "Ouvrir carte";
+    return "Attente";
   })();
 
-  const rollText = (() => {
+  const rollDetails = (() => {
+    if (pendingDoubleRollFirstDie != null && (!rollResult || rollResult.dice.length <= 1)) {
+      return [
+        `De 1: ${pendingDoubleRollFirstDie}`,
+        "De 2: en attente...",
+        "Total: en attente...",
+        "Deplacement applique: en attente...",
+      ];
+    }
+
     if (!rollResult) return null;
+
     if (rollResult.effectType === "double_roll") {
       const [a = 0, b = 0] = rollResult.dice;
-      return `🎲 ${a} + ${b} = ${rollResult.total}`;
+      return [
+        `De 1: ${a}`,
+        `De 2: ${b}`,
+        `Total: ${rollResult.total}`,
+        `Deplacement applique: ${rollResult.total}`,
+      ];
     }
+
     if (rollResult.effectType === "plus_two_roll") {
       const [a = 0] = rollResult.dice;
-      return `🎲 ${a} + 2 = ${rollResult.total}`;
+      return [
+        `De brut: ${a}`,
+        `Bonus: +${rollResult.bonus}`,
+        `Total: ${rollResult.total}`,
+        `Deplacement applique: ${rollResult.total}`,
+      ];
     }
+
     const [a = 0] = rollResult.dice;
-    return `🎲 ${a}`;
+    return [
+      `De: ${a}`,
+      `Total: ${rollResult.total}`,
+      `Deplacement applique: ${rollResult.total}`,
+    ];
   })();
 
-  const activeEffectText = (() => {
-    if (!rollResult) return null;
-    if (rollResult.effectType === "double_roll") return "Effet actif : Double lancer";
-    if (rollResult.effectType === "plus_two_roll") return "Bonus applique : +2";
-    return null;
-  })();
-
-  // Keyboard support (same key triggers the single action)
   useEffect(() => {
     if (disabled || isRolling) return;
 
@@ -161,12 +189,15 @@ export const Dice: React.FC<DiceProps> = ({
       >
         {label}
       </button>
-      {rollText && (
+
+      {rollDetails && (
         <div className="text-xs text-cyan-100 text-center">
-          <div>{rollText}</div>
-          {activeEffectText && <div className="mt-1 text-[10px] text-cyan-200/80">{activeEffectText}</div>}
+          {rollDetails.map((line) => (
+            <div key={line}>{line}</div>
+          ))}
         </div>
       )}
+
       {import.meta.env.DEV && hasInvalidRollResult && (
         <div className="text-[10px] text-rose-300">RollResult invalide: dice vide</div>
       )}

@@ -107,16 +107,6 @@ function rollDie() {
 
 export function resolveRoll(state) {
   const effect = state.pendingPreRollEffect?.type ?? "normal";
-  if (effect === "double_roll") {
-    const die1 = rollDie();
-    const die2 = rollDie();
-    return {
-      dice: [die1, die2],
-      bonus: 0,
-      total: die1 + die2,
-      effectType: "double_roll",
-    };
-  }
   if (effect === "plus_two_roll") {
     const die = rollDie();
     return {
@@ -139,6 +129,13 @@ export function consumePendingPreRollEffect(state) {
   return {
     ...state,
     pendingPreRollEffect: null,
+  };
+}
+
+export function consumePendingDoubleRoll(state) {
+  return {
+    ...state,
+    pendingDoubleRoll: null,
   };
 }
 
@@ -168,6 +165,7 @@ export function createInitialState() {
     turnPhase: "finished",
     preRollActionUsed: false,
     pendingPreRollEffect: null,
+    pendingDoubleRoll: null,
 
     // question flow
     currentQuestion: null,
@@ -222,6 +220,7 @@ export function initializePlayers(state, lobbyPlayers, maxRounds = 12) {
     turnPhase: "pre_roll",
     preRollActionUsed: false,
     pendingPreRollEffect: null,
+    pendingDoubleRoll: null,
     currentQuestion: null,
     currentMinigame: null,
     pendingPathChoice: null,
@@ -248,6 +247,64 @@ export function rollDice(state, socketId) {
   if (state.turnPhase !== "pre_roll") return state;
   if (!isPlayersTurn(state, socketId)) return state;
 
+  if (state.pendingPreRollEffect?.type === "double_roll") {
+    const firstDie = Number(state.pendingDoubleRoll?.firstDie ?? 0);
+    if (firstDie > 0) {
+      const die2 = rollDie();
+      const rollResult = {
+        dice: [firstDie, die2],
+        bonus: 0,
+        total: firstDie + die2,
+        effectType: "double_roll",
+      };
+      console.debug("[retro-party] rolling with effect: double_roll (second die)");
+      console.debug(
+        `[retro-party] roll result = ${JSON.stringify({ dice: rollResult.dice, bonus: rollResult.bonus, total: rollResult.total })}`
+      );
+      const withLogs = appendActionLog(
+        appendActionLog(
+          state,
+          "rolling with effect: double_roll"
+        ),
+        `roll result = ${JSON.stringify({ dice: rollResult.dice, bonus: rollResult.bonus, total: rollResult.total })}`
+      );
+      const clearedPreRoll = consumePendingPreRollEffect(withLogs);
+      const next = consumePendingDoubleRoll(clearedPreRoll);
+      return {
+        ...next,
+        diceValue: rollResult.total,
+        lastRollResult: rollResult,
+        isRolling: true,
+        turnPhase: "rolling",
+      };
+    }
+
+    const die1 = rollDie();
+    const firstRollResult = {
+      dice: [die1],
+      bonus: 0,
+      total: die1,
+      effectType: "double_roll",
+    };
+    console.debug("[retro-party] rolling with effect: double_roll (first die)");
+    console.debug(`[retro-party] first die result = ${die1}`);
+    const withLogs = appendActionLog(
+      appendActionLog(
+        state,
+        "rolling with effect: double_roll (first die)"
+      ),
+      `roll result = ${JSON.stringify({ dice: firstRollResult.dice, bonus: firstRollResult.bonus, total: firstRollResult.total })}`
+    );
+    return {
+      ...withLogs,
+      diceValue: null,
+      lastRollResult: firstRollResult,
+      isRolling: true,
+      turnPhase: "rolling",
+      pendingDoubleRoll: { firstDie: die1 },
+    };
+  }
+
   const rollResult = resolveRoll(state);
   console.debug(`[retro-party] rolling with effect: ${rollResult.effectType}`);
   if (!rollResult.dice.length) {
@@ -268,13 +325,17 @@ export function rollDice(state, socketId) {
     lastRollResult: rollResult,
     isRolling: true,
     turnPhase: "rolling",
+    pendingDoubleRoll: null,
   };
 }
 
 export function settleDice(state, socketId) {
   if (state.phase !== "playing") return state;
   if (!isPlayersTurn(state, socketId)) return state;
-  if (state.diceValue == null) return state;
+  if (state.pendingPreRollEffect?.type === "double_roll" && state.pendingDoubleRoll?.firstDie) {
+    return { ...state, isRolling: false, turnPhase: "pre_roll" };
+  }
+  if (state.diceValue == null) return { ...state, isRolling: false };
 
   return { ...state, isRolling: false, turnPhase: "moving" };
 }
@@ -1138,6 +1199,7 @@ export function useShopItem(state, socketId, itemInstanceId, payload = {}) {
     players,
     preRollActionUsed: true,
     pendingShop: null,
+    pendingDoubleRoll: null,
   };
 
   if (consumed.type === "double_roll" || consumed.type === "plus_two_roll") {
@@ -1145,6 +1207,7 @@ export function useShopItem(state, socketId, itemInstanceId, payload = {}) {
     nextState = {
       ...nextState,
       pendingPreRollEffect: { type: consumed.type },
+      pendingDoubleRoll: null,
       turnPhase: "pre_roll",
     };
     console.debug(`[retro-party] pending effect set: ${consumed.type}`);
@@ -1221,6 +1284,7 @@ export function useShopItem(state, socketId, itemInstanceId, payload = {}) {
       },
       turnPhase: "resolving",
       pendingPreRollEffect: null,
+      pendingDoubleRoll: null,
     };
     return appendActionLog(nextState, `${cur.name} utilise ${itemDef.label}`);
   }
@@ -1272,6 +1336,8 @@ export function nextTurn(state) {
       pendingKudoPurchase: null,
       pendingShop: null,
       turnPhase: "finished",
+      pendingPreRollEffect: null,
+      pendingDoubleRoll: null,
     };
   }
 
@@ -1288,6 +1354,7 @@ export function nextTurn(state) {
     turnPhase: "pre_roll",
     preRollActionUsed: false,
     pendingPreRollEffect: null,
+    pendingDoubleRoll: null,
   };
 }
 

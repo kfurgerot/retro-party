@@ -59,6 +59,10 @@ export type RollResult = {
   effectType: RollEffectType;
 };
 
+export type PendingDoubleRoll = {
+  firstDie: number;
+};
+
 export interface Tile {
   id: number;
   type: TileType;
@@ -180,6 +184,7 @@ export interface GameState {
   pendingShop?: PendingShop | null;
   preRollActionUsed?: boolean;
   pendingPreRollEffect?: { type: "double_roll" | "plus_two_roll" } | null;
+  pendingDoubleRoll?: PendingDoubleRoll | null;
   actionLogs?: string[];
   lastMoveTrace: MoveTrace | null;
   questionHistory: QuestionSummary[];

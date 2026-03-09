@@ -30,6 +30,7 @@ const EMPTY_STATE: GameState = {
   turnPhase: "finished",
   preRollActionUsed: false,
   pendingPreRollEffect: null,
+  pendingDoubleRoll: null,
   currentQuestion: null,
   currentMinigame: null,
   pendingPathChoice: null,
