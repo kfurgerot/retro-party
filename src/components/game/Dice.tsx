@@ -112,42 +112,20 @@ export const Dice: React.FC<DiceProps> = ({
 
   const rollDetails = (() => {
     if (pendingDoubleRollFirstDie != null && (!rollResult || rollResult.dice.length <= 1)) {
-      return [
-        `De 1: ${pendingDoubleRollFirstDie}`,
-        "De 2: en attente...",
-        "Total: en attente...",
-        "Deplacement applique: en attente...",
-      ];
+      return ["Deplacement applique: en attente..."];
     }
 
     if (!rollResult) return null;
 
     if (rollResult.effectType === "double_roll") {
-      const [a = 0, b = 0] = rollResult.dice;
-      return [
-        `De 1: ${a}`,
-        `De 2: ${b}`,
-        `Total: ${rollResult.total}`,
-        `Deplacement applique: ${rollResult.total}`,
-      ];
+      return [`Deplacement applique: ${rollResult.total}`];
     }
 
     if (rollResult.effectType === "plus_two_roll") {
-      const [a = 0] = rollResult.dice;
-      return [
-        `De brut: ${a}`,
-        `Bonus: +${rollResult.bonus}`,
-        `Total: ${rollResult.total}`,
-        `Deplacement applique: ${rollResult.total}`,
-      ];
+      return [`Deplacement applique: ${rollResult.total}`];
     }
 
-    const [a = 0] = rollResult.dice;
-    return [
-      `De: ${a}`,
-      `Total: ${rollResult.total}`,
-      `Deplacement applique: ${rollResult.total}`,
-    ];
+    return [`Deplacement applique: ${rollResult.total}`];
   })();
 
   useEffect(() => {
