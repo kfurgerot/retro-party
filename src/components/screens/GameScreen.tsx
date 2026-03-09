@@ -28,6 +28,7 @@ import { RetroScreenBackground } from "./RetroScreenBackground";
 import { WhoSaidItMinigame } from "../game/WhoSaidItMinigame";
 import { BugSmashMinigame } from "../game/BugSmashMinigame";
 import { BuzzwordDuelMinigame } from "../game/BuzzwordDuelMinigame";
+import { PointDuelMinigame } from "../game/PointDuelMinigame";
 import { LaunchAnnouncement } from "../game/LaunchAnnouncement";
 import { ShopModal } from "../game/ShopModal";
 import { PreRollChoiceModal } from "../game/PreRollChoiceModal";
@@ -54,6 +55,7 @@ interface GameScreenProps {
   whoSaidItState?: WhoSaidItViewState | null;
   onWhoSaidItSubmit?: (role: WhoSaidItRole) => void;
   onBuzzwordSubmit?: (category: BuzzwordCategory) => void;
+  onPointDuelRoll?: () => void;
 }
 
 export const GameScreen: React.FC<GameScreenProps> = ({
@@ -75,6 +77,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   whoSaidItState,
   onWhoSaidItSubmit,
   onBuzzwordSubmit,
+  onPointDuelRoll,
 }) => {
   const [hasMovedThisTurn, setHasMovedThisTurn] = useState(false);
   const [isMoveAnimating, setIsMoveAnimating] = useState(false);
@@ -96,13 +99,14 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const currentPlayer = gameState.players[gameState.currentPlayerIndex];
   const bugSmashState = gameState.currentMinigame?.minigameId === "BUG_SMASH" ? gameState.currentMinigame : null;
   const buzzwordState = gameState.currentMinigame?.minigameId === "BUZZWORD_DUEL" ? gameState.currentMinigame : null;
+  const pointDuelState = gameState.currentMinigame?.minigameId === "POINT_DUEL" ? gameState.currentMinigame : null;
   const isBuzzwordIntroActive =
     !!buzzwordState &&
     buzzwordState.phase === "between" &&
     buzzwordState.roundType === "main" &&
     buzzwordState.currentWordIndex === 1 &&
     !!buzzwordState.nextWordAt;
-  const isMinigameActive = !!whoSaidItState || !!bugSmashState || !!buzzwordState;
+  const isMinigameActive = !!whoSaidItState || !!bugSmashState || !!buzzwordState || !!pointDuelState;
   const isMyTurn =
     !!currentPlayer && !!myPlayerId && currentPlayer.id === myPlayerId;
   const pendingPathChoice = gameState.pendingPathChoice;
@@ -902,6 +906,15 @@ export const GameScreen: React.FC<GameScreenProps> = ({
           myPlayerId={myPlayerId}
           canInteract
           onSubmit={onBuzzwordSubmit}
+        />
+      )}
+
+      {pointDuelState && (
+        <PointDuelMinigame
+          players={gameState.players}
+          state={pointDuelState}
+          myPlayerId={myPlayerId}
+          onRoll={onPointDuelRoll}
         />
       )}
     </div>

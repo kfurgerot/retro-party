@@ -27,6 +27,8 @@ import {
   maybeStartBuzzwordNextWord,
   completeBuzzwordTransfer,
   getBuzzwordTransferDelayMs,
+  resolvePointDuelStep,
+  rollPointDuelDie,
 } from "./gameLogic.js";
 import {
   WHO_SAID_IT_MINIGAME_ID,
@@ -101,12 +103,55 @@ function clearBuzzwordTimers(room) {
   room.bwdTimers.clear();
 }
 
+function setPointDuelTimer(room, callback, delayMs) {
+  const timeout = setTimeout(() => {
+    room.pointDuelTimers.delete(timeout);
+    callback();
+  }, delayMs);
+  room.pointDuelTimers.add(timeout);
+  return timeout;
+}
+
+function clearPointDuelTimers(room) {
+  if (!room?.pointDuelTimers) return;
+  room.pointDuelTimers.forEach((timeout) => clearTimeout(timeout));
+  room.pointDuelTimers.clear();
+}
+
 function isBuzzwordDuelActive(room) {
   return room?.state?.currentMinigame?.minigameId === "BUZZWORD_DUEL";
 }
 
+function isPointDuelActive(room) {
+  return room?.state?.currentMinigame?.minigameId === "POINT_DUEL";
+}
+
 function isWhoSaidItActive(room) {
   return !!room?.wsi && room.wsi.minigameId === WHO_SAID_IT_MINIGAME_ID;
+}
+
+function schedulePointDuelTick(code, delayMs = 30) {
+  const room = rooms.get(code);
+  if (!room) return;
+  clearPointDuelTimers(room);
+  if (!isPointDuelActive(room)) return;
+  const nextStepAt = room.state.currentMinigame?.nextStepAt ?? null;
+  if (!nextStepAt) return;
+
+  setPointDuelTimer(room, () => {
+    const activeRoom = rooms.get(code);
+    if (!activeRoom || !isPointDuelActive(activeRoom)) return;
+
+    const now = Date.now();
+    activeRoom.state = resolvePointDuelStep(activeRoom.state, now);
+    broadcastState(code);
+
+    if (!isPointDuelActive(activeRoom)) return;
+    const nextDueAt = activeRoom.state.currentMinigame?.nextStepAt ?? null;
+    if (!nextDueAt) return;
+    const waitMs = Math.max(30, nextDueAt - Date.now() + 5);
+    schedulePointDuelTick(code, waitMs);
+  }, delayMs);
 }
 
 function runWhoSaidItReveal(code) {
@@ -255,6 +300,19 @@ function sanitizeState(state) {
             durationMs: state.currentMinigame.durationMs,
             score: state.currentMinigame.score,
           }
+        : state.currentMinigame.minigameId === "POINT_DUEL"
+        ? {
+            minigameId: "POINT_DUEL",
+            phase: state.currentMinigame.phase,
+            attackerId: state.currentMinigame.attackerId,
+            defenderId: state.currentMinigame.defenderId,
+            attackerRoll: state.currentMinigame.attackerRoll ?? null,
+            defenderRoll: state.currentMinigame.defenderRoll ?? null,
+            winnerId: state.currentMinigame.winnerId ?? null,
+            stolenPoints: state.currentMinigame.stolenPoints ?? 0,
+            startedAt: state.currentMinigame.startedAt,
+            nextStepAt: state.currentMinigame.nextStepAt ?? null,
+          }
         : {
             minigameId: state.currentMinigame.minigameId,
             duelists: state.currentMinigame.duelists,
@@ -374,6 +432,22 @@ function remapSocketIdInState(state, oldSocketId, newSocketId) {
             ? newSocketId
             : nextState.currentMinigame.targetPlayerId,
       };
+    } else if (nextState.currentMinigame.minigameId === "POINT_DUEL") {
+      nextState.currentMinigame = {
+        ...nextState.currentMinigame,
+        attackerId:
+          nextState.currentMinigame.attackerId === oldSocketId
+            ? newSocketId
+            : nextState.currentMinigame.attackerId,
+        defenderId:
+          nextState.currentMinigame.defenderId === oldSocketId
+            ? newSocketId
+            : nextState.currentMinigame.defenderId,
+        winnerId:
+          nextState.currentMinigame.winnerId === oldSocketId
+            ? newSocketId
+            : nextState.currentMinigame.winnerId,
+      };
     } else {
       const duelists = nextState.currentMinigame.duelists.map((id) =>
         id === oldSocketId ? newSocketId : id
@@ -489,6 +563,12 @@ function removePlayerFromState(state, socketId) {
   if (currentMinigame) {
     if (currentMinigame.minigameId === "BUG_SMASH") {
       if (currentMinigame.targetPlayerId === socketId) currentMinigame = null;
+    } else if (currentMinigame.minigameId === "POINT_DUEL") {
+      if (currentMinigame.attackerId === socketId || currentMinigame.defenderId === socketId) {
+        currentMinigame = null;
+      } else if (currentMinigame.winnerId === socketId) {
+        currentMinigame = { ...currentMinigame, winnerId: null };
+      }
     } else if (currentMinigame.duelists.includes(socketId)) {
       currentMinigame = null;
     } else {
@@ -558,6 +638,7 @@ function closeRoomForAll(code, reason = "Le host a quitte la partie") {
   room.disconnectTimers.clear();
   clearWhoSaidItTimers(room);
   clearBuzzwordTimers(room);
+  clearPointDuelTimers(room);
 
   room.clients.forEach((clientId) => {
     socketToRoom.delete(clientId);
@@ -596,6 +677,7 @@ function removePlayerNow(code, socketId) {
     }
   }
   clearBuzzwordTimers(room);
+  clearPointDuelTimers(room);
 
   syncHostFlags(room);
 
@@ -668,6 +750,7 @@ io.on("connection", (socket) => {
       wsi: null,
       wsiTimers: new Set(),
       bwdTimers: new Set(),
+      pointDuelTimers: new Set(),
       lobby: [
         {
           socketId: socket.id,
@@ -767,10 +850,14 @@ io.on("connection", (socket) => {
     if (!code) return;
     const room = rooms.get(code);
     if (!room) return;
-    if (isWhoSaidItActive(room) || isBuzzwordDuelActive(room)) return;
+    if (isWhoSaidItActive(room) || isBuzzwordDuelActive(room) || isPointDuelActive(room)) return;
 
     room.state = rollDice(room.state, socket.id);
     broadcastState(code);
+    if (isPointDuelActive(room)) {
+      const waitMs = Math.max(30, (room.state.currentMinigame?.nextStepAt ?? Date.now()) - Date.now() + 5);
+      schedulePointDuelTick(code, waitMs);
+    }
 
     // settle rolling after a short delay to let the UI animate
     setTimeout(() => {
@@ -786,10 +873,18 @@ io.on("connection", (socket) => {
     if (!code) return;
     const room = rooms.get(code);
     if (!room) return;
-    if (isWhoSaidItActive(room) || isBuzzwordDuelActive(room)) return;
+    if (isWhoSaidItActive(room) || isBuzzwordDuelActive(room) || isPointDuelActive(room)) return;
 
     room.state = movePlayer(room.state, socket.id, steps);
     broadcastState(code);
+    if (isPointDuelActive(room)) {
+      const dueAt = room.state.currentMinigame?.nextStepAt ?? null;
+      if (dueAt) {
+        const waitMs = Math.max(30, dueAt - Date.now() + 5);
+        schedulePointDuelTick(code, waitMs);
+      }
+      return;
+    }
     if (isBuzzwordDuelActive(room)) {
       const dueAt =
         room.state.currentMinigame.phase === "between"
@@ -804,10 +899,18 @@ io.on("connection", (socket) => {
     if (!code) return;
     const room = rooms.get(code);
     if (!room) return;
-    if (isWhoSaidItActive(room) || isBuzzwordDuelActive(room)) return;
+    if (isWhoSaidItActive(room) || isBuzzwordDuelActive(room) || isPointDuelActive(room)) return;
 
     room.state = choosePath(room.state, socket.id, Number(nextTileId));
     broadcastState(code);
+    if (isPointDuelActive(room)) {
+      const dueAt = room.state.currentMinigame?.nextStepAt ?? null;
+      if (dueAt) {
+        const waitMs = Math.max(30, dueAt - Date.now() + 5);
+        schedulePointDuelTick(code, waitMs);
+      }
+      return;
+    }
     if (isBuzzwordDuelActive(room)) {
       const dueAt =
         room.state.currentMinigame.phase === "between"
@@ -822,10 +925,17 @@ io.on("connection", (socket) => {
     if (!code) return;
     const room = rooms.get(code);
     if (!room) return;
-    if (isWhoSaidItActive(room) || isBuzzwordDuelActive(room)) return;
+    if (isWhoSaidItActive(room) || isBuzzwordDuelActive(room) || isPointDuelActive(room)) return;
 
     room.state = resolveKudoPurchase(room.state, socket.id, !!buyKudo);
     broadcastState(code);
+    if (isPointDuelActive(room)) {
+      const dueAt = room.state.currentMinigame?.nextStepAt ?? null;
+      if (dueAt) {
+        const waitMs = Math.max(30, dueAt - Date.now() + 5);
+        schedulePointDuelTick(code, waitMs);
+      }
+    }
   });
 
   socket.on("open_shop", () => {
@@ -833,7 +943,7 @@ io.on("connection", (socket) => {
     if (!code) return;
     const room = rooms.get(code);
     if (!room) return;
-    if (isWhoSaidItActive(room) || isBuzzwordDuelActive(room)) return;
+    if (isWhoSaidItActive(room) || isBuzzwordDuelActive(room) || isPointDuelActive(room)) return;
 
     room.state = openShopForPlayer(room.state, socket.id);
     broadcastState(code);
@@ -844,11 +954,19 @@ io.on("connection", (socket) => {
     if (!code) return;
     const room = rooms.get(code);
     if (!room) return;
-    if (isWhoSaidItActive(room) || isBuzzwordDuelActive(room)) return;
+    if (isWhoSaidItActive(room) || isBuzzwordDuelActive(room) || isPointDuelActive(room)) return;
 
     const previousRound = room.state.currentRound;
     room.state = closeShopForPlayer(room.state, socket.id);
     broadcastState(code);
+    if (isPointDuelActive(room)) {
+      const dueAt = room.state.currentMinigame?.nextStepAt ?? null;
+      if (dueAt) {
+        const waitMs = Math.max(30, dueAt - Date.now() + 5);
+        schedulePointDuelTick(code, waitMs);
+      }
+      return;
+    }
     maybeStartWhoSaidItAfterTurnAdvance(code, previousRound);
   });
 
@@ -857,11 +975,19 @@ io.on("connection", (socket) => {
     if (!code) return;
     const room = rooms.get(code);
     if (!room) return;
-    if (isWhoSaidItActive(room) || isBuzzwordDuelActive(room)) return;
+    if (isWhoSaidItActive(room) || isBuzzwordDuelActive(room) || isPointDuelActive(room)) return;
 
     const previousRound = room.state.currentRound;
     room.state = buyShopItem(room.state, socket.id, String(itemType ?? ""));
     broadcastState(code);
+    if (isPointDuelActive(room)) {
+      const dueAt = room.state.currentMinigame?.nextStepAt ?? null;
+      if (dueAt) {
+        const waitMs = Math.max(30, dueAt - Date.now() + 5);
+        schedulePointDuelTick(code, waitMs);
+      }
+      return;
+    }
     maybeStartWhoSaidItAfterTurnAdvance(code, previousRound);
   });
 
@@ -870,7 +996,7 @@ io.on("connection", (socket) => {
     if (!code) return;
     const room = rooms.get(code);
     if (!room) return;
-    if (isWhoSaidItActive(room) || isBuzzwordDuelActive(room)) return;
+    if (isWhoSaidItActive(room) || isBuzzwordDuelActive(room) || isPointDuelActive(room)) return;
 
     const beforeRound = room.state.currentRound;
     room.state = useShopItem(room.state, socket.id, String(itemInstanceId ?? ""), payload ?? {});
@@ -878,12 +1004,30 @@ io.on("connection", (socket) => {
     maybeStartWhoSaidItAfterTurnAdvance(code, beforeRound);
   });
 
+  socket.on("point_duel_roll", () => {
+    const code = socketToRoom.get(socket.id);
+    if (!code) return;
+    const room = rooms.get(code);
+    if (!room) return;
+    if (!isPointDuelActive(room)) return;
+    if (isWhoSaidItActive(room) || isBuzzwordDuelActive(room)) return;
+
+    room.state = rollPointDuelDie(room.state, socket.id, Date.now());
+    broadcastState(code);
+
+    const dueAt = room.state.currentMinigame?.nextStepAt ?? null;
+    if (dueAt) {
+      const waitMs = Math.max(30, dueAt - Date.now() + 5);
+      schedulePointDuelTick(code, waitMs);
+    }
+  });
+
   socket.on("resolve_pre_roll_choice", ({ itemInstanceId } = {}) => {
     const code = socketToRoom.get(socket.id);
     if (!code) return;
     const room = rooms.get(code);
     if (!room) return;
-    if (isWhoSaidItActive(room) || isBuzzwordDuelActive(room)) return;
+    if (isWhoSaidItActive(room) || isBuzzwordDuelActive(room) || isPointDuelActive(room)) return;
 
     room.state = resolvePreRollChoice(room.state, socket.id, itemInstanceId ?? null);
     broadcastState(code);
@@ -894,7 +1038,7 @@ io.on("connection", (socket) => {
     if (!code) return;
     const room = rooms.get(code);
     if (!room) return;
-    if (isWhoSaidItActive(room) || isBuzzwordDuelActive(room)) return;
+    if (isWhoSaidItActive(room) || isBuzzwordDuelActive(room) || isPointDuelActive(room)) return;
 
     room.state = voteQuestion(room.state, socket.id, vote);
     broadcastState(code);
@@ -905,7 +1049,7 @@ io.on("connection", (socket) => {
     if (!code) return;
     const room = rooms.get(code);
     if (!room) return;
-    if (isWhoSaidItActive(room) || isBuzzwordDuelActive(room)) return;
+    if (isWhoSaidItActive(room) || isBuzzwordDuelActive(room) || isPointDuelActive(room)) return;
 
     room.state = openQuestion(room.state, socket.id);
     broadcastState(code);
@@ -916,7 +1060,7 @@ io.on("connection", (socket) => {
     if (!code) return;
     const room = rooms.get(code);
     if (!room) return;
-    if (isWhoSaidItActive(room) || isBuzzwordDuelActive(room)) return;
+    if (isWhoSaidItActive(room) || isBuzzwordDuelActive(room) || isPointDuelActive(room)) return;
 
     const previousRound = room.state.currentRound;
     room.state = validateQuestion(room.state, socket.id);
@@ -929,7 +1073,7 @@ io.on("connection", (socket) => {
     if (!code) return;
     const room = rooms.get(code);
     if (!room) return;
-    if (isWhoSaidItActive(room) || isBuzzwordDuelActive(room)) return;
+    if (isWhoSaidItActive(room) || isBuzzwordDuelActive(room) || isPointDuelActive(room)) return;
 
     const previousRound = room.state.currentRound;
     room.state = completeBugSmash(room.state, socket.id, score);
@@ -942,7 +1086,7 @@ io.on("connection", (socket) => {
     if (!code) return;
     const room = rooms.get(code);
     if (!room) return;
-    if (isWhoSaidItActive(room) || isBuzzwordDuelActive(room)) return;
+    if (isWhoSaidItActive(room) || isBuzzwordDuelActive(room) || isPointDuelActive(room)) return;
 
     room.state = updateBugSmashProgress(room.state, socket.id, score);
     broadcastState(code);
@@ -1007,7 +1151,7 @@ io.on("connection", (socket) => {
     const room = rooms.get(code);
     if (!room) return;
     if (room.hostSocketId !== socket.id) return;
-    if (isWhoSaidItActive(room) || isBuzzwordDuelActive(room)) return;
+    if (isWhoSaidItActive(room) || isBuzzwordDuelActive(room) || isPointDuelActive(room)) return;
 
     room.state = nextTurn(room.state);
     broadcastState(code);
@@ -1024,6 +1168,7 @@ io.on("connection", (socket) => {
     clearBuzzwordTimers(room);
     room.wsi = null;
     room.state = resetGame(room.state);
+    clearPointDuelTimers(room);
     broadcastLobby(code);
     broadcastState(code);
   });

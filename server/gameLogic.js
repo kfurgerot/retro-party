@@ -22,6 +22,10 @@ const KUDO_COST = 10;
 const BOARD_COLORS = ["blue", "green", "red", "violet"];
 const STEAL_POINTS_AMOUNT = 5;
 const MAX_ACTION_LOGS = 12;
+const POINT_DUEL_ANNOUNCE_MS = 1800;
+const POINT_DUEL_ROLL_REVEAL_MS = 2200;
+const POINT_DUEL_RESULT_MS = 3200;
+const POINT_DUEL_STEAL = 5;
 
 function getBugSmashStars(score) {
   if (score >= 18) return 3;
@@ -798,13 +802,33 @@ function buildLandingState(state, players) {
     return startBuzzwordDuel(withBonus, curPlayer.id, collidedPlayer.id);
   }
 
+  if (collidedPlayer) {
+    return startPointDuel(withBonus, curPlayer.id, collidedPlayer.id);
+  }
+
+  return buildQuestionStateForCurrentPlayer(withBonus, players);
+}
+
+function buildQuestionStateForCurrentPlayer(state, players) {
+  const curPlayer = players[state.currentPlayerIndex];
+  const tile = state.tiles[curPlayer.position];
+  if (!tile) {
+    return {
+      ...state,
+      players,
+      currentMinigame: null,
+      currentQuestion: null,
+      turnPhase: "resolving",
+    };
+  }
   const seed = (state.board?.seed ?? 0) + curPlayer.position + state.currentRound * 1000;
   const rng = mulberry32(seed);
+  const type = tile.type === "bonus" ? "bonus" : tile.type;
   const text = pickQuestion(type, rng) || "(Question manquante)";
   const qId = `${Date.now()}-${Math.floor(Math.random() * 100000)}`;
 
   return {
-    ...withBonus,
+    ...state,
     currentMinigame: null,
     currentQuestion: {
       id: qId,
@@ -816,6 +840,180 @@ function buildLandingState(state, players) {
       nextMinigame: type === "red" && ENABLE_RED_TILE_MINIGAME ? "BUG_SMASH" : null,
     },
   };
+}
+
+export function startPointDuel(state, firstPlayerId, secondPlayerId, now = Date.now()) {
+  if (state.phase !== "playing") return state;
+  if (state.currentQuestion || state.currentMinigame) return state;
+  if (state.pendingPathChoice || state.pendingKudoPurchase || state.pendingShop) return state;
+
+  const playerA = state.players.find((p) => p.id === firstPlayerId);
+  const playerB = state.players.find((p) => p.id === secondPlayerId);
+  if (!playerA || !playerB || playerA.id === playerB.id) return state;
+
+  return appendActionLog(
+    {
+      ...state,
+      currentQuestion: null,
+      currentMinigame: {
+        minigameId: "POINT_DUEL",
+        phase: "announce",
+        attackerId: playerA.id,
+        defenderId: playerB.id,
+        attackerRoll: null,
+        defenderRoll: null,
+        winnerId: null,
+        stolenPoints: 0,
+        startedAt: now,
+        nextStepAt: now + POINT_DUEL_ANNOUNCE_MS,
+      },
+      turnPhase: "resolving",
+    },
+    `${playerA.name} declenche un duel contre ${playerB.name}`
+  );
+}
+
+function isPointDuelActiveState(state) {
+  return state.currentMinigame?.minigameId === "POINT_DUEL";
+}
+
+function resolvePointDuelResult(players, attackerId, defenderId, attackerRoll, defenderRoll) {
+  const attacker = players.find((p) => p.id === attackerId);
+  const defender = players.find((p) => p.id === defenderId);
+  if (!attacker || !defender) {
+    return { players, winnerId: null, stolenPoints: 0 };
+  }
+
+  if (attackerRoll === defenderRoll) {
+    return { players, winnerId: null, stolenPoints: 0 };
+  }
+
+  const winner = attackerRoll > defenderRoll ? attacker : defender;
+  const loser = winner.id === attacker.id ? defender : attacker;
+  const available = Math.max(0, Math.floor(Number(loser.points ?? 0)));
+  const stolen = Math.min(POINT_DUEL_STEAL, available);
+  loser.points = Math.max(0, available - stolen);
+  winner.points = Math.max(0, Math.floor(Number(winner.points ?? 0) + stolen));
+  return { players, winnerId: winner.id, stolenPoints: stolen };
+}
+
+export function resolvePointDuelStep(state, now = Date.now()) {
+  if (!isPointDuelActiveState(state)) return state;
+  const duel = state.currentMinigame;
+  if (!duel.nextStepAt || now < duel.nextStepAt) return state;
+
+  if (duel.phase === "announce") {
+    return {
+      ...state,
+      currentMinigame: {
+        ...duel,
+        phase: "waiting_attacker_roll",
+        nextStepAt: null,
+      },
+    };
+  }
+
+  if (duel.phase === "show_attacker_roll") {
+    return {
+      ...state,
+      currentMinigame: {
+        ...duel,
+        phase: "waiting_defender_roll",
+        nextStepAt: null,
+      },
+    };
+  }
+
+  if (duel.phase === "show_defender_roll") {
+    const players = state.players.map((p) => ({ ...p }));
+    const attackerRoll = Math.max(1, Math.floor(Number(duel.attackerRoll ?? 1)));
+    const defenderRoll = Math.max(1, Math.floor(Number(duel.defenderRoll ?? 1)));
+    const result = resolvePointDuelResult(players, duel.attackerId, duel.defenderId, attackerRoll, defenderRoll);
+    const winnerName = result.winnerId
+      ? players.find((p) => p.id === result.winnerId)?.name ?? "Gagnant"
+      : "Egalite";
+    const loserName =
+      result.winnerId == null
+        ? null
+        : players.find((p) => p.id !== result.winnerId && (p.id === duel.attackerId || p.id === duel.defenderId))
+            ?.name ?? null;
+
+    const withResult = {
+      ...state,
+      players,
+      currentMinigame: {
+        ...duel,
+        phase: "result",
+        winnerId: result.winnerId,
+        stolenPoints: result.stolenPoints,
+        nextStepAt: now + POINT_DUEL_RESULT_MS,
+      },
+    };
+    if (!result.winnerId) {
+      return appendActionLog(withResult, "Duel: egalite, aucun point vole");
+    }
+    return appendActionLog(
+      withResult,
+      `Duel: ${winnerName} vole ${result.stolenPoints} points a ${loserName ?? "adversaire"}`
+    );
+  }
+
+  if (duel.phase === "result") {
+    return completePointDuel(state);
+  }
+
+  return state;
+}
+
+export function rollPointDuelDie(state, socketId, now = Date.now()) {
+  if (!isPointDuelActiveState(state)) return state;
+  const duel = state.currentMinigame;
+
+  if (duel.phase === "waiting_attacker_roll") {
+    if (duel.attackerId !== socketId) return state;
+    const attackerRoll = rollDie();
+    return {
+      ...state,
+      currentMinigame: {
+        ...duel,
+        phase: "show_attacker_roll",
+        attackerRoll,
+        nextStepAt: now + POINT_DUEL_ROLL_REVEAL_MS,
+      },
+    };
+  }
+
+  if (duel.phase === "waiting_defender_roll") {
+    if (duel.defenderId !== socketId) return state;
+    const defenderRoll = rollDie();
+    return {
+      ...state,
+      currentMinigame: {
+        ...duel,
+        phase: "show_defender_roll",
+        defenderRoll,
+        nextStepAt: now + POINT_DUEL_ROLL_REVEAL_MS,
+      },
+    };
+  }
+
+  return state;
+}
+
+export function completePointDuel(state) {
+  if (!isPointDuelActiveState(state)) return state;
+  const players = state.players.map((p) => ({ ...p }));
+  const cleared = {
+    ...state,
+    players,
+    currentMinigame: null,
+    currentQuestion: null,
+    pendingPathChoice: null,
+    pendingKudoPurchase: null,
+    pendingShop: null,
+    turnPhase: "resolving",
+  };
+  return buildQuestionStateForCurrentPlayer(cleared, players);
 }
 
 export function movePlayer(state, socketId, steps) {

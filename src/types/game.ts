@@ -163,7 +163,26 @@ export interface BuzzwordDuelState {
   transfer: BuzzwordDuelTransfer | null;
 }
 
-export type ActiveMinigameState = BugSmashState | BuzzwordDuelState;
+export interface PointDuelState {
+  minigameId: "POINT_DUEL";
+  phase:
+    | "announce"
+    | "waiting_attacker_roll"
+    | "show_attacker_roll"
+    | "waiting_defender_roll"
+    | "show_defender_roll"
+    | "result";
+  attackerId: string;
+  defenderId: string;
+  attackerRoll: number | null;
+  defenderRoll: number | null;
+  winnerId: string | null;
+  stolenPoints: number;
+  startedAt: number;
+  nextStepAt: number | null;
+}
+
+export type ActiveMinigameState = BugSmashState | BuzzwordDuelState | PointDuelState;
 
 export interface GameState {
   phase: 'lobby' | 'playing' | 'results';

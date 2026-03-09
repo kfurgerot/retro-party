@@ -138,6 +138,7 @@ const Index: React.FC = () => {
         whoSaidItState={online.whoSaidIt}
         onWhoSaidItSubmit={online.submitWhoSaidIt}
         onBuzzwordSubmit={online.submitBuzzwordDuel}
+        onPointDuelRoll={online.rollPointDuel}
       />
     );
   }
