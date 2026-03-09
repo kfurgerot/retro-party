@@ -166,6 +166,8 @@ export function createInitialState() {
     preRollActionUsed: false,
     pendingPreRollEffect: null,
     pendingDoubleRoll: null,
+    preRollChoiceResolved: false,
+    preRollSelectedItemId: null,
 
     // question flow
     currentQuestion: null,
@@ -221,6 +223,8 @@ export function initializePlayers(state, lobbyPlayers, maxRounds = 12) {
     preRollActionUsed: false,
     pendingPreRollEffect: null,
     pendingDoubleRoll: null,
+    preRollChoiceResolved: false,
+    preRollSelectedItemId: null,
     currentQuestion: null,
     currentMinigame: null,
     pendingPathChoice: null,
@@ -237,6 +241,24 @@ function isPlayersTurn(state, socketId) {
   return !!cur && cur.id === socketId;
 }
 
+function getBeforeRollInventoryForCurrentPlayer(state, socketId) {
+  if (!isPlayersTurn(state, socketId)) return [];
+  const cur = state.players[state.currentPlayerIndex];
+  if (!cur) return [];
+  const inv = Array.isArray(cur.inventory) ? cur.inventory : [];
+  return inv.filter((item) => {
+    const def = item ? SHOP_CATALOG[item.type] : null;
+    return !!def && def.timing === "before_roll";
+  });
+}
+
+function shouldRequirePreRollChoice(state, socketId) {
+  if (!isPlayersTurn(state, socketId)) return false;
+  if (state.pendingPreRollEffect || state.pendingDoubleRoll) return false;
+  if (state.preRollChoiceResolved) return false;
+  return getBeforeRollInventoryForCurrentPlayer(state, socketId).length > 0;
+}
+
 export function rollDice(state, socketId) {
   if (state.phase !== "playing") return state;
   if (state.currentQuestion) return state;
@@ -246,9 +268,35 @@ export function rollDice(state, socketId) {
   if (state.pendingShop) return state;
   if (state.turnPhase !== "pre_roll") return state;
   if (!isPlayersTurn(state, socketId)) return state;
+  if (shouldRequirePreRollChoice(state, socketId)) return state;
 
-  if (state.pendingPreRollEffect?.type === "double_roll") {
-    const firstDie = Number(state.pendingDoubleRoll?.firstDie ?? 0);
+  let workingState = state;
+  if (!workingState.pendingPreRollEffect && !workingState.pendingDoubleRoll && workingState.preRollSelectedItemId) {
+    const { state: consumedState, consumed } = consumeInventoryItem(
+      {
+        ...workingState,
+        preRollSelectedItemId: null,
+      },
+      socketId,
+      workingState.preRollSelectedItemId
+    );
+    if (consumed?.type === "double_roll" || consumed?.type === "plus_two_roll") {
+      workingState = appendActionLog(
+        {
+          ...consumedState,
+          pendingPreRollEffect: { type: consumed.type },
+          preRollActionUsed: true,
+        },
+        `pre-roll item used: ${consumed.type}`
+      );
+      console.debug(`[retro-party] pre-roll item used: ${consumed.type}`);
+    } else {
+      workingState = consumedState;
+    }
+  }
+
+  if (workingState.pendingPreRollEffect?.type === "double_roll") {
+    const firstDie = Number(workingState.pendingDoubleRoll?.firstDie ?? 0);
     if (firstDie > 0) {
       const die2 = rollDie();
       const rollResult = {
@@ -263,7 +311,7 @@ export function rollDice(state, socketId) {
       );
       const withLogs = appendActionLog(
         appendActionLog(
-          state,
+          workingState,
           "rolling with effect: double_roll"
         ),
         `roll result = ${JSON.stringify({ dice: rollResult.dice, bonus: rollResult.bonus, total: rollResult.total })}`
@@ -290,7 +338,7 @@ export function rollDice(state, socketId) {
     console.debug(`[retro-party] first die result = ${die1}`);
     const withLogs = appendActionLog(
       appendActionLog(
-        state,
+        workingState,
         "rolling with effect: double_roll (first die)"
       ),
       `roll result = ${JSON.stringify({ dice: firstRollResult.dice, bonus: firstRollResult.bonus, total: firstRollResult.total })}`
@@ -305,7 +353,7 @@ export function rollDice(state, socketId) {
     };
   }
 
-  const rollResult = resolveRoll(state);
+  const rollResult = resolveRoll(workingState);
   console.debug(`[retro-party] rolling with effect: ${rollResult.effectType}`);
   if (!rollResult.dice.length) {
     console.error("[retro-party] invalid rollResult: empty dice", rollResult);
@@ -313,7 +361,7 @@ export function rollDice(state, socketId) {
   console.debug(`[retro-party] roll result = ${JSON.stringify({ dice: rollResult.dice, bonus: rollResult.bonus, total: rollResult.total })}`);
   const withLogs = appendActionLog(
     appendActionLog(
-      state,
+      workingState,
       `rolling with effect: ${rollResult.effectType}`
     ),
     `roll result = ${JSON.stringify({ dice: rollResult.dice, bonus: rollResult.bonus, total: rollResult.total })}`
@@ -1160,7 +1208,44 @@ export function getUsableItemsForTurn(state, socketId) {
   const cur = state.players[state.currentPlayerIndex];
   if (!cur || cur.id !== socketId) return [];
   const inv = Array.isArray(cur.inventory) ? cur.inventory : [];
-  return inv.filter((item) => item && SHOP_CATALOG[item.type]);
+  return inv.filter((item) => {
+    const def = item ? SHOP_CATALOG[item.type] : null;
+    return !!def && def.timing === "before_roll";
+  });
+}
+
+export function resolvePreRollChoice(state, socketId, itemInstanceId = null) {
+  if (state.phase !== "playing") return state;
+  if (!isPlayersTurn(state, socketId)) return state;
+  if (state.turnPhase !== "pre_roll") return state;
+  if (state.currentQuestion || state.currentMinigame) return state;
+  if (state.pendingPathChoice || state.pendingKudoPurchase || state.pendingShop) return state;
+  if (state.pendingPreRollEffect || state.pendingDoubleRoll) return state;
+
+  const usableItems = getBeforeRollInventoryForCurrentPlayer(state, socketId);
+  if (usableItems.length === 0) {
+    return {
+      ...state,
+      preRollChoiceResolved: true,
+      preRollSelectedItemId: null,
+    };
+  }
+
+  if (!itemInstanceId) {
+    return {
+      ...state,
+      preRollChoiceResolved: true,
+      preRollSelectedItemId: null,
+    };
+  }
+
+  const selected = usableItems.find((item) => item.id === itemInstanceId);
+  if (!selected) return state;
+  return {
+    ...state,
+    preRollChoiceResolved: true,
+    preRollSelectedItemId: selected.id,
+  };
 }
 
 export function consumeInventoryItem(state, socketId, itemInstanceId) {
@@ -1184,6 +1269,15 @@ export function useShopItem(state, socketId, itemInstanceId, payload = {}) {
   if (state.pendingPathChoice || state.pendingKudoPurchase || state.pendingShop || state.currentQuestion || state.currentMinigame) {
     return state;
   }
+
+  const previewPlayer = state.players[state.currentPlayerIndex];
+  if (!previewPlayer || previewPlayer.id !== socketId) return state;
+  const previewItem = (Array.isArray(previewPlayer.inventory) ? previewPlayer.inventory : []).find(
+    (item) => item.id === itemInstanceId
+  );
+  if (!previewItem) return state;
+  const previewDef = SHOP_CATALOG[previewItem.type];
+  if (!previewDef || previewDef.timing !== "before_roll") return state;
 
   const { state: afterConsume, consumed } = consumeInventoryItem(state, socketId, itemInstanceId);
   if (!consumed) return state;
@@ -1338,6 +1432,8 @@ export function nextTurn(state) {
       turnPhase: "finished",
       pendingPreRollEffect: null,
       pendingDoubleRoll: null,
+      preRollChoiceResolved: true,
+      preRollSelectedItemId: null,
     };
   }
 
@@ -1355,6 +1451,8 @@ export function nextTurn(state) {
     preRollActionUsed: false,
     pendingPreRollEffect: null,
     pendingDoubleRoll: null,
+    preRollChoiceResolved: false,
+    preRollSelectedItemId: null,
   };
 }
 

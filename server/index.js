@@ -14,6 +14,7 @@ import {
   closeShopForPlayer,
   buyShopItem,
   useShopItem,
+  resolvePreRollChoice,
   completeBugSmash,
   updateBugSmashProgress,
   openQuestion,
@@ -227,6 +228,8 @@ function sanitizeState(state) {
     preRollActionUsed: !!state.preRollActionUsed,
     pendingPreRollEffect: state.pendingPreRollEffect ?? null,
     pendingDoubleRoll: state.pendingDoubleRoll ?? null,
+    preRollChoiceResolved: !!state.preRollChoiceResolved,
+    preRollSelectedItemId: state.preRollSelectedItemId ?? null,
     lastRollResult: state.lastRollResult ?? null,
     actionLogs: Array.isArray(state.actionLogs) ? state.actionLogs : [],
     currentQuestion: state.currentQuestion
@@ -873,6 +876,17 @@ io.on("connection", (socket) => {
     room.state = useShopItem(room.state, socket.id, String(itemInstanceId ?? ""), payload ?? {});
     broadcastState(code);
     maybeStartWhoSaidItAfterTurnAdvance(code, beforeRound);
+  });
+
+  socket.on("resolve_pre_roll_choice", ({ itemInstanceId } = {}) => {
+    const code = socketToRoom.get(socket.id);
+    if (!code) return;
+    const room = rooms.get(code);
+    if (!room) return;
+    if (isWhoSaidItActive(room) || isBuzzwordDuelActive(room)) return;
+
+    room.state = resolvePreRollChoice(room.state, socket.id, itemInstanceId ?? null);
+    broadcastState(code);
   });
 
   socket.on("vote_question", ({ vote }) => {

@@ -31,6 +31,8 @@ const EMPTY_STATE: GameState = {
   preRollActionUsed: false,
   pendingPreRollEffect: null,
   pendingDoubleRoll: null,
+  preRollChoiceResolved: false,
+  preRollSelectedItemId: null,
   currentQuestion: null,
   currentMinigame: null,
   pendingPathChoice: null,
@@ -331,6 +333,9 @@ export function useOnlineGameState() {
   const useShopItem = useCallback((itemInstanceId: string, payload?: Record<string, unknown>) => {
     socket.emit("use_shop_item", { itemInstanceId, payload: payload ?? {} });
   }, []);
+  const resolvePreRollChoice = useCallback((itemInstanceId: string | null) => {
+    socket.emit("resolve_pre_roll_choice", { itemInstanceId });
+  }, []);
   const openQuestionCard = useCallback(() => socket.emit("open_question"), []);
   const voteQuestion = useCallback((vote: "up" | "down") => socket.emit("vote_question", { vote }), []);
   const validateQuestion = useCallback(() => socket.emit("validate_question"), []);
@@ -375,6 +380,7 @@ export function useOnlineGameState() {
     closeShop,
     buyShopItem,
     useShopItem,
+    resolvePreRollChoice,
     openQuestionCard,
     voteQuestion,
     validateQuestion,

@@ -36,11 +36,14 @@ export type ShopItemType =
   | "go_to_star"
   | "steal_points";
 
+export type ShopItemTiming = "before_roll" | "after_roll" | "instant" | "passive";
+
 export type ShopCatalogItem = {
   type: ShopItemType;
   label: string;
   cost: number;
   description: string;
+  timing: ShopItemTiming;
 };
 
 export type ShopItemInstance = {
@@ -185,6 +188,8 @@ export interface GameState {
   preRollActionUsed?: boolean;
   pendingPreRollEffect?: { type: "double_roll" | "plus_two_roll" } | null;
   pendingDoubleRoll?: PendingDoubleRoll | null;
+  preRollChoiceResolved?: boolean;
+  preRollSelectedItemId?: string | null;
   actionLogs?: string[];
   lastMoveTrace: MoveTrace | null;
   questionHistory: QuestionSummary[];

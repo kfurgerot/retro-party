@@ -129,7 +129,7 @@ const Index: React.FC = () => {
         onResolveKudoPurchase={online.resolveKudoPurchase}
         onBuyShopItem={online.buyShopItem}
         onCloseShop={online.closeShop}
-        onUseShopItem={online.useShopItem}
+        onResolvePreRollChoice={online.resolvePreRollChoice}
         onOpenQuestionCard={online.openQuestionCard}
         onVoteQuestion={online.voteQuestion}
         onValidateQuestion={online.validateQuestion}

@@ -4,30 +4,35 @@ export const SHOP_CATALOG = {
     label: "Double lance de des",
     cost: 10,
     description: "Lance 2 des et additionne le resultat.",
+    timing: "before_roll",
   },
   swap_position: {
     type: "swap_position",
     label: "Echanger ma place",
     cost: 20,
     description: "Echange ta position avec un autre joueur.",
+    timing: "instant",
   },
   plus_two_roll: {
     type: "plus_two_roll",
     label: "+2 au lancer",
     cost: 5,
     description: "Ajoute +2 au prochain lancer.",
+    timing: "before_roll",
   },
   go_to_star: {
     type: "go_to_star",
     label: "Aller sur l'etoile",
     cost: 30,
     description: "Te teleporte a l'etoile et ouvre l'achat Kudo.",
+    timing: "instant",
   },
   steal_points: {
     type: "steal_points",
     label: "Voler 5 points",
     cost: 5,
     description: "Vole jusqu'a 5 points a un joueur cible.",
+    timing: "instant",
   },
 };
 

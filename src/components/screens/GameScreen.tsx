@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { BuzzwordCategory, GameState, ShopItemInstance, ShopItemType, WhoSaidItRole, WhoSaidItViewState } from "@/types/game";
+import { BuzzwordCategory, GameState, ShopItemType, WhoSaidItRole, WhoSaidItViewState } from "@/types/game";
 import { GameBoard } from "../game/GameBoard";
 import { PlayerCard } from "../game/PlayerCard";
 import { Dice } from "../game/Dice";
@@ -29,9 +29,8 @@ import { WhoSaidItMinigame } from "../game/WhoSaidItMinigame";
 import { BugSmashMinigame } from "../game/BugSmashMinigame";
 import { BuzzwordDuelMinigame } from "../game/BuzzwordDuelMinigame";
 import { LaunchAnnouncement } from "../game/LaunchAnnouncement";
-import { PreRollActionPanel } from "../game/PreRollActionPanel";
 import { ShopModal } from "../game/ShopModal";
-import { TargetPlayerModal } from "../game/TargetPlayerModal";
+import { PreRollChoiceModal } from "../game/PreRollChoiceModal";
 import { SHOP_CATALOG } from "@/data/shopCatalog";
 
 const TURN_ANNOUNCE_MS = 2000;
@@ -46,7 +45,7 @@ interface GameScreenProps {
   onResolveKudoPurchase?: (buyKudo: boolean) => void;
   onBuyShopItem?: (itemType: ShopItemType) => void;
   onCloseShop?: () => void;
-  onUseShopItem?: (itemInstanceId: string, payload?: Record<string, unknown>) => void;
+  onResolvePreRollChoice?: (itemInstanceId: string | null) => void;
   onOpenQuestionCard: () => void;
   onVoteQuestion: (vote: "up" | "down") => void;
   onValidateQuestion: () => void;
@@ -67,7 +66,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   onResolveKudoPurchase,
   onBuyShopItem,
   onCloseShop,
-  onUseShopItem,
+  onResolvePreRollChoice,
   onOpenQuestionCard,
   onVoteQuestion,
   onValidateQuestion,
@@ -83,14 +82,10 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const [playersOpen, setPlayersOpen] = useState(false);
   const [legendOpen, setLegendOpen] = useState(false);
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
-  const [showPreRollPanel, setShowPreRollPanel] = useState(false);
   const [whoSaidItIntroAt, setWhoSaidItIntroAt] = useState<number | null>(null);
   const [turnIntroEndsAt, setTurnIntroEndsAt] = useState<number | null>(null);
   const [bugIntroEndsAt, setBugIntroEndsAt] = useState<number | null>(null);
-  const [pendingTargetSelection, setPendingTargetSelection] = useState<{
-    item: ShopItemInstance;
-    targetType: "swap_position" | "steal_points";
-  } | null>(null);
+  const [selectedPreRollType, setSelectedPreRollType] = useState<ShopItemType | null>(null);
 
   const autoMoveKeyRef = useRef<string | null>(null);
   const moveAnimationFallbackRef = useRef<number | null>(null);
@@ -128,9 +123,25 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     !!onResolveKudoPurchase;
   const isTurnIntroActive = turnIntroEndsAt != null;
   const isBugIntroActive = bugIntroEndsAt != null;
+  const catalogByType = SHOP_CATALOG;
   const myPlayer = gameState.players.find((p) => p.id === myPlayerId) ?? null;
   const pendingDoubleRollFirstDie = gameState.pendingDoubleRoll?.firstDie ?? null;
   const myInventory = myPlayer?.inventory ?? [];
+  const beforeRollInventory = useMemo(
+    () => myInventory.filter((item) => catalogByType[item.type]?.timing === "before_roll"),
+    [myInventory, catalogByType]
+  );
+  const preRollChoices = useMemo(() => {
+    const grouped = new Map<ShopItemType, { type: ShopItemType; count: number; label: string; description: string }>();
+    for (const item of beforeRollInventory) {
+      const def = catalogByType[item.type];
+      if (!def) continue;
+      const prev = grouped.get(item.type);
+      if (prev) prev.count += 1;
+      else grouped.set(item.type, { type: item.type, count: 1, label: def.label, description: def.description });
+    }
+    return [...grouped.values()];
+  }, [beforeRollInventory, catalogByType]);
   const canUsePreRollAction =
     gameState.phase === "playing" &&
     isMyTurn &&
@@ -143,6 +154,18 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     !isMinigameActive &&
     !gameState.isRolling &&
     gameState.diceValue == null;
+  const shouldShowPreRollChoiceModal =
+    canUsePreRollAction &&
+    !!onResolvePreRollChoice &&
+    beforeRollInventory.length > 0 &&
+    !gameState.preRollChoiceResolved &&
+    !gameState.pendingPreRollEffect &&
+    !gameState.pendingDoubleRoll &&
+    !isTurnIntroActive;
+
+  useEffect(() => {
+    if (!shouldShowPreRollChoiceModal) setSelectedPreRollType(null);
+  }, [shouldShowPreRollChoiceModal]);
 
   const myIndex = useMemo(() => {
     const idx = gameState.players.findIndex(
@@ -427,21 +450,12 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     currentPlayer.id === myPlayerId &&
     gameState.currentQuestion.targetPlayerId === myPlayerId;
 
-  useEffect(() => {
-    if (!canUsePreRollAction) setShowPreRollPanel(false);
-  }, [canUsePreRollAction]);
-
-  const catalogByType = SHOP_CATALOG;
-  const handleUseInventoryItem = (item: ShopItemInstance) => {
-    if (!onUseShopItem) return;
-    if (item.type === "swap_position" || item.type === "steal_points") {
-      setPendingTargetSelection({ item, targetType: item.type });
-      return;
-    }
-    onUseShopItem(item.id, {});
+  const handleConfirmPreRollChoice = (itemType: ShopItemType) => {
+    const item = beforeRollInventory.find((entry) => entry.type === itemType);
+    if (!item) return;
+    onResolvePreRollChoice?.(item.id);
+    setSelectedPreRollType(null);
   };
-  const targetCandidates = gameState.players.filter((p) => !!myPlayerId && p.id !== myPlayerId);
-  const pendingTargetAction = pendingTargetSelection ? catalogByType[pendingTargetSelection.item.type] : null;
 
   return (
     <div className="scanlines relative min-h-svh w-full overflow-hidden">
@@ -511,17 +525,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
             </div>
             <Card className={cn(neonCard, "hidden shrink-0 px-4 py-3 lg:block")}>
               <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-6">
-                <div>
-                  {canUsePreRollAction && (
-                    <button
-                      type="button"
-                      className={cn("rounded border px-3 py-2 text-xs font-semibold", neutralSecondaryBtn)}
-                      onClick={() => setShowPreRollPanel((prev) => !prev)}
-                    >
-                      Actions ({myInventory.length})
-                    </button>
-                  )}
-                </div>
+                <div />
                 <div className="flex justify-center">
                   <Dice
                     value={gameState.diceValue}
@@ -548,16 +552,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                   <div className="truncate text-xs text-slate-300">{infoHint}</div>
                 </div>
               </div>
-              <PreRollActionPanel
-                open={canUsePreRollAction && showPreRollPanel}
-                inventory={myInventory}
-                catalogByType={catalogByType}
-                canUseAction={canUsePreRollAction && !!onUseShopItem}
-                onUse={handleUseInventoryItem}
-                onPass={() => setShowPreRollPanel(false)}
-                activeBtnClass={activeCyanBtn}
-                neutralBtnClass={neutralSecondaryBtn}
-              />
             </Card>
           </div>
 
@@ -653,16 +647,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               </div>
 
               <div className={`grid gap-2 ${onLeave ? "grid-cols-3" : "grid-cols-2"}`}>
-                {canUsePreRollAction && (
-                  <Button
-                    className="h-10 w-full border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_0_2px_rgba(34,211,238,0.35)] hover:bg-cyan-400"
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => setShowPreRollPanel((prev) => !prev)}
-                  >
-                    Actions ({myInventory.length})
-                  </Button>
-                )}
                 <Button
                   className="h-10 w-full border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_0_2px_rgba(34,211,238,0.35)] hover:bg-cyan-400"
                   size="sm"
@@ -693,16 +677,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                   </Button>
                 )}
               </div>
-              <PreRollActionPanel
-                open={canUsePreRollAction && showPreRollPanel}
-                inventory={myInventory}
-                catalogByType={catalogByType}
-                canUseAction={canUsePreRollAction && !!onUseShopItem}
-                onUse={handleUseInventoryItem}
-                onPass={() => setShowPreRollPanel(false)}
-                activeBtnClass={activeCyanBtn}
-                neutralBtnClass={neutralSecondaryBtn}
-              />
             </div>
           </Card>
         </div>
@@ -846,16 +820,21 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         neutralBtnClass={neutralSecondaryBtn}
       />
 
-      <TargetPlayerModal
-        open={!!pendingTargetSelection}
-        action={pendingTargetAction}
-        players={targetCandidates}
-        onCancel={() => setPendingTargetSelection(null)}
-        onSelect={(targetPlayerId) => {
-          if (!pendingTargetSelection) return;
-          onUseShopItem?.(pendingTargetSelection.item.id, { targetPlayerId });
-          setPendingTargetSelection(null);
+      <PreRollChoiceModal
+        open={shouldShowPreRollChoiceModal}
+        canInteract={!!myPlayerId && isMyTurn && !!onResolvePreRollChoice}
+        items={preRollChoices}
+        selectedType={selectedPreRollType}
+        onSelectType={(itemType) => setSelectedPreRollType(itemType)}
+        onConfirmSelection={() => {
+          if (!selectedPreRollType) return;
+          handleConfirmPreRollChoice(selectedPreRollType);
         }}
+        onContinue={() => {
+          setSelectedPreRollType(null);
+          onResolvePreRollChoice?.(null);
+        }}
+        activeBtnClass={activeCyanBtn}
         neutralBtnClass={neutralSecondaryBtn}
       />
 
