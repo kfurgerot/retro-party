@@ -115,6 +115,12 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const isPathChoiceActive = !!pendingPathChoice;
   const isKudoPurchaseActive = !!pendingKudoPurchase;
   const isShopActive = !!pendingShop;
+  const isArrivalEventActive =
+    isPathChoiceActive ||
+    isKudoPurchaseActive ||
+    isShopActive ||
+    !!gameState.currentQuestion ||
+    isMinigameActive;
   const canChoosePath =
     !!pendingPathChoice &&
     !!myPlayerId &&
@@ -522,6 +528,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 players={gameState.players}
                 pendingPathChoice={pendingPathChoice}
                 lastMoveTrace={gameState.lastMoveTrace}
+                eventOverlayActive={isArrivalEventActive}
                 canChoosePath={canChoosePath}
                 onChoosePath={onChoosePath}
                 onMoveAnimationEnd={(playerId) => {

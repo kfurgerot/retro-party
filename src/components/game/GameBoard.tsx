@@ -10,6 +10,7 @@ interface GameBoardProps {
   lastMoveTrace?: MoveTrace | null;
   canChoosePath?: boolean;
   onChoosePath?: (nextTileId: number) => void;
+  eventOverlayActive?: boolean;
 }
 
 const TileIcon: Record<string, string> = {
@@ -70,6 +71,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   lastMoveTrace,
   canChoosePath = false,
   onChoosePath,
+  eventOverlayActive = false,
 }) => {
   const bounds = useMemo(() => {
     if (!tiles.length) return { minX: 0, minY: 0, maxX: 800, maxY: 500 };
@@ -96,7 +98,10 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   const floatingTimeoutsRef = useRef<number[]>([]);
   const [displayPositions, setDisplayPositions] = useState<Record<string, number>>({});
   const [movingPlayerId, setMovingPlayerId] = useState<string | null>(null);
+  const [isAutoResettingView, setIsAutoResettingView] = useState(false);
   const [floatingDeltas, setFloatingDeltas] = useState<FloatingDelta[]>([]);
+  const pendingAutoZoomOutRef = useRef(false);
+  const autoZoomTimeoutRef = useRef<number | null>(null);
 
   // Keep latest values for resize callbacks / pointer handlers.
   const scaleRef = useRef(1);
@@ -184,7 +189,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     [bounds.minX, bounds.minY, tiles]
   );
 
-  const resetView = () => {
+  const resetView = (animate = false) => {
     const el = containerRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
@@ -208,9 +213,27 @@ export const GameBoard: React.FC<GameBoardProps> = ({
       y: (rect.height - contentH) / 2,
     };
 
+    if (animate) {
+      setIsAutoResettingView(true);
+      if (autoZoomTimeoutRef.current) {
+        window.clearTimeout(autoZoomTimeoutRef.current);
+      }
+      autoZoomTimeoutRef.current = window.setTimeout(() => {
+        setIsAutoResettingView(false);
+        autoZoomTimeoutRef.current = null;
+      }, 650);
+    }
+
     setScale(nextScale);
     setOffset(clampOffset(nextScale, centered, rect.width, rect.height));
   };
+
+  const tryAutoZoomOut = useCallback(() => {
+    if (!pendingAutoZoomOutRef.current) return;
+    if (eventOverlayActive) return;
+    pendingAutoZoomOutRef.current = false;
+    resetView(true);
+  }, [eventOverlayActive]);
 
   useLayoutEffect(() => {
     const el = containerRef.current;
@@ -470,6 +493,22 @@ export const GameBoard: React.FC<GameBoardProps> = ({
       return;
     }
 
+    const hasPositionDelta = players.some((p) => {
+      const from = previousPositionsRef.current[p.id];
+      const to = p.position;
+      return from != null && from !== to;
+    });
+
+    // Keep the current move animation running even if other state updates rerender the board.
+    if (!hasPositionDelta) {
+      previousPositionsRef.current = nextActual;
+      if (!movingPlayerId) {
+        setDisplayPositions(nextActual);
+        setMovingPlayerId(null);
+      }
+      return;
+    }
+
     clearMoveTimeouts();
     let hasAnimatedMove = false;
     let followedPlayerId: string | null = null;
@@ -502,6 +541,13 @@ export const GameBoard: React.FC<GameBoardProps> = ({
           if (followedPlayerId === p.id) focusOnPosition(position, true);
           if (idx === steps.length - 1 && followedPlayerId === p.id) {
             setMovingPlayerId(null);
+            pendingAutoZoomOutRef.current = true;
+            if (!eventOverlayActive) {
+              const timeoutId = window.setTimeout(() => {
+                tryAutoZoomOut();
+              }, 260);
+              moveTimeoutsRef.current.push(timeoutId);
+            }
           }
           if (idx === steps.length - 1) {
             onMoveAnimationEnd?.(p.id);
@@ -518,9 +564,13 @@ export const GameBoard: React.FC<GameBoardProps> = ({
       setMovingPlayerId(null);
     }
     previousPositionsRef.current = nextActual;
+  }, [eventOverlayActive, findPath, focusOnPosition, lastMoveTrace, movingPlayerId, onMoveAnimationEnd, players, pushFloatingDelta, tilePointDelta, tiles, tryAutoZoomOut]);
 
-    return () => clearMoveTimeouts();
-  }, [findPath, focusOnPosition, lastMoveTrace, players, pushFloatingDelta, tilePointDelta, tiles]);
+  useLayoutEffect(() => {
+    if (!eventOverlayActive) {
+      tryAutoZoomOut();
+    }
+  }, [eventOverlayActive, tryAutoZoomOut]);
 
   useLayoutEffect(() => {
     return () => {
@@ -528,6 +578,10 @@ export const GameBoard: React.FC<GameBoardProps> = ({
       moveTimeoutsRef.current = [];
       floatingTimeoutsRef.current.forEach((id) => window.clearTimeout(id));
       floatingTimeoutsRef.current = [];
+      if (autoZoomTimeoutRef.current) {
+        window.clearTimeout(autoZoomTimeoutRef.current);
+        autoZoomTimeoutRef.current = null;
+      }
     };
   }, []);
 
@@ -551,7 +605,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
             height,
             transform: `translate3d(${offset.x}px, ${offset.y}px, 0) scale(${scale})`,
             transformOrigin: "top left",
-            transition: movingPlayerId ? "transform 220ms ease-out" : undefined,
+            transition: movingPlayerId || isAutoResettingView ? "transform 360ms ease-out" : undefined,
           }}
         >
           {/* Path lines */}
