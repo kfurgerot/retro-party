@@ -295,6 +295,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       !buzzwordState &&
       !whoSaidItState &&
       gameState.turnPhase === "pre_roll" &&
+      !gameState.pendingPreRollEffect &&
+      !gameState.pendingDoubleRoll &&
       gameState.diceValue == null &&
       !gameState.isRolling;
     if (!shouldShowTurnIntro) {
