@@ -1,11 +1,11 @@
 import React, { useMemo, useState } from 'react';
+import { useLocation, useNavigate } from "react-router-dom";
 import { useGameState } from '@/hooks/useGameState';
 import { useOnlineGameState } from '@/hooks/useOnlineGameState';
 import { LobbyScreen } from '@/components/screens/LobbyScreen';
 import { OnlineLobbyScreen } from '@/components/screens/OnlineLobbyScreen';
 import { OnlineOnboardingScreen } from '@/components/screens/OnlineOnboardingScreen';
 import { ExperienceId, SelectExperienceScreen } from '@/components/screens/SelectExperienceScreen';
-import { PressStartScreen } from '@/components/screens/PressStartScreen';
 import { GameScreen } from '@/components/screens/GameScreen';
 import { ResultsScreen } from '@/components/screens/ResultsScreen';
 import { PixelCard } from '@/components/game/PixelCard';
@@ -17,6 +17,25 @@ type OnlineProfile = {
 };
 
 const Index: React.FC = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const initialParams = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    const mode = params.get("mode");
+    const code = params.get("code");
+    const name = params.get("name");
+    const avatar = Number(params.get("avatar"));
+    const auto = params.get("auto");
+    return {
+      mode: mode === "join" ? "join" : "host",
+      code: code ? code.toUpperCase() : "",
+      name: name ? name.trim() : "",
+      avatar: Number.isFinite(avatar) ? Math.max(0, Math.floor(avatar)) : 0,
+      autoSubmit: auto === "1",
+      direct: auto === "1" || !!code,
+    };
+  }, [location.search]);
+
   const isOnline = useMemo(() => {
     if (typeof window === 'undefined') return false;
 
@@ -36,24 +55,31 @@ const Index: React.FC = () => {
 
   // Online state (rooms + websocket)
   const online = useOnlineGameState();
-  const [hasEnteredOnlineLobby, setHasEnteredOnlineLobby] = useState(false);
-  const [onlineProfile, setOnlineProfile] = useState<OnlineProfile | null>(null);
-  const [selectedExperience, setSelectedExperience] = useState<ExperienceId | null>(null);
+  const [onlineProfile, setOnlineProfile] = useState<OnlineProfile | null>(
+    initialParams.name
+      ? {
+          name: initialParams.name,
+          avatar: initialParams.avatar,
+        }
+      : null
+  );
+  const [selectedExperience, setSelectedExperience] = useState<ExperienceId | null>(
+    initialParams.direct ? "retro-party" : null
+  );
+  const [autoSubmitKey] = useState<number>(() => (initialParams.autoSubmit ? Date.now() : 0));
 
   if (isOnline) {
     if (online.gameState.phase === 'lobby') {
-      if (!hasEnteredOnlineLobby) {
-        return <PressStartScreen onStart={() => setHasEnteredOnlineLobby(true)} />;
-      }
-
       if (!online.code && !onlineProfile) {
         return (
           <OnlineOnboardingScreen
             connected={online.connected}
-            onBack={() => setHasEnteredOnlineLobby(false)}
+            onBack={() => navigate("/")}
             onSubmit={({ name, avatar }) => {
               setOnlineProfile({ name, avatar });
             }}
+            initialName={onlineProfile?.name}
+            initialAvatar={onlineProfile?.avatar}
           />
         );
       }
@@ -90,19 +116,23 @@ const Index: React.FC = () => {
           <OnlineLobbyScreen
             connected={online.connected}
             roomCode={online.code}
-            lobbyPlayers={online.lobby as any}
+            lobbyPlayers={online.lobby}
             onHost={online.createRoom}
             onJoin={online.joinRoom}
             onLeave={() => {
               online.leaveRoom();
               if (!online.code) {
                 setSelectedExperience(null);
+                navigate("/");
               }
             }}
             onStartGame={online.startGame}
             canStart={online.isHost}
             initialName={onlineProfile?.name}
             initialAvatar={onlineProfile?.avatar}
+            initialMode={initialParams.mode}
+            initialCode={initialParams.code}
+            autoSubmitKey={autoSubmitKey}
           />
         </div>
       );

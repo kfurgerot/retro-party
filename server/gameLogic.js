@@ -824,7 +824,25 @@ function buildQuestionStateForCurrentPlayer(state, players) {
   const seed = (state.board?.seed ?? 0) + curPlayer.position + state.currentRound * 1000;
   const rng = mulberry32(seed);
   const type = tile.type === "bonus" ? "bonus" : tile.type;
-  const text = pickQuestion(type, rng) || "(Question manquante)";
+  const normalizedType =
+    type === "purple" ? "violet" : type === "star" || type === "yellow" ? "bonus" : type;
+  const customPool = Array.isArray(state.templateCustomQuestions)
+    ? state.templateCustomQuestions.filter((q) => {
+        if (!q || q.isActive === false || typeof q.text !== "string") return false;
+        if (!q.category) return true;
+        const normalizedCategory =
+          q.category === "purple"
+            ? "violet"
+            : q.category === "star" || q.category === "yellow"
+            ? "bonus"
+            : q.category;
+        return normalizedCategory === normalizedType;
+      })
+    : [];
+  const customText = customPool.length
+    ? customPool[Math.floor(rng() * customPool.length)]?.text ?? ""
+    : "";
+  const text = customText || pickQuestion(type, rng) || "(Question manquante)";
   const qId = `${Date.now()}-${Math.floor(Math.random() * 100000)}`;
 
   return {

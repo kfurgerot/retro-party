@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
+import { QUESTIONS } from "./questions.js";
 
 const SESSION_COOKIE_NAME = process.env.SESSION_COOKIE_NAME || "rp_session";
 const SESSION_TTL_DAYS = Number(process.env.SESSION_TTL_DAYS || 7);
@@ -144,6 +145,26 @@ function serializeQuestion(row) {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
+}
+
+function getDefaultTemplateQuestions() {
+  const categoryOrder = ["blue", "green", "red", "violet", "bonus"];
+  const items = [];
+  let sortOrder = 0;
+  for (const category of categoryOrder) {
+    const list = Array.isArray(QUESTIONS[category]) ? QUESTIONS[category] : [];
+    for (const text of list) {
+      if (typeof text !== "string" || !text.trim()) continue;
+      items.push({
+        id: crypto.randomUUID(),
+        category,
+        text: text.trim(),
+        sortOrder,
+      });
+      sortOrder += 1;
+    }
+  }
+  return items;
 }
 
 async function getOwnedTemplate(pool, userId, templateId) {
@@ -321,6 +342,7 @@ export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCod
   });
 
   app.post("/api/templates", requireAuth, async (req, res, next) => {
+    const client = await pool.connect();
     try {
       const { name, description, baseConfig } = req.body ?? {};
       if (typeof name !== "string" || name.trim().length < 1 || name.length > 120) {
@@ -334,7 +356,8 @@ export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCod
       }
 
       const templateId = crypto.randomUUID();
-      const result = await pool.query(
+      await client.query("BEGIN");
+      const result = await client.query(
         `
           INSERT INTO game_templates (id, user_id, name, description, base_config)
           VALUES ($1, $2, $3, $4, $5::jsonb)
@@ -348,9 +371,23 @@ export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCod
           JSON.stringify(baseConfig ?? {}),
         ]
       );
+      const seedQuestions = getDefaultTemplateQuestions();
+      for (const question of seedQuestions) {
+        await client.query(
+          `
+            INSERT INTO custom_questions (id, template_id, text, category, sort_order, is_active)
+            VALUES ($1, $2, $3, $4, $5, true)
+          `,
+          [question.id, templateId, question.text, question.category, question.sortOrder]
+        );
+      }
+      await client.query("COMMIT");
       return res.status(201).json({ template: serializeTemplate(result.rows[0]) });
     } catch (err) {
+      await client.query("ROLLBACK");
       next(err);
+    } finally {
+      client.release();
     }
   });
 

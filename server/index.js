@@ -97,9 +97,22 @@ function createRuntimeRoom({
 } = {}) {
   if (rooms.has(code)) return rooms.get(code);
 
+  const initialState = createInitialState();
+  const customQuestions = Array.isArray(configSnapshot?.customQuestions)
+    ? configSnapshot.customQuestions
+        .filter((q) => q && typeof q.text === "string" && q.text.trim().length > 0)
+        .map((q) => ({
+          text: q.text.trim(),
+          category: typeof q.category === "string" ? q.category.trim().toLowerCase() : null,
+          isActive: q.isActive !== false,
+        }))
+    : [];
+
+  initialState.templateCustomQuestions = customQuestions;
+
   const hasHost = Boolean(hostSocketId);
   const room = {
-    state: createInitialState(),
+    state: initialState,
     hostSocketId,
     clients: hasHost ? new Set([hostSocketId]) : new Set(),
     disconnectTimers: new Map(),
