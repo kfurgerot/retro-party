@@ -68,6 +68,13 @@ const Index: React.FC = () => {
   );
   const [autoSubmitKey] = useState<number>(() => (initialParams.autoSubmit ? Date.now() : 0));
 
+  const leaveOnlineSession = () => {
+    online.leaveRoom();
+    setSelectedExperience(null);
+    setOnlineProfile(null);
+    navigate("/");
+  };
+
   if (isOnline) {
     if (online.gameState.phase === 'lobby') {
       if (!online.code && !onlineProfile) {
@@ -120,11 +127,7 @@ const Index: React.FC = () => {
             onHost={online.createRoom}
             onJoin={online.joinRoom}
             onLeave={() => {
-              online.leaveRoom();
-              if (!online.code) {
-                setSelectedExperience(null);
-                navigate("/");
-              }
+              leaveOnlineSession();
             }}
             onStartGame={online.startGame}
             canStart={online.isHost}
@@ -152,7 +155,7 @@ const Index: React.FC = () => {
       <GameScreen
         gameState={online.gameState}
         myPlayerId={online.myPlayerId}
-        onLeave={online.leaveRoom}
+        onLeave={leaveOnlineSession}
         onRollDice={online.rollDice}
         onMovePlayer={online.movePlayer}
         onChoosePath={online.choosePath}
