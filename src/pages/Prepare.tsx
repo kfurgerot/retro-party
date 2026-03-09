@@ -6,11 +6,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api, HostUser, TemplateItem } from "@/net/api";
 import { RetroScreenBackground } from "@/components/screens/RetroScreenBackground";
+import { ExperienceId, SelectExperienceScreen } from "@/components/screens/SelectExperienceScreen";
+import { PixelCard } from "@/components/game/PixelCard";
+import { PixelButton } from "@/components/game/PixelButton";
 
 type AuthMode = "login" | "register";
 
 const PreparePage = () => {
   const navigate = useNavigate();
+  const [selectedExperience, setSelectedExperience] = useState<ExperienceId | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -149,6 +153,33 @@ const PreparePage = () => {
       setError(err instanceof Error ? err.message : "Erreur inconnue");
     }
   };
+
+  if (!selectedExperience) {
+    return (
+      <SelectExperienceScreen
+        onSelect={(experience) => setSelectedExperience(experience)}
+        onBack={() => navigate("/")}
+      />
+    );
+  }
+
+  if (selectedExperience !== "retro-party") {
+    return (
+      <div className="scanlines flex min-h-svh w-full items-center justify-center p-6">
+        <PixelCard className="w-full max-w-xl p-6 text-center">
+          <div className="font-pixel text-2xl">Coming Soon</div>
+          <div className="mt-2 text-sm opacity-80">
+            Cette experience n&apos;est pas encore disponible pour la preparation.
+          </div>
+          <div className="mt-6">
+            <PixelButton onClick={() => setSelectedExperience(null)} variant="secondary">
+              Back To Tools
+            </PixelButton>
+          </div>
+        </PixelCard>
+      </div>
+    );
+  }
 
   return (
     <div className="scanlines relative flex min-h-svh w-full items-center justify-center overflow-hidden px-4 py-8">

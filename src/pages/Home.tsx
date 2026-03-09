@@ -1,26 +1,15 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RetroScreenBackground } from "@/components/screens/RetroScreenBackground";
 import { PressStartScreen } from "@/components/screens/PressStartScreen";
 
-const PRESS_START_STORAGE_KEY = "retro-party:press-start-seen";
-
 const Home = () => {
   const navigate = useNavigate();
   const [hasStarted, setHasStarted] = useState(false);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const seen = window.sessionStorage.getItem(PRESS_START_STORAGE_KEY) === "1";
-    setHasStarted(seen);
-  }, []);
-
   const handleStart = () => {
-    if (typeof window !== "undefined") {
-      window.sessionStorage.setItem(PRESS_START_STORAGE_KEY, "1");
-    }
     setHasStarted(true);
   };
 
