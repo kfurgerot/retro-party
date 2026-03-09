@@ -101,6 +101,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   const [isAutoResettingView, setIsAutoResettingView] = useState(false);
   const [floatingDeltas, setFloatingDeltas] = useState<FloatingDelta[]>([]);
   const pendingAutoZoomOutRef = useRef(false);
+  const pendingAutoZoomTargetRef = useRef<number | null>(null);
   const autoZoomTimeoutRef = useRef<number | null>(null);
 
   // Keep latest values for resize callbacks / pointer handlers.
@@ -228,12 +229,64 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     setOffset(clampOffset(nextScale, centered, rect.width, rect.height));
   };
 
+  const zoomOutKeepingPosition = useCallback(
+    (position: number, animate = false) => {
+      const el = containerRef.current;
+      const tile = tiles[position];
+      if (!el || !tile) {
+        resetView(animate);
+        return;
+      }
+      const rect = el.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) {
+        resetView(animate);
+        return;
+      }
+
+      const coarse = isCoarsePointer();
+      const fit = computeFitScale(rect.width, rect.height);
+      const nextScale = clamp(
+        coarse ? Math.min(fit * 0.96, 1.05) : Math.min(fit * 1.04, 2.2),
+        0.5,
+        2.75
+      );
+
+      const centerX = tile.x - bounds.minX + TILE_CENTER;
+      const centerY = tile.y - bounds.minY + TILE_CENTER;
+      const wanted = {
+        x: rect.width * 0.5 - centerX * nextScale,
+        y: rect.height * 0.5 - centerY * nextScale,
+      };
+
+      if (animate) {
+        setIsAutoResettingView(true);
+        if (autoZoomTimeoutRef.current) {
+          window.clearTimeout(autoZoomTimeoutRef.current);
+        }
+        autoZoomTimeoutRef.current = window.setTimeout(() => {
+          setIsAutoResettingView(false);
+          autoZoomTimeoutRef.current = null;
+        }, 650);
+      }
+
+      setScale(nextScale);
+      setOffset(clampOffset(nextScale, wanted, rect.width, rect.height));
+    },
+    [bounds.minX, bounds.minY, tiles]
+  );
+
   const tryAutoZoomOut = useCallback(() => {
     if (!pendingAutoZoomOutRef.current) return;
     if (eventOverlayActive) return;
     pendingAutoZoomOutRef.current = false;
+    const target = pendingAutoZoomTargetRef.current;
+    pendingAutoZoomTargetRef.current = null;
+    if (target != null) {
+      zoomOutKeepingPosition(target, true);
+      return;
+    }
     resetView(true);
-  }, [eventOverlayActive]);
+  }, [eventOverlayActive, zoomOutKeepingPosition]);
 
   useLayoutEffect(() => {
     const el = containerRef.current;
@@ -542,6 +595,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
           if (idx === steps.length - 1 && followedPlayerId === p.id) {
             setMovingPlayerId(null);
             pendingAutoZoomOutRef.current = true;
+            pendingAutoZoomTargetRef.current = position;
             if (!eventOverlayActive) {
               const timeoutId = window.setTimeout(() => {
                 tryAutoZoomOut();
