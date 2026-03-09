@@ -14,7 +14,36 @@ services:
     restart: unless-stopped
     environment:
       - PORT=3001
-      # In prod, set to your https domain to lock CORS:
-      # - ORIGIN=https://retro-party.example.com
+      - ORIGIN=http://localhost:8088
+      - DATABASE_URL=postgresql://retro:retro_pwd@postgres:5432/retro_party
+      - SESSION_COOKIE_NAME=rp_session
+      - SESSION_TTL_DAYS=7
+      - BCRYPT_ROUNDS=12
+      - LOGIN_RATE_LIMIT_WINDOW_MS=900000
+      - LOGIN_RATE_LIMIT_MAX=10
     ports:
       - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: retro-party-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=retro_party
+      - POSTGRES_USER=retro
+      - POSTGRES_PASSWORD=retro_pwd
+    ports:
+      - "5432:5432"
+    volumes:
+      - retro_party_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U retro -d retro_party"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  retro_party_postgres_data:

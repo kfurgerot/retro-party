@@ -2,6 +2,8 @@ import express from "express";
 import http from "http";
 import cors from "cors";
 import { Server } from "socket.io";
+import { initDatabase, pool } from "./db.js";
+import { registerApiRoutes } from "./restApi.js";
 import {
   createInitialState,
   initializePlayers,
@@ -52,7 +54,8 @@ const WHO_SAID_IT_ANNOUNCE_MS = 4000;
 const ENABLE_WHO_SAID_IT_MINIGAME = true;
 
 const app = express();
-app.use(cors({ origin: ORIGIN, credentials: false }));
+app.use(cors({ origin: ORIGIN, credentials: true }));
+app.use(express.json({ limit: "1mb" }));
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
 const server = http.createServer(app);
@@ -72,6 +75,67 @@ function makeSessionId() {
 
 const rooms = new Map(); // code -> { state, hostSocketId, clients, lobby, disconnectTimers }
 const socketToRoom = new Map(); // socketId -> code
+
+function makeUniqueRoomCode() {
+  for (let i = 0; i < 30; i += 1) {
+    const code = makeCode();
+    if (!rooms.has(code)) return code;
+  }
+  throw new Error("Unable to generate room code");
+}
+
+function createRuntimeRoom({
+  code,
+  hostSocketId = null,
+  sessionId = null,
+  name = "Host",
+  avatar = 0,
+  configSnapshot = null,
+  mode = "quick",
+  sourceTemplateId = null,
+  createdByUserId = null,
+} = {}) {
+  if (rooms.has(code)) return rooms.get(code);
+
+  const hasHost = Boolean(hostSocketId);
+  const room = {
+    state: createInitialState(),
+    hostSocketId,
+    clients: hasHost ? new Set([hostSocketId]) : new Set(),
+    disconnectTimers: new Map(),
+    wsi: null,
+    wsiTimers: new Set(),
+    bwdTimers: new Set(),
+    pointDuelTimers: new Set(),
+    configSnapshot,
+    mode,
+    sourceTemplateId,
+    createdByUserId,
+    lobby: hasHost
+      ? [
+          {
+            socketId: hostSocketId,
+            sessionId,
+            name,
+            avatar,
+            isHost: true,
+            connected: true,
+          },
+        ]
+      : [],
+  };
+
+  rooms.set(code, room);
+  return room;
+}
+
+registerApiRoutes({
+  app,
+  pool,
+  rooms,
+  createRuntimeRoom,
+  makeCode,
+});
 
 function setWhoSaidItTimer(room, callback, delayMs) {
   const timeout = setTimeout(() => {
@@ -739,28 +803,15 @@ io.on("connection", (socket) => {
   socket.emit("server_hello", { ok: true });
 
   socket.on("create_room", ({ name, avatar, sessionId }) => {
-    const code = makeCode();
-    const state = createInitialState();
+    const code = makeUniqueRoomCode();
     const resolvedSessionId = typeof sessionId === "string" ? sessionId : makeSessionId();
-    rooms.set(code, {
-      state,
+    createRuntimeRoom({
+      code,
       hostSocketId: socket.id,
-      clients: new Set([socket.id]),
-      disconnectTimers: new Map(),
-      wsi: null,
-      wsiTimers: new Set(),
-      bwdTimers: new Set(),
-      pointDuelTimers: new Set(),
-      lobby: [
-        {
-          socketId: socket.id,
-          sessionId: resolvedSessionId,
-          name: name || "Host",
-          avatar: avatar ?? 0,
-          isHost: true,
-          connected: true,
-        },
-      ],
+      sessionId: resolvedSessionId,
+      name: name || "Host",
+      avatar: avatar ?? 0,
+      mode: "quick",
     });
     socketToRoom.set(socket.id, code);
     socket.join(code);
@@ -793,17 +844,20 @@ io.on("connection", (socket) => {
     }
 
     const resolvedSessionId = requestedSessionId ?? makeSessionId();
+    const becomesHost = !room.hostSocketId;
+    if (becomesHost) room.hostSocketId = socket.id;
     room.clients.add(socket.id);
     room.lobby.push({
       socketId: socket.id,
       sessionId: resolvedSessionId,
       name: name || "Player",
       avatar: avatar ?? 0,
-      isHost: false,
+      isHost: becomesHost,
       connected: true,
     });
     socketToRoom.set(socket.id, code);
     socket.join(code);
+    syncHostFlags(room);
 
     socket.emit("room_joined", { code });
     broadcastLobby(code);
@@ -1206,6 +1260,14 @@ io.on("connection", (socket) => {
   });
 });
 
-server.listen(PORT, () => {
-  console.log(`Retro Party backend listening on :${PORT}`);
+async function startServer() {
+  await initDatabase();
+  server.listen(PORT, () => {
+    console.log(`Retro Party backend listening on :${PORT}`);
+  });
+}
+
+startServer().catch((err) => {
+  console.error("Failed to start backend", err);
+  process.exit(1);
 });
