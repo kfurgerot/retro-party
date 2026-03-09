@@ -373,6 +373,10 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       : "En attente de la decision..."
     : isShopActive
     ? "Achete une action ou continue"
+    : gameState.pendingPreRollEffect?.type === "double_roll"
+    ? "Effet pret: Double lancer"
+    : gameState.pendingPreRollEffect?.type === "plus_two_roll"
+    ? "Effet pret: +2 au lancer"
     : canRoll
     ? "Lance le de"
     : isMoveAnimating
@@ -518,6 +522,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 <div className="flex justify-center">
                   <Dice
                     value={gameState.diceValue}
+                    rollResult={gameState.lastRollResult ?? null}
                     isRolling={gameState.isRolling}
                     canRoll={canRoll}
                     canMove={canMove}
@@ -619,6 +624,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 <div className="origin-left shrink-0 scale-[0.88]">
                   <Dice
                     value={gameState.diceValue}
+                    rollResult={gameState.lastRollResult ?? null}
                     isRolling={gameState.isRolling}
                     canRoll={canRoll}
                     canMove={canMove}

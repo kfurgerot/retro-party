@@ -1,9 +1,11 @@
 import React, { useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { getPlayerBoardKey, BOARD_KEYS } from "@/data/keyboardMappings";
+import { RollResult } from "@/types/game";
 
 interface DiceProps {
   value: number | null;
+  rollResult?: RollResult | null;
   isRolling: boolean;
 
   canRoll: boolean;
@@ -43,6 +45,13 @@ const DiceFace: React.FC<{ value: number }> = ({ value }) => {
       "bottom-2 right-3",
     ],
   };
+  if (!dotPositions[value]) {
+    return (
+      <div className="relative w-20 h-20 bg-foreground border-4 border-primary flex items-center justify-center">
+        <span className="font-pixel text-base text-background">{value}</span>
+      </div>
+    );
+  }
 
   return (
     <div className="relative w-20 h-20 bg-foreground border-4 border-primary">
@@ -55,6 +64,7 @@ const DiceFace: React.FC<{ value: number }> = ({ value }) => {
 
 export const Dice: React.FC<DiceProps> = ({
   value,
+  rollResult = null,
   isRolling,
   canRoll,
   canMove,
@@ -72,6 +82,7 @@ export const Dice: React.FC<DiceProps> = ({
 
   const playerKey = getPlayerBoardKey(playerIndex);
   const canOpen = canOpenQuestionCard && !!onOpenQuestionCard;
+  const hasInvalidRollResult = !!rollResult && (!Array.isArray(rollResult.dice) || rollResult.dice.length === 0);
 
   const disabled = !canRoll && !canMove && !canOpen;
 
@@ -87,6 +98,27 @@ export const Dice: React.FC<DiceProps> = ({
     if (canMove && value != null) return `➡️ Avancer (${value})`;
     if (canOpen) return "🃏 Ouvrir carte";
     return "⏳ Attente";
+  })();
+
+  const rollText = (() => {
+    if (!rollResult) return null;
+    if (rollResult.effectType === "double_roll") {
+      const [a = 0, b = 0] = rollResult.dice;
+      return `🎲 ${a} + ${b} = ${rollResult.total}`;
+    }
+    if (rollResult.effectType === "plus_two_roll") {
+      const [a = 0] = rollResult.dice;
+      return `🎲 ${a} + 2 = ${rollResult.total}`;
+    }
+    const [a = 0] = rollResult.dice;
+    return `🎲 ${a}`;
+  })();
+
+  const activeEffectText = (() => {
+    if (!rollResult) return null;
+    if (rollResult.effectType === "double_roll") return "Effet actif : Double lancer";
+    if (rollResult.effectType === "plus_two_roll") return "Bonus applique : +2";
+    return null;
   })();
 
   // Keyboard support (same key triggers the single action)
@@ -129,6 +161,15 @@ export const Dice: React.FC<DiceProps> = ({
       >
         {label}
       </button>
+      {rollText && (
+        <div className="text-xs text-cyan-100 text-center">
+          <div>{rollText}</div>
+          {activeEffectText && <div className="mt-1 text-[10px] text-cyan-200/80">{activeEffectText}</div>}
+        </div>
+      )}
+      {import.meta.env.DEV && hasInvalidRollResult && (
+        <div className="text-[10px] text-rose-300">RollResult invalide: dice vide</div>
+      )}
     </div>
   );
 };

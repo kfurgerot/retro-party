@@ -50,6 +50,14 @@ export type ShopItemInstance = {
 };
 
 export type TurnPhase = "pre_roll" | "rolling" | "moving" | "resolving" | "finished";
+export type RollEffectType = "normal" | "double_roll" | "plus_two_roll";
+
+export type RollResult = {
+  dice: number[];
+  bonus: number;
+  total: number;
+  effectType: RollEffectType;
+};
 
 export interface Tile {
   id: number;
@@ -162,6 +170,7 @@ export interface GameState {
   tiles: Tile[];
 
   diceValue: number | null;
+  lastRollResult?: RollResult | null;
   isRolling: boolean;
 
   currentQuestion: QuestionState | null;
@@ -170,7 +179,7 @@ export interface GameState {
   pendingKudoPurchase: PendingKudoPurchase | null;
   pendingShop?: PendingShop | null;
   preRollActionUsed?: boolean;
-  preRollEffect?: { kind: "double_roll" | "plus_two_roll" } | null;
+  pendingPreRollEffect?: { type: "double_roll" | "plus_two_roll" } | null;
   actionLogs?: string[];
   lastMoveTrace: MoveTrace | null;
   questionHistory: QuestionSummary[];

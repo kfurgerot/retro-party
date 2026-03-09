@@ -101,6 +101,47 @@ function appendActionLog(state, message) {
   };
 }
 
+function rollDie() {
+  return 1 + Math.floor(Math.random() * 6);
+}
+
+export function resolveRoll(state) {
+  const effect = state.pendingPreRollEffect?.type ?? "normal";
+  if (effect === "double_roll") {
+    const die1 = rollDie();
+    const die2 = rollDie();
+    return {
+      dice: [die1, die2],
+      bonus: 0,
+      total: die1 + die2,
+      effectType: "double_roll",
+    };
+  }
+  if (effect === "plus_two_roll") {
+    const die = rollDie();
+    return {
+      dice: [die],
+      bonus: 2,
+      total: die + 2,
+      effectType: "plus_two_roll",
+    };
+  }
+  const die = rollDie();
+  return {
+    dice: [die],
+    bonus: 0,
+    total: die,
+    effectType: "normal",
+  };
+}
+
+export function consumePendingPreRollEffect(state) {
+  return {
+    ...state,
+    pendingPreRollEffect: null,
+  };
+}
+
 export function createInitialState() {
   const seed = Math.floor(Math.random() * 1_000_000_000);
   const board = generateRandomBoard(seed, { cols: 30, rows: 20, length: 85 });
@@ -122,10 +163,11 @@ export function createInitialState() {
 
     // dice / UX
     diceValue: null,
+    lastRollResult: null,
     isRolling: false,
     turnPhase: "finished",
     preRollActionUsed: false,
-    preRollEffect: null,
+    pendingPreRollEffect: null,
 
     // question flow
     currentQuestion: null,
@@ -175,10 +217,11 @@ export function initializePlayers(state, lobbyPlayers, maxRounds = 12) {
     currentRound: 1,
     maxRounds,
     diceValue: null,
+    lastRollResult: null,
     isRolling: false,
     turnPhase: "pre_roll",
     preRollActionUsed: false,
-    preRollEffect: null,
+    pendingPreRollEffect: null,
     currentQuestion: null,
     currentMinigame: null,
     pendingPathChoice: null,
@@ -205,17 +248,26 @@ export function rollDice(state, socketId) {
   if (state.turnPhase !== "pre_roll") return state;
   if (!isPlayersTurn(state, socketId)) return state;
 
-  const d1 = 1 + Math.floor(Math.random() * 6);
-  const d2 = 1 + Math.floor(Math.random() * 6);
-  let dice = d1;
-  if (state.preRollEffect?.kind === "double_roll") dice = d1 + d2;
-  if (state.preRollEffect?.kind === "plus_two_roll") dice = d1 + 2;
+  const rollResult = resolveRoll(state);
+  console.debug(`[retro-party] rolling with effect: ${rollResult.effectType}`);
+  if (!rollResult.dice.length) {
+    console.error("[retro-party] invalid rollResult: empty dice", rollResult);
+  }
+  console.debug(`[retro-party] roll result = ${JSON.stringify({ dice: rollResult.dice, bonus: rollResult.bonus, total: rollResult.total })}`);
+  const withLogs = appendActionLog(
+    appendActionLog(
+      state,
+      `rolling with effect: ${rollResult.effectType}`
+    ),
+    `roll result = ${JSON.stringify({ dice: rollResult.dice, bonus: rollResult.bonus, total: rollResult.total })}`
+  );
+  const next = consumePendingPreRollEffect(withLogs);
   return {
-    ...state,
-    diceValue: dice,
+    ...next,
+    diceValue: rollResult.total,
+    lastRollResult: rollResult,
     isRolling: true,
     turnPhase: "rolling",
-    preRollEffect: null,
   };
 }
 
@@ -667,14 +719,18 @@ export function movePlayer(state, socketId, steps) {
   if (state.pendingShop) return state;
   if (typeof steps !== "number" || steps <= 0) return state;
   if (state.diceValue == null) return state;
+  const numericSteps = Math.max(0, Math.floor(Number(steps) || 0));
+  if (numericSteps <= 0) return state;
+  console.debug(`[retro-party] moving player with total roll: ${numericSteps}`);
+  const loggedState = appendActionLog(state, `moving player with total roll: ${numericSteps}`);
 
-  const players = state.players.map((p) => ({ ...p }));
+  const players = loggedState.players.map((p) => ({ ...p }));
   const cur = players[state.currentPlayerIndex];
-  const moved = advancePlayerAlongBoard(state, cur, steps);
+  const moved = advancePlayerAlongBoard(loggedState, cur, numericSteps);
 
   if (!moved.finished) {
     return {
-      ...state,
+      ...loggedState,
       players,
       isRolling: false,
       diceValue: null,
@@ -687,7 +743,7 @@ export function movePlayer(state, socketId, steps) {
   }
 
   return {
-    ...buildLandingState(state, players),
+    ...buildLandingState(loggedState, players),
     lastMoveTrace: moved.moveTrace,
   };
 }
@@ -1085,12 +1141,16 @@ export function useShopItem(state, socketId, itemInstanceId, payload = {}) {
   };
 
   if (consumed.type === "double_roll" || consumed.type === "plus_two_roll") {
+    console.debug(`[retro-party] pre-roll item used: ${consumed.type}`);
     nextState = {
       ...nextState,
-      preRollEffect: { kind: consumed.type },
+      pendingPreRollEffect: { type: consumed.type },
       turnPhase: "pre_roll",
     };
-    return appendActionLog(nextState, `${cur.name} utilise ${itemDef.label}`);
+    console.debug(`[retro-party] pending effect set: ${consumed.type}`);
+    const withUseLog = appendActionLog(nextState, `pre-roll item used: ${consumed.type}`);
+    const withPendingLog = appendActionLog(withUseLog, `pending effect set: ${consumed.type}`);
+    return appendActionLog(withPendingLog, `${cur.name} utilise ${itemDef.label}`);
   }
 
   if (consumed.type === "swap_position") {
@@ -1160,13 +1220,15 @@ export function useShopItem(state, socketId, itemInstanceId, payload = {}) {
         turnEndsAfterResolve: true,
       },
       turnPhase: "resolving",
-      preRollEffect: null,
+      pendingPreRollEffect: null,
     };
     return appendActionLog(nextState, `${cur.name} utilise ${itemDef.label}`);
   }
 
   return state;
 }
+
+export const applyPreRollItem = useShopItem;
 
 export function nextTurn(state) {
   if (state.phase !== "playing") return state;
@@ -1225,7 +1287,7 @@ export function nextTurn(state) {
     pendingShop: null,
     turnPhase: "pre_roll",
     preRollActionUsed: false,
-    preRollEffect: null,
+    pendingPreRollEffect: null,
   };
 }
 

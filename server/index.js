@@ -225,7 +225,8 @@ function sanitizeState(state) {
     })),
     turnPhase: state.turnPhase ?? "finished",
     preRollActionUsed: !!state.preRollActionUsed,
-    preRollEffect: state.preRollEffect ?? null,
+    pendingPreRollEffect: state.pendingPreRollEffect ?? null,
+    lastRollResult: state.lastRollResult ?? null,
     actionLogs: Array.isArray(state.actionLogs) ? state.actionLogs : [],
     currentQuestion: state.currentQuestion
       ? {
