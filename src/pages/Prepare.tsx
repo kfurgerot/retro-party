@@ -12,6 +12,12 @@ import { PixelButton } from "@/components/game/PixelButton";
 import { fr } from "@/i18n/fr";
 
 type AuthMode = "login" | "register";
+const neutralSecondaryBtn =
+  "border-cyan-300/50 bg-cyan-500/15 text-cyan-50 shadow-[0_0_0_1px_rgba(34,211,238,0.18)] hover:bg-cyan-500/25 hover:text-cyan-50";
+const activeCyanBtn =
+  "border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_0_2px_rgba(34,211,238,0.35)] hover:bg-cyan-400";
+const dangerBtn =
+  "border-rose-300 bg-rose-500 text-white shadow-[0_0_0_2px_rgba(251,113,133,0.3)] hover:bg-rose-400";
 
 const PreparePage = () => {
   const navigate = useNavigate();
@@ -205,10 +211,16 @@ const PreparePage = () => {
   return (
     <div className="scanlines relative flex min-h-svh w-full items-center justify-center overflow-hidden px-4 py-8">
       <RetroScreenBackground />
-      <Card className="relative z-10 w-full max-w-4xl border-cyan-300/60 bg-card/90">
+      <Card className="relative z-10 w-full max-w-4xl border-cyan-300/40 bg-slate-900/55 shadow-[0_0_0_1px_rgba(34,211,238,0.18),0_0_24px_rgba(34,211,238,0.12)] backdrop-blur">
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle className="text-lg text-cyan-200 break-words">{title}</CardTitle>
-          <Button variant="secondary" onClick={() => navigate("/")} className="w-full sm:w-auto">
+          <CardTitle className="text-base font-semibold uppercase tracking-[0.14em] text-cyan-100/90 break-words">
+            {title}
+          </CardTitle>
+          <Button
+            variant="secondary"
+            onClick={() => navigate("/")}
+            className={`w-full sm:w-auto ${neutralSecondaryBtn}`}
+          >
             Accueil
           </Button>
         </CardHeader>
@@ -222,14 +234,16 @@ const PreparePage = () => {
               <div className="flex gap-2">
                 <Button
                   type="button"
-                  variant={authMode === "login" ? "default" : "secondary"}
+                  variant="secondary"
+                  className={authMode === "login" ? activeCyanBtn : neutralSecondaryBtn}
                   onClick={() => setAuthMode("login")}
                 >
                   Connexion
                 </Button>
                 <Button
                   type="button"
-                  variant={authMode === "register" ? "default" : "secondary"}
+                  variant="secondary"
+                  className={authMode === "register" ? activeCyanBtn : neutralSecondaryBtn}
                   onClick={() => setAuthMode("register")}
                 >
                   Inscription
@@ -267,7 +281,7 @@ const PreparePage = () => {
                   required
                 />
               </div>
-              <Button type="submit" className="w-fit">
+              <Button type="submit" variant="secondary" className={`w-fit ${activeCyanBtn}`}>
                 {authMode === "register" ? "Creer mon compte" : "Se connecter"}
               </Button>
               {authMode === "login" && (
@@ -299,10 +313,19 @@ const PreparePage = () => {
                     placeholder="Optionnel"
                   />
                 </div>
-                <Button onClick={submitCreateTemplate} disabled={creatingTemplate} className="w-full sm:w-auto">
+                <Button
+                  variant="secondary"
+                  onClick={submitCreateTemplate}
+                  disabled={creatingTemplate}
+                  className={`w-full sm:w-auto ${activeCyanBtn}`}
+                >
                   {creatingTemplate ? "Creation..." : "Creer"}
                 </Button>
-                <Button variant="secondary" onClick={handleLogout} className="w-full sm:w-auto">
+                <Button
+                  variant="secondary"
+                  onClick={handleLogout}
+                  className={`w-full sm:w-auto ${neutralSecondaryBtn}`}
+                >
                   Se deconnecter
                 </Button>
               </div>
@@ -325,17 +348,21 @@ const PreparePage = () => {
                       <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
                         <Button
                           variant="secondary"
-                          className="w-full sm:w-auto"
+                          className={`w-full sm:w-auto ${neutralSecondaryBtn}`}
                           onClick={() => navigate(`/prepare/templates/${template.id}`)}
                         >
                           Editer
                         </Button>
-                        <Button className="w-full sm:w-auto" onClick={() => launchTemplate(template.id)}>
+                        <Button
+                          variant="secondary"
+                          className={`w-full sm:w-auto ${activeCyanBtn}`}
+                          onClick={() => launchTemplate(template.id)}
+                        >
                           {fr.prepare.launchParty}
                         </Button>
                         <Button
                           variant="destructive"
-                          className="w-full sm:w-auto"
+                          className={`w-full sm:w-auto ${dangerBtn}`}
                           onClick={() => deleteTemplate(template.id)}
                         >
                           Supprimer

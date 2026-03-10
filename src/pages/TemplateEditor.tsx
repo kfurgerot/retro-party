@@ -4,25 +4,66 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
 import { api, TemplateItem, TemplateQuestion } from "@/net/api";
 import { RetroScreenBackground } from "@/components/screens/RetroScreenBackground";
 import { fr } from "@/i18n/fr";
 
 type ThemeTab = "all" | "blue" | "green" | "red" | "violet" | "bonus" | "other";
+type ThemeKey = Exclude<ThemeTab, "all" | "other">;
+type StatusFilter = "all" | "active" | "inactive";
 
-const THEME_META: Record<Exclude<ThemeTab, "all" | "other">, { label: string; className: string }> = {
-  blue: { label: fr.templateEditor.blue, className: "text-blue-300" },
-  green: { label: fr.templateEditor.green, className: "text-green-300" },
-  red: { label: fr.templateEditor.red, className: "text-red-300" },
-  violet: { label: "Violet", className: "text-violet-300" },
-  bonus: { label: "Bonus", className: "text-yellow-300" },
+const THEME_META: Record<
+  ThemeKey,
+  { label: string; className: string; chipClassName: string }
+> = {
+  blue: {
+    label: "Comprendre",
+    className: "text-blue-300",
+    chipClassName: "bg-tile-blue",
+  },
+  green: {
+    label: "Ameliorer",
+    className: "text-green-300",
+    chipClassName: "bg-tile-green",
+  },
+  red: {
+    label: "Frictions",
+    className: "text-red-300",
+    chipClassName: "bg-tile-red",
+  },
+  violet: {
+    label: "Vision",
+    className: "text-violet-300",
+    chipClassName: "bg-tile-violet",
+  },
+  bonus: {
+    label: "Kudobox",
+    className: "text-yellow-300",
+    chipClassName: "bg-tile-star",
+  },
 };
+const THEME_ORDER: ThemeKey[] = ["blue", "green", "red", "violet", "bonus"];
+const neutralSecondaryBtn =
+  "border-cyan-300/50 bg-cyan-500/15 text-cyan-50 shadow-[0_0_0_1px_rgba(34,211,238,0.18)] hover:bg-cyan-500/25 hover:text-cyan-50";
+const activeCyanBtn =
+  "border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_0_2px_rgba(34,211,238,0.35)] hover:bg-cyan-400";
 
 function normalizeCategory(value: string | null | undefined): ThemeTab {
   if (!value) return "other";
   const raw = value.trim().toLowerCase();
+  if (raw === "comprendre") return "blue";
+  if (raw === "ameliorer" || raw === "améliorer") return "green";
+  if (raw === "frictions") return "red";
+  if (raw === "vision") return "violet";
+  if (raw === "kudobox") return "bonus";
   if (raw === "purple") return "violet";
   if (raw === "yellow" || raw === "star") return "bonus";
   if (raw === "blue" || raw === "green" || raw === "red" || raw === "violet" || raw === "bonus") {
@@ -44,13 +85,12 @@ const TemplateEditorPage = () => {
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [baseConfigText, setBaseConfigText] = useState("{}");
+  const [baseConfig, setBaseConfig] = useState<Record<string, unknown>>({});
 
   const [activeTab, setActiveTab] = useState<ThemeTab>("all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [newQuestionText, setNewQuestionText] = useState("");
-  const [newQuestionCategory, setNewQuestionCategory] = useState<"blue" | "green" | "red" | "violet" | "bonus">(
-    "blue"
-  );
+  const [newQuestionCategory, setNewQuestionCategory] = useState<ThemeKey>("blue");
 
   const validTemplateId = typeof templateId === "string" && templateId.length > 0;
 
@@ -67,7 +107,7 @@ const TemplateEditorPage = () => {
       setTemplate(nextTemplate);
       setName(nextTemplate.name);
       setDescription(nextTemplate.description || "");
-      setBaseConfigText(JSON.stringify(nextTemplate.baseConfig ?? {}, null, 2));
+      setBaseConfig(nextTemplate.baseConfig ?? {});
       setQuestions(questionsResponse.items);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur inconnue");
@@ -85,18 +125,10 @@ const TemplateEditorPage = () => {
     setSaving(true);
     setError(null);
     try {
-      let parsedBaseConfig: Record<string, unknown>;
-      try {
-        parsedBaseConfig = JSON.parse(baseConfigText) as Record<string, unknown>;
-      } catch {
-        setError("JSON invalide dans baseConfig");
-        return;
-      }
-
       const response = await api.patchTemplate(templateId, {
         name: name.trim(),
         description: description.trim() || null,
-        baseConfig: parsedBaseConfig,
+        baseConfig,
       });
       setTemplate(response.template);
     } catch (err) {
@@ -138,17 +170,23 @@ const TemplateEditorPage = () => {
     if (!templateId) return;
     const nextText = window.prompt("Question", question.text);
     if (!nextText || !nextText.trim()) return;
-    const nextCategory = window.prompt(
-      "Categorie (blue | green | red | violet | bonus)",
-      normalizeCategory(question.category) === "other" ? "" : normalizeCategory(question.category)
-    );
-    if (nextCategory === null) return;
     setError(null);
     try {
-      const normalizedCategory = normalizeCategory(nextCategory);
       const response = await api.patchTemplateQuestion(templateId, question.id, {
         text: nextText.trim(),
-        category: normalizedCategory === "other" ? null : normalizedCategory,
+      });
+      setQuestions((prev) => prev.map((item) => (item.id === question.id ? response.question : item)));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur inconnue");
+    }
+  };
+
+  const changeQuestionCategory = async (question: TemplateQuestion, nextCategory: ThemeKey) => {
+    if (!templateId) return;
+    setError(null);
+    try {
+      const response = await api.patchTemplateQuestion(templateId, question.id, {
+        category: nextCategory,
       });
       setQuestions((prev) => prev.map((item) => (item.id === question.id ? response.question : item)));
     } catch (err) {
@@ -216,21 +254,36 @@ const TemplateEditorPage = () => {
   }, [questions]);
 
   const filteredQuestions = useMemo(() => {
-    if (activeTab === "all") return questions;
-    return questions.filter((question) => normalizeCategory(question.category) === activeTab);
-  }, [questions, activeTab]);
+    const themeFiltered =
+      activeTab === "all"
+        ? questions
+        : questions.filter((question) => normalizeCategory(question.category) === activeTab);
+    if (statusFilter === "active") return themeFiltered.filter((question) => question.isActive);
+    if (statusFilter === "inactive") return themeFiltered.filter((question) => !question.isActive);
+    return themeFiltered;
+  }, [questions, activeTab, statusFilter]);
 
   return (
     <div className="scanlines relative flex min-h-svh w-full items-center justify-center overflow-hidden px-4 py-8">
       <RetroScreenBackground />
-      <Card className="relative z-10 w-full max-w-5xl border-cyan-300/60 bg-card/90">
+      <Card className="relative z-10 w-full max-w-5xl border-cyan-300/40 bg-slate-900/55 shadow-[0_0_0_1px_rgba(34,211,238,0.18),0_0_24px_rgba(34,211,238,0.12)] backdrop-blur">
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle className="text-lg text-cyan-200">Edition template</CardTitle>
+          <CardTitle className="text-base font-semibold uppercase tracking-[0.14em] text-cyan-100/90">
+            Edition template
+          </CardTitle>
           <div className="flex w-full flex-wrap gap-2 sm:w-auto">
-            <Button variant="secondary" onClick={() => navigate("/prepare")} className="w-full sm:w-auto">
+            <Button
+              variant="secondary"
+              className={`w-full sm:w-auto ${neutralSecondaryBtn}`}
+              onClick={() => navigate("/prepare")}
+            >
               Mes templates
             </Button>
-            <Button variant="secondary" onClick={() => navigate("/")} className="w-full sm:w-auto">
+            <Button
+              variant="secondary"
+              onClick={() => navigate("/")}
+              className={`w-full sm:w-auto ${neutralSecondaryBtn}`}
+            >
               Accueil
             </Button>
           </div>
@@ -255,140 +308,189 @@ const TemplateEditorPage = () => {
                     onChange={(e) => setDescription(e.target.value)}
                   />
                 </div>
-                <div className="grid gap-1">
-                  <Label htmlFor="template-base-config">Base config (JSON)</Label>
-                  <Textarea
-                    id="template-base-config"
-                    value={baseConfigText}
-                    onChange={(e) => setBaseConfigText(e.target.value)}
-                    className="min-h-36"
-                  />
-                </div>
                 <div className="flex flex-wrap gap-2">
-                  <Button onClick={saveTemplate} disabled={!canSave} className="w-full sm:w-auto">
+                  <Button
+                    variant="secondary"
+                    onClick={saveTemplate}
+                    disabled={!canSave}
+                    className={`w-full sm:w-auto ${activeCyanBtn}`}
+                  >
                     {saving ? "Sauvegarde..." : "Sauvegarder"}
                   </Button>
-                  <Button onClick={launchRoom} className="w-full sm:w-auto">
+                  <Button
+                    variant="secondary"
+                    onClick={launchRoom}
+                    className={`w-full sm:w-auto ${activeCyanBtn}`}
+                  >
                     {fr.templateEditor.launchParty}
                   </Button>
                 </div>
               </div>
 
-              <div className="grid gap-3 rounded border border-cyan-300/20 p-3">
-                <p className="text-sm font-semibold text-cyan-100">Questions du template</p>
-                <div className="grid gap-2 sm:grid-cols-[1fr_180px_auto]">
-                  <Input
-                    value={newQuestionText}
-                    onChange={(e) => setNewQuestionText(e.target.value)}
-                    placeholder="Nouvelle question"
-                  />
-                  <select
-                    value={newQuestionCategory}
-                    onChange={(e) =>
-                      setNewQuestionCategory(e.target.value as "blue" | "green" | "red" | "violet" | "bonus")
-                    }
-                    className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                  >
-                    <option value="blue">{fr.templateEditor.blue}</option>
-                    <option value="green">{fr.templateEditor.green}</option>
-                    <option value="red">{fr.templateEditor.red}</option>
-                    <option value="violet">Violet</option>
-                    <option value="bonus">Bonus</option>
-                  </select>
-                  <Button onClick={addQuestion} className="w-full sm:w-auto">
-                    Ajouter
-                  </Button>
+              <div className="grid gap-4 rounded border border-cyan-300/20 p-3">
+                <div className="rounded-lg border border-cyan-300/20 bg-slate-950/30 p-3">
+                  <p className="mb-3 text-sm font-semibold text-cyan-100">Ajouter une question</p>
+                  <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                    <Input
+                      value={newQuestionText}
+                      onChange={(e) => setNewQuestionText(e.target.value)}
+                      placeholder="Nouvelle question"
+                    />
+                    <Button
+                      variant="secondary"
+                      onClick={addQuestion}
+                      className={`w-full sm:w-auto ${activeCyanBtn}`}
+                    >
+                      Ajouter
+                    </Button>
+                  </div>
+                  <div className="mt-2 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+                    {THEME_ORDER.map((themeKey) => {
+                      const isActive = newQuestionCategory === themeKey;
+                      return (
+                        <Button
+                          key={themeKey}
+                          type="button"
+                          variant="outline"
+                          className={`justify-start border-cyan-300/30 bg-slate-900/55 text-cyan-100 hover:bg-slate-900/70 hover:text-cyan-50 ${
+                            isActive
+                              ? "border-cyan-300/80 bg-cyan-500/35 !text-cyan-50 hover:!text-cyan-50"
+                              : ""
+                          }`}
+                          onClick={() => setNewQuestionCategory(themeKey)}
+                        >
+                          <span
+                            className={`inline-flex h-2.5 w-2.5 shrink-0 rounded-full border border-black/40 ${THEME_META[themeKey].chipClassName}`}
+                          />
+                          <span>{isActive ? "* " : ""}{THEME_META[themeKey].label}</span>
+                        </Button>
+                      );
+                    })}
+                  </div>
                 </div>
 
-                <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ThemeTab)}>
-                  <TabsList className="h-auto w-full flex-wrap justify-start gap-1 bg-transparent p-0">
-                    <TabsTrigger value="all" className="h-auto whitespace-normal text-center">
-                      Tous ({counts.all})
-                    </TabsTrigger>
-                    <TabsTrigger value="blue" className="h-auto whitespace-normal text-center">
-                      {fr.templateEditor.blue} ({counts.blue})
-                    </TabsTrigger>
-                    <TabsTrigger value="green" className="h-auto whitespace-normal text-center">
-                      {fr.templateEditor.green} ({counts.green})
-                    </TabsTrigger>
-                    <TabsTrigger value="red" className="h-auto whitespace-normal text-center">
-                      {fr.templateEditor.red} ({counts.red})
-                    </TabsTrigger>
-                    <TabsTrigger value="violet" className="h-auto whitespace-normal text-center">
-                      Violet ({counts.violet})
-                    </TabsTrigger>
-                    <TabsTrigger value="bonus" className="h-auto whitespace-normal text-center">
-                      Bonus ({counts.bonus})
-                    </TabsTrigger>
-                    <TabsTrigger value="other" className="h-auto whitespace-normal text-center">
-                      Autres ({counts.other})
-                    </TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value={activeTab}>
-                    {filteredQuestions.length === 0 ? (
-                      <p className="text-sm text-slate-300">Aucune question pour cet onglet.</p>
-                    ) : (
-                      <div className="grid gap-2">
-                        {filteredQuestions.map((question) => {
-                          const normalized = normalizeCategory(question.category);
-                          const theme =
-                            normalized === "other" ? { label: "Autre", className: "text-slate-300" } : THEME_META[normalized];
-                          return (
-                            <div
-                              key={question.id}
-                              className="flex flex-wrap items-center justify-between gap-2 rounded border border-cyan-300/15 p-2"
-                            >
-                              <div className="w-full min-w-0 flex-1 sm:w-auto sm:min-w-64">
-                                <p className="text-sm text-cyan-100 break-words">{question.text}</p>
-                                <p className={`text-xs break-words ${theme.className}`}>
-                                  {theme.label} | {question.isActive ? fr.templateEditor.active : fr.templateEditor.inactive}
-                                </p>
-                              </div>
-                              <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
-                                <Button
-                                  variant="secondary"
-                                  className="w-full sm:w-auto"
-                                  onClick={() => reorderQuestion(question.id, -1)}
-                                >
-                                  {fr.templateEditor.up}
-                                </Button>
-                                <Button
-                                  variant="secondary"
-                                  className="w-full sm:w-auto"
-                                  onClick={() => reorderQuestion(question.id, 1)}
-                                >
-                                  {fr.templateEditor.down}
-                                </Button>
-                                <Button
-                                  variant="secondary"
-                                  className="w-full sm:w-auto"
-                                  onClick={() => toggleQuestion(question)}
-                                >
-                                  {question.isActive ? "Desactiver" : "Activer"}
-                                </Button>
-                                <Button
-                                  variant="secondary"
-                                  className="w-full sm:w-auto"
-                                  onClick={() => editQuestion(question)}
-                                >
-                                  Editer
-                                </Button>
-                                <Button
-                                  variant="destructive"
-                                  className="w-full sm:w-auto"
-                                  onClick={() => deleteQuestion(question.id)}
-                                >
-                                  Supprimer
-                                </Button>
+                <div className="rounded-lg border border-cyan-300/20 bg-slate-950/20 p-3">
+                  <p className="mb-3 text-sm font-semibold text-cyan-100">Questions existantes</p>
+                  <div className="mb-3 grid gap-2 sm:grid-cols-2">
+                    <div className="grid gap-1">
+                      <Label htmlFor="theme-filter">Type de question</Label>
+                      <select
+                        id="theme-filter"
+                        value={activeTab}
+                        onChange={(e) => setActiveTab(e.target.value as ThemeTab)}
+                        className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                      >
+                        <option value="all">Tous ({counts.all})</option>
+                        <option value="blue">{THEME_META.blue.label} ({counts.blue})</option>
+                        <option value="green">{THEME_META.green.label} ({counts.green})</option>
+                        <option value="red">{THEME_META.red.label} ({counts.red})</option>
+                        <option value="violet">{THEME_META.violet.label} ({counts.violet})</option>
+                        <option value="bonus">{THEME_META.bonus.label} ({counts.bonus})</option>
+                        <option value="other">Autres ({counts.other})</option>
+                      </select>
+                    </div>
+                    <div className="grid gap-1">
+                      <Label htmlFor="status-filter">Statut</Label>
+                      <select
+                        id="status-filter"
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+                        className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                      >
+                        <option value="all">Tous</option>
+                        <option value="active">Actifs</option>
+                        <option value="inactive">Inactifs</option>
+                      </select>
+                    </div>
+                  </div>
+                  {filteredQuestions.length === 0 ? (
+                    <p className="text-sm text-slate-300">Aucune question pour ce filtre.</p>
+                  ) : (
+                    <div className="grid gap-2">
+                      {filteredQuestions.map((question) => {
+                        const normalized = normalizeCategory(question.category);
+                        const theme =
+                          normalized === "other" ? { label: "Autre", className: "text-slate-300" } : THEME_META[normalized];
+                        const currentIndex = questions.findIndex((item) => item.id === question.id);
+                        const canMoveUp = currentIndex > 0;
+                        const canMoveDown = currentIndex >= 0 && currentIndex < questions.length - 1;
+                        return (
+                          <div
+                            key={question.id}
+                            className="flex flex-wrap items-center justify-between gap-2 rounded border border-cyan-300/15 p-2"
+                          >
+                            <div className="w-full min-w-0 flex-1 sm:w-auto sm:min-w-64">
+                              <p className="text-sm text-cyan-100 break-words">{question.text}</p>
+                              <div className="mt-1 flex flex-wrap items-center gap-2">
+                                <Badge variant="outline" className={theme.className}>
+                                  {theme.label}
+                                </Badge>
+                                <Badge variant={question.isActive ? "default" : "secondary"}>
+                                  {question.isActive ? fr.templateEditor.active : fr.templateEditor.inactive}
+                                </Badge>
                               </div>
                             </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </TabsContent>
-                </Tabs>
+                            <div className="w-full sm:w-auto sm:self-start">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="secondary"
+                                    className={`w-full sm:w-auto ${neutralSecondaryBtn}`}
+                                  >
+                                    Actions
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent
+                                  align="start"
+                                  className="w-56 max-w-[calc(100vw-2rem)]"
+                                >
+                                  <DropdownMenuItem
+                                    disabled={!canMoveUp}
+                                    onClick={() => reorderQuestion(question.id, -1)}
+                                  >
+                                    {fr.templateEditor.up}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    disabled={!canMoveDown}
+                                    onClick={() => reorderQuestion(question.id, 1)}
+                                  >
+                                    {fr.templateEditor.down}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => toggleQuestion(question)}>
+                                    {question.isActive ? "Desactiver" : "Activer"}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => editQuestion(question)}>
+                                    Editer
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem disabled className="opacity-80">
+                                    Changer de theme
+                                  </DropdownMenuItem>
+                                  {THEME_ORDER.map((themeKey) => (
+                                    <DropdownMenuItem
+                                      key={themeKey}
+                                      disabled={normalized === themeKey}
+                                      onClick={() => changeQuestionCategory(question, themeKey)}
+                                    >
+                                      {THEME_META[themeKey].label}
+                                    </DropdownMenuItem>
+                                  ))}
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={() => deleteQuestion(question.id)}
+                                    className="text-red-400 focus:text-red-300"
+                                  >
+                                    Supprimer
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
             </>
           )}
@@ -399,4 +501,5 @@ const TemplateEditorPage = () => {
 };
 
 export default TemplateEditorPage;
+
 

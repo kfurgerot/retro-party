@@ -42,7 +42,7 @@ export const fr = {
     profileIncomplete: "Profil incomplet. Reviens a l'etape precedente.",
     roomCodePlaceholder: "Code partie",
     hostAction: "Hote",
-    joinAction: "Rejoindre une partie",
+    joinAction: "Rejoindre",
     createLoading: "Creation...",
     createParty: "Creer la partie",
     cancelParty: "Annuler la partie",
