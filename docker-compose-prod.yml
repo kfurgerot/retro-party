@@ -1,0 +1,47 @@
+services:
+  frontend:
+    build: .
+    container_name: retro-party-frontend-prod
+    restart: unless-stopped
+    ports:
+      - "8088:80"
+    depends_on:
+      - backend
+
+  backend:
+    build: ./server
+    container_name: retro-party-backend-prod
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      # Replace with your public frontend URL in production.
+      - ORIGIN=https://retro-party.example.com
+      - DATABASE_URL=postgresql://retro:change_this_password@postgres:5432/retro_party
+      - SESSION_COOKIE_NAME=rp_session
+      - SESSION_TTL_DAYS=7
+      - BCRYPT_ROUNDS=12
+      - LOGIN_RATE_LIMIT_WINDOW_MS=900000
+      - LOGIN_RATE_LIMIT_MAX=10
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: retro-party-postgres-prod
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=retro_party
+      - POSTGRES_USER=retro
+      - POSTGRES_PASSWORD=change_this_password
+    # No host port exposure by default in production.
+    volumes:
+      - /volume1/docker/retro-postgres-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U retro -d retro_party"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
