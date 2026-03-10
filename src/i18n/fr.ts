@@ -60,6 +60,18 @@ export const fr = {
     copy: "Copier",
     copied: "Copie",
   },
+  selectExperience: {
+    badge: "Choix d'experience",
+    title: "Choisis ton experience",
+    subtitle: "Choisis un outil ou un jeu pour continuer.",
+    ready: "Pret",
+    soon: "Bientot",
+    back: "Retour",
+    retroPartyDescription: "Jeu de plateau retro multijoueur pour les retros d'equipe.",
+    drawDuelDescription: "Duel de dessin rapide pour echauffement icebreaker.",
+    agileRadarDescription: "Radar de maturite d'equipe et lanceur de discussion.",
+    retroGeneratorDescription: "Genere des formats de retrospective prets a animer.",
+  },
   game: {
     shopLegend: "BOUTIQUE - Boutique",
     backToOnlineLobby: "Tu vas revenir au salon en ligne. Cette action est immediate.",

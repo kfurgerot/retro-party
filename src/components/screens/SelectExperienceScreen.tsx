@@ -2,12 +2,14 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { RetroScreenBackground } from "./RetroScreenBackground";
 import { cn } from "@/lib/utils";
+import { fr } from "@/i18n/fr";
+import { Gamepad2, Pencil, Radar, Puzzle, LucideIcon } from "lucide-react";
 
 export type ExperienceId = "retro-party" | "draw-duel" | "agile-radar" | "retro-generator";
 
 type ToolItem = {
   id: ExperienceId;
-  icon: string;
+  Icon: LucideIcon;
   title: string;
   description: string;
   available: boolean;
@@ -16,30 +18,30 @@ type ToolItem = {
 const TOOLS: ToolItem[] = [
   {
     id: "retro-party",
-    icon: "🕹️",
+    Icon: Gamepad2,
     title: "Retro Party",
-    description: "Multiplayer retro board game for team retros.",
+    description: fr.selectExperience.retroPartyDescription,
     available: true,
   },
   {
     id: "draw-duel",
-    icon: "✏️",
+    Icon: Pencil,
     title: "Draw Duel",
-    description: "Fast drawing duel for icebreaker warm-up.",
+    description: fr.selectExperience.drawDuelDescription,
     available: false,
   },
   {
     id: "agile-radar",
-    icon: "📡",
+    Icon: Radar,
     title: "Agile Radar",
-    description: "Team maturity radar and discussion starter.",
+    description: fr.selectExperience.agileRadarDescription,
     available: false,
   },
   {
     id: "retro-generator",
-    icon: "🧩",
+    Icon: Puzzle,
     title: "Retro Generator",
-    description: "Generate facilitation-ready retrospective formats.",
+    description: fr.selectExperience.retroGeneratorDescription,
     available: false,
   },
 ];
@@ -60,14 +62,14 @@ export const SelectExperienceScreen: React.FC<SelectExperienceScreenProps> = ({
       <div className="relative z-10 w-full max-w-5xl rounded border border-cyan-300/60 bg-card/88 p-5 shadow-[0_0_0_2px_rgba(34,211,238,0.3),0_0_34px_rgba(34,211,238,0.32)] backdrop-blur sm:p-8">
         <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-cyan-200/80">
           <span>Retro Agile Toolbox</span>
-          <span>Select Experience</span>
+          <span>{fr.selectExperience.badge}</span>
         </div>
 
         <h1 className="mt-4 text-center text-xl text-cyan-200 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)] sm:text-3xl">
-          Select your experience
+          {fr.selectExperience.title}
         </h1>
         <p className="mt-2 text-center text-sm text-slate-300">
-          Choose a tool or game to continue.
+          {fr.selectExperience.subtitle}
         </p>
 
         <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -83,7 +85,7 @@ export const SelectExperienceScreen: React.FC<SelectExperienceScreenProps> = ({
               )}
             >
               <div className="flex items-center justify-between gap-2">
-                <span className="text-2xl">{tool.icon}</span>
+                <tool.Icon className="h-7 w-7 text-cyan-100" aria-hidden="true" />
                 <span
                   className={cn(
                     "rounded-full px-2 py-0.5 text-[10px] uppercase tracking-[0.12em]",
@@ -92,7 +94,7 @@ export const SelectExperienceScreen: React.FC<SelectExperienceScreenProps> = ({
                       : "border border-amber-400/40 bg-amber-500/10 text-amber-200"
                   )}
                 >
-                  {tool.available ? "Ready" : "Soon"}
+                  {tool.available ? fr.selectExperience.ready : fr.selectExperience.soon}
                 </span>
               </div>
               <div className="mt-3 text-sm font-semibold text-cyan-100">{tool.title}</div>
@@ -108,7 +110,7 @@ export const SelectExperienceScreen: React.FC<SelectExperienceScreenProps> = ({
             className="border-border/70 bg-background/50 text-foreground hover:bg-background/70"
             onClick={onBack}
           >
-            Back
+            {fr.selectExperience.back}
           </Button>
         </div>
       </div>
