@@ -18,6 +18,7 @@ const PreparePage = () => {
   const [loading, setLoading] = useState(true);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [user, setUser] = useState<HostUser | null>(null);
   const [templates, setTemplates] = useState<TemplateItem[]>([]);
 
@@ -76,6 +77,7 @@ const PreparePage = () => {
   const submitAuth = async (event: FormEvent) => {
     event.preventDefault();
     setError(null);
+    setInfoMessage(null);
     try {
       if (authMode === "register") {
         if (!displayName.trim()) {
@@ -98,6 +100,21 @@ const PreparePage = () => {
     }
   };
 
+  const submitForgotPassword = async () => {
+    setError(null);
+    setInfoMessage(null);
+    if (!email.trim()) {
+      setError("Renseigne ton email pour recevoir le lien.");
+      return;
+    }
+    try {
+      const response = await api.forgotPassword({ email: email.trim() });
+      setInfoMessage(response.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur inconnue");
+    }
+  };
+
   const submitCreateTemplate = async () => {
     if (!newTemplateName.trim()) {
       setError("Nom de template requis");
@@ -105,6 +122,7 @@ const PreparePage = () => {
     }
     setCreatingTemplate(true);
     setError(null);
+    setInfoMessage(null);
     try {
       const response = await api.createTemplate({
         name: newTemplateName.trim(),
@@ -124,6 +142,7 @@ const PreparePage = () => {
   const launchTemplate = async (templateId: string) => {
     if (!user) return;
     setError(null);
+    setInfoMessage(null);
     try {
       const response = await api.launchTemplateRoom(templateId);
       const nextName = encodeURIComponent(user.displayName || "Host");
@@ -145,6 +164,7 @@ const PreparePage = () => {
 
   const handleLogout = async () => {
     setError(null);
+    setInfoMessage(null);
     try {
       await api.logout();
       setUser(null);
@@ -194,6 +214,7 @@ const PreparePage = () => {
         <CardContent className="space-y-4">
           {loading && <p className="text-sm text-slate-300">Chargement...</p>}
           {error && <p className="text-sm text-red-300">{error}</p>}
+          {infoMessage && <p className="text-sm text-emerald-300">{infoMessage}</p>}
 
           {!loading && !user && (
             <form onSubmit={submitAuth} className="grid gap-3">
@@ -248,6 +269,11 @@ const PreparePage = () => {
               <Button type="submit" className="w-fit">
                 {authMode === "register" ? "Creer mon compte" : "Se connecter"}
               </Button>
+              {authMode === "login" && (
+                <Button type="button" variant="link" className="w-fit p-0" onClick={submitForgotPassword}>
+                  Mot de passe oublie ?
+                </Button>
+              )}
             </form>
           )}
 

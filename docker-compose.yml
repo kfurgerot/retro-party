@@ -12,15 +12,8 @@ services:
     build: ./server
     container_name: retro-party-backend
     restart: unless-stopped
-    environment:
-      - PORT=3001
-      - ORIGIN=http://localhost:8088
-      - DATABASE_URL=postgresql://retro:retro_pwd@postgres:5432/retro_party
-      - SESSION_COOKIE_NAME=rp_session
-      - SESSION_TTL_DAYS=7
-      - BCRYPT_ROUNDS=12
-      - LOGIN_RATE_LIMIT_WINDOW_MS=900000
-      - LOGIN_RATE_LIMIT_MAX=10
+    env_file:
+      - ./.env.local
     ports:
       - "3001:3001"
     depends_on:
@@ -31,10 +24,8 @@ services:
     image: postgres:16-alpine
     container_name: retro-party-postgres
     restart: unless-stopped
-    environment:
-      - POSTGRES_DB=retro_party
-      - POSTGRES_USER=retro
-      - POSTGRES_PASSWORD=retro_pwd
+    env_file:
+      - ./.env.local
     ports:
       - "5432:5432"
     volumes:

@@ -23,6 +23,11 @@ services:
       - BCRYPT_ROUNDS=12
       - LOGIN_RATE_LIMIT_WINDOW_MS=900000
       - LOGIN_RATE_LIMIT_MAX=10
+      - GMAIL_USER=${GMAIL_USER}
+      - GMAIL_APP_PASSWORD=${GMAIL_APP_PASSWORD}
+      - MAIL_FROM=${MAIL_FROM:-}
+      - RESET_PASSWORD_URL_BASE=${RESET_PASSWORD_URL_BASE:-https://retro-party.example.com/reset-password}
+      - RESET_TOKEN_TTL_MINUTES=${RESET_TOKEN_TTL_MINUTES:-60}
     ports:
       - "3001:3001"
     depends_on:

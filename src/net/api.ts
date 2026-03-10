@@ -70,6 +70,16 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload),
     }),
+  forgotPassword: (payload: { email: string }) =>
+    request<{ ok: boolean; message: string }>("/auth/forgot-password", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  resetPassword: (payload: { token: string; password: string }) =>
+    request<{ ok: boolean; message: string }>("/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
   logout: () => request<void>("/auth/logout", { method: "POST" }),
 
   listTemplates: () => request<{ items: TemplateItem[] }>("/templates", { method: "GET" }),

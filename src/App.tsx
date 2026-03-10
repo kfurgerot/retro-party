@@ -7,6 +7,7 @@ import Home from "./pages/Home";
 import Index from "./pages/Index";
 import PreparePage from "./pages/Prepare";
 import TemplateEditorPage from "./pages/TemplateEditor";
+import ResetPasswordPage from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,6 +23,7 @@ const App = () => (
           <Route path="/play" element={<Index />} />
           <Route path="/prepare" element={<PreparePage />} />
           <Route path="/prepare/templates/:templateId" element={<TemplateEditorPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

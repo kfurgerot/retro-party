@@ -9,9 +9,10 @@
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
-    "express": "^4.19.2",
-    "socket.io": "^4.7.5",
     "cors": "^2.8.5",
-    "pg": "^8.13.1"
+    "express": "^4.19.2",
+    "nodemailer": "^8.0.2",
+    "pg": "^8.13.1",
+    "socket.io": "^4.7.5"
   }
 }

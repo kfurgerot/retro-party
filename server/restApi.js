@@ -1,12 +1,15 @@
 import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
 import { QUESTIONS } from "./questions.js";
+import { testMail } from "./mailService.js";
+import { sendMail } from "./mailService.js";
 
 const SESSION_COOKIE_NAME = process.env.SESSION_COOKIE_NAME || "rp_session";
 const SESSION_TTL_DAYS = Number(process.env.SESSION_TTL_DAYS || 7);
 const BCRYPT_ROUNDS = Number(process.env.BCRYPT_ROUNDS || 12);
 const LOGIN_RATE_LIMIT_WINDOW_MS = Number(process.env.LOGIN_RATE_LIMIT_WINDOW_MS || 15 * 60 * 1000);
 const LOGIN_RATE_LIMIT_MAX = Number(process.env.LOGIN_RATE_LIMIT_MAX || 10);
+const RESET_TOKEN_TTL_MINUTES = Number(process.env.RESET_TOKEN_TTL_MINUTES || 60);
 
 const loginAttempts = new Map();
 
@@ -313,6 +316,153 @@ export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCod
     }
   });
 
+  app.post("/api/auth/forgot-password", async (req, res, next) => {
+    const client = await pool.connect();
+    try {
+      const email = req.body?.email;
+      if (!isValidEmail(email)) {
+        return res.status(400).json({ error: "Invalid payload" });
+      }
+
+      const normalizedEmail = email.trim().toLowerCase();
+      const result = await pool.query(
+        "SELECT id, email, display_name FROM users WHERE email = $1 LIMIT 1",
+        [normalizedEmail]
+      );
+      const user = result.rows[0] ?? null;
+
+      // Always return success to avoid account enumeration.
+      const genericResponse = {
+        ok: true,
+        message: "If this account exists, a reset email has been sent.",
+      };
+
+      if (!user) return res.status(200).json(genericResponse);
+
+      const resetBaseUrl =
+        process.env.RESET_PASSWORD_URL_BASE || `${process.env.ORIGIN || "http://localhost:8088"}/reset-password`;
+      const rawToken = crypto.randomBytes(32).toString("hex");
+      const tokenHash = hashToken(rawToken);
+      const expiresAt = new Date(Date.now() + RESET_TOKEN_TTL_MINUTES * 60 * 1000).toISOString();
+      const resetUrl = `${resetBaseUrl}?token=${encodeURIComponent(rawToken)}`;
+
+      await client.query("BEGIN");
+      await client.query(
+        `
+          UPDATE password_reset_tokens
+          SET used_at = now()
+          WHERE user_id = $1 AND used_at IS NULL
+        `,
+        [user.id]
+      );
+      await client.query(
+        `
+          INSERT INTO password_reset_tokens (id, user_id, token_hash, expires_at)
+          VALUES ($1, $2, $3, $4)
+        `,
+        [crypto.randomUUID(), user.id, tokenHash, expiresAt]
+      );
+      await client.query("COMMIT");
+
+      try {
+        await sendMail({
+          to: user.email,
+          subject: "Retro Party - Password reset request",
+          text: [
+            `Hello ${user.display_name || "host"},`,
+            "",
+            "You requested a password reset for your Retro Party account.",
+            `Reset link: ${resetUrl}`,
+            "",
+            "If you did not request this, you can ignore this email.",
+          ].join("\n"),
+          html: [
+            `<p>Hello ${user.display_name || "host"},</p>`,
+            "<p>You requested a password reset for your Retro Party account.</p>",
+            `<p><a href="${resetUrl}">Reset your password</a></p>`,
+            "<p>If you did not request this, you can ignore this email.</p>",
+          ].join(""),
+        });
+      } catch (mailErr) {
+        if (mailErr?.code === "MAIL_NOT_CONFIGURED") {
+          // Keep generic response for security and avoid failing the endpoint in local setups.
+          return res.status(200).json(genericResponse);
+        }
+        throw mailErr;
+      }
+
+      return res.status(200).json(genericResponse);
+    } catch (err) {
+      await client.query("ROLLBACK");
+      next(err);
+    } finally {
+      client.release();
+    }
+  });
+
+  app.post("/api/auth/reset-password", async (req, res, next) => {
+    const client = await pool.connect();
+    try {
+      const token = typeof req.body?.token === "string" ? req.body.token.trim() : "";
+      const password = req.body?.password;
+
+      if (!token || typeof password !== "string" || password.length < 8 || password.length > 72) {
+        return res.status(400).json({ error: "Invalid payload" });
+      }
+
+      const tokenHash = hashToken(token);
+      const tokenResult = await pool.query(
+        `
+          SELECT id, user_id
+          FROM password_reset_tokens
+          WHERE token_hash = $1
+            AND used_at IS NULL
+            AND expires_at > now()
+          LIMIT 1
+        `,
+        [tokenHash]
+      );
+      const row = tokenResult.rows[0];
+      if (!row) return res.status(400).json({ error: "Invalid or expired token" });
+
+      const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+
+      await client.query("BEGIN");
+      await client.query(
+        `
+          UPDATE users
+          SET password_hash = $1, updated_at = now()
+          WHERE id = $2
+        `,
+        [passwordHash, row.user_id]
+      );
+      await client.query(
+        `
+          UPDATE password_reset_tokens
+          SET used_at = now()
+          WHERE id = $1
+        `,
+        [row.id]
+      );
+      await client.query(
+        `
+          UPDATE auth_sessions
+          SET revoked_at = now()
+          WHERE user_id = $1 AND revoked_at IS NULL
+        `,
+        [row.user_id]
+      );
+      await client.query("COMMIT");
+
+      return res.status(200).json({ ok: true, message: "Password has been reset." });
+    } catch (err) {
+      await client.query("ROLLBACK");
+      next(err);
+    } finally {
+      client.release();
+    }
+  });
+
   app.post("/api/auth/logout", async (req, res, next) => {
     try {
       if (req.currentUser?.sessionId) {
@@ -321,6 +471,24 @@ export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCod
       clearSessionCookie(res);
       return res.status(204).send();
     } catch (err) {
+      next(err);
+    }
+  });
+
+  app.post("/api/mail/test", requireAuth, async (req, res, next) => {
+    try {
+      const requestedTo = req.body?.to;
+      const to =
+        typeof requestedTo === "string" && requestedTo.trim()
+          ? requestedTo.trim()
+          : req.currentUser.email;
+
+      await testMail({ to });
+      return res.status(200).json({ ok: true, message: `Test email sent to ${to}` });
+    } catch (err) {
+      if (err?.code === "MAIL_NOT_CONFIGURED") {
+        return res.status(503).json({ error: "Mail service not configured" });
+      }
       next(err);
     }
   });
