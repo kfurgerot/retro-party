@@ -1,0 +1,23 @@
+{
+  "name": "Retro Party",
+  "short_name": "Retro Party",
+  "description": "Jeu de plateau Agile en pixel art - 2 a 20 joueurs",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#060b14",
+  "theme_color": "#0b1220",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
