@@ -410,24 +410,27 @@ export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCod
         return res.status(400).json({ error: "Invalid payload" });
       }
 
+      await client.query("BEGIN");
       const tokenHash = hashToken(token);
-      const tokenResult = await pool.query(
+      const tokenResult = await client.query(
         `
-          SELECT id, user_id
-          FROM password_reset_tokens
+          UPDATE password_reset_tokens
+          SET used_at = now()
           WHERE token_hash = $1
             AND used_at IS NULL
             AND expires_at > now()
-          LIMIT 1
+          RETURNING id, user_id
         `,
         [tokenHash]
       );
       const row = tokenResult.rows[0];
-      if (!row) return res.status(400).json({ error: "Invalid or expired token" });
+      if (!row) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({ error: "Invalid or expired token" });
+      }
 
       const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
-      await client.query("BEGIN");
       await client.query(
         `
           UPDATE users
@@ -435,14 +438,6 @@ export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCod
           WHERE id = $2
         `,
         [passwordHash, row.user_id]
-      );
-      await client.query(
-        `
-          UPDATE password_reset_tokens
-          SET used_at = now()
-          WHERE id = $1
-        `,
-        [row.id]
       );
       await client.query(
         `

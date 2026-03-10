@@ -7,6 +7,13 @@ import { Label } from "@/components/ui/label";
 import { RetroScreenBackground } from "@/components/screens/RetroScreenBackground";
 import { api } from "@/net/api";
 
+const neutralSecondaryBtn =
+  "border-cyan-300/50 bg-cyan-500/15 text-cyan-50 shadow-[0_0_0_1px_rgba(34,211,238,0.18)] hover:bg-cyan-500/25 hover:text-cyan-50";
+const activeCyanBtn =
+  "border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_0_2px_rgba(34,211,238,0.35)] hover:bg-cyan-400";
+const fieldClass =
+  "border-cyan-300/20 bg-slate-900/45 text-cyan-100 placeholder:text-cyan-200/55 hover:bg-slate-900/65 focus-visible:ring-cyan-300/45";
+
 const ResetPasswordPage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -52,41 +59,65 @@ const ResetPasswordPage = () => {
   return (
     <div className="scanlines relative flex min-h-svh w-full items-center justify-center overflow-hidden px-4 py-8">
       <RetroScreenBackground />
-      <Card className="relative z-10 w-full max-w-lg border-cyan-300/60 bg-card/90">
-        <CardHeader>
-          <CardTitle className="text-center text-cyan-200">Reinitialiser le mot de passe</CardTitle>
+      <Card className="relative z-10 w-full max-w-xl border-cyan-300/40 bg-slate-900/55 shadow-[0_0_0_1px_rgba(34,211,238,0.18),0_0_24px_rgba(34,211,238,0.12)] backdrop-blur">
+        <CardHeader className="space-y-2">
+          <p className="text-center text-[10px] uppercase tracking-[0.22em] text-cyan-200/75">Retro Party</p>
+          <CardTitle className="text-center text-base font-semibold uppercase tracking-[0.14em] text-cyan-100/90">
+            Reinitialiser le mot de passe
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {!token && <p className="text-sm text-red-300">Lien invalide: token manquant.</p>}
-          {error && <p className="text-sm text-red-300">{error}</p>}
-          {success && <p className="text-sm text-emerald-300">{success}</p>}
+          {!token && (
+            <p className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+              Lien invalide: token manquant.
+            </p>
+          )}
+          {error && (
+            <p className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">{error}</p>
+          )}
+          {success && (
+            <p className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">
+              {success}
+            </p>
+          )}
 
           <form className="grid gap-3" onSubmit={onSubmit}>
             <div className="grid gap-1">
-              <Label htmlFor="new-password">Nouveau mot de passe</Label>
+              <Label htmlFor="new-password" className="text-cyan-100">
+                Nouveau mot de passe
+              </Label>
               <Input
                 id="new-password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={loading || !token}
+                className={fieldClass}
               />
             </div>
             <div className="grid gap-1">
-              <Label htmlFor="confirm-password">Confirmer le mot de passe</Label>
+              <Label htmlFor="confirm-password" className="text-cyan-100">
+                Confirmer le mot de passe
+              </Label>
               <Input
                 id="confirm-password"
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 disabled={loading || !token}
+                className={fieldClass}
               />
             </div>
-            <div className="flex gap-2">
-              <Button type="submit" disabled={loading || !token}>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button type="submit" variant="secondary" className={activeCyanBtn} disabled={loading || !token}>
                 {loading ? "Envoi..." : "Valider"}
               </Button>
-              <Button type="button" variant="secondary" onClick={() => navigate("/prepare")}>
+              <Button
+                type="button"
+                variant="secondary"
+                className={neutralSecondaryBtn}
+                onClick={() => navigate("/prepare")}
+              >
                 Retour connexion
               </Button>
             </div>
