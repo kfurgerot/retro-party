@@ -1,121 +1,238 @@
-﻿# Retro Party
+# Retro Party
 
-Jeu de retrospective d'equipe en mode plateau, avec:
-- mode local (un seul navigateur)
-- mode online temps reel (rooms + Socket.IO)
+Application web de retrospective d'equipe en mode jeu de plateau retro, jouable en ligne (temps reel via Socket.IO) et en local.
 
-## Stack
-- Frontend: React + TypeScript + Vite + Tailwind + shadcn/ui
-- Backend: Node.js + Express + Socket.IO
-- Conteneurisation: Docker + Docker Compose + Nginx
+## Apercu
 
-## Structure du repo
+Retro Party contient:
+- un frontend React/TypeScript (Vite, Tailwind, shadcn/ui)
+- un backend Node.js/Express avec Socket.IO
+- une base PostgreSQL
+- un deploiement conteneurise (Docker + Docker Compose + Nginx)
+
+Fonctions principales:
+- parties online avec code de room
+- logique de jeu autoritaire cote serveur
+- authentification (inscription/connexion/logout)
+- gestion de templates de partie + questions personnalisees
+- creation de room rapide ou basee sur template
+- reset de mot de passe via email (SMTP Gmail)
+
+## Stack technique
+
+- Frontend: React 18, TypeScript, Vite 5, TailwindCSS, shadcn/ui
+- Realtime: Socket.IO (client + serveur)
+- Backend: Node.js 20, Express 4
+- Base de donnees: PostgreSQL 16
+- Reverse proxy: Nginx (frontend statique + proxy `/api` et `/socket.io`)
+- Tests:
+  - frontend: Vitest
+  - backend: test unitaire `server/whoSaidItEngine.test.js`
+
+## Architecture du repository
+
 ```text
 .
-|- src/                 # Frontend
-|- server/              # Backend Socket.IO + logique de jeu
-|- Dockerfile           # Image frontend
-|- server/Dockerfile    # Image backend
-|- docker-compose.yml   # Orchestration locale
-`- nginx.conf           # Reverse proxy frontend -> backend/socket.io
+|- src/                    # Frontend React
+|- server/                 # Backend Express + Socket.IO + DB init
+|- public/                 # Assets statiques
+|- Dockerfile              # Build frontend + image Nginx
+|- server/Dockerfile       # Image backend Node
+|- docker-compose.yml      # Stack locale
+|- docker-compose-prod.yml # Stack production
+|- nginx.conf              # Proxy Nginx vers backend
+`- .env*.example           # Exemples de variables d'environnement
 ```
 
-## Lancer en local (sans Docker)
+## Demarrage rapide (dev sans Docker)
 
 ### 1) Frontend
+
 ```bash
 npm install
 npm run dev
 ```
-Frontend: `http://localhost:5173`
+
+Frontend disponible sur `http://localhost:5173`.
 
 ### 2) Backend
+
 ```bash
 cd server
 npm install
 npm run dev
 ```
-Backend: `http://localhost:3001`
 
-### Variables utiles
-- Frontend:
-  - `VITE_BACKEND_URL` (optionnel): URL du backend Socket.IO/HTTP
-- Backend:
-  - `PORT` (defaut: `3001`)
-  - `ORIGIN` (defaut: `*`) pour CORS
+Backend disponible sur `http://localhost:3001`.
 
-## Lancer avec Docker
+## Demarrage avec Docker (local)
+
+1. Copier les variables locales:
+
 ```bash
-docker compose build --no-cache
-docker compose up -d
+cp .env.local.example .env.local
 ```
 
-Services:
-- Frontend: `http://localhost:8088`
-- Backend: `http://localhost:3001`
+2. Lancer la stack:
+
+```bash
+docker compose up -d --build
+```
+
+3. Acceder aux services:
+- frontend: `http://localhost:8088`
+- backend: `http://localhost:3001`
+- postgres: `localhost:5432` (expose uniquement en compose local)
 
 Arret:
+
 ```bash
 docker compose down
 ```
 
-## Production: secrets et variables
+Arret + suppression des volumes locaux:
 
-Le fichier `docker-compose-prod.yml` est prevu pour que les secrets soient injectes via variables
-d'environnement (Portainer ou fichier `.env.prod` non versionne).
+```bash
+docker compose down -v
+```
 
-1. Copier le modele:
+## Deploiement production (`docker-compose-prod.yml`)
+
+Le compose de production demarre 3 services:
+- `frontend` (Nginx, port `8088:80`)
+- `backend` (Node.js, port `3001:3001`)
+- `postgres` (non expose publiquement par defaut)
+
+### 1) Variables d'environnement
+
+Copier le template:
+
 ```bash
 cp .env.prod.example .env.prod
 ```
-2. Remplir les vraies valeurs (mots de passe DB, Gmail app password, URLs publiques).
-3. Deployer:
+
+Renseigner au minimum:
+- `ORIGIN` (URL publique autorisee en CORS)
+- `POSTGRES_PASSWORD`
+- `GMAIL_USER` et `GMAIL_APP_PASSWORD` (si reset password actif)
+- `RESET_PASSWORD_URL_BASE`
+
+### 2) Volume PostgreSQL
+
+Dans `docker-compose-prod.yml`, le volume DB est actuellement:
+
+```yml
+/volume1/docker/retro-postgres-db:/var/lib/postgresql/data
+```
+
+Adapter ce chemin a votre serveur avant de deployer.
+
+### 3) Lancer en production
+
 ```bash
 docker compose --env-file .env.prod -f docker-compose-prod.yml up -d --build
 ```
 
-### Variables critiques a definir en production
-- `ORIGIN`
+### 4) Sante des services
+
+- endpoint backend: `GET /health`
+- verification rapide:
+
+```bash
+curl http://localhost:3001/health
+```
+
+## Variables d'environnement
+
+### Frontend
+
+- `VITE_BACKEND_URL` (optionnel)
+  - en local sans proxy: `http://localhost:3001`
+  - en prod derriere meme domaine: peut etre omis
+
+### Backend
+
+Variables principales:
+- `PORT` (defaut `3001`)
+- `ORIGIN` (CORS, URL frontend)
 - `DATABASE_URL`
-- `POSTGRES_PASSWORD`
-- `GMAIL_USER`
-- `GMAIL_APP_PASSWORD`
+- `SESSION_COOKIE_NAME` (defaut `rp_session`)
+- `SESSION_TTL_DAYS` (defaut `7`)
+- `BCRYPT_ROUNDS` (defaut `12`)
+- `LOGIN_RATE_LIMIT_WINDOW_MS` (defaut `900000`)
+- `LOGIN_RATE_LIMIT_MAX` (defaut `10`)
+- `RESET_TOKEN_TTL_MINUTES` (defaut `60`)
+- `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `MAIL_FROM`
 - `RESET_PASSWORD_URL_BASE`
 
-### Portainer
-- Ouvrir la stack `docker-compose-prod.yml`
-- Renseigner les variables dans **Environment variables** (ou via `stack.env`)
-- Ne jamais saisir de secrets en dur dans le compose
+Voir:
+- `.env.local.example`
+- `.env.prod.example`
 
-## Scripts principaux
+## Endpoints API (resume)
+
+Auth:
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `POST /api/auth/logout`
+- `GET /api/auth/me`
+- `POST /api/auth/forgot-password`
+- `POST /api/auth/reset-password`
+
+Templates (auth requis):
+- `GET/POST /api/templates`
+- `GET/PATCH/DELETE /api/templates/:templateId`
+- `GET/POST /api/templates/:templateId/questions`
+- `PATCH/DELETE /api/templates/:templateId/questions/:questionId`
+- `PUT /api/templates/:templateId/questions/reorder`
+- `POST /api/templates/:templateId/launch-room`
+
+Rooms:
+- `POST /api/rooms/quick`
+
+## Socket.IO (evenements principaux)
+
+- Room: `create_room`, `join_room`, `reconnect_room`, `leave_room`
+- Partie: `start_game`, `roll_dice`, `move_player`, `choose_path`, `validate_question`, `reset_game`
+- Minigames: `BUZZWORD_SUBMIT`, `WSI_SUBMIT`, `point_duel_roll`, `BUG_SMASH_*`
+- Flux serveur: `state_update`, `lobby_update`, `room_closed`, `error_msg`
+
+## Scripts utiles
 
 A la racine:
-- `npm run dev` lance Vite
-- `npm run build` build frontend
-- `npm run test` lance les tests Vitest
 
-Dans `server/`:
-- `npm run dev` lance le backend Node
-- `npm run start` lance le backend en mode standard
-
-## Fonctionnalites
-- Creation et partage de room (code court)
-- Rejoindre une room existante
-- Demarrage de partie par le host
-- Des, deplacement, questions retro, votes
-- Reconnexion avec delai de grace
-- Gestion host et fermeture room si host quitte
-- Bouton d'annulation de room dans le lobby online
-
-## Notes techniques
-- Le serveur est autoritaire sur l'etat online (`server/gameLogic.js`).
-- Le frontend supporte aussi un mode local (`src/hooks/useGameState.ts`).
-- Le flux Socket.IO est gere cote client dans `src/hooks/useOnlineGameState.ts`.
-
-## Tests
 ```bash
+npm run dev
+npm run build
+npm run preview
+npm run lint
 npm run test
 ```
 
+Dans `server/`:
+
+```bash
+npm run dev
+npm run start
+node whoSaidItEngine.test.js
+```
+
+## Notes d'implementation
+
+- Le mode online est actif par defaut dans le frontend.
+- Le mode local reste disponible via le parametre `?online=0`.
+- L'etat de jeu online est gere cote serveur (`server/gameLogic.js`).
+- La base est auto-initialisee au demarrage backend (`initDatabase()` dans `server/db.js`).
+
+## Recommandations production
+
+- Ne jamais committer `.env.prod`.
+- Utiliser des mots de passe forts et uniques.
+- Restreindre `ORIGIN` a votre domaine public.
+- Placer un reverse proxy TLS (Nginx/Traefik/Caddy) devant les ports exposes.
+- Sauvegarder regulierement le volume PostgreSQL.
+
 ## Licence
-A definir.
+
+Copyright (c) 2026 Karl FURGEROT.
+Contact: karl.furgerot@gmail.com
