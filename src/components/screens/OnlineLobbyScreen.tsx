@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { RetroScreenBackground } from "./RetroScreenBackground";
+import { fr } from "@/i18n/fr";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -86,7 +87,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
 
   const subtitle = useMemo(() => {
     if (!connected) return "Connexion au serveur...";
-    if (roomCode) return `Room active : ${roomCode}`;
+    if (roomCode) return `${fr.onlineLobby.roomActive} : ${roomCode}`;
     return `Multijoueur en ligne (1-${MAX_PLAYERS} joueurs)`;
   }, [connected, roomCode]);
 
@@ -177,14 +178,14 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
   const primaryLabel = roomCode
     ? pending === "starting"
       ? "Lancement..."
-      : "Lancer la partie"
+      : fr.onlineLobby.launchParty
     : mode === "host"
     ? pending === "hosting"
-      ? "Creation..."
-      : "Creer la room"
+      ? fr.onlineLobby.createLoading
+      : fr.onlineLobby.createParty
     : pending === "joining"
     ? "Connexion..."
-    : "Rejoindre";
+    : fr.onlineLobby.joinAction;
 
   const primaryDisabled =
     pending !== "idle" ||
@@ -212,12 +213,12 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
         <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] uppercase tracking-[0.2em] text-cyan-200/80">
           <span>Retro Party Online</span>
           <span className="rounded-full border border-cyan-300/45 px-2 py-1">
-            Lobby
+            {fr.onlineLobby.lobbyBadge}
           </span>
         </div>
 
         <h1 className="mt-4 text-center text-xl text-cyan-200 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)] sm:text-3xl">
-          {roomCode ? "Room prete" : "Configuration rapide"}
+          {roomCode ? fr.onlineLobby.roomReady : fr.onlineLobby.quickConfig}
         </h1>
 
         <div className="mt-3 flex flex-wrap justify-center gap-2 text-xs">
@@ -248,7 +249,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
           <section className="mx-auto mt-6 grid w-full max-w-md gap-3 rounded-lg border border-cyan-300/25 bg-slate-900/35 p-4">
             {!validName && (
               <div className="rounded-md border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
-                Profil incomplet. Reviens a l'etape precedente.
+                {fr.onlineLobby.profileIncomplete}
               </div>
             )}
 
@@ -263,7 +264,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
                   mode === "host" && "border-cyan-300 bg-cyan-500 text-slate-950 hover:bg-cyan-400"
                 )}
               >
-                Heberger
+                {fr.onlineLobby.hostAction}
               </Button>
               <Button
                 type="button"
@@ -275,14 +276,14 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
                   mode === "join" && "border-cyan-300 bg-cyan-500 text-slate-950 hover:bg-cyan-400"
                 )}
               >
-                Rejoindre
+                {fr.onlineLobby.joinAction}
               </Button>
             </div>
 
             {mode === "join" && (
               <div className="space-y-1">
                 <Input
-                  placeholder="Code room"
+                  placeholder={fr.onlineLobby.roomCodePlaceholder}
                   value={code}
                   disabled={pending !== "idle"}
                   className="h-11 border-cyan-300/20 bg-slate-900/50 text-cyan-50 placeholder:text-slate-400"
@@ -321,7 +322,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
         {roomCode && (
           <>
             <div className="mx-auto mt-5 flex max-w-md items-center justify-center gap-2 rounded-md border border-cyan-300/35 bg-slate-900/45 p-2">
-              <span className="text-xs text-cyan-100/80">Code:</span>
+              <span className="text-xs text-cyan-100/80">{fr.onlineLobby.codeLabel}:</span>
               <span className="rounded bg-cyan-500/15 px-2 py-1 text-sm font-semibold tracking-[0.12em] text-cyan-200">
                 {roomCode}
               </span>
@@ -332,15 +333,15 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
                 disabled={pending !== "idle"}
                 className="border-cyan-300/30 bg-slate-900/45 text-cyan-100 hover:bg-slate-900/70"
               >
-                {copied ? "Copie" : "Copier"}
+                {copied ? fr.onlineLobby.copied : fr.onlineLobby.copy}
               </Button>
             </div>
 
             <section className="mx-auto mt-6 grid w-full max-w-md gap-2 rounded-lg border border-cyan-300/25 bg-slate-900/35 p-4">
               <p className="text-center text-xs text-slate-300">
                 {canStart
-                  ? "Tu es host. Lance la partie quand tout le monde est pret."
-                  : "En attente du host pour lancer la partie."}
+                  ? fr.onlineLobby.hostLaunchHint
+                  : fr.onlineLobby.waitingHost}
               </p>
               {canStart && (
                 <div className="space-y-1">
@@ -375,7 +376,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
                 variant="secondary"
                 className="h-11 border-cyan-300/20 bg-slate-900/45 text-cyan-100 hover:bg-slate-900/70"
               >
-                {canStart ? "Annuler la room" : "Quitter la room"}
+                {canStart ? fr.onlineLobby.cancelParty : fr.onlineLobby.leaveParty}
               </Button>
             </section>
           </>
@@ -407,7 +408,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
                   )}
                   {p.isHost && (
                     <span className="rounded-full border border-cyan-500/35 bg-cyan-500/10 px-2 py-0.5 text-[10px] text-cyan-200">
-                      HOST
+                      {fr.terms.host.toUpperCase()}
                     </span>
                   )}
                 </div>
@@ -416,7 +417,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
 
             {lobbyPlayers.length === 0 && (
               <div className="rounded-md border border-dashed border-cyan-300/20 px-3 py-4 text-center text-sm text-slate-300 sm:col-span-2">
-                En attente de joueurs...
+                {fr.onlineLobby.waitingPlayers}
               </div>
             )}
           </div>
@@ -427,12 +428,12 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
         <AlertDialogContent className="border-cyan-300/30 bg-slate-950/95 text-cyan-50">
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {canStart ? "Annuler la room ?" : "Quitter la room ?"}
+              {canStart ? fr.onlineLobby.cancelPartyQuestion : fr.onlineLobby.leavePartyQuestion}
             </AlertDialogTitle>
             <AlertDialogDescription className="text-slate-300">
               {canStart
-                ? "Tous les joueurs seront deconnectes de cette room."
-                : "Tu vas quitter la room en cours."}
+                ? fr.onlineLobby.disconnectAll
+                : fr.onlineLobby.leavingCurrent}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -443,7 +444,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
               className="border-rose-300 bg-rose-500 text-white shadow-[0_0_0_2px_rgba(251,113,133,0.35)] hover:bg-rose-400"
               onClick={confirmLeave}
             >
-              {canStart ? "Annuler la room" : "Quitter la room"}
+              {canStart ? fr.onlineLobby.cancelParty : fr.onlineLobby.leaveParty}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -451,3 +452,4 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
     </div>
   );
 };
+

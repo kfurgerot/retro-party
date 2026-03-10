@@ -10,6 +10,7 @@ import { GameScreen } from '@/components/screens/GameScreen';
 import { ResultsScreen } from '@/components/screens/ResultsScreen';
 import { PixelCard } from '@/components/game/PixelCard';
 import { PixelButton } from '@/components/game/PixelButton';
+import { fr } from '@/i18n/fr';
 
 type OnlineProfile = {
   name: string;
@@ -104,13 +105,13 @@ const Index: React.FC = () => {
         return (
           <div className="scanlines flex min-h-svh w-full items-center justify-center p-6">
             <PixelCard className="w-full max-w-xl p-6 text-center">
-              <div className="font-pixel text-2xl">Coming Soon</div>
+              <div className="font-pixel text-2xl">{fr.templateEditor.comingSoon}</div>
               <div className="mt-2 text-sm opacity-80">
-                This experience is listed in the toolbox but not available yet.
+                Cette experience est listee dans la boite a outils mais pas encore disponible.
               </div>
               <div className="mt-6">
                 <PixelButton onClick={() => setSelectedExperience(null)} variant="secondary">
-                  Back To Tools
+                  {fr.templateEditor.backToTools}
                 </PixelButton>
               </div>
             </PixelCard>

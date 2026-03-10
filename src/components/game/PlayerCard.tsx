@@ -2,6 +2,7 @@ import React from "react";
 import { Player, AVATARS } from "@/types/game";
 import { PixelCard } from "./PixelCard";
 import { cn } from "@/lib/utils";
+import { fr } from "@/i18n/fr";
 
 interface PlayerCardProps {
   player: Player;
@@ -45,7 +46,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({ player, isActive, compac
         </div>
         <div className="flex-1">
           <div className="font-pixel text-sm">{player.name}</div>
-          <div className="mt-1 text-xs opacity-80">{player.isHost ? "Host" : "Player"}</div>
+          <div className="mt-1 text-xs opacity-80">{player.isHost ? fr.terms.host : fr.terms.player}</div>
         </div>
         <div className="text-right">
           <div className="font-pixel text-xs">PTS {player.points ?? 0}</div>

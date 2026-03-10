@@ -3,6 +3,7 @@ import { Player, AVATARS, QuestionSummary } from "@/types/game";
 import { PixelCard } from "../game/PixelCard";
 import { PixelButton } from "../game/PixelButton";
 import { cn } from "@/lib/utils";
+import { fr } from "@/i18n/fr";
 
 interface ResultsScreenProps {
   players: Player[];
@@ -28,7 +29,7 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
   return (
     <div className="scanlines flex w-full flex-col items-center gap-6 p-6">
       <PixelCard className="w-full max-w-3xl p-6 text-center">
-        <div className="font-pixel text-2xl">Fin de partie</div>
+        <div className="font-pixel text-2xl">{fr.results.title}</div>
         <div className="mt-2 text-sm opacity-80">Total kudobox: {totalStars}</div>
         <div className="mt-1 text-sm opacity-80">Total points: {totalPoints}</div>
       </PixelCard>
@@ -46,8 +47,8 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
               </div>
               <div className="flex-1">
                 <div className="font-pixel text-lg">{p.name}</div>
-                <div className="text-sm opacity-80">Stars: {p.stars}</div>
-                <div className="text-sm opacity-80">Points: {p.points ?? 0}</div>
+                <div className="text-sm opacity-80">{fr.results.stars}: {p.stars}</div>
+                <div className="text-sm opacity-80">{fr.results.points}: {p.points ?? 0}</div>
               </div>
               {idx === 0 && <div className="text-xl">#1</div>}
             </div>

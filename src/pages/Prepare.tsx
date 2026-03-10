@@ -9,6 +9,7 @@ import { RetroScreenBackground } from "@/components/screens/RetroScreenBackgroun
 import { ExperienceId, SelectExperienceScreen } from "@/components/screens/SelectExperienceScreen";
 import { PixelCard } from "@/components/game/PixelCard";
 import { PixelButton } from "@/components/game/PixelButton";
+import { fr } from "@/i18n/fr";
 
 type AuthMode = "login" | "register";
 
@@ -70,7 +71,7 @@ const PreparePage = () => {
   }, [user, loadTemplates]);
 
   const title = useMemo(() => {
-    if (!user) return "Connexion host";
+    if (!user) return fr.prepare.hostLogin;
     return `Mes templates - ${user.displayName}`;
   }, [user]);
 
@@ -145,7 +146,7 @@ const PreparePage = () => {
     setInfoMessage(null);
     try {
       const response = await api.launchTemplateRoom(templateId);
-      const nextName = encodeURIComponent(user.displayName || "Host");
+      const nextName = encodeURIComponent(user.displayName || fr.prepare.hostPlaceholder);
       navigate(`/play?mode=join&code=${response.roomCode}&name=${nextName}&avatar=0&auto=1`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur inconnue");
@@ -187,13 +188,13 @@ const PreparePage = () => {
     return (
       <div className="scanlines flex min-h-svh w-full items-center justify-center p-6">
         <PixelCard className="w-full max-w-xl p-6 text-center">
-          <div className="font-pixel text-2xl">Coming Soon</div>
+          <div className="font-pixel text-2xl">{fr.templateEditor.comingSoon}</div>
           <div className="mt-2 text-sm opacity-80">
             Cette experience n&apos;est pas encore disponible pour la preparation.
           </div>
           <div className="mt-6">
             <PixelButton onClick={() => setSelectedExperience(null)} variant="secondary">
-              Back To Tools
+              {fr.templateEditor.backToTools}
             </PixelButton>
           </div>
         </PixelCard>
@@ -241,7 +242,7 @@ const PreparePage = () => {
                     id="displayName"
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
-                    placeholder="Host"
+                    placeholder={fr.prepare.hostPlaceholder}
                   />
                 </div>
               )}
@@ -328,7 +329,7 @@ const PreparePage = () => {
                         >
                           Editer
                         </Button>
-                        <Button onClick={() => launchTemplate(template.id)}>Lancer une room</Button>
+                        <Button onClick={() => launchTemplate(template.id)}>{fr.prepare.launchParty}</Button>
                         <Button variant="destructive" onClick={() => deleteTemplate(template.id)}>
                           Supprimer
                         </Button>

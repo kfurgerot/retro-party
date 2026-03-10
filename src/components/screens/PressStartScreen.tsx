@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { RetroScreenBackground } from "./RetroScreenBackground";
+import { fr } from "@/i18n/fr";
 
 interface PressStartScreenProps {
   onStart: () => void;
@@ -28,10 +29,10 @@ export const PressStartScreen: React.FC<PressStartScreenProps> = ({ onStart }) =
           Retro Party Online
         </div>
         <h1 className="mt-4 text-xl text-cyan-200 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)] sm:text-3xl">
-          Press Start
+          {fr.pressStart.title}
         </h1>
         <p className="mt-4 text-[11px] leading-relaxed text-slate-300 sm:text-xs">
-          Appuie sur START pour entrer dans le lobby multijoueur.
+          {fr.pressStart.subtitle}
         </p>
 
         <div className="mt-8">
@@ -39,7 +40,7 @@ export const PressStartScreen: React.FC<PressStartScreenProps> = ({ onStart }) =
             onClick={onStart}
             className="h-12 w-full animate-pixel-pulse border border-cyan-300 bg-cyan-500 text-sm font-semibold uppercase tracking-wide text-slate-950 shadow-[0_0_12px_rgba(34,211,238,0.45)] hover:bg-cyan-400 sm:w-auto sm:px-12"
           >
-            Start
+            {fr.pressStart.button}
           </Button>
         </div>
 
@@ -48,7 +49,7 @@ export const PressStartScreen: React.FC<PressStartScreenProps> = ({ onStart }) =
         </div>
 
         <div className="mt-7 border-t border-cyan-300/25 pt-3 text-[10px] text-cyan-100/75 sm:text-xs">
-          <div>Copyright © 2026 By Karl FURGEROT</div>
+          <div>Copyright (c) 2026 By Karl FURGEROT</div>
           <a
             href="mailto:karl.furgerot@gmail.com"
             className="text-cyan-300 underline-offset-2 hover:underline"

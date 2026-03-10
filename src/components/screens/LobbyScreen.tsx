@@ -3,6 +3,7 @@ import { AVATARS } from '@/types/game';
 import { PixelCard } from '../game/PixelCard';
 import { PixelButton } from '../game/PixelButton';
 import { cn } from '@/lib/utils';
+import { fr } from '@/i18n/fr';
 
 interface LobbyScreenProps {
   onStartGame: (names: string[], avatars: number[]) => void;
@@ -22,7 +23,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({ onStartGame }) => {
     setPlayerCount(count);
     setPlayers(
       Array.from({ length: count }, (_, i) => ({
-        name: `Player ${i + 1}`,
+        name: `${fr.terms.player} ${i + 1}`,
         avatar: i % AVATARS.length,
       }))
     );
@@ -33,7 +34,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({ onStartGame }) => {
   };
 
   const start = () => {
-    const names = players.map(p => p.name?.trim() || 'Player');
+    const names = players.map(p => p.name?.trim() || fr.lobbyLocal.defaultPlayer);
     const avatars = players.map(p => p.avatar);
     onStartGame(names, avatars);
   };
@@ -41,7 +42,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({ onStartGame }) => {
   return (
     <div className="scanlines flex w-full flex-col items-center gap-6 p-6">
       <PixelCard className="w-full max-w-3xl p-6 text-center">
-        <div className="font-pixel text-2xl">Rétro Party 🎮</div>
+        <div className="font-pixel text-2xl">Retro Party</div>
         <div className="mt-2 text-sm opacity-80">
           Choisis le nombre de joueurs, puis lance la partie.
         </div>
@@ -72,7 +73,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({ onStartGame }) => {
           <div className="flex flex-col gap-3">
             {players.map((p, idx) => (
               <div key={idx} className="flex items-center gap-3">
-                <div className="text-3xl">{AVATARS[p.avatar] ?? '🙂'}</div>
+                <div className="text-3xl">{AVATARS[p.avatar] ?? ':)'}</div>
                 <input
                   className="flex-1 border-4 border-black rounded px-3 py-2 font-pixel text-sm bg-white"
                   value={p.name}
@@ -95,7 +96,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({ onStartGame }) => {
 
           <div className="mt-6 flex justify-end">
             <PixelButton onClick={start} variant="primary" disabled={players.length < 1}>
-              🚀 Lancer la partie
+              Lancer la partie
             </PixelButton>
           </div>
         </PixelCard>

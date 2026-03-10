@@ -288,7 +288,7 @@ export function useOnlineGameState() {
   }, []);
 
   const createRoom = useCallback((name: string, avatar: number) => {
-    const normalizedName = name.trim() || "Host";
+    const normalizedName = name.trim() || "Hote";
     const sessionId = sessionRef.current?.sessionId ?? makeSessionId();
     pendingProfileRef.current = { name: normalizedName, avatar, sessionId };
     if (!socket.connected) socket.connect();
@@ -296,7 +296,7 @@ export function useOnlineGameState() {
   }, []);
 
   const joinRoom = useCallback((roomCode: string, name: string, avatar: number) => {
-    const normalizedName = name.trim() || "Player";
+    const normalizedName = name.trim() || "Joueur";
     const sessionId = sessionRef.current?.sessionId ?? makeSessionId();
     pendingProfileRef.current = { name: normalizedName, avatar, sessionId };
     if (!socket.connected) socket.connect();

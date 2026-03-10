@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { AVATARS } from "@/types/game";
 import { cn } from "@/lib/utils";
 import { RetroScreenBackground } from "./RetroScreenBackground";
+import { fr } from "@/i18n/fr";
 
 interface OnlineOnboardingScreenProps {
   connected: boolean;
@@ -33,8 +34,8 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
   const canSubmit = connected && validName;
 
   const stepTitle = useMemo(() => {
-    if (step === 1) return "Choose your nickname";
-    return "Choose your avatar";
+    if (step === 1) return fr.onlineOnboarding.nicknameTitle;
+    return fr.onlineOnboarding.avatarTitle;
   }, [step]);
 
   const goNext = () => {
@@ -57,7 +58,7 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
       <div className="relative z-10 w-full max-w-2xl rounded border border-cyan-300/60 bg-card/88 p-5 shadow-[0_0_0_2px_rgba(34,211,238,0.3),0_0_34px_rgba(34,211,238,0.32)] backdrop-blur sm:p-8">
         <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-cyan-200/80">
           <span>Retro Agile Toolbox</span>
-          <span>Step {step}/2</span>
+          <span>{fr.onlineOnboarding.step} {step}/2</span>
         </div>
 
         <h1 className="mt-4 text-center text-xl text-cyan-200 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)] sm:text-3xl">
@@ -66,24 +67,24 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
 
         {step === 1 && (
           <div className="mt-8 space-y-2">
-            <p className="text-xs text-slate-300 sm:text-sm">Enter your display name</p>
+            <p className="text-xs text-slate-300 sm:text-sm">{fr.onlineOnboarding.displayNameLabel}</p>
             <Input
               autoFocus
               value={name}
               maxLength={16}
-              placeholder="Your nickname"
+              placeholder={fr.onlineOnboarding.displayNamePlaceholder}
               onChange={(e) => setName(cleanName(e.target.value))}
               onKeyDown={(e) => e.key === "Enter" && validName && goNext()}
             />
             {!validName && name.length > 0 && (
-              <p className="text-xs text-amber-300">Min. 2 characters</p>
+              <p className="text-xs text-amber-300">{fr.onlineOnboarding.minName}</p>
             )}
           </div>
         )}
 
         {step === 2 && (
           <div className="mt-8">
-            <p className="mb-3 text-xs text-slate-300 sm:text-sm">Pick your avatar</p>
+            <p className="mb-3 text-xs text-slate-300 sm:text-sm">{fr.onlineOnboarding.avatarLabel}</p>
             <div className="grid grid-cols-5 gap-2 sm:grid-cols-6">
               {AVATARS.map((a, i) => (
                 <button
@@ -102,7 +103,7 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
             </div>
 
             {!connected && (
-              <p className="mt-4 text-xs text-amber-300">Connecting to server...</p>
+              <p className="mt-4 text-xs text-amber-300">{fr.onlineOnboarding.connecting}</p>
             )}
 
             <Button
@@ -111,7 +112,7 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
               onClick={() => onSubmit({ name: cleanName(name), avatar })}
               className="mt-6 h-12 w-full border border-cyan-300 bg-cyan-500 text-sm font-semibold uppercase tracking-wide text-slate-950 shadow-[0_0_12px_rgba(34,211,238,0.45)] hover:bg-cyan-400"
             >
-              Continue
+              {fr.onlineOnboarding.continue}
             </Button>
           </div>
         )}
@@ -123,7 +124,7 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
             className="border-border/70 bg-background/50 text-foreground hover:bg-background/70"
             onClick={goBack}
           >
-            {step === 1 ? "Back" : "Previous"}
+            {step === 1 ? fr.onlineOnboarding.back : fr.onlineOnboarding.previous}
           </Button>
 
           {step < 2 && (
@@ -133,7 +134,7 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
               disabled={step === 1 && !validName}
               className="border border-cyan-300 bg-cyan-500 font-semibold text-slate-950 hover:bg-cyan-400"
             >
-              Next
+              {fr.onlineOnboarding.next}
             </Button>
           )}
         </div>

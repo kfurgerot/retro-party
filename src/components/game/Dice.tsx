@@ -2,6 +2,7 @@ import React, { useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { getPlayerBoardKey, BOARD_KEYS } from "@/data/keyboardMappings";
 import { RollResult } from "@/types/game";
+import { fr } from "@/i18n/fr";
 
 interface DiceProps {
   value: number | null;
@@ -102,9 +103,9 @@ export const Dice: React.FC<DiceProps> = ({
   };
 
   const label = (() => {
-    if (isRolling) return "Lancer...";
-    if (canRoll && pendingDoubleRollFirstDie != null) return `Lancer De 2 [${playerKey}]`;
-    if (canRoll) return `Lancer [${playerKey}]`;
+    if (isRolling) return `${fr.terms.rollDice}...`;
+    if (canRoll && pendingDoubleRollFirstDie != null) return `${fr.terms.rollDice} (De 2) [${playerKey}]`;
+    if (canRoll) return `${fr.terms.rollDice} [${playerKey}]`;
     if (canMove && value != null) return `Avancer (${value})`;
     if (canOpen) return "Ouvrir carte";
     return "Attente";

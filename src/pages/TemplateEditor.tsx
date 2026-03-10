@@ -8,13 +8,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api, TemplateItem, TemplateQuestion } from "@/net/api";
 import { RetroScreenBackground } from "@/components/screens/RetroScreenBackground";
+import { fr } from "@/i18n/fr";
 
 type ThemeTab = "all" | "blue" | "green" | "red" | "violet" | "bonus" | "other";
 
 const THEME_META: Record<Exclude<ThemeTab, "all" | "other">, { label: string; className: string }> = {
-  blue: { label: "Blue", className: "text-blue-300" },
-  green: { label: "Green", className: "text-green-300" },
-  red: { label: "Red", className: "text-red-300" },
+  blue: { label: fr.templateEditor.blue, className: "text-blue-300" },
+  green: { label: fr.templateEditor.green, className: "text-green-300" },
+  red: { label: fr.templateEditor.red, className: "text-red-300" },
   violet: { label: "Violet", className: "text-violet-300" },
   bonus: { label: "Bonus", className: "text-yellow-300" },
 };
@@ -194,7 +195,7 @@ const TemplateEditorPage = () => {
     setError(null);
     try {
       const response = await api.launchTemplateRoom(templateId);
-      navigate(`/play?mode=join&code=${response.roomCode}&name=Host&avatar=0&auto=1`);
+      navigate(`/play?mode=join&code=${response.roomCode}&name=${fr.prepare.hostPlaceholder}&avatar=0&auto=1`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur inconnue");
     }
@@ -267,7 +268,7 @@ const TemplateEditorPage = () => {
                   <Button onClick={saveTemplate} disabled={!canSave}>
                     {saving ? "Sauvegarde..." : "Sauvegarder"}
                   </Button>
-                  <Button onClick={launchRoom}>Lancer une room</Button>
+                  <Button onClick={launchRoom}>{fr.templateEditor.launchParty}</Button>
                 </div>
               </div>
 
@@ -286,9 +287,9 @@ const TemplateEditorPage = () => {
                     }
                     className="h-10 rounded-md border border-input bg-background px-3 text-sm"
                   >
-                    <option value="blue">Blue</option>
-                    <option value="green">Green</option>
-                    <option value="red">Red</option>
+                    <option value="blue">{fr.templateEditor.blue}</option>
+                    <option value="green">{fr.templateEditor.green}</option>
+                    <option value="red">{fr.templateEditor.red}</option>
                     <option value="violet">Violet</option>
                     <option value="bonus">Bonus</option>
                   </select>
@@ -298,9 +299,9 @@ const TemplateEditorPage = () => {
                 <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ThemeTab)}>
                   <TabsList className="h-auto w-full flex-wrap justify-start gap-1 bg-transparent p-0">
                     <TabsTrigger value="all">Tous ({counts.all})</TabsTrigger>
-                    <TabsTrigger value="blue">Blue ({counts.blue})</TabsTrigger>
-                    <TabsTrigger value="green">Green ({counts.green})</TabsTrigger>
-                    <TabsTrigger value="red">Red ({counts.red})</TabsTrigger>
+                    <TabsTrigger value="blue">{fr.templateEditor.blue} ({counts.blue})</TabsTrigger>
+                    <TabsTrigger value="green">{fr.templateEditor.green} ({counts.green})</TabsTrigger>
+                    <TabsTrigger value="red">{fr.templateEditor.red} ({counts.red})</TabsTrigger>
                     <TabsTrigger value="violet">Violet ({counts.violet})</TabsTrigger>
                     <TabsTrigger value="bonus">Bonus ({counts.bonus})</TabsTrigger>
                     <TabsTrigger value="other">Autres ({counts.other})</TabsTrigger>
@@ -323,15 +324,15 @@ const TemplateEditorPage = () => {
                               <div className="min-w-64 flex-1">
                                 <p className="text-sm text-cyan-100">{question.text}</p>
                                 <p className={`text-xs ${theme.className}`}>
-                                  {theme.label} | {question.isActive ? "active" : "inactive"}
+                                  {theme.label} | {question.isActive ? fr.templateEditor.active : fr.templateEditor.inactive}
                                 </p>
                               </div>
                               <div className="flex gap-2">
                                 <Button variant="secondary" onClick={() => reorderQuestion(question.id, -1)}>
-                                  Up
+                                  {fr.templateEditor.up}
                                 </Button>
                                 <Button variant="secondary" onClick={() => reorderQuestion(question.id, 1)}>
-                                  Down
+                                  {fr.templateEditor.down}
                                 </Button>
                                 <Button variant="secondary" onClick={() => toggleQuestion(question)}>
                                   {question.isActive ? "Desactiver" : "Activer"}
@@ -360,3 +361,4 @@ const TemplateEditorPage = () => {
 };
 
 export default TemplateEditorPage;
+

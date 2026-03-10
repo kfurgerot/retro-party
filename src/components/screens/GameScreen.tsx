@@ -33,6 +33,7 @@ import { LaunchAnnouncement } from "../game/LaunchAnnouncement";
 import { ShopModal } from "../game/ShopModal";
 import { PreRollChoiceModal } from "../game/PreRollChoiceModal";
 import { SHOP_CATALOG } from "@/data/shopCatalog";
+import { fr } from "@/i18n/fr";
 
 const TURN_ANNOUNCE_MS = 2000;
 
@@ -227,7 +228,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       { k: "red", label: "ROUGE - Frictions", icon: "R" },
       { k: "violet", label: "VIOLET - Vision", icon: "I" },
       { k: "bonus", label: "BONUS - Kudobox", icon: "*" },
-      { k: "shop", label: "SHOP - Boutique", icon: "$" },
+      { k: "shop", label: fr.game.shopLegend, icon: "$" },
     ],
     []
   );
@@ -762,7 +763,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
           <AlertDialogHeader>
             <AlertDialogTitle>Quitter la partie ?</AlertDialogTitle>
             <AlertDialogDescription className="text-slate-300">
-              Tu vas revenir au lobby en ligne. Cette action est immediate.
+              {fr.game.backToOnlineLobby}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -854,7 +855,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       {isTurnIntroActive && !isPathChoiceActive && !isKudoPurchaseActive && !isShopActive && !gameState.currentQuestion && !isMinigameActive && (
         <LaunchAnnouncement
           title="A toi de jouer"
-          subtitle="Prepares-toi a lancer le de."
+          subtitle={fr.game.yourTurnLaunch}
           startAt={turnIntroEndsAt ?? undefined}
         />
       )}

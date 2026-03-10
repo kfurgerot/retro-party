@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RetroScreenBackground } from "@/components/screens/RetroScreenBackground";
 import { PressStartScreen } from "@/components/screens/PressStartScreen";
+import { fr } from "@/i18n/fr";
 
 const Home = () => {
   const navigate = useNavigate();
@@ -26,24 +27,24 @@ const Home = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-center text-sm text-slate-300">
-            Choisis ton mode : lance une partie immédiatement ou prépare une session personnalisée
+            Choisis ton mode : lance une partie immediatement ou prepare une session personnalisee
             pour plus tard.
           </p>
           <div className="grid gap-3 sm:grid-cols-2">
             <Button
               className="h-12 border border-cyan-300 bg-cyan-500 font-semibold text-slate-950 hover:bg-cyan-400"
               onClick={() => navigate("/play")}
-              title="Créer ou rejoindre une partie rapide"
+              title={fr.home.quickPartyTitle}
             >
-              Jouer maintenant
+              {fr.home.playNow}
             </Button>
             <Button
               variant="secondary"
               className="h-12 border border-cyan-300/40 bg-slate-900/55 text-cyan-100 hover:bg-slate-900/75"
               onClick={() => navigate("/prepare")}
-              title="Configurer une session avancée pour plus tard"
+              title={fr.home.preparePartyTitle}
             >
-              Préparer une partie
+              {fr.home.prepareParty}
             </Button>
           </div>
         </CardContent>
