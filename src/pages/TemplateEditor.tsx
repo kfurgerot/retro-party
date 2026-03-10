@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,6 +13,23 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { api, TemplateItem, TemplateQuestion } from "@/net/api";
 import { RetroScreenBackground } from "@/components/screens/RetroScreenBackground";
 import { fr } from "@/i18n/fr";
@@ -72,6 +90,10 @@ function normalizeCategory(value: string | null | undefined): ThemeTab {
   return "other";
 }
 
+function isThemeKey(value: ThemeTab): value is ThemeKey {
+  return value === "blue" || value === "green" || value === "red" || value === "violet" || value === "bonus";
+}
+
 const TemplateEditorPage = () => {
   const { templateId } = useParams<{ templateId: string }>();
   const navigate = useNavigate();
@@ -91,6 +113,11 @@ const TemplateEditorPage = () => {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [newQuestionText, setNewQuestionText] = useState("");
   const [newQuestionCategory, setNewQuestionCategory] = useState<ThemeKey>("blue");
+  const [editingQuestion, setEditingQuestion] = useState<TemplateQuestion | null>(null);
+  const [editingQuestionText, setEditingQuestionText] = useState("");
+  const [savingQuestionEdit, setSavingQuestionEdit] = useState(false);
+  const [bulkDeleteTheme, setBulkDeleteTheme] = useState<ThemeKey | null>(null);
+  const [deletingThemeQuestions, setDeletingThemeQuestions] = useState(false);
 
   const validTemplateId = typeof templateId === "string" && templateId.length > 0;
 
@@ -166,18 +193,26 @@ const TemplateEditorPage = () => {
     }
   };
 
-  const editQuestion = async (question: TemplateQuestion) => {
-    if (!templateId) return;
-    const nextText = window.prompt("Question", question.text);
-    if (!nextText || !nextText.trim()) return;
+  const openEditQuestion = (question: TemplateQuestion) => {
+    setEditingQuestion(question);
+    setEditingQuestionText(question.text);
+  };
+
+  const saveEditedQuestion = async () => {
+    if (!templateId || !editingQuestion || !editingQuestionText.trim()) return;
+    setSavingQuestionEdit(true);
     setError(null);
     try {
-      const response = await api.patchTemplateQuestion(templateId, question.id, {
-        text: nextText.trim(),
+      const response = await api.patchTemplateQuestion(templateId, editingQuestion.id, {
+        text: editingQuestionText.trim(),
       });
-      setQuestions((prev) => prev.map((item) => (item.id === question.id ? response.question : item)));
+      setQuestions((prev) => prev.map((item) => (item.id === editingQuestion.id ? response.question : item)));
+      setEditingQuestion(null);
+      setEditingQuestionText("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur inconnue");
+    } finally {
+      setSavingQuestionEdit(false);
     }
   };
 
@@ -202,6 +237,29 @@ const TemplateEditorPage = () => {
       setQuestions((prev) => prev.filter((item) => item.id !== questionId));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur inconnue");
+    }
+  };
+
+  const deleteQuestionsByTheme = async (theme: ThemeKey) => {
+    if (!templateId) return;
+    const idsToDelete = questions
+      .filter((question) => normalizeCategory(question.category) === theme)
+      .map((question) => question.id);
+    if (!idsToDelete.length) {
+      setBulkDeleteTheme(null);
+      return;
+    }
+
+    setDeletingThemeQuestions(true);
+    setError(null);
+    try {
+      await Promise.all(idsToDelete.map((questionId) => api.deleteTemplateQuestion(templateId, questionId)));
+      setQuestions((prev) => prev.filter((question) => normalizeCategory(question.category) !== theme));
+      setBulkDeleteTheme(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur inconnue");
+    } finally {
+      setDeletingThemeQuestions(false);
     }
   };
 
@@ -263,10 +321,13 @@ const TemplateEditorPage = () => {
     return themeFiltered;
   }, [questions, activeTab, statusFilter]);
 
+  const selectedThemeForBulkDelete = isThemeKey(activeTab) ? activeTab : null;
+  const selectedThemeCount = selectedThemeForBulkDelete ? counts[selectedThemeForBulkDelete] : 0;
+
   return (
-    <div className="scanlines relative flex min-h-svh w-full items-center justify-center overflow-hidden px-4 py-8">
+    <div className="scanlines relative flex min-h-svh w-full items-center justify-center overflow-x-hidden overflow-y-hidden px-4 py-8">
       <RetroScreenBackground />
-      <Card className="relative z-10 w-full max-w-5xl border-cyan-300/40 bg-slate-900/55 shadow-[0_0_0_1px_rgba(34,211,238,0.18),0_0_24px_rgba(34,211,238,0.12)] backdrop-blur">
+      <Card className="relative z-10 w-full min-w-0 max-w-5xl border-cyan-300/40 bg-slate-900/55 shadow-[0_0_0_1px_rgba(34,211,238,0.18),0_0_24px_rgba(34,211,238,0.12)] backdrop-blur">
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle className="text-base font-semibold uppercase tracking-[0.14em] text-cyan-100/90">
             Edition template
@@ -288,7 +349,7 @@ const TemplateEditorPage = () => {
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="min-w-0 space-y-4">
           {loading && <p className="text-sm text-slate-300">Chargement...</p>}
           {!validTemplateId && <p className="text-sm text-red-300">Template invalide.</p>}
           {error && <p className="text-sm text-red-300">{error}</p>}
@@ -327,8 +388,8 @@ const TemplateEditorPage = () => {
                 </div>
               </div>
 
-              <div className="grid gap-4 rounded border border-cyan-300/20 p-3">
-                <div className="rounded-lg border border-cyan-300/20 bg-slate-950/30 p-3">
+              <div className="grid min-w-0 gap-4 rounded border border-cyan-300/20 p-3">
+                <div className="min-w-0 rounded-lg border border-cyan-300/20 bg-slate-950/30 p-3">
                   <p className="mb-3 text-sm font-semibold text-cyan-100">Ajouter une question</p>
                   <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
                     <Input
@@ -369,7 +430,7 @@ const TemplateEditorPage = () => {
                   </div>
                 </div>
 
-                <div className="rounded-lg border border-cyan-300/20 bg-slate-950/20 p-3">
+                <div className="min-w-0 rounded-lg border border-cyan-300/20 bg-slate-950/20 p-3">
                   <p className="mb-3 text-sm font-semibold text-cyan-100">Questions existantes</p>
                   <div className="mb-3 grid gap-2 sm:grid-cols-2">
                     <div className="grid gap-1">
@@ -402,6 +463,21 @@ const TemplateEditorPage = () => {
                         <option value="inactive">Inactifs</option>
                       </select>
                     </div>
+                  </div>
+                  <div className="mb-3">
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      disabled={!selectedThemeForBulkDelete || selectedThemeCount === 0}
+                      className="h-auto w-full whitespace-normal break-words py-2 text-left sm:w-auto"
+                      onClick={() => {
+                        if (!selectedThemeForBulkDelete) return;
+                        setBulkDeleteTheme(selectedThemeForBulkDelete);
+                      }}
+                    >
+                      Supprimer les questions du theme
+                      {selectedThemeForBulkDelete ? ` (${THEME_META[selectedThemeForBulkDelete].label})` : ""}
+                    </Button>
                   </div>
                   {filteredQuestions.length === 0 ? (
                     <p className="text-sm text-slate-300">Aucune question pour ce filtre.</p>
@@ -442,7 +518,7 @@ const TemplateEditorPage = () => {
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent
                                   align="start"
-                                  className="w-56 max-w-[calc(100vw-2rem)]"
+                                  className="w-[min(14rem,calc(100vw-2rem))]"
                                 >
                                   <DropdownMenuItem
                                     disabled={!canMoveUp}
@@ -459,7 +535,7 @@ const TemplateEditorPage = () => {
                                   <DropdownMenuItem onClick={() => toggleQuestion(question)}>
                                     {question.isActive ? "Desactiver" : "Activer"}
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => editQuestion(question)}>
+                                  <DropdownMenuItem onClick={() => openEditQuestion(question)}>
                                     Editer
                                   </DropdownMenuItem>
                                   <DropdownMenuSeparator />
@@ -496,6 +572,78 @@ const TemplateEditorPage = () => {
           )}
         </CardContent>
       </Card>
+
+      <Dialog
+        open={!!editingQuestion}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditingQuestion(null);
+            setEditingQuestionText("");
+          }
+        }}
+      >
+        <DialogContent className="border-cyan-300/30 bg-slate-950/95 text-cyan-50 sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Editer la question</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-2">
+            <Label htmlFor="edit-question-text">Question</Label>
+            <Textarea
+              id="edit-question-text"
+              value={editingQuestionText}
+              onChange={(e) => setEditingQuestionText(e.target.value)}
+              className="min-h-28"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="secondary"
+              className={neutralSecondaryBtn}
+              onClick={() => {
+                setEditingQuestion(null);
+                setEditingQuestionText("");
+              }}
+            >
+              Annuler
+            </Button>
+            <Button
+              variant="secondary"
+              className={activeCyanBtn}
+              disabled={!editingQuestionText.trim() || savingQuestionEdit}
+              onClick={saveEditedQuestion}
+            >
+              {savingQuestionEdit ? "Sauvegarde..." : "Enregistrer"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!bulkDeleteTheme} onOpenChange={(open) => !open && setBulkDeleteTheme(null)}>
+        <AlertDialogContent className="border-cyan-300/30 bg-slate-950/95 text-cyan-50">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer toutes les questions du theme ?</AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-300">
+              {bulkDeleteTheme
+                ? `Cette action supprimera ${counts[bulkDeleteTheme]} question(s) du theme ${THEME_META[bulkDeleteTheme].label}.`
+                : "Cette action supprimera toutes les questions du theme selectionne."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className={neutralSecondaryBtn}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={!bulkDeleteTheme || deletingThemeQuestions}
+              onClick={(e) => {
+                e.preventDefault();
+                if (!bulkDeleteTheme) return;
+                void deleteQuestionsByTheme(bulkDeleteTheme);
+              }}
+            >
+              {deletingThemeQuestions ? "Suppression..." : "Supprimer"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
