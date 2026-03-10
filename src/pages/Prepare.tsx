@@ -206,9 +206,9 @@ const PreparePage = () => {
     <div className="scanlines relative flex min-h-svh w-full items-center justify-center overflow-hidden px-4 py-8">
       <RetroScreenBackground />
       <Card className="relative z-10 w-full max-w-4xl border-cyan-300/60 bg-card/90">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-lg text-cyan-200">{title}</CardTitle>
-          <Button variant="secondary" onClick={() => navigate("/")}>
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <CardTitle className="text-lg text-cyan-200 break-words">{title}</CardTitle>
+          <Button variant="secondary" onClick={() => navigate("/")} className="w-full sm:w-auto">
             Accueil
           </Button>
         </CardHeader>
@@ -281,7 +281,7 @@ const PreparePage = () => {
           {!loading && user && (
             <>
               <div className="flex flex-wrap items-end gap-2 rounded border border-cyan-300/20 p-3">
-                <div className="min-w-56 flex-1 space-y-1">
+                <div className="w-full min-w-0 flex-1 space-y-1 sm:min-w-56">
                   <Label htmlFor="templateName">Nouveau template</Label>
                   <Input
                     id="templateName"
@@ -290,7 +290,7 @@ const PreparePage = () => {
                     placeholder="Sprint retro equipe API"
                   />
                 </div>
-                <div className="min-w-56 flex-1 space-y-1">
+                <div className="w-full min-w-0 flex-1 space-y-1 sm:min-w-56">
                   <Label htmlFor="templateDescription">Description</Label>
                   <Input
                     id="templateDescription"
@@ -299,10 +299,10 @@ const PreparePage = () => {
                     placeholder="Optionnel"
                   />
                 </div>
-                <Button onClick={submitCreateTemplate} disabled={creatingTemplate}>
+                <Button onClick={submitCreateTemplate} disabled={creatingTemplate} className="w-full sm:w-auto">
                   {creatingTemplate ? "Creation..." : "Creer"}
                 </Button>
-                <Button variant="secondary" onClick={handleLogout}>
+                <Button variant="secondary" onClick={handleLogout} className="w-full sm:w-auto">
                   Se deconnecter
                 </Button>
               </div>
@@ -318,19 +318,26 @@ const PreparePage = () => {
                       key={template.id}
                       className="flex flex-wrap items-center justify-between gap-3 rounded border border-cyan-300/20 p-3"
                     >
-                      <div>
-                        <p className="font-semibold text-cyan-100">{template.name}</p>
-                        <p className="text-xs text-slate-300">{template.description || "Sans description"}</p>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-cyan-100 break-words">{template.name}</p>
+                        <p className="text-xs text-slate-300 break-words">{template.description || "Sans description"}</p>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
                         <Button
                           variant="secondary"
+                          className="w-full sm:w-auto"
                           onClick={() => navigate(`/prepare/templates/${template.id}`)}
                         >
                           Editer
                         </Button>
-                        <Button onClick={() => launchTemplate(template.id)}>{fr.prepare.launchParty}</Button>
-                        <Button variant="destructive" onClick={() => deleteTemplate(template.id)}>
+                        <Button className="w-full sm:w-auto" onClick={() => launchTemplate(template.id)}>
+                          {fr.prepare.launchParty}
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          className="w-full sm:w-auto"
+                          onClick={() => deleteTemplate(template.id)}
+                        >
                           Supprimer
                         </Button>
                       </div>

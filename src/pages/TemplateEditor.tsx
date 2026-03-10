@@ -224,13 +224,13 @@ const TemplateEditorPage = () => {
     <div className="scanlines relative flex min-h-svh w-full items-center justify-center overflow-hidden px-4 py-8">
       <RetroScreenBackground />
       <Card className="relative z-10 w-full max-w-5xl border-cyan-300/60 bg-card/90">
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle className="text-lg text-cyan-200">Edition template</CardTitle>
-          <div className="flex gap-2">
-            <Button variant="secondary" onClick={() => navigate("/prepare")}>
+          <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+            <Button variant="secondary" onClick={() => navigate("/prepare")} className="w-full sm:w-auto">
               Mes templates
             </Button>
-            <Button variant="secondary" onClick={() => navigate("/")}>
+            <Button variant="secondary" onClick={() => navigate("/")} className="w-full sm:w-auto">
               Accueil
             </Button>
           </div>
@@ -264,11 +264,13 @@ const TemplateEditorPage = () => {
                     className="min-h-36"
                   />
                 </div>
-                <div className="flex gap-2">
-                  <Button onClick={saveTemplate} disabled={!canSave}>
+                <div className="flex flex-wrap gap-2">
+                  <Button onClick={saveTemplate} disabled={!canSave} className="w-full sm:w-auto">
                     {saving ? "Sauvegarde..." : "Sauvegarder"}
                   </Button>
-                  <Button onClick={launchRoom}>{fr.templateEditor.launchParty}</Button>
+                  <Button onClick={launchRoom} className="w-full sm:w-auto">
+                    {fr.templateEditor.launchParty}
+                  </Button>
                 </div>
               </div>
 
@@ -293,18 +295,34 @@ const TemplateEditorPage = () => {
                     <option value="violet">Violet</option>
                     <option value="bonus">Bonus</option>
                   </select>
-                  <Button onClick={addQuestion}>Ajouter</Button>
+                  <Button onClick={addQuestion} className="w-full sm:w-auto">
+                    Ajouter
+                  </Button>
                 </div>
 
                 <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ThemeTab)}>
                   <TabsList className="h-auto w-full flex-wrap justify-start gap-1 bg-transparent p-0">
-                    <TabsTrigger value="all">Tous ({counts.all})</TabsTrigger>
-                    <TabsTrigger value="blue">{fr.templateEditor.blue} ({counts.blue})</TabsTrigger>
-                    <TabsTrigger value="green">{fr.templateEditor.green} ({counts.green})</TabsTrigger>
-                    <TabsTrigger value="red">{fr.templateEditor.red} ({counts.red})</TabsTrigger>
-                    <TabsTrigger value="violet">Violet ({counts.violet})</TabsTrigger>
-                    <TabsTrigger value="bonus">Bonus ({counts.bonus})</TabsTrigger>
-                    <TabsTrigger value="other">Autres ({counts.other})</TabsTrigger>
+                    <TabsTrigger value="all" className="h-auto whitespace-normal text-center">
+                      Tous ({counts.all})
+                    </TabsTrigger>
+                    <TabsTrigger value="blue" className="h-auto whitespace-normal text-center">
+                      {fr.templateEditor.blue} ({counts.blue})
+                    </TabsTrigger>
+                    <TabsTrigger value="green" className="h-auto whitespace-normal text-center">
+                      {fr.templateEditor.green} ({counts.green})
+                    </TabsTrigger>
+                    <TabsTrigger value="red" className="h-auto whitespace-normal text-center">
+                      {fr.templateEditor.red} ({counts.red})
+                    </TabsTrigger>
+                    <TabsTrigger value="violet" className="h-auto whitespace-normal text-center">
+                      Violet ({counts.violet})
+                    </TabsTrigger>
+                    <TabsTrigger value="bonus" className="h-auto whitespace-normal text-center">
+                      Bonus ({counts.bonus})
+                    </TabsTrigger>
+                    <TabsTrigger value="other" className="h-auto whitespace-normal text-center">
+                      Autres ({counts.other})
+                    </TabsTrigger>
                   </TabsList>
 
                   <TabsContent value={activeTab}>
@@ -321,26 +339,46 @@ const TemplateEditorPage = () => {
                               key={question.id}
                               className="flex flex-wrap items-center justify-between gap-2 rounded border border-cyan-300/15 p-2"
                             >
-                              <div className="min-w-64 flex-1">
-                                <p className="text-sm text-cyan-100">{question.text}</p>
-                                <p className={`text-xs ${theme.className}`}>
+                              <div className="w-full min-w-0 flex-1 sm:w-auto sm:min-w-64">
+                                <p className="text-sm text-cyan-100 break-words">{question.text}</p>
+                                <p className={`text-xs break-words ${theme.className}`}>
                                   {theme.label} | {question.isActive ? fr.templateEditor.active : fr.templateEditor.inactive}
                                 </p>
                               </div>
-                              <div className="flex gap-2">
-                                <Button variant="secondary" onClick={() => reorderQuestion(question.id, -1)}>
+                              <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
+                                <Button
+                                  variant="secondary"
+                                  className="w-full sm:w-auto"
+                                  onClick={() => reorderQuestion(question.id, -1)}
+                                >
                                   {fr.templateEditor.up}
                                 </Button>
-                                <Button variant="secondary" onClick={() => reorderQuestion(question.id, 1)}>
+                                <Button
+                                  variant="secondary"
+                                  className="w-full sm:w-auto"
+                                  onClick={() => reorderQuestion(question.id, 1)}
+                                >
                                   {fr.templateEditor.down}
                                 </Button>
-                                <Button variant="secondary" onClick={() => toggleQuestion(question)}>
+                                <Button
+                                  variant="secondary"
+                                  className="w-full sm:w-auto"
+                                  onClick={() => toggleQuestion(question)}
+                                >
                                   {question.isActive ? "Desactiver" : "Activer"}
                                 </Button>
-                                <Button variant="secondary" onClick={() => editQuestion(question)}>
+                                <Button
+                                  variant="secondary"
+                                  className="w-full sm:w-auto"
+                                  onClick={() => editQuestion(question)}
+                                >
                                   Editer
                                 </Button>
-                                <Button variant="destructive" onClick={() => deleteQuestion(question.id)}>
+                                <Button
+                                  variant="destructive"
+                                  className="w-full sm:w-auto"
+                                  onClick={() => deleteQuestion(question.id)}
+                                >
                                   Supprimer
                                 </Button>
                               </div>
