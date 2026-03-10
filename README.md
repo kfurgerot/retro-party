@@ -59,6 +59,34 @@ Arret:
 docker compose down
 ```
 
+## Production: secrets et variables
+
+Le fichier `docker-compose-prod.yml` est prevu pour que les secrets soient injectes via variables
+d'environnement (Portainer ou fichier `.env.prod` non versionne).
+
+1. Copier le modele:
+```bash
+cp .env.prod.example .env.prod
+```
+2. Remplir les vraies valeurs (mots de passe DB, Gmail app password, URLs publiques).
+3. Deployer:
+```bash
+docker compose --env-file .env.prod -f docker-compose-prod.yml up -d --build
+```
+
+### Variables critiques a definir en production
+- `ORIGIN`
+- `DATABASE_URL`
+- `POSTGRES_PASSWORD`
+- `GMAIL_USER`
+- `GMAIL_APP_PASSWORD`
+- `RESET_PASSWORD_URL_BASE`
+
+### Portainer
+- Ouvrir la stack `docker-compose-prod.yml`
+- Renseigner les variables dans **Environment variables** (ou via `stack.env`)
+- Ne jamais saisir de secrets en dur dans le compose
+
 ## Scripts principaux
 
 A la racine:

@@ -14,19 +14,21 @@ services:
     restart: unless-stopped
     environment:
       - NODE_ENV=production
-      - PORT=3001
-      # Replace with your public frontend URL in production.
-      - ORIGIN=https://retro-party.example.com
-      - DATABASE_URL=postgresql://retro:change_this_password@postgres:5432/retro_party
-      - SESSION_COOKIE_NAME=rp_session
-      - SESSION_TTL_DAYS=7
-      - BCRYPT_ROUNDS=12
-      - LOGIN_RATE_LIMIT_WINDOW_MS=900000
-      - LOGIN_RATE_LIMIT_MAX=10
+      - PORT=${PORT:-3001}
+      - ORIGIN=${ORIGIN}
+      - POSTGRES_DB=${POSTGRES_DB:-retro_party}
+      - POSTGRES_USER=${POSTGRES_USER:-retro}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - SESSION_COOKIE_NAME=${SESSION_COOKIE_NAME:-rp_session}
+      - SESSION_TTL_DAYS=${SESSION_TTL_DAYS:-7}
+      - BCRYPT_ROUNDS=${BCRYPT_ROUNDS:-12}
+      - LOGIN_RATE_LIMIT_WINDOW_MS=${LOGIN_RATE_LIMIT_WINDOW_MS:-900000}
+      - LOGIN_RATE_LIMIT_MAX=${LOGIN_RATE_LIMIT_MAX:-10}
       - GMAIL_USER=${GMAIL_USER}
       - GMAIL_APP_PASSWORD=${GMAIL_APP_PASSWORD}
       - MAIL_FROM=${MAIL_FROM:-}
-      - RESET_PASSWORD_URL_BASE=${RESET_PASSWORD_URL_BASE:-https://retro-party.example.com/reset-password}
+      - RESET_PASSWORD_URL_BASE=${RESET_PASSWORD_URL_BASE}
       - RESET_TOKEN_TTL_MINUTES=${RESET_TOKEN_TTL_MINUTES:-60}
     ports:
       - "3001:3001"
@@ -39,9 +41,9 @@ services:
     container_name: retro-party-postgres-prod
     restart: unless-stopped
     environment:
-      - POSTGRES_DB=retro_party
-      - POSTGRES_USER=retro
-      - POSTGRES_PASSWORD=change_this_password
+      - POSTGRES_DB=${POSTGRES_DB:-retro_party}
+      - POSTGRES_USER=${POSTGRES_USER:-retro}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     # No host port exposure by default in production.
     volumes:
       - /volume1/docker/retro-postgres-db:/var/lib/postgresql/data
