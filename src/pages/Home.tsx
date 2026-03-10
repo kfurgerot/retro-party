@@ -20,27 +20,30 @@ const Home = () => {
   return (
     <div className="scanlines relative flex min-h-svh w-full items-center justify-center overflow-hidden px-4 py-8">
       <RetroScreenBackground />
-      <Card className="relative z-10 w-full max-w-2xl border-cyan-300/60 bg-card/90">
+      <Card className="relative z-10 w-full max-w-2xl border-cyan-300/60 bg-card/88 shadow-[0_0_0_2px_rgba(34,211,238,0.3),0_0_34px_rgba(34,211,238,0.32)] backdrop-blur">
         <CardHeader>
           <CardTitle className="text-center text-2xl text-cyan-200">Retro Party</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-center text-sm text-slate-300">
-            Lance une room instantanee ou prepare tes templates host.
+            Choisis ton mode : lance une partie immédiatement ou prépare une session personnalisée
+            pour plus tard.
           </p>
           <div className="grid gap-3 sm:grid-cols-2">
             <Button
               className="h-12 border border-cyan-300 bg-cyan-500 font-semibold text-slate-950 hover:bg-cyan-400"
               onClick={() => navigate("/play")}
+              title="Créer ou rejoindre une partie rapide"
             >
-              Creer une room rapide
+              Jouer maintenant
             </Button>
             <Button
               variant="secondary"
               className="h-12 border border-cyan-300/40 bg-slate-900/55 text-cyan-100 hover:bg-slate-900/75"
               onClick={() => navigate("/prepare")}
+              title="Configurer une session avancée pour plus tard"
             >
-              Preparer mes parties
+              Préparer une partie
             </Button>
           </div>
         </CardContent>
