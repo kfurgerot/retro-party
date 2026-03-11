@@ -48,14 +48,52 @@ import {
 } from "./whoSaidItEngine.js";
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3001;
-const ORIGIN = process.env.ORIGIN || true; // in prod set to your https domain
 const RECONNECT_GRACE_MS = 30000;
 const MAX_PLAYERS = 20;
 const WHO_SAID_IT_ANNOUNCE_MS = 4000;
 const ENABLE_WHO_SAID_IT_MINIGAME = true;
 
+function getAllowedOrigins() {
+  const raw = process.env.ORIGIN;
+  const configured = (raw ? raw.split(",") : ["http://localhost:8088"])
+    .map((value) => value.trim())
+    .filter(Boolean);
+  const allowed = [];
+
+  for (const origin of configured) {
+    try {
+      const parsed = new URL(origin);
+      if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+        allowed.push(parsed.origin);
+      }
+    } catch (_err) {
+      // Ignore invalid origin values from env.
+    }
+  }
+
+  if (allowed.length === 0) {
+    allowed.push("http://localhost:8088");
+  }
+
+  return new Set(allowed);
+}
+
+const ALLOWED_ORIGINS = getAllowedOrigins();
+const ALLOWED_ORIGIN_LIST = Array.from(ALLOWED_ORIGINS);
+
 const app = express();
-app.use(cors({ origin: ORIGIN, credentials: true }));
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin || ALLOWED_ORIGINS.has(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(new Error("Not allowed by CORS"));
+    },
+    credentials: true,
+  })
+);
 app.use(express.json({ limit: "1mb" }));
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
@@ -63,7 +101,7 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   path: "/socket.io",
-  cors: { origin: ORIGIN, methods: ["GET", "POST"] },
+  cors: { origin: ALLOWED_ORIGIN_LIST, methods: ["GET", "POST"], credentials: true },
 });
 
 function makeCode() {
