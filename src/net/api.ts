@@ -30,6 +30,30 @@ type ApiError = { error?: string };
 
 const API_BASE = `${resolveBackendUrl()}/api`;
 
+const ERROR_TRANSLATIONS: Record<string, string> = {
+  Unauthorized: "Non autorise",
+  "Invalid payload": "Donnees invalides",
+  "Invalid credentials": "Identifiants invalides",
+  "Too many attempts": "Trop de tentatives, reessaie plus tard",
+  "Too many requests": "Trop de requetes, reessaie plus tard",
+  "Not found": "Ressource introuvable",
+  "Sort order already used": "Ordre deja utilise",
+  "Unable to create account": "Impossible de creer le compte",
+  "Unable to generate room code": "Impossible de generer un code de partie",
+  "Mail service not configured": "Service d'email non configure",
+  "Internal server error": "Erreur interne du serveur",
+  "Invalid or expired token": "Lien invalide ou expire",
+};
+
+const SUCCESS_TRANSLATIONS: Record<string, string> = {
+  "If this account exists, a reset email has been sent.":
+    "Si ce compte existe, un email de reinitialisation a ete envoye.",
+  "Password has been reset.": "Le mot de passe a ete reinitialise.",
+};
+
+const localizeMessage = (message: string) => ERROR_TRANSLATIONS[message] ?? message;
+const localizeSuccessMessage = (message: string) => SUCCESS_TRANSLATIONS[message] ?? message;
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
     ...init,
@@ -47,7 +71,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     } catch {
       payload = null;
     }
-    const message = payload?.error || `HTTP ${response.status}`;
+    const rawMessage = payload?.error || `HTTP ${response.status}`;
+    const message = localizeMessage(rawMessage);
     throw new Error(message);
   }
 
@@ -74,12 +99,18 @@ export const api = {
     request<{ ok: boolean; message: string }>("/auth/forgot-password", {
       method: "POST",
       body: JSON.stringify(payload),
-    }),
+    }).then((response) => ({
+      ...response,
+      message: localizeSuccessMessage(response.message),
+    })),
   resetPassword: (payload: { token: string; password: string }) =>
     request<{ ok: boolean; message: string }>("/auth/reset-password", {
       method: "POST",
       body: JSON.stringify(payload),
-    }),
+    }).then((response) => ({
+      ...response,
+      message: localizeSuccessMessage(response.message),
+    })),
   logout: () => request<void>("/auth/logout", { method: "POST" }),
 
   listTemplates: () => request<{ items: TemplateItem[] }>("/templates", { method: "GET" }),

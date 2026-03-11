@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { GameState, Player } from "@/types/game";
+import { GameState, Player, QuestionState } from "@/types/game";
 import { generateRandomBoard } from "@/data/boardGenerator";
 import { pickQuestion } from "@/data/questions";
 
@@ -53,6 +53,14 @@ const getTilePointDelta = (tileType: string) => {
   if (normalized === "red") return -2;
   if (normalized === "blue" || normalized === "green" || normalized === "violet" || normalized === "yellow") return 2;
   return 0;
+};
+
+const toQuestionType = (tileType: string): QuestionState["type"] => {
+  const normalized = normalizeTileType(tileType);
+  if (normalized === "blue" || normalized === "green" || normalized === "red" || normalized === "violet" || normalized === "bonus") {
+    return normalized;
+  }
+  return "blue";
 };
 
 const shuffleInPlace = <T,>(list: T[]) => {
@@ -225,9 +233,8 @@ const buildLandingState = (prev: GameState, players: Player[]): GameState => {
     };
   }
 
-  const type = tile.type === "bonus" ? "bonus" : tile.type;
-
-  const text = pickQuestion(type as any);
+  const type = toQuestionType(tile.type);
+  const text = pickQuestion(type);
 
   return {
     ...prev,
@@ -237,7 +244,7 @@ const buildLandingState = (prev: GameState, players: Player[]): GameState => {
     pendingShop: null,
     currentQuestion: {
       id: `${Date.now()}`,
-      type: type as any,
+      type,
       text,
       targetPlayerId: cur.id,
       votes: { up: [], down: [] },

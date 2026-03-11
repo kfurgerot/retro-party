@@ -137,10 +137,9 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const catalogByType = SHOP_CATALOG;
   const myPlayer = gameState.players.find((p) => p.id === myPlayerId) ?? null;
   const pendingDoubleRollFirstDie = gameState.pendingDoubleRoll?.firstDie ?? null;
-  const myInventory = myPlayer?.inventory ?? [];
   const beforeRollInventory = useMemo(
-    () => myInventory.filter((item) => catalogByType[item.type]?.timing === "before_roll"),
-    [myInventory, catalogByType]
+    () => (myPlayer?.inventory ?? []).filter((item) => catalogByType[item.type]?.timing === "before_roll"),
+    [myPlayer?.inventory, catalogByType]
   );
   const preRollChoices = useMemo(() => {
     const grouped = new Map<ShopItemType, { type: ShopItemType; count: number; label: string; description: string }>();
@@ -608,7 +607,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                   {gameState.players.map((p) => (
                     <PlayerCard
                       key={p.id}
-                      player={p as any}
+                      player={p}
                       isActive={currentPlayer?.id === p.id}
                       compact
                     />
@@ -718,7 +717,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
             {gameState.players.map((p) => (
               <PlayerCard
                 key={p.id}
-                player={p as any}
+                player={p}
                 isActive={currentPlayer?.id === p.id}
                 compact
               />
