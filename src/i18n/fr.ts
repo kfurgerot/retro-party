@@ -20,6 +20,8 @@ export const fr = {
     title: "Appuie sur Demarrer",
     subtitle: "Appuie sur DEMARRER pour entrer dans le salon multijoueur.",
     button: "Demarrer",
+    controls: "Entree / Espace / Clic",
+    copyright: "Copyright (c) 2026 Karl FURGEROT",
   },
   onlineOnboarding: {
     step: "Etape",
@@ -101,6 +103,10 @@ export const fr = {
     down: "Descendre",
     active: "actif",
     inactive: "inactif",
+  },
+  notFound: {
+    title: "Page introuvable",
+    backHome: "Retour a l'accueil",
   },
 } as const;
 

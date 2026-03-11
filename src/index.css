@@ -80,8 +80,7 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: 'Press Start 2P', monospace;
-    image-rendering: pixelated;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 
     /* Keep horizontal lock, allow vertical scrolling on mobile screens like lobby */
     overflow-x: hidden;

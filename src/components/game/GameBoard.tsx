@@ -14,16 +14,16 @@ interface GameBoardProps {
 }
 
 const TileIcon: Record<string, string> = {
-  blue: "🔵",
-  red: "🔴",
-  green: "🟢",
-  purple: "🟣",
-  violet: "🟣",
-  star: "⭐",
-  yellow: "⭐",
-  bonus: "⭐",
-  shop: "🛒",
-  start: "🏁",
+  blue: "B",
+  red: "R",
+  green: "V",
+  purple: "I",
+  violet: "I",
+  star: "*",
+  yellow: "*",
+  bonus: "*",
+  shop: "$",
+  start: "D",
 };
 
 const TileColors: Record<string, string> = {
@@ -760,9 +760,9 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                   TileColors[tile.type] ?? "bg-slate-800"
                 )}
                 style={{ left: px, top: py }}
-                title={`${idx + 1} — ${tile.type}`}
+                title={`${idx + 1} - ${tile.type}`}
               >
-                <span>{TileIcon[tile.type] ?? "⬜"}</span>
+                <span>{TileIcon[tile.type] ?? "?"}</span>
 
                 {/* Players on tile */}
                 {playersHere.length > 0 && (
@@ -777,7 +777,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                         style={{ borderColor: p.color }}
                         title={p.name}
                       >
-                        {AVATARS[p.avatar] ?? "🙂"}
+                        {AVATARS[p.avatar] ?? ":)"}
                       </div>
                     ))}
                     {playersHere.length > 3 && (
@@ -877,7 +877,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
             onClick={() => zoomAt(scale / 1.15, { x: 80, y: 80 })}
             aria-label="Zoom -"
           >
-            −
+            -
           </button>
           <button
             type="button"
@@ -885,7 +885,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
             onClick={resetView}
             aria-label="Recentrer"
           >
-            ⟳
+            C
           </button>
         </div>
       )}

@@ -45,11 +45,11 @@ export const PressStartScreen: React.FC<PressStartScreenProps> = ({ onStart }) =
         </div>
 
         <div className="mt-4 text-[10px] text-slate-400 sm:text-xs">
-          Enter / Espace / Clic
+          {fr.pressStart.controls}
         </div>
 
         <div className="mt-7 border-t border-cyan-300/25 pt-3 text-[10px] text-cyan-100/75 sm:text-xs">
-          <div>Copyright (c) 2026 By Karl FURGEROT</div>
+          <div>{fr.pressStart.copyright}</div>
           <a
             href="mailto:karl.furgerot@gmail.com"
             className="text-cyan-300 underline-offset-2 hover:underline"
