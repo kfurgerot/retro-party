@@ -147,7 +147,7 @@ export const WhoSaidItMinigame: React.FC<WhoSaidItMinigameProps> = ({
 
         {phase === "answer" && (
           <Card className="border-cyan-300/35 bg-slate-900/70 p-3 text-center text-cyan-100">
-            {selectedRole ? "Reponse envoyee OK" : "Choisis un role avant la fin du timer"}
+            {selectedRole ? "Reponse envoyee" : "Choisis un role avant la fin du chrono"}
           </Card>
         )}
 

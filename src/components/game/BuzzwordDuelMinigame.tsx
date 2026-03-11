@@ -64,11 +64,11 @@ export const BuzzwordDuelMinigame: React.FC<BuzzwordDuelMinigameProps> = ({
     }
     if (state.phase === "between") {
       return state.roundType === "sudden_death"
-        ? "Sudden death en cours..."
+        ? "Mort subite en cours..."
         : `Mot suivant (${state.currentWordIndex}/${state.totalWords})`;
     }
     if (state.phase === "sudden_death") {
-      return `SUDDEN DEATH #${state.suddenDeathRound}`;
+      return `MORT SUBITE #${state.suddenDeathRound}`;
     }
     return `Mot ${state.currentWordIndex}/${state.totalWords}`;
   }, [players, state]);
@@ -181,7 +181,7 @@ export const BuzzwordDuelMinigame: React.FC<BuzzwordDuelMinigameProps> = ({
               : canAnswer
               ? "Choisis ta reponse avant la fin du chrono"
               : "Attends la resolution du mot"
-            : "Mode spectateur: lecture seule"}
+            : "Mode spectateur : lecture seule"}
         </div>
       </div>
     </div>

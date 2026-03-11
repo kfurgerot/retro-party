@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AVATARS } from "@/types/game";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -140,19 +140,19 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
     }
   };
 
-  const submitHost = () => {
+  const submitHost = useCallback(() => {
     if (!canCreate) return;
     setError(null);
     setPending("hosting");
     onHost(name.trim(), avatar);
-  };
+  }, [avatar, canCreate, name, onHost]);
 
-  const submitJoin = () => {
+  const submitJoin = useCallback(() => {
     if (!canJoin) return;
     setError(null);
     setPending("joining");
     onJoin(cleanCode(code), name.trim(), avatar);
-  };
+  }, [avatar, canJoin, code, name, onJoin]);
 
   const submitStart = () => {
     if (!canLaunch) return;

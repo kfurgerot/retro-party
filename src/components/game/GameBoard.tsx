@@ -135,15 +135,15 @@ export const GameBoard: React.FC<GameBoardProps> = ({
       }
   >(null);
 
-  const computeFitScale = (containerW: number, containerH: number) => {
+  const computeFitScale = useCallback((containerW: number, containerH: number) => {
     const pad = 16;
     const availW = Math.max(0, containerW - pad);
     const availH = Math.max(0, containerH - pad);
     if (width <= 0 || height <= 0) return 1;
     return Math.min(availW / width, availH / height);
-  };
+  }, [height, width]);
 
-  const clampOffset = (nextScale: number, nextOffset: Point, containerW: number, containerH: number) => {
+  const clampOffset = useCallback((nextScale: number, nextOffset: Point, containerW: number, containerH: number) => {
     const pad = 8;
     const contentW = width * nextScale;
     const contentH = height * nextScale;
@@ -158,7 +158,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
       x: clamp(nextOffset.x, minX, maxX),
       y: clamp(nextOffset.y, minY, maxY),
     };
-  };
+  }, [height, width]);
 
   const focusOnPosition = useCallback(
     (position: number, boostScale: boolean) => {
@@ -187,10 +187,10 @@ export const GameBoard: React.FC<GameBoardProps> = ({
       setScale(nextScale);
       setOffset(clampOffset(nextScale, nextOffset, rect.width, rect.height));
     },
-    [bounds.minX, bounds.minY, tiles]
+    [bounds.minX, bounds.minY, clampOffset, computeFitScale, tiles]
   );
 
-  const resetView = (animate = false) => {
+  const resetView = useCallback((animate = false) => {
     const el = containerRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
@@ -227,7 +227,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
 
     setScale(nextScale);
     setOffset(clampOffset(nextScale, centered, rect.width, rect.height));
-  };
+  }, [clampOffset, computeFitScale, height, width]);
 
   const zoomOutKeepingPosition = useCallback(
     (position: number, animate = false) => {
@@ -272,7 +272,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
       setScale(nextScale);
       setOffset(clampOffset(nextScale, wanted, rect.width, rect.height));
     },
-    [bounds.minX, bounds.minY, tiles]
+    [bounds.minX, bounds.minY, clampOffset, computeFitScale, resetView, tiles]
   );
 
   const tryAutoZoomOut = useCallback(() => {
@@ -286,7 +286,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
       return;
     }
     resetView(true);
-  }, [eventOverlayActive, zoomOutKeepingPosition]);
+  }, [eventOverlayActive, resetView, zoomOutKeepingPosition]);
 
   useLayoutEffect(() => {
     const el = containerRef.current;

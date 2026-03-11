@@ -1,10 +1,10 @@
+@import '@fontsource/press-start-2p';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@import '@fontsource/press-start-2p';
-
-/* Rétro Party - Pixel Art Design System */
+/* Retro Party - Pixel Art Design System */
 
 @layer base {
   :root {
@@ -272,3 +272,4 @@
     animation: move-step 0.3s ease-out;
   }
 }
+

@@ -334,6 +334,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     gameState.currentQuestion,
     gameState.diceValue,
     gameState.isRolling,
+    gameState.pendingPreRollEffect,
+    gameState.pendingDoubleRoll,
     isMyTurn,
     isPathChoiceActive,
     isKudoPurchaseActive,
@@ -368,7 +370,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         bugIntroTimerRef.current = null;
       }
     };
-  }, [bugSmashState?.targetPlayerId, bugSmashState?.startAt]);
+  }, [bugSmashState]);
 
   const isMobile = () => {
     if (typeof window === "undefined") return true;
