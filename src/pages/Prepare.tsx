@@ -42,7 +42,7 @@ const PreparePage = () => {
       const response = await api.listTemplates();
       setTemplates(response.items);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur inconnue");
+      setError(err instanceof Error ? err.message : fr.prepare.unknownError);
     } finally {
       setLoadingTemplates(false);
     }
@@ -74,7 +74,7 @@ const PreparePage = () => {
 
   const title = useMemo(() => {
     if (!user) return fr.prepare.hostLogin;
-    return `Mes templates - ${user.displayName}`;
+    return fr.prepare.myTemplatesTitle.replace("{name}", user.displayName);
   }, [user]);
 
   const submitAuth = async (event: FormEvent) => {
@@ -84,7 +84,7 @@ const PreparePage = () => {
     try {
       if (authMode === "register") {
         if (!displayName.trim()) {
-          setError("Nom d'affichage requis");
+          setError(fr.prepare.displayNameRequired);
           return;
         }
         const response = await api.register({
@@ -99,7 +99,7 @@ const PreparePage = () => {
       }
       setPassword("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur inconnue");
+      setError(err instanceof Error ? err.message : fr.prepare.unknownError);
     }
   };
 
@@ -107,20 +107,20 @@ const PreparePage = () => {
     setError(null);
     setInfoMessage(null);
     if (!email.trim()) {
-      setError("Renseigne ton email pour recevoir le lien.");
+      setError(fr.prepare.forgotPasswordNeedEmail);
       return;
     }
     try {
       const response = await api.forgotPassword({ email: email.trim() });
       setInfoMessage(response.message);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur inconnue");
+      setError(err instanceof Error ? err.message : fr.prepare.unknownError);
     }
   };
 
   const submitCreateTemplate = async () => {
     if (!newTemplateName.trim()) {
-      setError("Nom de template requis");
+      setError(fr.prepare.templateNameRequired);
       return;
     }
     setCreatingTemplate(true);
@@ -136,7 +136,7 @@ const PreparePage = () => {
       setNewTemplateDescription("");
       navigate(`/prepare/templates/${response.template.id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur inconnue");
+      setError(err instanceof Error ? err.message : fr.prepare.unknownError);
     } finally {
       setCreatingTemplate(false);
     }
@@ -151,7 +151,7 @@ const PreparePage = () => {
       const nextName = encodeURIComponent(user.displayName || fr.prepare.hostPlaceholder);
       navigate(`/play?mode=join&code=${response.roomCode}&name=${nextName}&avatar=0&auto=1`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur inconnue");
+      setError(err instanceof Error ? err.message : fr.prepare.unknownError);
     }
   };
 
@@ -161,7 +161,7 @@ const PreparePage = () => {
       await api.deleteTemplate(templateId);
       setTemplates((prev) => prev.filter((item) => item.id !== templateId));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur inconnue");
+      setError(err instanceof Error ? err.message : fr.prepare.unknownError);
     }
   };
 
@@ -173,7 +173,7 @@ const PreparePage = () => {
       setUser(null);
       setTemplates([]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur inconnue");
+      setError(err instanceof Error ? err.message : fr.prepare.unknownError);
     }
   };
 
@@ -190,11 +190,11 @@ const PreparePage = () => {
             onClick={() => navigate("/")}
             className={`w-full sm:w-auto ${neutralSecondaryBtn}`}
           >
-            Accueil
+            {fr.prepare.home}
           </Button>
         </CardHeader>
         <CardContent className="space-y-4">
-          {loading && <p className="text-sm text-slate-300">Chargement...</p>}
+          {loading && <p className="text-sm text-slate-300">{fr.prepare.loading}</p>}
           {error && <p className="text-sm text-red-300">{error}</p>}
           {infoMessage && <p className="text-sm text-emerald-300">{infoMessage}</p>}
 
@@ -207,7 +207,7 @@ const PreparePage = () => {
                   className={authMode === "login" ? activeCyanBtn : neutralSecondaryBtn}
                   onClick={() => setAuthMode("login")}
                 >
-                  Connexion
+                  {fr.prepare.login}
                 </Button>
                 <Button
                   type="button"
@@ -215,12 +215,12 @@ const PreparePage = () => {
                   className={authMode === "register" ? activeCyanBtn : neutralSecondaryBtn}
                   onClick={() => setAuthMode("register")}
                 >
-                  Inscription
+                  {fr.prepare.register}
                 </Button>
               </div>
               {authMode === "register" && (
                 <div className="grid gap-1">
-                  <Label htmlFor="displayName">Nom d'affichage</Label>
+                  <Label htmlFor="displayName">{fr.prepare.displayName}</Label>
                   <Input
                     id="displayName"
                     value={displayName}
@@ -230,18 +230,18 @@ const PreparePage = () => {
                 </div>
               )}
               <div className="grid gap-1">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{fr.prepare.email}</Label>
                 <Input
                   id="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="host@company.com"
+                  placeholder={fr.prepare.emailPlaceholder}
                   required
                 />
               </div>
               <div className="grid gap-1">
-                <Label htmlFor="password">Mot de passe</Label>
+                <Label htmlFor="password">{fr.prepare.password}</Label>
                 <Input
                   id="password"
                   type="password"
@@ -251,11 +251,11 @@ const PreparePage = () => {
                 />
               </div>
               <Button type="submit" variant="secondary" className={`w-fit ${activeCyanBtn}`}>
-                {authMode === "register" ? "Creer mon compte" : "Se connecter"}
+                {authMode === "register" ? fr.prepare.createAccount : fr.prepare.signIn}
               </Button>
               {authMode === "login" && (
                 <Button type="button" variant="link" className="w-fit p-0" onClick={submitForgotPassword}>
-                  Mot de passe oublie ?
+                  {fr.prepare.forgotPassword}
                 </Button>
               )}
             </form>
@@ -265,21 +265,21 @@ const PreparePage = () => {
             <>
               <div className="flex flex-wrap items-end gap-2 rounded border border-cyan-300/20 p-3">
                 <div className="w-full min-w-0 flex-1 space-y-1 sm:min-w-56">
-                  <Label htmlFor="templateName">Nouveau template</Label>
+                  <Label htmlFor="templateName">{fr.prepare.newTemplate}</Label>
                   <Input
                     id="templateName"
                     value={newTemplateName}
                     onChange={(e) => setNewTemplateName(e.target.value)}
-                    placeholder="Sprint retro equipe API"
+                    placeholder={fr.prepare.newTemplatePlaceholder}
                   />
                 </div>
                 <div className="w-full min-w-0 flex-1 space-y-1 sm:min-w-56">
-                  <Label htmlFor="templateDescription">Description</Label>
+                  <Label htmlFor="templateDescription">{fr.prepare.description}</Label>
                   <Input
                     id="templateDescription"
                     value={newTemplateDescription}
                     onChange={(e) => setNewTemplateDescription(e.target.value)}
-                    placeholder="Optionnel"
+                    placeholder={fr.prepare.optional}
                   />
                 </div>
                 <Button
@@ -288,21 +288,21 @@ const PreparePage = () => {
                   disabled={creatingTemplate}
                   className={`w-full sm:w-auto ${activeCyanBtn}`}
                 >
-                  {creatingTemplate ? "Creation..." : "Creer"}
+                  {creatingTemplate ? fr.prepare.creating : fr.prepare.create}
                 </Button>
                 <Button
                   variant="secondary"
                   onClick={handleLogout}
                   className={`w-full sm:w-auto ${neutralSecondaryBtn}`}
                 >
-                  Se deconnecter
+                  {fr.prepare.logout}
                 </Button>
               </div>
 
               {loadingTemplates ? (
-                <p className="text-sm text-slate-300">Chargement des templates...</p>
+                <p className="text-sm text-slate-300">{fr.prepare.loadingTemplates}</p>
               ) : templates.length === 0 ? (
-                <p className="text-sm text-slate-300">Aucun template pour le moment.</p>
+                <p className="text-sm text-slate-300">{fr.prepare.noTemplates}</p>
               ) : (
                 <div className="grid gap-3">
                   {templates.map((template) => (
@@ -312,7 +312,7 @@ const PreparePage = () => {
                     >
                       <div className="min-w-0 flex-1">
                         <p className="font-semibold text-cyan-100 break-words">{template.name}</p>
-                        <p className="text-xs text-slate-300 break-words">{template.description || "Sans description"}</p>
+                        <p className="text-xs text-slate-300 break-words">{template.description || fr.prepare.noDescription}</p>
                       </div>
                       <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
                         <Button
@@ -320,7 +320,7 @@ const PreparePage = () => {
                           className={`w-full sm:w-auto ${neutralSecondaryBtn}`}
                           onClick={() => navigate(`/prepare/templates/${template.id}`)}
                         >
-                          Editer
+                          {fr.prepare.edit}
                         </Button>
                         <Button
                           variant="secondary"
@@ -334,7 +334,7 @@ const PreparePage = () => {
                           className={`w-full sm:w-auto ${dangerBtn}`}
                           onClick={() => deleteTemplate(template.id)}
                         >
-                          Supprimer
+                          {fr.prepare.delete}
                         </Button>
                       </div>
                     </div>

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RetroScreenBackground } from "@/components/screens/RetroScreenBackground";
 import { api } from "@/net/api";
+import { fr } from "@/i18n/fr";
 
 const neutralSecondaryBtn =
   "border-cyan-300/50 bg-cyan-500/15 text-cyan-50 shadow-[0_0_0_1px_rgba(34,211,238,0.18)] hover:bg-cyan-500/25 hover:text-cyan-50";
@@ -31,15 +32,15 @@ const ResetPasswordPage = () => {
     setSuccess(null);
 
     if (!token) {
-      setError("Token manquant ou invalide.");
+      setError(fr.resetPassword.missingToken);
       return;
     }
     if (password.length < 8) {
-      setError("Le mot de passe doit contenir au moins 8 caracteres.");
+      setError(fr.resetPassword.passwordTooShort);
       return;
     }
     if (password !== confirmPassword) {
-      setError("Les mots de passe ne correspondent pas.");
+      setError(fr.resetPassword.passwordMismatch);
       return;
     }
 
@@ -50,7 +51,7 @@ const ResetPasswordPage = () => {
       setPassword("");
       setConfirmPassword("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur inconnue");
+      setError(err instanceof Error ? err.message : fr.resetPassword.unknownError);
     } finally {
       setLoading(false);
     }
@@ -63,13 +64,13 @@ const ResetPasswordPage = () => {
         <CardHeader className="space-y-2">
           <p className="text-center text-[10px] uppercase tracking-[0.22em] text-cyan-200/75">Retro Party</p>
           <CardTitle className="text-center text-base font-semibold uppercase tracking-[0.14em] text-cyan-100/90">
-            Reinitialiser le mot de passe
+            {fr.resetPassword.title}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {!token && (
             <p className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
-              Lien invalide: token manquant.
+              {fr.resetPassword.invalidLink}
             </p>
           )}
           {error && (
@@ -84,7 +85,7 @@ const ResetPasswordPage = () => {
           <form className="grid gap-3" onSubmit={onSubmit}>
             <div className="grid gap-1">
               <Label htmlFor="new-password" className="text-cyan-100">
-                Nouveau mot de passe
+                {fr.resetPassword.newPassword}
               </Label>
               <Input
                 id="new-password"
@@ -97,7 +98,7 @@ const ResetPasswordPage = () => {
             </div>
             <div className="grid gap-1">
               <Label htmlFor="confirm-password" className="text-cyan-100">
-                Confirmer le mot de passe
+                {fr.resetPassword.confirmPassword}
               </Label>
               <Input
                 id="confirm-password"
@@ -110,7 +111,7 @@ const ResetPasswordPage = () => {
             </div>
             <div className="flex flex-col gap-2 sm:flex-row">
               <Button type="submit" variant="secondary" className={activeCyanBtn} disabled={loading || !token}>
-                {loading ? "Envoi..." : "Valider"}
+                {loading ? fr.resetPassword.sending : fr.resetPassword.validate}
               </Button>
               <Button
                 type="button"
@@ -118,7 +119,7 @@ const ResetPasswordPage = () => {
                 className={neutralSecondaryBtn}
                 onClick={() => navigate("/prepare")}
               >
-                Retour connexion
+                {fr.resetPassword.backLogin}
               </Button>
             </div>
           </form>

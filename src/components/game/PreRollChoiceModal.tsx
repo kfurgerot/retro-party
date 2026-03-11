@@ -1,5 +1,5 @@
 import React from "react";
-import { ShopCatalogItem, ShopItemType } from "@/types/game";
+import { ShopItemType } from "@/types/game";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,6 +11,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import { fr } from "@/i18n/fr";
 
 type ItemChoice = {
   type: ShopItemType;
@@ -46,9 +47,9 @@ export const PreRollChoiceModal: React.FC<PreRollChoiceModalProps> = ({
     <AlertDialog open={open} onOpenChange={() => {}}>
       <AlertDialogContent className="border-cyan-300/30 bg-slate-950/95 text-cyan-50 max-w-2xl">
         <AlertDialogHeader>
-          <AlertDialogTitle>Preparation du tour</AlertDialogTitle>
+          <AlertDialogTitle>{fr.preRollChoice.title}</AlertDialogTitle>
           <AlertDialogDescription className="text-slate-300">
-            Tu peux utiliser un objet avant le lancer, ou continuer sans objet.
+            {fr.preRollChoice.description}
           </AlertDialogDescription>
         </AlertDialogHeader>
 
@@ -87,14 +88,14 @@ export const PreRollChoiceModal: React.FC<PreRollChoiceModalProps> = ({
             disabled={!canInteract}
             onClick={onContinue}
           >
-            Continuer
+            {fr.preRollChoice.continue}
           </AlertDialogCancel>
           <AlertDialogAction
             className={activeBtnClass}
             disabled={!canInteract || !selectedType}
             onClick={onConfirmSelection}
           >
-            Utiliser cet objet
+            {fr.preRollChoice.useItem}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

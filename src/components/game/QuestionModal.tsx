@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { QuestionState, Player } from "@/types/game";
 import { PixelCard } from "./PixelCard";
 import { PixelButton } from "./PixelButton";
+import { fr } from "@/i18n/fr";
 
 type Props = {
   question: QuestionState;
@@ -16,7 +17,7 @@ const TYPE_THEME: Record<
   { title: string; icon: string; border: string; glow: string; badge: string; panel: string }
 > = {
   blue: {
-    title: "BLEU | Comprendre (faits et realite)",
+    title: fr.questionModal.blueTitle,
     icon: "B",
     border: "border-[hsl(var(--tile-blue))]",
     glow: "shadow-[6px_6px_0_rgba(0,0,0,0.55),0_0_24px_hsl(var(--tile-blue)/0.45)]",
@@ -24,7 +25,7 @@ const TYPE_THEME: Record<
     panel: "bg-[linear-gradient(180deg,hsl(var(--tile-blue)/0.25)_0%,hsl(var(--card))_40%)]",
   },
   green: {
-    title: "VERT | Ameliorer (solutions et idees)",
+    title: fr.questionModal.greenTitle,
     icon: "V",
     border: "border-[hsl(var(--tile-green))]",
     glow: "shadow-[6px_6px_0_rgba(0,0,0,0.55),0_0_24px_hsl(var(--tile-green)/0.45)]",
@@ -32,7 +33,7 @@ const TYPE_THEME: Record<
     panel: "bg-[linear-gradient(180deg,hsl(var(--tile-green)/0.25)_0%,hsl(var(--card))_40%)]",
   },
   red: {
-    title: "ROUGE | Frictions, problemes et irritants",
+    title: fr.questionModal.redTitle,
     icon: "R",
     border: "border-[hsl(var(--tile-red))]",
     glow: "shadow-[6px_6px_0_rgba(0,0,0,0.55),0_0_24px_hsl(var(--tile-red)/0.45)]",
@@ -40,7 +41,7 @@ const TYPE_THEME: Record<
     panel: "bg-[linear-gradient(180deg,hsl(var(--tile-red)/0.25)_0%,hsl(var(--card))_40%)]",
   },
   purple: {
-    title: "PURPLE | Vision, projection et sens",
+    title: fr.questionModal.violetTitle,
     icon: "I",
     border: "border-[hsl(var(--tile-violet))]",
     glow: "shadow-[6px_6px_0_rgba(0,0,0,0.55),0_0_24px_hsl(var(--tile-violet)/0.45)]",
@@ -48,7 +49,7 @@ const TYPE_THEME: Record<
     panel: "bg-[linear-gradient(180deg,hsl(var(--tile-violet)/0.25)_0%,hsl(var(--card))_40%)]",
   },
   violet: {
-    title: "VIOLET | Vision, projection et sens",
+    title: fr.questionModal.violetTitle,
     icon: "I",
     border: "border-[hsl(var(--tile-violet))]",
     glow: "shadow-[6px_6px_0_rgba(0,0,0,0.55),0_0_24px_hsl(var(--tile-violet)/0.45)]",
@@ -56,7 +57,7 @@ const TYPE_THEME: Record<
     panel: "bg-[linear-gradient(180deg,hsl(var(--tile-violet)/0.25)_0%,hsl(var(--card))_40%)]",
   },
   bonus: {
-    title: "BONUS | Kudobox",
+    title: fr.questionModal.bonusTitle,
     icon: "*",
     border: "border-[hsl(var(--tile-star))]",
     glow: "shadow-[6px_6px_0_rgba(0,0,0,0.55),0_0_24px_hsl(var(--tile-star)/0.45)]",
@@ -70,7 +71,7 @@ export function QuestionModal({ question, players, myPlayerId, onVote, onValidat
   const theme = TYPE_THEME[question.type];
 
   const targetName = useMemo(() => {
-    return players.find((p) => p.id === question.targetPlayerId)?.name ?? "Joueur";
+    return players.find((p) => p.id === question.targetPlayerId)?.name ?? fr.questionModal.defaultPlayer;
   }, [players, question.targetPlayerId]);
 
   const upCount = question.votes.up.length;
@@ -99,7 +100,7 @@ export function QuestionModal({ question, players, myPlayerId, onVote, onValidat
                 <div className="text-[11px] font-bold uppercase tracking-wide">{theme.title}</div>
               </div>
               <div className="mt-2 text-sm opacity-90">
-                Question pour <span className="font-semibold">{targetName}</span>
+                {fr.questionModal.questionFor} <span className="font-semibold">{targetName}</span>
               </div>
             </div>
             <div className="flex items-center gap-2 text-xs">
@@ -123,24 +124,24 @@ export function QuestionModal({ question, players, myPlayerId, onVote, onValidat
                   onClick={() => onVote("up")}
                   className="border-emerald-400 bg-emerald-500/80 text-black"
                 >
-                  + Utile
+                  + {fr.questionModal.useful}
                 </PixelButton>
                 <PixelButton
                   onClick={() => onVote("down")}
                   className="border-rose-400 bg-rose-500/80 text-white"
                 >
-                  - A creuser
+                  - {fr.questionModal.toExplore}
                 </PixelButton>
               </div>
             ) : (
               <div className="text-sm opacity-80">
-                Reponds a voix haute, puis valide quand tu as termine.
+                {fr.questionModal.answerInstruction}
               </div>
             )}
 
             {isTarget && (
               <PixelButton onClick={onValidate} variant="primary">
-                Valider ma reponse
+                {fr.questionModal.validateAnswer}
               </PixelButton>
             )}
           </div>

@@ -27,8 +27,7 @@ const Home = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-center text-sm text-slate-300">
-            Choisis ton mode : lance une partie immediatement ou prepare une session personnalisee
-            pour plus tard.
+            {fr.home.modeDescription}
           </p>
           <div className="grid gap-3 sm:grid-cols-2">
             <Button

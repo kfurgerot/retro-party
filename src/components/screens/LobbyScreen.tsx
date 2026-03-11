@@ -44,12 +44,12 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({ onStartGame }) => {
       <PixelCard className="w-full max-w-3xl p-6 text-center">
         <div className="font-pixel text-2xl">Retro Party</div>
         <div className="mt-2 text-sm opacity-80">
-          Choisis le nombre de joueurs, puis lance la partie.
+          {fr.lobbyLocal.choosePlayersHint}
         </div>
       </PixelCard>
 
       <PixelCard className="w-full max-w-3xl p-6">
-        <div className="font-pixel text-lg mb-4">Nombre de joueurs</div>
+        <div className="font-pixel text-lg mb-4">{fr.lobbyLocal.playerCount}</div>
         <div className="flex flex-wrap gap-2">
           {selectableCounts.map(n => (
             <button
@@ -68,7 +68,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({ onStartGame }) => {
 
       {playerCount && (
         <PixelCard className="w-full max-w-3xl p-6">
-          <div className="font-pixel text-lg mb-4">Joueurs</div>
+          <div className="font-pixel text-lg mb-4">{fr.lobbyLocal.playersTitle}</div>
 
           <div className="flex flex-col gap-3">
             {players.map((p, idx) => (
@@ -96,7 +96,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({ onStartGame }) => {
 
           <div className="mt-6 flex justify-end">
             <PixelButton onClick={start} variant="primary" disabled={players.length < 1}>
-              Lancer la partie
+              {fr.lobbyLocal.launchParty}
             </PixelButton>
           </div>
         </PixelCard>

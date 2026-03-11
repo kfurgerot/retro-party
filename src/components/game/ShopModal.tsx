@@ -11,6 +11,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import { fr } from "@/i18n/fr";
 
 interface ShopModalProps {
   open: boolean;
@@ -37,9 +38,9 @@ export const ShopModal: React.FC<ShopModalProps> = ({
     <AlertDialog open={open} onOpenChange={() => {}}>
       <AlertDialogContent className="border-cyan-300/30 bg-slate-950/95 text-cyan-50 max-w-2xl">
         <AlertDialogHeader>
-          <AlertDialogTitle>Boutique</AlertDialogTitle>
+          <AlertDialogTitle>{fr.shopModal.title}</AlertDialogTitle>
           <AlertDialogDescription className="text-slate-300">
-            Points disponibles: <span className="font-semibold text-cyan-200">{points}</span>
+            {fr.shopModal.availablePoints}: <span className="font-semibold text-cyan-200">{points}</span>
           </AlertDialogDescription>
         </AlertDialogHeader>
         <div className="grid gap-2 max-h-[55vh] overflow-auto pr-1">
@@ -52,7 +53,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                     <div className="text-sm font-semibold">{item.label}</div>
                     <div className="text-xs text-slate-300 mt-1">{item.description}</div>
                   </div>
-                  <div className="text-sm font-bold text-amber-300">{item.cost} pts</div>
+                  <div className="text-sm font-bold text-amber-300">{item.cost} {fr.shopModal.pointsUnit}</div>
                 </div>
                 <div className="mt-2 flex justify-end">
                   <button
@@ -66,7 +67,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                     )}
                     onClick={() => onBuy(item.type)}
                   >
-                    Acheter
+                    {fr.shopModal.buy}
                   </button>
                 </div>
               </div>
@@ -75,10 +76,10 @@ export const ShopModal: React.FC<ShopModalProps> = ({
         </div>
         <AlertDialogFooter>
           <AlertDialogCancel className={cn(neutralBtnClass, "text-cyan-100")} onClick={onClose}>
-            Continuer
+            {fr.shopModal.continue}
           </AlertDialogCancel>
           <AlertDialogAction className={activeBtnClass} onClick={onClose}>
-            Fermer
+            {fr.shopModal.close}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

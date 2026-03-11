@@ -10,6 +10,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import { fr } from "@/i18n/fr";
 
 interface TargetPlayerModalProps {
   open: boolean;
@@ -32,9 +33,9 @@ export const TargetPlayerModal: React.FC<TargetPlayerModalProps> = ({
     <AlertDialog open={open} onOpenChange={() => {}}>
       <AlertDialogContent className="border-cyan-300/30 bg-slate-950/95 text-cyan-50">
         <AlertDialogHeader>
-          <AlertDialogTitle>Choisir une cible</AlertDialogTitle>
+          <AlertDialogTitle>{fr.targetPlayerModal.title}</AlertDialogTitle>
           <AlertDialogDescription className="text-slate-300">
-            {action?.label ?? "Action"}: selectionne un joueur.
+            {fr.targetPlayerModal.description.replace("{action}", action?.label ?? fr.targetPlayerModal.actionFallback)}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <div className="grid gap-2">
@@ -46,13 +47,15 @@ export const TargetPlayerModal: React.FC<TargetPlayerModalProps> = ({
               onClick={() => onSelect(player.id)}
             >
               <span className="text-sm font-semibold">{player.name}</span>
-              <span className="ml-2 text-xs text-slate-300">PTS {player.points ?? 0} | KUDO {player.stars}</span>
+              <span className="ml-2 text-xs text-slate-300">
+                {fr.targetPlayerModal.pointsLabel} {player.points ?? 0} | {fr.targetPlayerModal.kudoLabel} {player.stars}
+              </span>
             </button>
           ))}
         </div>
         <AlertDialogFooter>
           <AlertDialogCancel className={cn(neutralBtnClass, "text-cyan-100")} onClick={onCancel}>
-            Annuler
+            {fr.targetPlayerModal.cancel}
           </AlertDialogCancel>
         </AlertDialogFooter>
       </AlertDialogContent>

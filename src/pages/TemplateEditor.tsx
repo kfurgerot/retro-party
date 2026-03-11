@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,27 +43,27 @@ const THEME_META: Record<
   { label: string; className: string; chipClassName: string }
 > = {
   blue: {
-    label: "Comprendre",
+    label: fr.templateEditor.understand,
     className: "text-blue-300",
     chipClassName: "bg-tile-blue",
   },
   green: {
-    label: "Ameliorer",
+    label: fr.templateEditor.improve,
     className: "text-green-300",
     chipClassName: "bg-tile-green",
   },
   red: {
-    label: "Frictions",
+    label: fr.templateEditor.frictions,
     className: "text-red-300",
     chipClassName: "bg-tile-red",
   },
   violet: {
-    label: "Vision",
+    label: fr.templateEditor.vision,
     className: "text-violet-300",
     chipClassName: "bg-tile-violet",
   },
   bonus: {
-    label: "Kudobox",
+    label: fr.templateEditor.kudobox,
     className: "text-yellow-300",
     chipClassName: "bg-tile-star",
   },
@@ -137,7 +137,7 @@ const TemplateEditorPage = () => {
       setBaseConfig(nextTemplate.baseConfig ?? {});
       setQuestions(questionsResponse.items);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur inconnue");
+      setError(err instanceof Error ? err.message : fr.templateEditor.unknownError);
     } finally {
       setLoading(false);
     }
@@ -159,7 +159,7 @@ const TemplateEditorPage = () => {
       });
       setTemplate(response.template);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur inconnue");
+      setError(err instanceof Error ? err.message : fr.templateEditor.unknownError);
     } finally {
       setSaving(false);
     }
@@ -176,7 +176,7 @@ const TemplateEditorPage = () => {
       setQuestions((prev) => [...prev, response.question].sort((a, b) => a.sortOrder - b.sortOrder));
       setNewQuestionText("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur inconnue");
+      setError(err instanceof Error ? err.message : fr.templateEditor.unknownError);
     }
   };
 
@@ -189,7 +189,7 @@ const TemplateEditorPage = () => {
       });
       setQuestions((prev) => prev.map((item) => (item.id === question.id ? response.question : item)));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur inconnue");
+      setError(err instanceof Error ? err.message : fr.templateEditor.unknownError);
     }
   };
 
@@ -210,7 +210,7 @@ const TemplateEditorPage = () => {
       setEditingQuestion(null);
       setEditingQuestionText("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur inconnue");
+      setError(err instanceof Error ? err.message : fr.templateEditor.unknownError);
     } finally {
       setSavingQuestionEdit(false);
     }
@@ -225,7 +225,7 @@ const TemplateEditorPage = () => {
       });
       setQuestions((prev) => prev.map((item) => (item.id === question.id ? response.question : item)));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur inconnue");
+      setError(err instanceof Error ? err.message : fr.templateEditor.unknownError);
     }
   };
 
@@ -236,7 +236,7 @@ const TemplateEditorPage = () => {
       await api.deleteTemplateQuestion(templateId, questionId);
       setQuestions((prev) => prev.filter((item) => item.id !== questionId));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur inconnue");
+      setError(err instanceof Error ? err.message : fr.templateEditor.unknownError);
     }
   };
 
@@ -257,7 +257,7 @@ const TemplateEditorPage = () => {
       setQuestions((prev) => prev.filter((question) => normalizeCategory(question.category) !== theme));
       setBulkDeleteTheme(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur inconnue");
+      setError(err instanceof Error ? err.message : fr.templateEditor.unknownError);
     } finally {
       setDeletingThemeQuestions(false);
     }
@@ -281,7 +281,7 @@ const TemplateEditorPage = () => {
       );
       setQuestions(response.items);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur inconnue");
+      setError(err instanceof Error ? err.message : fr.templateEditor.unknownError);
       load();
     }
   };
@@ -293,7 +293,7 @@ const TemplateEditorPage = () => {
       const response = await api.launchTemplateRoom(templateId);
       navigate(`/play?mode=join&code=${response.roomCode}&name=${fr.prepare.hostPlaceholder}&avatar=0&auto=1`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur inconnue");
+      setError(err instanceof Error ? err.message : fr.templateEditor.unknownError);
     }
   };
 
@@ -330,7 +330,7 @@ const TemplateEditorPage = () => {
       <Card className="relative z-10 w-full min-w-0 max-w-5xl border-cyan-300/40 bg-slate-900/55 shadow-[0_0_0_1px_rgba(34,211,238,0.18),0_0_24px_rgba(34,211,238,0.12)] backdrop-blur">
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle className="text-base font-semibold uppercase tracking-[0.14em] text-cyan-100/90">
-            Edition template
+            {fr.templateEditor.title}
           </CardTitle>
           <div className="flex w-full flex-wrap gap-2 sm:w-auto">
             <Button
@@ -338,31 +338,31 @@ const TemplateEditorPage = () => {
               className={`w-full sm:w-auto ${neutralSecondaryBtn}`}
               onClick={() => navigate("/prepare")}
             >
-              Mes templates
+              {fr.templateEditor.myTemplates}
             </Button>
             <Button
               variant="secondary"
               onClick={() => navigate("/")}
               className={`w-full sm:w-auto ${neutralSecondaryBtn}`}
             >
-              Accueil
+              {fr.templateEditor.home}
             </Button>
           </div>
         </CardHeader>
         <CardContent className="min-w-0 space-y-4">
-          {loading && <p className="text-sm text-slate-300">Chargement...</p>}
-          {!validTemplateId && <p className="text-sm text-red-300">Template invalide.</p>}
+          {loading && <p className="text-sm text-slate-300">{fr.templateEditor.loading}</p>}
+          {!validTemplateId && <p className="text-sm text-red-300">{fr.templateEditor.invalidTemplate}</p>}
           {error && <p className="text-sm text-red-300">{error}</p>}
 
           {!loading && template && (
             <>
               <div className="grid gap-3 rounded border border-cyan-300/20 p-3">
                 <div className="grid gap-1">
-                  <Label htmlFor="template-name">Nom</Label>
+                  <Label htmlFor="template-name">{fr.templateEditor.name}</Label>
                   <Input id="template-name" value={name} onChange={(e) => setName(e.target.value)} />
                 </div>
                 <div className="grid gap-1">
-                  <Label htmlFor="template-description">Description</Label>
+                  <Label htmlFor="template-description">{fr.templateEditor.description}</Label>
                   <Input
                     id="template-description"
                     value={description}
@@ -376,7 +376,7 @@ const TemplateEditorPage = () => {
                     disabled={!canSave}
                     className={`w-full sm:w-auto ${activeCyanBtn}`}
                   >
-                    {saving ? "Sauvegarde..." : "Sauvegarder"}
+                    {saving ? fr.templateEditor.saving : fr.templateEditor.save}
                   </Button>
                   <Button
                     variant="secondary"
@@ -390,19 +390,19 @@ const TemplateEditorPage = () => {
 
               <div className="grid min-w-0 gap-4 rounded border border-cyan-300/20 p-3">
                 <div className="min-w-0 rounded-lg border border-cyan-300/20 bg-slate-950/30 p-3">
-                  <p className="mb-3 text-sm font-semibold text-cyan-100">Ajouter une question</p>
+                  <p className="mb-3 text-sm font-semibold text-cyan-100">{fr.templateEditor.addQuestion}</p>
                   <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
                     <Input
                       value={newQuestionText}
                       onChange={(e) => setNewQuestionText(e.target.value)}
-                      placeholder="Nouvelle question"
+                      placeholder={fr.templateEditor.newQuestionPlaceholder}
                     />
                     <Button
                       variant="secondary"
                       onClick={addQuestion}
                       className={`w-full sm:w-auto ${activeCyanBtn}`}
                     >
-                      Ajouter
+                      {fr.templateEditor.add}
                     </Button>
                   </div>
                   <div className="mt-2 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
@@ -431,36 +431,36 @@ const TemplateEditorPage = () => {
                 </div>
 
                 <div className="min-w-0 rounded-lg border border-cyan-300/20 bg-slate-950/20 p-3">
-                  <p className="mb-3 text-sm font-semibold text-cyan-100">Questions existantes</p>
+                  <p className="mb-3 text-sm font-semibold text-cyan-100">{fr.templateEditor.existingQuestions}</p>
                   <div className="mb-3 grid gap-2 sm:grid-cols-2">
                     <div className="grid gap-1">
-                      <Label htmlFor="theme-filter">Type de question</Label>
+                      <Label htmlFor="theme-filter">{fr.templateEditor.questionType}</Label>
                       <select
                         id="theme-filter"
                         value={activeTab}
                         onChange={(e) => setActiveTab(e.target.value as ThemeTab)}
                         className="h-10 rounded-md border border-input bg-background px-3 text-sm"
                       >
-                        <option value="all">Tous ({counts.all})</option>
+                        <option value="all">{fr.templateEditor.all} ({counts.all})</option>
                         <option value="blue">{THEME_META.blue.label} ({counts.blue})</option>
                         <option value="green">{THEME_META.green.label} ({counts.green})</option>
                         <option value="red">{THEME_META.red.label} ({counts.red})</option>
                         <option value="violet">{THEME_META.violet.label} ({counts.violet})</option>
                         <option value="bonus">{THEME_META.bonus.label} ({counts.bonus})</option>
-                        <option value="other">Autres ({counts.other})</option>
+                        <option value="other">{fr.templateEditor.others} ({counts.other})</option>
                       </select>
                     </div>
                     <div className="grid gap-1">
-                      <Label htmlFor="status-filter">Statut</Label>
+                      <Label htmlFor="status-filter">{fr.templateEditor.status}</Label>
                       <select
                         id="status-filter"
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
                         className="h-10 rounded-md border border-input bg-background px-3 text-sm"
                       >
-                        <option value="all">Tous</option>
-                        <option value="active">Actifs</option>
-                        <option value="inactive">Inactifs</option>
+                        <option value="all">{fr.templateEditor.all}</option>
+                        <option value="active">{fr.templateEditor.activePlural}</option>
+                        <option value="inactive">{fr.templateEditor.inactivePlural}</option>
                       </select>
                     </div>
                   </div>
@@ -475,18 +475,18 @@ const TemplateEditorPage = () => {
                         setBulkDeleteTheme(selectedThemeForBulkDelete);
                       }}
                     >
-                      Supprimer les questions du theme
+                      {fr.templateEditor.deleteThemeQuestions}
                       {selectedThemeForBulkDelete ? ` (${THEME_META[selectedThemeForBulkDelete].label})` : ""}
                     </Button>
                   </div>
                   {filteredQuestions.length === 0 ? (
-                    <p className="text-sm text-slate-300">Aucune question pour ce filtre.</p>
+                    <p className="text-sm text-slate-300">{fr.templateEditor.noQuestionsForFilter}</p>
                   ) : (
                     <div className="grid gap-2">
                       {filteredQuestions.map((question) => {
                         const normalized = normalizeCategory(question.category);
                         const theme =
-                          normalized === "other" ? { label: "Autre", className: "text-slate-300" } : THEME_META[normalized];
+                          normalized === "other" ? { label: fr.templateEditor.other, className: "text-slate-300" } : THEME_META[normalized];
                         const currentIndex = questions.findIndex((item) => item.id === question.id);
                         const canMoveUp = currentIndex > 0;
                         const canMoveDown = currentIndex >= 0 && currentIndex < questions.length - 1;
@@ -513,7 +513,7 @@ const TemplateEditorPage = () => {
                                     variant="secondary"
                                     className={`w-full sm:w-auto ${neutralSecondaryBtn}`}
                                   >
-                                    Actions
+                                    {fr.templateEditor.actions}
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent
@@ -533,14 +533,14 @@ const TemplateEditorPage = () => {
                                     {fr.templateEditor.down}
                                   </DropdownMenuItem>
                                   <DropdownMenuItem onClick={() => toggleQuestion(question)}>
-                                    {question.isActive ? "Desactiver" : "Activer"}
+                                    {question.isActive ? fr.templateEditor.disable : fr.templateEditor.enable}
                                   </DropdownMenuItem>
                                   <DropdownMenuItem onClick={() => openEditQuestion(question)}>
-                                    Editer
+                                    {fr.templateEditor.edit}
                                   </DropdownMenuItem>
                                   <DropdownMenuSeparator />
                                   <DropdownMenuItem disabled className="opacity-80">
-                                    Changer de theme
+                                    {fr.templateEditor.changeTheme}
                                   </DropdownMenuItem>
                                   {THEME_ORDER.map((themeKey) => (
                                     <DropdownMenuItem
@@ -556,7 +556,7 @@ const TemplateEditorPage = () => {
                                     onClick={() => deleteQuestion(question.id)}
                                     className="text-red-400 focus:text-red-300"
                                   >
-                                    Supprimer
+                                    {fr.templateEditor.delete}
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
@@ -584,10 +584,10 @@ const TemplateEditorPage = () => {
       >
         <DialogContent className="border-cyan-300/30 bg-slate-950/95 text-cyan-50 sm:max-w-xl">
           <DialogHeader>
-            <DialogTitle>Editer la question</DialogTitle>
+            <DialogTitle>{fr.templateEditor.editQuestion}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-2">
-            <Label htmlFor="edit-question-text">Question</Label>
+            <Label htmlFor="edit-question-text">{fr.templateEditor.question}</Label>
             <Textarea
               id="edit-question-text"
               value={editingQuestionText}
@@ -604,7 +604,7 @@ const TemplateEditorPage = () => {
                 setEditingQuestionText("");
               }}
             >
-              Annuler
+              {fr.templateEditor.cancel}
             </Button>
             <Button
               variant="secondary"
@@ -612,7 +612,7 @@ const TemplateEditorPage = () => {
               disabled={!editingQuestionText.trim() || savingQuestionEdit}
               onClick={saveEditedQuestion}
             >
-              {savingQuestionEdit ? "Sauvegarde..." : "Enregistrer"}
+              {savingQuestionEdit ? fr.templateEditor.saving : fr.templateEditor.saveButton}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -621,15 +621,17 @@ const TemplateEditorPage = () => {
       <AlertDialog open={!!bulkDeleteTheme} onOpenChange={(open) => !open && setBulkDeleteTheme(null)}>
         <AlertDialogContent className="border-cyan-300/30 bg-slate-950/95 text-cyan-50">
           <AlertDialogHeader>
-            <AlertDialogTitle>Supprimer toutes les questions du theme ?</AlertDialogTitle>
+            <AlertDialogTitle>{fr.templateEditor.deleteThemeConfirmTitle}</AlertDialogTitle>
             <AlertDialogDescription className="text-slate-300">
               {bulkDeleteTheme
-                ? `Cette action supprimera ${counts[bulkDeleteTheme]} question(s) du theme ${THEME_META[bulkDeleteTheme].label}.`
-                : "Cette action supprimera toutes les questions du theme selectionne."}
+                ? fr.templateEditor.deleteThemeConfirmWithCount
+                    .replace("{count}", String(counts[bulkDeleteTheme]))
+                    .replace("{theme}", THEME_META[bulkDeleteTheme].label)
+                : fr.templateEditor.deleteThemeConfirmFallback}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className={neutralSecondaryBtn}>Annuler</AlertDialogCancel>
+            <AlertDialogCancel className={neutralSecondaryBtn}>{fr.templateEditor.cancel}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={!bulkDeleteTheme || deletingThemeQuestions}
@@ -639,7 +641,7 @@ const TemplateEditorPage = () => {
                 void deleteQuestionsByTheme(bulkDeleteTheme);
               }}
             >
-              {deletingThemeQuestions ? "Suppression..." : "Supprimer"}
+              {deletingThemeQuestions ? fr.templateEditor.deleting : fr.templateEditor.delete}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -649,5 +651,7 @@ const TemplateEditorPage = () => {
 };
 
 export default TemplateEditorPage;
+
+
 
 

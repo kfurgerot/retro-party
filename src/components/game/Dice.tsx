@@ -104,29 +104,29 @@ export const Dice: React.FC<DiceProps> = ({
 
   const label = (() => {
     if (isRolling) return `${fr.terms.rollDice}...`;
-    if (canRoll && pendingDoubleRollFirstDie != null) return `${fr.terms.rollDice} (De 2) [${playerKey}]`;
+    if (canRoll && pendingDoubleRollFirstDie != null) return `${fr.terms.rollDice} (${fr.dice.secondDie}) [${playerKey}]`;
     if (canRoll) return `${fr.terms.rollDice} [${playerKey}]`;
-    if (canMove && value != null) return `Avancer (${value})`;
-    if (canOpen) return "Ouvrir carte";
-    return "Attente";
+    if (canMove && value != null) return `${fr.dice.move} (${value})`;
+    if (canOpen) return fr.dice.openCard;
+    return fr.dice.waiting;
   })();
 
   const rollDetails = (() => {
     if (pendingDoubleRollFirstDie != null && (!rollResult || rollResult.dice.length <= 1)) {
-      return ["Deplacement applique: en attente..."];
+      return [fr.dice.movementAppliedPending];
     }
 
     if (!rollResult) return null;
 
     if (rollResult.effectType === "double_roll") {
-      return [`Deplacement applique: ${rollResult.total}`];
+      return [fr.dice.movementApplied.replace("{total}", String(rollResult.total))];
     }
 
     if (rollResult.effectType === "plus_two_roll") {
-      return [`Deplacement applique: ${rollResult.total}`];
+      return [fr.dice.movementApplied.replace("{total}", String(rollResult.total))];
     }
 
-    return [`Deplacement applique: ${rollResult.total}`];
+    return [fr.dice.movementApplied.replace("{total}", String(rollResult.total))];
   })();
 
   useEffect(() => {
@@ -178,7 +178,7 @@ export const Dice: React.FC<DiceProps> = ({
       )}
 
       {import.meta.env.DEV && hasInvalidRollResult && (
-        <div className="text-[10px] text-rose-300">RollResult invalide: dice vide</div>
+        <div className="text-[10px] text-rose-300">{fr.dice.invalidRollResult}</div>
       )}
     </div>
   );

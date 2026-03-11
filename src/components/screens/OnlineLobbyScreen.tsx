@@ -86,20 +86,20 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
     connected && !!roomCode && canStart && lobbyPlayers.length >= 1;
 
   const subtitle = useMemo(() => {
-    if (!connected) return "Connexion au serveur...";
+    if (!connected) return fr.onlineOnboarding.connecting;
     if (roomCode) return `${fr.onlineLobby.roomActive} : ${roomCode}`;
-    return `Multijoueur en ligne (1-${MAX_PLAYERS} joueurs)`;
+    return fr.onlineLobby.onlineSubtitle.replace("{maxPlayers}", String(MAX_PLAYERS));
   }, [connected, roomCode]);
 
   useEffect(() => {
     if (!connected) {
       setPending("idle");
-      setError("Serveur indisponible. Verifie ta connexion.");
+      setError(fr.onlineLobby.serverUnavailable);
       return;
     }
 
     setError((prev) =>
-      prev === "Serveur indisponible. Verifie ta connexion." ? null : prev
+      prev === fr.onlineLobby.serverUnavailable ? null : prev
     );
 
     if (roomCode && (pending === "hosting" || pending === "joining")) {
@@ -177,14 +177,14 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
 
   const primaryLabel = roomCode
     ? pending === "starting"
-      ? "Lancement..."
+      ? fr.onlineLobby.launching
       : fr.onlineLobby.launchParty
     : mode === "host"
     ? pending === "hosting"
       ? fr.onlineLobby.createLoading
       : fr.onlineLobby.createParty
     : pending === "joining"
-    ? "Connexion..."
+    ? fr.onlineLobby.joining
     : fr.onlineLobby.joinAction;
 
   const primaryDisabled =
@@ -230,10 +230,10 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
                 : "border-amber-500/30 bg-amber-500/10 text-amber-200"
             )}
           >
-            {connected ? "Connecte" : "Connexion..."}
+            {connected ? fr.onlineLobby.connected : fr.onlineLobby.connecting}
           </span>
           <span className="rounded-full border border-cyan-300/35 bg-slate-900/40 px-3 py-1 text-cyan-100">
-            {lobbyPlayers.length}/{MAX_PLAYERS} joueurs
+            {lobbyPlayers.length}/{MAX_PLAYERS} {fr.onlineLobby.playersUnit}
           </span>
         </div>
 
@@ -254,7 +254,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
               <div className="space-y-1">
                 <label className="text-xs text-cyan-100/85">{fr.onlineLobby.profileNameLabel}</label>
                 <Input
-                  placeholder="Ton pseudo"
+                  placeholder={fr.onlineOnboarding.displayNamePlaceholder}
                   value={name}
                   disabled={pending !== "idle"}
                   className="h-11 border-cyan-300/20 bg-slate-900/50 text-cyan-50 placeholder:text-slate-400"
@@ -279,7 +279,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
                         "flex h-10 w-10 items-center justify-center rounded-md border border-cyan-300/25 bg-slate-900/50 text-xl transition hover:border-cyan-300/65 hover:bg-slate-900/70",
                         i === avatar && "border-cyan-300 bg-cyan-500/20"
                       )}
-                      aria-label={`Avatar ${i + 1}`}
+                      aria-label={fr.onlineLobby.avatarAria.replace("{index}", String(i + 1))}
                     >
                       {emoji}
                     </button>
@@ -334,7 +334,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
                   }}
                 />
                 {!validCode && code.length > 0 && (
-                  <p className="text-xs text-amber-200">Min. 4 caracteres (A-Z0-9)</p>
+                  <p className="text-xs text-amber-200">{fr.onlineLobby.minCodeHint}</p>
                 )}
               </div>
             )}
@@ -386,7 +386,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
               </p>
               {canStart && (
                 <div className="space-y-1">
-                  <label className="text-xs text-cyan-100/85">Nombre de tours</label>
+                  <label className="text-xs text-cyan-100/85">{fr.onlineLobby.roundsLabel}</label>
                   <Input
                     type="number"
                     min={1}
@@ -426,7 +426,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
         <section className="mt-6 rounded-lg border border-cyan-300/25 bg-slate-900/35 p-4">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-cyan-100/80">
-              Joueurs
+              {fr.onlineLobby.playersTitle}
             </h2>
             <span className="text-xs text-slate-300">{lobbyPlayers.length}/{MAX_PLAYERS}</span>
           </div>
@@ -444,7 +444,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
                 <div className="flex items-center gap-2">
                   {p.connected === false && (
                     <span className="rounded-full border border-amber-500/35 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-200">
-                      Hors ligne
+                      {fr.onlineLobby.offline}
                     </span>
                   )}
                   {p.isHost && (
@@ -479,7 +479,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="border-cyan-300/20 bg-slate-900/45 text-cyan-100 hover:bg-slate-900/70">
-              Annuler
+              {fr.onlineLobby.cancel}
             </AlertDialogCancel>
             <AlertDialogAction
               className="border-rose-300 bg-rose-500 text-white shadow-[0_0_0_2px_rgba(251,113,133,0.35)] hover:bg-rose-400"

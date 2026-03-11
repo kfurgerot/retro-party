@@ -30,8 +30,8 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
     <div className="scanlines flex w-full flex-col items-center gap-6 p-6">
       <PixelCard className="w-full max-w-3xl p-6 text-center">
         <div className="font-pixel text-2xl">{fr.results.title}</div>
-        <div className="mt-2 text-sm opacity-80">Total kudobox: {totalStars}</div>
-        <div className="mt-1 text-sm opacity-80">Total points: {totalPoints}</div>
+        <div className="mt-2 text-sm opacity-80">{fr.results.totalKudobox}: {totalStars}</div>
+        <div className="mt-1 text-sm opacity-80">{fr.results.totalPoints}: {totalPoints}</div>
       </PixelCard>
 
       <div className="grid w-full max-w-3xl grid-cols-1 gap-4 md:grid-cols-2">
@@ -57,10 +57,10 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
       </div>
 
       <PixelCard className="w-full max-w-3xl p-5">
-        <div className="font-pixel text-lg">Cartes les plus votees utiles</div>
+        <div className="font-pixel text-lg">{fr.results.topUsefulCards}</div>
         {topQuestions.length === 0 ? (
           <div className="mt-2 text-sm opacity-80">
-            Aucune carte n&apos;a recu de pouce vers le haut.
+            {fr.results.noUpvoteCards}
           </div>
         ) : (
           <div className="mt-3 grid gap-2">
@@ -80,7 +80,7 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
       </PixelCard>
 
       <PixelButton onClick={onPlayAgain} variant="primary">
-        Rejouer
+        {fr.results.playAgain}
       </PixelButton>
     </div>
   );
