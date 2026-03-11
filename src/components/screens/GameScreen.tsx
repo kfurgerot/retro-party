@@ -863,24 +863,24 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 
       {isBugIntroActive && bugSmashState && (
         <LaunchAnnouncement
-          title="Bug Smash"
-          subtitle="Mini-jeu rouge imminent."
+          title={fr.game.bugSmashLaunchTitle}
+          subtitle={fr.game.bugSmashLaunchSubtitle}
           startAt={bugIntroEndsAt ?? bugSmashState.startAt}
         />
       )}
 
       {isBuzzwordIntroActive && buzzwordState && (
         <LaunchAnnouncement
-          title="Buzzword Duel"
-          subtitle="Duel 1v1 imminent."
+          title={fr.game.buzzwordLaunchTitle}
+          subtitle={fr.game.buzzwordLaunchSubtitle}
           startAt={buzzwordState.nextWordAt ?? undefined}
         />
       )}
 
       {whoSaidItState?.phase === "idle" && (
         <LaunchAnnouncement
-          title="Qui a dit ca ?"
-          subtitle="Le mini-jeu de roles Agile va commencer."
+          title={fr.game.whoSaidItLaunchTitle}
+          subtitle={fr.game.whoSaidItLaunchSubtitle}
           startAt={whoSaidItIntroAt ?? undefined}
         />
       )}

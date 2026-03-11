@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { AVATARS } from "@/types/game";
 import { cn } from "@/lib/utils";
+import { fr } from "@/i18n/fr";
 
 interface BuzzwordDuelMinigameProps {
   state: BuzzwordDuelState;
@@ -64,13 +65,13 @@ export const BuzzwordDuelMinigame: React.FC<BuzzwordDuelMinigameProps> = ({
     }
     if (state.phase === "between") {
       return state.roundType === "sudden_death"
-        ? "Mort subite en cours..."
-        : `Mot suivant (${state.currentWordIndex}/${state.totalWords})`;
+        ? fr.buzzwordDuel.suddenDeathInProgress
+        : `${fr.buzzwordDuel.nextWord} (${state.currentWordIndex}/${state.totalWords})`;
     }
     if (state.phase === "sudden_death") {
-      return `MORT SUBITE #${state.suddenDeathRound}`;
+      return `${fr.buzzwordDuel.suddenDeathRound} #${state.suddenDeathRound}`;
     }
-    return `Mot ${state.currentWordIndex}/${state.totalWords}`;
+    return `${fr.buzzwordDuel.word} ${state.currentWordIndex}/${state.totalWords}`;
   }, [players, state]);
 
   useEffect(() => {
@@ -89,7 +90,7 @@ export const BuzzwordDuelMinigame: React.FC<BuzzwordDuelMinigameProps> = ({
       <div className="mx-auto flex h-full w-full max-w-6xl flex-col gap-3 sm:gap-4">
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <Card className="border-cyan-300/35 bg-slate-900/80 px-3 py-2 text-center">
-            <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">Score</div>
+            <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">{fr.buzzwordDuel.score}</div>
             <div className="text-lg font-bold">{leftScore}</div>
             <div className="truncate text-xs text-cyan-100/80">
               {leftPlayer ? `${AVATARS[leftPlayer.avatar] ?? "?"} ${leftPlayer.name}` : "-"}
@@ -97,7 +98,7 @@ export const BuzzwordDuelMinigame: React.FC<BuzzwordDuelMinigameProps> = ({
           </Card>
 
           <Card className="border-cyan-300/35 bg-slate-900/80 px-3 py-2 text-center">
-            <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">Score</div>
+            <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">{fr.buzzwordDuel.score}</div>
             <div className="text-lg font-bold">{rightScore}</div>
             <div className="truncate text-xs text-cyan-100/80">
               {rightPlayer ? `${AVATARS[rightPlayer.avatar] ?? "?"} ${rightPlayer.name}` : "-"}
@@ -105,12 +106,12 @@ export const BuzzwordDuelMinigame: React.FC<BuzzwordDuelMinigameProps> = ({
           </Card>
 
           <Card className="border-cyan-300/35 bg-slate-900/80 px-3 py-2 text-center">
-            <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">Compte a rebours</div>
+            <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">{fr.buzzwordDuel.countdown}</div>
             <div className="text-lg font-bold">{countdown}</div>
           </Card>
 
           <Card className="border-cyan-300/35 bg-slate-900/80 px-3 py-2 text-center">
-            <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">Statut</div>
+            <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">{fr.buzzwordDuel.status}</div>
             <div className="truncate text-sm font-semibold">{statusLabel}</div>
           </Card>
         </div>
@@ -118,8 +119,8 @@ export const BuzzwordDuelMinigame: React.FC<BuzzwordDuelMinigameProps> = ({
         <Card className="flex flex-1 flex-col items-center justify-center border-cyan-300/35 bg-slate-900/80 px-4 py-6 text-center">
           {state.phase === "transfer" ? (
             <div className="w-full max-w-xl">
-              <div className="text-xs uppercase tracking-[0.18em] text-cyan-200/70">Transfert en cours</div>
-              <div className="mt-3 text-2xl font-black sm:text-4xl">{state.transfer?.amount ?? 0} POINTS VOLES</div>
+              <div className="text-xs uppercase tracking-[0.18em] text-cyan-200/70">{fr.buzzwordDuel.transferInProgress}</div>
+              <div className="mt-3 text-2xl font-black sm:text-4xl">{state.transfer?.amount ?? 0} {fr.buzzwordDuel.stolenPoints}</div>
               <div className="mt-4 rounded border border-cyan-300/35 bg-slate-950/55 px-4 py-3 text-sm text-cyan-50">
                 <div>
                   <span className="font-semibold">{transferWinner?.name ?? "?"}</span>
@@ -135,15 +136,15 @@ export const BuzzwordDuelMinigame: React.FC<BuzzwordDuelMinigameProps> = ({
             </div>
           ) : state.phase === "between" ? (
             <div className="text-center">
-              <div className="text-xs uppercase tracking-[0.18em] text-cyan-200/70">Preparation</div>
+              <div className="text-xs uppercase tracking-[0.18em] text-cyan-200/70">{fr.buzzwordDuel.preparation}</div>
               <div className="mt-3 text-2xl font-black sm:text-5xl">{countdown}</div>
             </div>
           ) : (
             <>
-              <div className="text-xs uppercase tracking-[0.18em] text-cyan-200/70">Buzzword Duel</div>
+              <div className="text-xs uppercase tracking-[0.18em] text-cyan-200/70">{fr.buzzwordDuel.title}</div>
               {state.isDouble && state.roundType === "main" && (
                 <div className="mt-2 rounded-full border border-amber-300 bg-amber-500/20 px-4 py-1 text-xs font-bold text-amber-100">
-                  COMPTE DOUBLE
+                  {fr.buzzwordDuel.doubleCount}
                 </div>
               )}
               <div className="mt-4 break-words text-3xl font-black leading-tight sm:text-5xl">{state.wordText}</div>
@@ -177,11 +178,11 @@ export const BuzzwordDuelMinigame: React.FC<BuzzwordDuelMinigameProps> = ({
         <div className="text-center text-sm text-cyan-100/85">
           {isDuelist
             ? hasSubmitted
-              ? "Reponse envoyee"
+              ? fr.buzzwordDuel.sentAnswer
               : canAnswer
-              ? "Choisis ta reponse avant la fin du chrono"
-              : "Attends la resolution du mot"
-            : "Mode spectateur : lecture seule"}
+              ? fr.buzzwordDuel.chooseBeforeEnd
+              : fr.buzzwordDuel.waitResolution
+            : fr.buzzwordDuel.spectator}
         </div>
       </div>
     </div>

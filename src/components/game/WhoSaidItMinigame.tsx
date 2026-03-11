@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Player, WhoSaidItRole, WhoSaidItViewState } from "@/types/game";
 import { cn } from "@/lib/utils";
+import { fr } from "@/i18n/fr";
 
 interface WhoSaidItMinigameProps {
   state: WhoSaidItViewState;
@@ -108,10 +109,10 @@ export const WhoSaidItMinigame: React.FC<WhoSaidItMinigameProps> = ({
     <div className="absolute inset-0 z-50 flex h-full w-full flex-col overflow-hidden bg-slate-950/95 p-3 sm:p-6">
       <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-3 text-cyan-50">
         <div className="rounded border border-cyan-300/35 bg-slate-900/70 px-3 py-2 text-sm font-semibold">
-          Manche {Math.max(1, roundIndex)} / {state.totalRounds}
+          {fr.whoSaidIt.round} {Math.max(1, roundIndex)} / {state.totalRounds}
         </div>
         <div className="rounded border border-cyan-300/35 bg-slate-900/70 px-3 py-2 text-sm font-semibold">
-          {phase === "answer" ? `${timerSeconds}s` : phase === "reveal" ? "Revelation" : phase === "done" ? "Resultat" : "Preparation"}
+          {phase === "answer" ? `${timerSeconds}s` : phase === "reveal" ? fr.whoSaidIt.revelation : phase === "done" ? fr.whoSaidIt.result : fr.whoSaidIt.preparation}
         </div>
       </div>
 
@@ -147,13 +148,13 @@ export const WhoSaidItMinigame: React.FC<WhoSaidItMinigameProps> = ({
 
         {phase === "answer" && (
           <Card className="border-cyan-300/35 bg-slate-900/70 p-3 text-center text-cyan-100">
-            {selectedRole ? "Reponse envoyee" : "Choisis un role avant la fin du chrono"}
+            {selectedRole ? fr.whoSaidIt.sentAnswer : fr.whoSaidIt.chooseRoleBeforeEnd}
           </Card>
         )}
 
         {phase === "reveal" && (
           <Card className="border-cyan-300/35 bg-slate-900/70 p-4 text-cyan-50">
-            <div className="text-lg font-bold">Bonne reponse: {state.answerRole ? ROLE_LABELS[state.answerRole] : "-"}</div>
+            <div className="text-lg font-bold">{fr.whoSaidIt.correctAnswer}: {state.answerRole ? ROLE_LABELS[state.answerRole] : "-"}</div>
             <div className="mt-3 grid gap-2">
               {ROLE_CONFIG.map(({ role, label }) => {
                 const votes = state.distribution[role] ?? 0;
@@ -172,17 +173,17 @@ export const WhoSaidItMinigame: React.FC<WhoSaidItMinigameProps> = ({
               })}
             </div>
             <div className="mt-4 text-sm">
-              Gagnants: {winnerNames.length ? winnerNames.join(", ") : "Aucun"}
+              {fr.whoSaidIt.winners}: {winnerNames.length ? winnerNames.join(", ") : fr.whoSaidIt.none}
             </div>
-            <div className="mt-1 text-sm">Tes points sur cette manche: +{myDelta}</div>
+            <div className="mt-1 text-sm">{fr.whoSaidIt.yourPointsThisRound}: +{myDelta}</div>
           </Card>
         )}
 
         {phase === "done" && (
           <Card className="border-cyan-300/35 bg-slate-900/70 p-4 text-cyan-50">
-            <div className="text-lg font-bold">Mini-jeu termine</div>
+            <div className="text-lg font-bold">{fr.whoSaidIt.minigameFinished}</div>
             <div className="mt-2 text-sm">
-              Points gagnes: +{myPlayerId && state.summary ? state.summary.pointsGained[myPlayerId] ?? 0 : 0}
+              {fr.whoSaidIt.pointsGained}: +{myPlayerId && state.summary ? state.summary.pointsGained[myPlayerId] ?? 0 : 0}
             </div>
           </Card>
         )}
