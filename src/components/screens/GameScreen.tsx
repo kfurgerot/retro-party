@@ -445,6 +445,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 
   const neonCard =
     "border-cyan-300/30 bg-slate-900/55 text-cyan-50 shadow-[0_0_0_1px_rgba(34,211,238,0.18),0_0_24px_rgba(34,211,238,0.12)] backdrop-blur";
+  const neonPanel =
+    "rounded-lg border border-cyan-300/25 bg-slate-900/40 shadow-[0_0_0_1px_rgba(34,211,238,0.12),0_0_20px_rgba(34,211,238,0.08)]";
   const neutralSecondaryBtn =
     "border-cyan-300/20 bg-slate-900/45 text-cyan-100 hover:bg-slate-900/70";
   const activeCyanBtn =
@@ -476,37 +478,37 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       <RetroScreenBackground />
 
       <div className="relative z-10 flex h-svh w-full flex-col overflow-hidden p-2 sm:p-3">
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:flex lg:flex-wrap lg:items-center lg:justify-between lg:gap-3">
-          <Card className={cn(neonCard, "px-3 py-2 sm:px-4 sm:py-3")}>
+        <div className="grid grid-cols-2 gap-2 rounded-lg border border-cyan-300/20 bg-slate-950/25 p-2 sm:grid-cols-4 lg:flex lg:flex-wrap lg:items-center lg:justify-between lg:gap-3">
+          <Card className={cn(neonCard, "min-w-0 px-3 py-2 sm:px-4 sm:py-3")}>
             <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">
               {fr.gameScreen.round}
             </div>
-            <div className="text-xl font-bold">
+            <div className="text-lg font-bold sm:text-xl">
               {gameState.currentRound} / {gameState.maxRounds}
             </div>
           </Card>
 
-          <Card className={cn(neonCard, "px-3 py-2 sm:px-4 sm:py-3")}>
+          <Card className={cn(neonCard, "min-w-0 px-3 py-2 sm:px-4 sm:py-3")}>
             <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">
               {fr.gameScreen.currentTurn}
             </div>
-            <div className="truncate text-xl font-bold">{currentPlayer?.name ?? "-"}</div>
+            <div className="truncate text-lg font-bold sm:text-xl">{currentPlayer?.name ?? "-"}</div>
           </Card>
 
-          <Card className={cn(neonCard, "px-3 py-2 sm:px-4 sm:py-3")}>
+          <Card className={cn(neonCard, "min-w-0 px-3 py-2 sm:px-4 sm:py-3")}>
             <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">
               {fr.gameScreen.points}
             </div>
-            <div className="text-xl font-bold">
+            <div className="text-lg font-bold sm:text-xl">
               {gameState.players.find((p) => p.id === myPlayerId)?.points ?? 0}
             </div>
           </Card>
 
-          <Card className={cn(neonCard, "px-3 py-2 sm:px-4 sm:py-3")}>
+          <Card className={cn(neonCard, "min-w-0 px-3 py-2 sm:px-4 sm:py-3")}>
             <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">
               {fr.gameScreen.kudobox}
             </div>
-            <div className="text-xl font-bold">
+            <div className="text-lg font-bold sm:text-xl">
               {gameState.players.find((p) => p.id === myPlayerId)?.stars ?? 0}
             </div>
           </Card>
@@ -522,9 +524,9 @@ export const GameScreen: React.FC<GameScreenProps> = ({
           )}
         </div>
 
-        <div className="mt-2 grid min-h-0 flex-1 grid-cols-1 gap-3 sm:mt-3 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="mt-2 grid min-h-0 flex-1 grid-cols-1 gap-3 sm:mt-3 lg:grid-cols-[minmax(0,1fr)_340px]">
           <div className="flex min-h-0 flex-col gap-3">
-            <div className="min-h-0 flex-1 overflow-hidden rounded-md border border-cyan-300/25 bg-slate-900/35 p-1 shadow-[0_0_24px_rgba(34,211,238,0.1)]">
+            <div className={cn("min-h-0 flex-1 overflow-hidden p-1", neonPanel)}>
               <GameBoard
                 tiles={gameState.tiles}
                 players={gameState.players}
@@ -557,7 +559,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                   />
                 </div>
 
-                <div className="max-w-[360px] justify-self-end text-right">
+                <div className="max-w-[360px] justify-self-end rounded-md border border-cyan-300/15 bg-slate-950/30 px-3 py-2 text-right">
                   <div
                     className={`mb-2 inline-flex rounded-full border px-2 py-1 text-[11px] ${turnStatusClass}`}
                   >
@@ -605,7 +607,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               </div>
 
               {sidebarTab === "players" ? (
-                <div className="mt-3 grid gap-2">
+                <div className="mt-3 grid max-h-[58vh] gap-2 overflow-auto pr-1">
                   {gameState.players.map((p) => (
                     <PlayerCard
                       key={p.id}
@@ -616,7 +618,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                   ))}
                 </div>
               ) : (
-                <div className="mt-3 grid gap-2 text-sm text-cyan-50">
+                <div className="mt-3 grid max-h-[58vh] gap-2 overflow-auto pr-1 text-sm text-cyan-50">
                   {legend.map((l) => (
                     <div key={l.k} className="flex items-center gap-2">
                       <span className="inline-flex h-5 w-5 items-center justify-center rounded-sm border border-cyan-300/35 bg-slate-900/60 text-[11px] font-semibold text-cyan-200">
@@ -631,7 +633,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
           </div>
         </div>
         <div className="sticky bottom-0 z-30 mt-2 pb-[env(safe-area-inset-bottom)] lg:hidden">
-          <Card className={cn(neonCard, "border px-2 py-2")}>
+          <Card className={cn(neonCard, "border px-2 py-2 backdrop-blur-md")}>
             <div className="flex flex-col gap-3">
               <div className="flex min-w-0 items-end gap-3">
                 <div className="origin-left shrink-0 scale-[0.88]">
@@ -650,14 +652,14 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                   />
                 </div>
 
-                <div className="min-w-0 flex-1 self-end pb-3 text-right">
+                <div className="min-w-0 flex-1 self-end rounded border border-cyan-300/15 bg-slate-950/25 px-2 py-1 text-right">
                   <div
                     className={`mb-1 inline-flex rounded-full border px-2 py-1 text-[11px] ${turnStatusClass}`}
                   >
                     {gameState.currentQuestion ? fr.gameScreen.statusQuestion : isMyTurn ? fr.gameScreen.statusYourTurn : fr.gameScreen.statusWaiting}
                   </div>
-                  <div className="truncate text-sm text-cyan-100/90">{infoTitle}</div>
-                  <div className="truncate text-xs text-slate-300">{infoHint}</div>
+                  <div className="truncate text-xs text-cyan-100/90 sm:text-sm">{infoTitle}</div>
+                  <div className="truncate text-[11px] text-slate-300 sm:text-xs">{infoHint}</div>
                 </div>
               </div>
 

@@ -45,6 +45,8 @@ const MAX_PLAYERS = 20;
 const cleanName = (v: string) => v.replace(/\s+/g, " ").trim().slice(0, 16);
 const cleanCode = (v: string) =>
   v.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
+const neonPanel =
+  "rounded-lg border border-cyan-300/25 bg-slate-900/35 shadow-[0_0_0_1px_rgba(34,211,238,0.12),0_0_24px_rgba(34,211,238,0.08)]";
 
 export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
   connected,
@@ -209,7 +211,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
     <div className="scanlines relative flex min-h-svh w-full items-center justify-center overflow-hidden px-4 py-8">
       <RetroScreenBackground />
 
-      <div className="relative z-10 w-full max-w-3xl rounded border border-cyan-300/60 bg-card/88 p-5 shadow-[0_0_0_2px_rgba(34,211,238,0.3),0_0_34px_rgba(34,211,238,0.32)] backdrop-blur sm:p-8">
+      <div className="relative z-10 w-full max-w-4xl rounded border border-cyan-300/60 bg-[linear-gradient(180deg,rgba(8,18,38,0.88)_0%,rgba(8,12,24,0.9)_100%)] p-5 shadow-[0_0_0_2px_rgba(34,211,238,0.3),0_0_34px_rgba(34,211,238,0.32)] backdrop-blur sm:p-8">
         <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] uppercase tracking-[0.2em] text-cyan-200/80">
           <span>Retro Party Online</span>
           <span className="rounded-full border border-cyan-300/45 px-2 py-1">
@@ -246,8 +248,8 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
         )}
 
         {!roomCode && (
-          <section className="mx-auto mt-6 grid w-full max-w-md gap-3 rounded-lg border border-cyan-300/25 bg-slate-900/35 p-4">
-            <div className="rounded-md border border-cyan-300/25 bg-slate-950/40 p-3">
+          <section className={cn("mx-auto mt-6 grid w-full max-w-lg gap-3 p-4 sm:p-5", neonPanel)}>
+            <div className="rounded-md border border-cyan-300/25 bg-slate-950/45 p-3">
               <p className="mb-2 text-xs uppercase tracking-[0.12em] text-cyan-100/80">
                 {fr.onlineLobby.profileTitle}
               </p>
@@ -294,7 +296,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2 pt-1">
               <Button
                 type="button"
                 variant="secondary"
@@ -343,7 +345,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
               type="button"
               onClick={mode === "host" ? submitHost : submitJoin}
               disabled={primaryDisabled}
-              className="h-11 border border-cyan-300 bg-cyan-500 font-semibold text-slate-950 hover:bg-cyan-400"
+              className="h-11 border border-cyan-300 bg-cyan-500 font-semibold text-slate-950 shadow-[0_0_0_2px_rgba(34,211,238,0.25)] hover:bg-cyan-400"
             >
               {primaryLabel}
             </Button>
@@ -362,7 +364,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
 
         {roomCode && (
           <>
-            <div className="mx-auto mt-5 flex max-w-md items-center justify-center gap-2 rounded-md border border-cyan-300/35 bg-slate-900/45 p-2">
+            <div className={cn("mx-auto mt-5 flex max-w-md items-center justify-center gap-2 p-2", neonPanel)}>
               <span className="text-xs text-cyan-100/80">{fr.onlineLobby.codeLabel}:</span>
               <span className="rounded bg-cyan-500/15 px-2 py-1 text-sm font-semibold tracking-[0.12em] text-cyan-200">
                 {roomCode}
@@ -378,7 +380,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
               </Button>
             </div>
 
-            <section className="mx-auto mt-6 grid w-full max-w-md gap-2 rounded-lg border border-cyan-300/25 bg-slate-900/35 p-4">
+            <section className={cn("mx-auto mt-6 grid w-full max-w-lg gap-2 p-4 sm:p-5", neonPanel)}>
               <p className="text-center text-xs text-slate-300">
                 {canStart
                   ? fr.onlineLobby.hostLaunchHint
@@ -423,7 +425,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
           </>
         )}
 
-        <section className="mt-6 rounded-lg border border-cyan-300/25 bg-slate-900/35 p-4">
+        <section className={cn("mt-6 p-4 sm:p-5", neonPanel)}>
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-cyan-100/80">
               {fr.onlineLobby.playersTitle}
@@ -431,14 +433,16 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
             <span className="text-xs text-slate-300">{lobbyPlayers.length}/{MAX_PLAYERS}</span>
           </div>
 
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid max-h-[38vh] gap-2 overflow-auto pr-1 sm:grid-cols-2">
             {lobbyPlayers.map((p, i) => (
               <div
                 key={i}
-                className="flex items-center justify-between rounded-md border border-cyan-300/20 bg-slate-900/45 px-3 py-2"
+                className="flex items-center justify-between rounded-md border border-cyan-300/20 bg-slate-900/55 px-3 py-2"
               >
                 <div className="flex items-center gap-2">
-                  <span>{AVATARS[p.avatar] ?? "?"}</span>
+                  <span className="inline-flex h-7 w-7 items-center justify-center rounded border border-cyan-300/25 bg-slate-950/50">
+                    {AVATARS[p.avatar] ?? "?"}
+                  </span>
                   <span className="text-sm font-medium text-cyan-50">{p.name}</span>
                 </div>
                 <div className="flex items-center gap-2">

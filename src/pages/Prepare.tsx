@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { api, HostUser, TemplateItem } from "@/net/api";
 import { RetroScreenBackground } from "@/components/screens/RetroScreenBackground";
 import { fr } from "@/i18n/fr";
+import { cn } from "@/lib/utils";
 
 type AuthMode = "login" | "register";
 const neutralSecondaryBtn =
@@ -15,6 +16,8 @@ const activeCyanBtn =
   "border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_0_2px_rgba(34,211,238,0.35)] hover:bg-cyan-400";
 const dangerBtn =
   "border-rose-300 bg-rose-500 text-white shadow-[0_0_0_2px_rgba(251,113,133,0.3)] hover:bg-rose-400";
+const neonPanel =
+  "rounded-lg border border-cyan-300/20 bg-slate-950/30 shadow-[0_0_0_1px_rgba(34,211,238,0.12),0_0_20px_rgba(34,211,238,0.08)]";
 
 const PreparePage = () => {
   const navigate = useNavigate();
@@ -180,7 +183,7 @@ const PreparePage = () => {
   return (
     <div className="scanlines relative flex min-h-svh w-full items-center justify-center overflow-hidden px-4 py-8">
       <RetroScreenBackground />
-      <Card className="relative z-10 w-full max-w-4xl border-cyan-300/40 bg-slate-900/55 shadow-[0_0_0_1px_rgba(34,211,238,0.18),0_0_24px_rgba(34,211,238,0.12)] backdrop-blur">
+      <Card className="relative z-10 w-full max-w-5xl border-cyan-300/40 bg-[linear-gradient(180deg,rgba(8,18,38,0.82)_0%,rgba(8,12,24,0.88)_100%)] shadow-[0_0_0_1px_rgba(34,211,238,0.18),0_0_24px_rgba(34,211,238,0.12)] backdrop-blur">
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle className="text-base font-semibold uppercase tracking-[0.14em] text-cyan-100/90 break-words">
             {title}
@@ -199,7 +202,7 @@ const PreparePage = () => {
           {infoMessage && <p className="text-sm text-emerald-300">{infoMessage}</p>}
 
           {!loading && !user && (
-            <form onSubmit={submitAuth} className="grid gap-3">
+            <form onSubmit={submitAuth} className={cn("grid gap-3 p-3 sm:p-4", neonPanel)}>
               <div className="flex gap-2">
                 <Button
                   type="button"
@@ -250,7 +253,7 @@ const PreparePage = () => {
                   required
                 />
               </div>
-              <Button type="submit" variant="secondary" className={`w-fit ${activeCyanBtn}`}>
+              <Button type="submit" variant="secondary" className={`w-full sm:w-fit ${activeCyanBtn}`}>
                 {authMode === "register" ? fr.prepare.createAccount : fr.prepare.signIn}
               </Button>
               {authMode === "login" && (
@@ -263,7 +266,7 @@ const PreparePage = () => {
 
           {!loading && user && (
             <>
-              <div className="flex flex-wrap items-end gap-2 rounded border border-cyan-300/20 p-3">
+              <div className={cn("flex flex-wrap items-end gap-2 p-3 sm:p-4", neonPanel)}>
                 <div className="w-full min-w-0 flex-1 space-y-1 sm:min-w-56">
                   <Label htmlFor="templateName">{fr.prepare.newTemplate}</Label>
                   <Input
@@ -304,11 +307,11 @@ const PreparePage = () => {
               ) : templates.length === 0 ? (
                 <p className="text-sm text-slate-300">{fr.prepare.noTemplates}</p>
               ) : (
-                <div className="grid gap-3">
+                <div className="grid max-h-[48vh] gap-3 overflow-auto pr-1">
                   {templates.map((template) => (
                     <div
                       key={template.id}
-                      className="flex flex-wrap items-center justify-between gap-3 rounded border border-cyan-300/20 p-3"
+                      className={cn("flex flex-wrap items-center justify-between gap-3 p-3 sm:p-4", neonPanel)}
                     >
                       <div className="min-w-0 flex-1">
                         <p className="font-semibold text-cyan-100 break-words">{template.name}</p>
