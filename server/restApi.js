@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
+import rateLimit from "express-rate-limit";
 import { QUESTIONS } from "./questions.js";
 import { testMail } from "./mailService.js";
 import { sendMail } from "./mailService.js";
@@ -10,6 +11,12 @@ const BCRYPT_ROUNDS = Number(process.env.BCRYPT_ROUNDS || 12);
 const LOGIN_RATE_LIMIT_WINDOW_MS = Number(process.env.LOGIN_RATE_LIMIT_WINDOW_MS || 15 * 60 * 1000);
 const LOGIN_RATE_LIMIT_MAX = Number(process.env.LOGIN_RATE_LIMIT_MAX || 10);
 const RESET_TOKEN_TTL_MINUTES = Number(process.env.RESET_TOKEN_TTL_MINUTES || 60);
+const API_RATE_LIMIT_WINDOW_MS = Number(process.env.API_RATE_LIMIT_WINDOW_MS || 60 * 1000);
+const API_RATE_LIMIT_MAX = Number(process.env.API_RATE_LIMIT_MAX || 300);
+const AUTH_RATE_LIMIT_WINDOW_MS = Number(process.env.AUTH_RATE_LIMIT_WINDOW_MS || 15 * 60 * 1000);
+const AUTH_RATE_LIMIT_MAX = Number(process.env.AUTH_RATE_LIMIT_MAX || 30);
+const MAIL_TEST_RATE_LIMIT_WINDOW_MS = Number(process.env.MAIL_TEST_RATE_LIMIT_WINDOW_MS || 10 * 60 * 1000);
+const MAIL_TEST_RATE_LIMIT_MAX = Number(process.env.MAIL_TEST_RATE_LIMIT_MAX || 5);
 
 const loginAttempts = new Map();
 
@@ -188,6 +195,35 @@ export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCod
     }
   });
 
+  const apiLimiter = rateLimit({
+    windowMs: API_RATE_LIMIT_WINDOW_MS,
+    max: API_RATE_LIMIT_MAX,
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req) => getClientIp(req) || req.ip || "unknown",
+    message: { error: "Too many requests" },
+  });
+
+  const authLimiter = rateLimit({
+    windowMs: AUTH_RATE_LIMIT_WINDOW_MS,
+    max: AUTH_RATE_LIMIT_MAX,
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req) => getClientIp(req) || req.ip || "unknown",
+    message: { error: "Too many requests" },
+  });
+
+  const mailTestLimiter = rateLimit({
+    windowMs: MAIL_TEST_RATE_LIMIT_WINDOW_MS,
+    max: MAIL_TEST_RATE_LIMIT_MAX,
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req) => req.currentUser?.id || getClientIp(req) || req.ip || "unknown",
+    message: { error: "Too many requests" },
+  });
+
+  app.use("/api", apiLimiter);
+
   function requireAuth(req, res, next) {
     if (!req.currentUser) {
       return res.status(401).json({ error: "Unauthorized" });
@@ -206,7 +242,7 @@ export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCod
     });
   });
 
-  app.post("/api/auth/register", async (req, res, next) => {
+  app.post("/api/auth/register", authLimiter, async (req, res, next) => {
     try {
       const { email, password, displayName } = req.body ?? {};
       if (!isValidEmail(email)) return res.status(400).json({ error: "Invalid payload" });
@@ -257,7 +293,7 @@ export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCod
     }
   });
 
-  app.post("/api/auth/login", async (req, res, next) => {
+  app.post("/api/auth/login", authLimiter, async (req, res, next) => {
     try {
       const { email, password } = req.body ?? {};
       if (!isValidEmail(email) || typeof password !== "string") {
@@ -316,7 +352,7 @@ export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCod
     }
   });
 
-  app.post("/api/auth/forgot-password", async (req, res, next) => {
+  app.post("/api/auth/forgot-password", authLimiter, async (req, res, next) => {
     const client = await pool.connect();
     try {
       const email = req.body?.email;
@@ -400,7 +436,7 @@ export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCod
     }
   });
 
-  app.post("/api/auth/reset-password", async (req, res, next) => {
+  app.post("/api/auth/reset-password", authLimiter, async (req, res, next) => {
     const client = await pool.connect();
     try {
       const token = typeof req.body?.token === "string" ? req.body.token.trim() : "";
@@ -470,7 +506,7 @@ export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCod
     }
   });
 
-  app.post("/api/mail/test", requireAuth, async (req, res, next) => {
+  app.post("/api/mail/test", requireAuth, mailTestLimiter, async (req, res, next) => {
     try {
       const requestedTo = req.body?.to;
       const to =
