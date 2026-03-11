@@ -222,11 +222,11 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 
   const legend = useMemo(
     () => [
-      { k: "blue", label: "BLEU - Comprendre", icon: "B" },
-      { k: "green", label: "VERT - Ameliorer", icon: "V" },
-      { k: "red", label: "ROUGE - Frictions", icon: "R" },
-      { k: "violet", label: "VIOLET - Vision", icon: "I" },
-      { k: "bonus", label: "BONUS - Kudobox", icon: "*" },
+      { k: "blue", label: fr.gameScreen.legendBlue, icon: "B" },
+      { k: "green", label: fr.gameScreen.legendGreen, icon: "V" },
+      { k: "red", label: fr.gameScreen.legendRed, icon: "R" },
+      { k: "violet", label: fr.gameScreen.legendViolet, icon: "I" },
+      { k: "bonus", label: fr.gameScreen.legendBonus, icon: "*" },
       { k: "shop", label: fr.game.shopLegend, icon: "$" },
     ],
     []
@@ -389,43 +389,43 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 
   const infoTitle = gameState.currentQuestion
     ? gameState.currentQuestion.status === "pending"
-      ? "Question prete"
-      : "Question en cours..."
+      ? fr.gameScreen.infoQuestionReady
+      : fr.gameScreen.infoQuestionOpen
     : isPathChoiceActive
-    ? "Intersection"
+    ? fr.gameScreen.infoIntersection
     : isKudoPurchaseActive
-    ? "Case Kudobox"
+    ? fr.gameScreen.infoKudoboxTile
     : isShopActive
-    ? "Boutique"
+    ? fr.gameScreen.infoShop
     : isMyTurn
-    ? "A toi de jouer"
-    : "En attente...";
+    ? fr.gameScreen.infoYourTurn
+    : fr.gameScreen.infoWaiting;
 
   const infoHint = isPathChoiceActive
     ? canChoosePath
-      ? "Choisis une route"
-      : "En attente du choix..."
+      ? fr.gameScreen.hintChooseRoute
+      : fr.gameScreen.hintWaitingChoice
     : isKudoPurchaseActive
     ? canResolveKudoPurchase
-      ? "Acheter Kudo ?"
-      : "En attente de la decision..."
+      ? fr.gameScreen.hintBuyKudo
+      : fr.gameScreen.hintWaitingDecision
     : isShopActive
-    ? "Achete une action ou continue"
+    ? fr.gameScreen.hintBuyAction
     : pendingDoubleRollFirstDie != null
-    ? `Double lancer: De 1 = ${pendingDoubleRollFirstDie}, lance De 2`
+    ? fr.gameScreen.hintDoubleRoll.replace("{firstDie}", String(pendingDoubleRollFirstDie))
     : gameState.pendingPreRollEffect?.type === "double_roll"
-    ? "Effet pret: Double lancer"
+    ? fr.gameScreen.hintEffectDoubleRoll
     : gameState.pendingPreRollEffect?.type === "plus_two_roll"
-    ? "Effet pret: +2 au lancer"
+    ? fr.gameScreen.hintEffectPlusTwo
     : canRoll
-    ? "Lance le de"
+    ? fr.gameScreen.hintRollDice
     : isMoveAnimating
-    ? "Deplacement en cours..."
+    ? fr.gameScreen.hintMoving
     : canMove
-    ? "Avance auto..."
+    ? fr.gameScreen.hintAutoAdvance
     : isMyTurn
     ? "..."
-    : "Tour adverse";
+    : fr.gameScreen.hintOpponentTurn;
 
   const requestLeave = () => {
     if (!onLeave) return;
@@ -479,7 +479,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:flex lg:flex-wrap lg:items-center lg:justify-between lg:gap-3">
           <Card className={cn(neonCard, "px-3 py-2 sm:px-4 sm:py-3")}>
             <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">
-              Manche
+              {fr.gameScreen.round}
             </div>
             <div className="text-xl font-bold">
               {gameState.currentRound} / {gameState.maxRounds}
@@ -488,14 +488,14 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 
           <Card className={cn(neonCard, "px-3 py-2 sm:px-4 sm:py-3")}>
             <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">
-              Tour de
+              {fr.gameScreen.currentTurn}
             </div>
             <div className="truncate text-xl font-bold">{currentPlayer?.name ?? "-"}</div>
           </Card>
 
           <Card className={cn(neonCard, "px-3 py-2 sm:px-4 sm:py-3")}>
             <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">
-              Points
+              {fr.gameScreen.points}
             </div>
             <div className="text-xl font-bold">
               {gameState.players.find((p) => p.id === myPlayerId)?.points ?? 0}
@@ -504,7 +504,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 
           <Card className={cn(neonCard, "px-3 py-2 sm:px-4 sm:py-3")}>
             <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">
-              Kudobox
+              {fr.gameScreen.kudobox}
             </div>
             <div className="text-xl font-bold">
               {gameState.players.find((p) => p.id === myPlayerId)?.stars ?? 0}
@@ -517,7 +517,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               variant="secondary"
               onClick={requestLeave}
             >
-              Quitter la partie
+              {fr.gameScreen.leaveGame}
             </Button>
           )}
         </div>
@@ -561,7 +561,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                   <div
                     className={`mb-2 inline-flex rounded-full border px-2 py-1 text-[11px] ${turnStatusClass}`}
                   >
-                    {gameState.currentQuestion ? "Question" : isMyTurn ? "Ton tour" : "Attente"}
+                    {gameState.currentQuestion ? fr.gameScreen.statusQuestion : isMyTurn ? fr.gameScreen.statusYourTurn : fr.gameScreen.statusWaiting}
                   </div>
                   <div className="truncate text-sm text-cyan-100/90">{infoTitle}</div>
                   <div className="truncate text-xs text-slate-300">{infoHint}</div>
@@ -574,7 +574,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
             <Card className={cn(neonCard, "flex min-h-0 flex-col px-3 py-3")}>
               <div className="flex items-center justify-between gap-2">
                 <div className="text-base font-bold">
-                  {sidebarTab === "players" ? "Joueurs" : "Legende"}
+                  {sidebarTab === "players" ? fr.gameScreen.players : fr.gameScreen.legend}
                 </div>
                 <div className="flex gap-2">
                   <Button
@@ -587,7 +587,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                     }
                     onClick={() => setSidebarTab("players")}
                   >
-                    Joueurs
+                    {fr.gameScreen.players}
                   </Button>
                   <Button
                     variant="secondary"
@@ -599,7 +599,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                     }
                     onClick={() => setSidebarTab("legend")}
                   >
-                    Legende
+                    {fr.gameScreen.legend}
                   </Button>
                 </div>
               </div>
@@ -654,7 +654,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                   <div
                     className={`mb-1 inline-flex rounded-full border px-2 py-1 text-[11px] ${turnStatusClass}`}
                   >
-                    {gameState.currentQuestion ? "Question" : isMyTurn ? "Ton tour" : "Attente"}
+                    {gameState.currentQuestion ? fr.gameScreen.statusQuestion : isMyTurn ? fr.gameScreen.statusYourTurn : fr.gameScreen.statusWaiting}
                   </div>
                   <div className="truncate text-sm text-cyan-100/90">{infoTitle}</div>
                   <div className="truncate text-xs text-slate-300">{infoHint}</div>
@@ -668,7 +668,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                   variant="secondary"
                   onClick={openPlayers}
                 >
-                  Joueurs
+                  {fr.gameScreen.players}
                 </Button>
 
                 <Button
@@ -676,9 +676,9 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                   size="sm"
                   variant="secondary"
                   onClick={openLegend}
-                  aria-label="Afficher la legende"
+                  aria-label={fr.gameScreen.mobileLegendAria}
                 >
-                  Legende
+                  {fr.gameScreen.legend}
                 </Button>
 
                 {onLeave && (
@@ -688,7 +688,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                     variant="secondary"
                     onClick={requestLeave}
                   >
-                    Quitter
+                    {fr.gameScreen.leave}
                   </Button>
                 )}
               </div>
@@ -701,12 +701,12 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         <DrawerContent className="border-cyan-300/30 bg-slate-950/95 text-cyan-50 lg:hidden">
           <DrawerHeader className="pb-2">
             <div className="flex items-center justify-between gap-2">
-              <DrawerTitle>Joueurs</DrawerTitle>
+              <DrawerTitle>{fr.gameScreen.players}</DrawerTitle>
               <DrawerClose asChild>
                 <Button
                   variant="ghost"
                   size="sm"
-                  aria-label="Fermer le panneau joueurs"
+                  aria-label={fr.gameScreen.closePlayersPanelAria}
                   className="text-cyan-100 hover:bg-slate-800/60 hover:text-cyan-50"
                 >
                   X
@@ -732,12 +732,12 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         <DrawerContent className="border-cyan-300/30 bg-slate-950/95 text-cyan-50 lg:hidden">
           <DrawerHeader className="pb-2">
             <div className="flex items-center justify-between gap-2">
-              <DrawerTitle>Legende</DrawerTitle>
+              <DrawerTitle>{fr.gameScreen.legend}</DrawerTitle>
               <DrawerClose asChild>
                 <Button
                   variant="ghost"
                   size="sm"
-                  aria-label="Fermer le panneau legende"
+                  aria-label={fr.gameScreen.closeLegendPanelAria}
                   className="text-cyan-100 hover:bg-slate-800/60 hover:text-cyan-50"
                 >
                   X
@@ -762,17 +762,17 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       <AlertDialog open={leaveDialogOpen} onOpenChange={setLeaveDialogOpen}>
         <AlertDialogContent className="border-cyan-300/30 bg-slate-950/95 text-cyan-50">
           <AlertDialogHeader>
-            <AlertDialogTitle>Quitter la partie ?</AlertDialogTitle>
+            <AlertDialogTitle>{fr.gameScreen.leaveQuestionTitle}</AlertDialogTitle>
             <AlertDialogDescription className="text-slate-300">
               {fr.game.backToOnlineLobby}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className={cn(neutralSecondaryBtn, "text-cyan-100")}>
-              Annuler
+              {fr.gameScreen.cancel}
             </AlertDialogCancel>
             <AlertDialogAction className={dangerLeaveBtn} onClick={confirmLeave}>
-              Quitter
+              {fr.gameScreen.leave}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -791,11 +791,11 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       <AlertDialog open={isKudoPurchaseActive && !isMoveAnimating} onOpenChange={() => {}}>
         <AlertDialogContent className="border-cyan-300/30 bg-slate-950/95 text-cyan-50">
           <AlertDialogHeader>
-            <AlertDialogTitle>Acheter Kudo (10 points) ?</AlertDialogTitle>
+            <AlertDialogTitle>{fr.gameScreen.buyKudoTitle}</AlertDialogTitle>
             <AlertDialogDescription className="text-slate-300">
               {pendingKudoPurchase?.canAfford
-                ? "Tu peux convertir 10 points en 1 Kudo."
-                : "Points insuffisants: achat impossible."}
+                ? fr.gameScreen.canConvertKudo
+                : fr.gameScreen.cannotAffordKudo}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -805,19 +805,19 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                   className={cn(neutralSecondaryBtn, "text-cyan-100")}
                   onClick={() => onResolveKudoPurchase?.(false)}
                 >
-                  Continuer
+                  {fr.gameScreen.continue}
                 </AlertDialogCancel>
                 <AlertDialogAction
                   className={activeCyanBtn}
                   disabled={!pendingKudoPurchase?.canAfford}
                   onClick={() => onResolveKudoPurchase?.(true)}
                 >
-                  Acheter Kudo
+                  {fr.gameScreen.buyKudo}
                 </AlertDialogAction>
               </>
             ) : (
               <AlertDialogCancel className={cn(neutralSecondaryBtn, "text-cyan-100")}>
-                En attente...
+                {fr.gameScreen.waiting}
               </AlertDialogCancel>
             )}
           </AlertDialogFooter>
@@ -855,7 +855,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 
       {isTurnIntroActive && !isPathChoiceActive && !isKudoPurchaseActive && !isShopActive && !gameState.currentQuestion && !isMinigameActive && (
         <LaunchAnnouncement
-          title="A toi de jouer"
+          title={fr.gameScreen.infoYourTurn}
           subtitle={fr.game.yourTurnLaunch}
           startAt={turnIntroEndsAt ?? undefined}
         />
