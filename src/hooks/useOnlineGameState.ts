@@ -44,12 +44,23 @@ const EMPTY_STATE: GameState = {
 };
 
 const SESSION_STORAGE_KEY = "retro-party:online-session";
+let sessionFallbackCounter = 0;
 
 const makeSessionId = () => {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
+  const webCrypto = globalThis.crypto;
+  if (webCrypto && typeof webCrypto.randomUUID === "function") {
+    return webCrypto.randomUUID();
   }
-  return `session-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+  if (webCrypto && typeof webCrypto.getRandomValues === "function") {
+    const bytes = new Uint8Array(8);
+    webCrypto.getRandomValues(bytes);
+    const randomHex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+    return `session-${Date.now()}-${randomHex}`;
+  }
+
+  sessionFallbackCounter += 1;
+  return `session-${Date.now()}-${sessionFallbackCounter.toString(36)}`;
 };
 
 const isOnlineSession = (value: unknown): value is OnlineSession => {
