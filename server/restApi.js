@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
-import rateLimit from "express-rate-limit";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { QUESTIONS } from "./questions.js";
 import { testMail } from "./mailService.js";
 import { sendMail } from "./mailService.js";
@@ -215,7 +215,7 @@ export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCod
     max: API_RATE_LIMIT_MAX,
     standardHeaders: true,
     legacyHeaders: false,
-    keyGenerator: (req) => getClientIp(req) || req.ip || "unknown",
+    keyGenerator: (req) => ipKeyGenerator(getClientIp(req) || req.ip || ""),
     message: { error: "Too many requests" },
   });
 
@@ -224,7 +224,7 @@ export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCod
     max: AUTH_RATE_LIMIT_MAX,
     standardHeaders: true,
     legacyHeaders: false,
-    keyGenerator: (req) => getClientIp(req) || req.ip || "unknown",
+    keyGenerator: (req) => ipKeyGenerator(getClientIp(req) || req.ip || ""),
     message: { error: "Too many requests" },
   });
 
@@ -233,7 +233,7 @@ export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCod
     max: MAIL_TEST_RATE_LIMIT_MAX,
     standardHeaders: true,
     legacyHeaders: false,
-    keyGenerator: (req) => req.currentUser?.id || getClientIp(req) || req.ip || "unknown",
+    keyGenerator: (req) => req.currentUser?.id || ipKeyGenerator(getClientIp(req) || req.ip || ""),
     message: { error: "Too many requests" },
   });
 

@@ -52,10 +52,36 @@ const RECONNECT_GRACE_MS = 30000;
 const MAX_PLAYERS = 20;
 const WHO_SAID_IT_ANNOUNCE_MS = 4000;
 const ENABLE_WHO_SAID_IT_MINIGAME = true;
+const IS_PRODUCTION = process.env.NODE_ENV === "production";
+
+function isPrivateIpv4(hostname) {
+  const parts = hostname.split(".");
+  if (parts.length !== 4) return false;
+  const octets = parts.map((part) => Number(part));
+  if (octets.some((value) => !Number.isInteger(value) || value < 0 || value > 255)) return false;
+
+  if (octets[0] === 10) return true;
+  if (octets[0] === 192 && octets[1] === 168) return true;
+  if (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31) return true;
+  return false;
+}
+
+function isLocalDevOrigin(origin) {
+  try {
+    const parsed = new URL(origin);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return false;
+    if (parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1" || parsed.hostname === "::1") {
+      return true;
+    }
+    return isPrivateIpv4(parsed.hostname);
+  } catch (_err) {
+    return false;
+  }
+}
 
 function getAllowedOrigins() {
   const raw = process.env.ORIGIN;
-  const configured = (raw ? raw.split(",") : ["http://localhost:8088"])
+  const configured = (raw ? raw.split(",") : ["http://localhost:8088", "http://127.0.0.1:8088"])
     .map((value) => value.trim())
     .filter(Boolean);
   const allowed = [];
@@ -79,13 +105,18 @@ function getAllowedOrigins() {
 }
 
 const ALLOWED_ORIGINS = getAllowedOrigins();
-const ALLOWED_ORIGIN_LIST = Array.from(ALLOWED_ORIGINS);
+
+function isAllowedCorsOrigin(origin) {
+  if (!origin) return true;
+  if (ALLOWED_ORIGINS.has(origin)) return true;
+  return !IS_PRODUCTION && isLocalDevOrigin(origin);
+}
 
 const app = express();
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || ALLOWED_ORIGINS.has(origin)) {
+      if (isAllowedCorsOrigin(origin)) {
         callback(null, true);
         return;
       }
@@ -101,7 +132,17 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   path: "/socket.io",
-  cors: { origin: ALLOWED_ORIGIN_LIST, methods: ["GET", "POST"], credentials: true },
+  cors: {
+    origin(origin, callback) {
+      if (isAllowedCorsOrigin(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(new Error("Not allowed by CORS"));
+    },
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
 });
 
 function makeCode() {
