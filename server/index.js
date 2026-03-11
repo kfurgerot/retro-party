@@ -1,6 +1,7 @@
 import express from "express";
 import http from "http";
 import cors from "cors";
+import crypto from "node:crypto";
 import { Server } from "socket.io";
 import { initDatabase, pool } from "./db.js";
 import { registerApiRoutes } from "./restApi.js";
@@ -66,11 +67,11 @@ const io = new Server(server, {
 });
 
 function makeCode() {
-  return Math.random().toString(36).slice(2, 6).toUpperCase();
+  return crypto.randomInt(36 ** 4).toString(36).toUpperCase().padStart(4, "0");
 }
 
 function makeSessionId() {
-  return `session-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  return `session-${Date.now()}-${crypto.randomBytes(8).toString("hex")}`;
 }
 
 const rooms = new Map(); // code -> { state, hostSocketId, clients, lobby, disconnectTimers }
