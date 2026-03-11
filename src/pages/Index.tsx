@@ -4,18 +4,8 @@ import { useGameState } from '@/hooks/useGameState';
 import { useOnlineGameState } from '@/hooks/useOnlineGameState';
 import { LobbyScreen } from '@/components/screens/LobbyScreen';
 import { OnlineLobbyScreen } from '@/components/screens/OnlineLobbyScreen';
-import { OnlineOnboardingScreen } from '@/components/screens/OnlineOnboardingScreen';
-import { ExperienceId, SelectExperienceScreen } from '@/components/screens/SelectExperienceScreen';
 import { GameScreen } from '@/components/screens/GameScreen';
 import { ResultsScreen } from '@/components/screens/ResultsScreen';
-import { PixelCard } from '@/components/game/PixelCard';
-import { PixelButton } from '@/components/game/PixelButton';
-import { fr } from '@/i18n/fr';
-
-type OnlineProfile = {
-  name: string;
-  avatar: number;
-};
 
 const Index: React.FC = () => {
   const location = useLocation();
@@ -56,69 +46,15 @@ const Index: React.FC = () => {
 
   // Online state (rooms + websocket)
   const online = useOnlineGameState();
-  const [onlineProfile, setOnlineProfile] = useState<OnlineProfile | null>(
-    initialParams.name
-      ? {
-          name: initialParams.name,
-          avatar: initialParams.avatar,
-        }
-      : null
-  );
-  const [selectedExperience, setSelectedExperience] = useState<ExperienceId | null>(
-    initialParams.direct ? "retro-party" : null
-  );
   const [autoSubmitKey] = useState<number>(() => (initialParams.autoSubmit ? Date.now() : 0));
 
   const leaveOnlineSession = () => {
     online.leaveRoom();
-    setSelectedExperience(null);
-    setOnlineProfile(null);
     navigate("/");
   };
 
   if (isOnline) {
     if (online.gameState.phase === 'lobby') {
-      if (!online.code && !onlineProfile) {
-        return (
-          <OnlineOnboardingScreen
-            connected={online.connected}
-            onBack={() => navigate("/")}
-            onSubmit={({ name, avatar }) => {
-              setOnlineProfile({ name, avatar });
-            }}
-            initialName={onlineProfile?.name}
-            initialAvatar={onlineProfile?.avatar}
-          />
-        );
-      }
-
-      if (!online.code && !selectedExperience) {
-        return (
-          <SelectExperienceScreen
-            onSelect={(experience) => setSelectedExperience(experience)}
-            onBack={() => setOnlineProfile(null)}
-          />
-        );
-      }
-
-      if (!online.code && selectedExperience && selectedExperience !== 'retro-party') {
-        return (
-          <div className="scanlines flex min-h-svh w-full items-center justify-center p-6">
-            <PixelCard className="w-full max-w-xl p-6 text-center">
-              <div className="font-pixel text-2xl">{fr.templateEditor.comingSoon}</div>
-              <div className="mt-2 text-sm opacity-80">
-                Cette experience est listee dans la boite a outils mais pas encore disponible.
-              </div>
-              <div className="mt-6">
-                <PixelButton onClick={() => setSelectedExperience(null)} variant="secondary">
-                  {fr.templateEditor.backToTools}
-                </PixelButton>
-              </div>
-            </PixelCard>
-          </div>
-        );
-      }
-
       return (
         <div className="h-full w-full">
           <OnlineLobbyScreen
@@ -132,8 +68,8 @@ const Index: React.FC = () => {
             }}
             onStartGame={online.startGame}
             canStart={online.isHost}
-            initialName={onlineProfile?.name}
-            initialAvatar={onlineProfile?.avatar}
+            initialName={initialParams.name || undefined}
+            initialAvatar={initialParams.avatar}
             initialMode={initialParams.mode}
             initialCode={initialParams.code}
             autoSubmitKey={autoSubmitKey}

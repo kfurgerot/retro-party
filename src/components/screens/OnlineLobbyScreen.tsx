@@ -247,6 +247,47 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
 
         {!roomCode && (
           <section className="mx-auto mt-6 grid w-full max-w-md gap-3 rounded-lg border border-cyan-300/25 bg-slate-900/35 p-4">
+            <div className="rounded-md border border-cyan-300/25 bg-slate-950/40 p-3">
+              <p className="mb-2 text-xs uppercase tracking-[0.12em] text-cyan-100/80">
+                {fr.onlineLobby.profileTitle}
+              </p>
+              <div className="space-y-1">
+                <label className="text-xs text-cyan-100/85">{fr.onlineLobby.profileNameLabel}</label>
+                <Input
+                  placeholder="Ton pseudo"
+                  value={name}
+                  disabled={pending !== "idle"}
+                  className="h-11 border-cyan-300/20 bg-slate-900/50 text-cyan-50 placeholder:text-slate-400"
+                  onChange={(e) => setName(cleanName(e.target.value))}
+                  onKeyDown={(e) => {
+                    if (e.key !== "Enter") return;
+                    if (mode === "host" && canCreate) submitHost();
+                    if (mode === "join" && canJoin) submitJoin();
+                  }}
+                />
+              </div>
+              <div className="mt-3 space-y-1">
+                <label className="text-xs text-cyan-100/85">{fr.onlineLobby.profileAvatarLabel}</label>
+                <div className="grid grid-cols-6 gap-2">
+                  {AVATARS.map((emoji, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      disabled={pending !== "idle"}
+                      onClick={() => setAvatar(i)}
+                      className={cn(
+                        "flex h-10 w-10 items-center justify-center rounded-md border border-cyan-300/25 bg-slate-900/50 text-xl transition hover:border-cyan-300/65 hover:bg-slate-900/70",
+                        i === avatar && "border-cyan-300 bg-cyan-500/20"
+                      )}
+                      aria-label={`Avatar ${i + 1}`}
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
             {!validName && (
               <div className="rounded-md border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
                 {fr.onlineLobby.profileIncomplete}
@@ -314,7 +355,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
               disabled={pending !== "idle"}
               className="h-11 border-cyan-300/20 bg-slate-900/45 text-cyan-100 hover:bg-slate-900/70"
             >
-              Changer de profil
+              {fr.onlineLobby.backHome}
             </Button>
           </section>
         )}
