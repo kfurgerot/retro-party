@@ -35,7 +35,22 @@ function hashToken(token) {
 }
 
 function isValidEmail(value) {
-  return typeof value === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+  if (typeof value !== "string") return false;
+  const email = value.trim();
+  if (!email || email.length > 254) return false;
+  if (email.includes(" ")) return false;
+
+  const atIndex = email.indexOf("@");
+  if (atIndex <= 0 || atIndex !== email.lastIndexOf("@")) return false;
+
+  const localPart = email.slice(0, atIndex);
+  const domainPart = email.slice(atIndex + 1);
+  if (!localPart || !domainPart) return false;
+  if (domainPart.startsWith(".") || domainPart.endsWith(".")) return false;
+  if (!domainPart.includes(".")) return false;
+  if (domainPart.includes("..")) return false;
+
+  return true;
 }
 
 function getClientIp(req) {
