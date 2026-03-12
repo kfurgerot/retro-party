@@ -50,13 +50,26 @@ interface SelectExperienceScreenProps {
   onSelect: (experience: ExperienceId) => void;
   onBack: () => void;
   stepLabel?: string;
+  stepCurrent?: number;
+  stepTotal?: number;
 }
 
 export const SelectExperienceScreen: React.FC<SelectExperienceScreenProps> = ({
   onSelect,
   onBack,
   stepLabel,
+  stepCurrent,
+  stepTotal,
 }) => {
+  const hasProgress =
+    typeof stepCurrent === "number" &&
+    typeof stepTotal === "number" &&
+    stepTotal > 0;
+  const progressPct = hasProgress
+    ? Math.max(0, Math.min(100, Math.round((stepCurrent / stepTotal) * 100)))
+    : 0;
+  const computedStepLabel = hasProgress ? `${fr.onlineOnboarding.step} ${stepCurrent}/${stepTotal}` : stepLabel;
+
   return (
     <div className="scanlines relative flex min-h-svh w-full items-center justify-center overflow-hidden px-4 py-8">
       <RetroScreenBackground />
@@ -65,8 +78,8 @@ export const SelectExperienceScreen: React.FC<SelectExperienceScreenProps> = ({
         <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-cyan-200/80">
           <span>{fr.selectExperience.brand}</span>
           <div className="flex items-center gap-2">
-            {stepLabel ? (
-              <span className="rounded-full border border-cyan-300/40 px-2 py-0.5">{stepLabel}</span>
+            {computedStepLabel ? (
+              <span className="rounded-full border border-cyan-300/40 px-2 py-0.5">{computedStepLabel}</span>
             ) : null}
             <span>{fr.selectExperience.badge}</span>
           </div>
@@ -78,6 +91,14 @@ export const SelectExperienceScreen: React.FC<SelectExperienceScreenProps> = ({
         <p className="mt-2 text-center text-sm text-slate-300">
           {fr.selectExperience.subtitle}
         </p>
+        {hasProgress ? (
+          <div className="mx-auto mt-4 h-1.5 w-full max-w-xl overflow-hidden rounded bg-slate-900/55">
+            <div
+              className="h-full rounded bg-cyan-400/90 transition-all duration-300"
+              style={{ width: `${progressPct}%` }}
+            />
+          </div>
+        ) : null}
 
         <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {TOOLS.map((tool) => (

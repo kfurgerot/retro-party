@@ -39,6 +39,8 @@ interface OnlineLobbyScreenProps {
   initialCode?: string;
   autoSubmitKey?: number;
   stepLabel?: string;
+  stepCurrent?: number;
+  stepTotal?: number;
 }
 
 type Pending = "idle" | "hosting" | "joining" | "starting";
@@ -64,6 +66,8 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
   initialCode,
   autoSubmitKey,
   stepLabel,
+  stepCurrent,
+  stepTotal,
 }) => {
   const [mode, setMode] = useState<"host" | "join">(initialMode ?? "host");
   const [name, setName] = useState(() => cleanName(initialName ?? ""));
@@ -142,6 +146,14 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
     if (roomCode) return `${fr.onlineLobby.roomActive} : ${roomCode}`;
     return fr.onlineLobby.onlineSubtitle.replace("{maxPlayers}", String(MAX_PLAYERS));
   }, [connected, roomCode]);
+  const hasProgress =
+    !roomCode &&
+    typeof stepCurrent === "number" &&
+    typeof stepTotal === "number" &&
+    stepTotal > 0;
+  const progressPct = hasProgress
+    ? Math.max(0, Math.min(100, Math.round((stepCurrent / stepTotal) * 100)))
+    : 0;
 
   useEffect(() => {
     if (!connected) {
@@ -294,6 +306,14 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
         </div>
 
         <p className="mt-4 text-center text-xs text-slate-300 sm:text-sm">{subtitle}</p>
+        {hasProgress ? (
+          <div className="mx-auto mt-3 h-1.5 w-full max-w-xl overflow-hidden rounded bg-slate-900/55">
+            <div
+              className="h-full rounded bg-cyan-400/90 transition-all duration-300"
+              style={{ width: `${progressPct}%` }}
+            />
+          </div>
+        ) : null}
 
         {error && (
           <div className="mx-auto mt-4 max-w-md rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-center text-xs text-red-200">

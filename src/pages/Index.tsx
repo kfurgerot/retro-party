@@ -124,6 +124,8 @@ const Index: React.FC = () => {
             initialCode={initialParams.code}
             autoSubmitKey={autoSubmitKey}
             stepLabel={`${fr.onlineOnboarding.step} 5/5`}
+            stepCurrent={5}
+            stepTotal={5}
           />
         </div>
       );

@@ -59,6 +59,11 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
   const currentOverallStep =
     typeof overallStepStart === "number" ? overallStepStart + (step === 2 ? 1 : 0) : null;
   const showOverallStep = currentOverallStep !== null && typeof overallStepTotal === "number";
+  const progressPct = showOverallStep
+    ? Math.max(0, Math.min(100, Math.round((currentOverallStep / overallStepTotal) * 100)))
+    : step === 1
+      ? 50
+      : 100;
 
   return (
     <div className="scanlines relative flex min-h-svh w-full items-center justify-center overflow-hidden px-4 py-8">
@@ -79,7 +84,10 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
         </h1>
 
         <div className="mt-4 h-1 w-full overflow-hidden rounded bg-slate-900/55">
-          <div className={cn("h-full rounded bg-cyan-400/90 transition-all duration-300", step === 1 ? "w-1/2" : "w-full")} />
+          <div
+            className="h-full rounded bg-cyan-400/90 transition-all duration-300"
+            style={{ width: `${progressPct}%` }}
+          />
         </div>
 
         <div className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">

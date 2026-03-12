@@ -49,7 +49,8 @@ const Home = () => {
   if (stage === "select-experience") {
     return (
       <SelectExperienceScreen
-        stepLabel={`${fr.onlineOnboarding.step} 1/5`}
+        stepCurrent={1}
+        stepTotal={5}
         onBack={() => setStage("press-start")}
         onSelect={(experience: ExperienceId) => {
           if (experience !== "retro-party") return;
@@ -75,6 +76,12 @@ const Home = () => {
           <p className="text-center text-sm text-slate-300">
             {fr.home.modeDescription}
           </p>
+          <div className="mx-auto h-1.5 w-full max-w-md overflow-hidden rounded bg-slate-900/55">
+            <div
+              className="h-full rounded bg-cyan-400/90 transition-all duration-300"
+              style={{ width: "40%" }}
+            />
+          </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <Button
               className={`h-12 font-semibold ${CTA_NEON_PRIMARY}`}
