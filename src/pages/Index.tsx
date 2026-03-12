@@ -89,7 +89,13 @@ const Index: React.FC = () => {
               setOnboardingProfile({ name, avatar });
               setShowOnlineOnboarding(false);
             }}
-            onBack={() => navigate("/")}
+            onBack={() => {
+              if (onboardingProfile.name) {
+                setShowOnlineOnboarding(false);
+                return;
+              }
+              navigate("/");
+            }}
           />
         );
       }
@@ -105,6 +111,7 @@ const Index: React.FC = () => {
             onLeave={() => {
               leaveOnlineSession();
             }}
+            onEditProfile={() => setShowOnlineOnboarding(true)}
             onStartGame={online.startGame}
             canStart={online.isHost}
             initialName={onboardingProfile.name || initialParams.name || undefined}

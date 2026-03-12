@@ -31,6 +31,7 @@ interface OnlineLobbyScreenProps {
   onJoin: (code: string, name: string, avatar: number) => void;
   onLeave: () => void;
   onStartGame: (maxRounds: number) => void;
+  onEditProfile?: () => void;
   canStart: boolean;
   initialName?: string;
   initialAvatar?: number;
@@ -54,6 +55,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
   onJoin,
   onLeave,
   onStartGame,
+  onEditProfile,
   canStart,
   initialName,
   initialAvatar,
@@ -128,6 +130,10 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
     [canStart, connectedPlayersCount, offlinePlayers.length]
   );
   const launchReady = launchChecklist.every((item) => item.ok);
+  const launchBlockers = useMemo(
+    () => launchChecklist.filter((item) => !item.ok).map((item) => item.label),
+    [launchChecklist]
+  );
 
   const subtitle = useMemo(() => {
     if (!connected) return fr.onlineOnboarding.connecting;
@@ -295,40 +301,29 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
               <p className="mb-2 text-xs uppercase tracking-[0.12em] text-cyan-100/80">
                 {fr.onlineLobby.profileTitle}
               </p>
-              <div className="space-y-1">
-                <label className="text-xs text-cyan-100/85">{fr.onlineLobby.profileNameLabel}</label>
-                <Input
-                  placeholder={fr.onlineOnboarding.displayNamePlaceholder}
-                  value={name}
-                  disabled={pending !== "idle"}
-                  className="h-11 border-cyan-300/20 bg-slate-900/50 text-cyan-50 placeholder:text-slate-400"
-                  onChange={(e) => setName(cleanName(e.target.value))}
-                  onKeyDown={(e) => {
-                    if (e.key !== "Enter") return;
-                    if (mode === "host" && canCreate) submitHost();
-                    if (mode === "join" && canJoin) submitJoin();
-                  }}
-                />
-              </div>
-              <div className="mt-3 space-y-1">
-                <label className="text-xs text-cyan-100/85">{fr.onlineLobby.profileAvatarLabel}</label>
-                <div className="grid grid-cols-6 gap-2">
-                  {AVATARS.map((emoji, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      disabled={pending !== "idle"}
-                      onClick={() => setAvatar(i)}
-                      className={cn(
-                        "flex h-10 w-10 items-center justify-center rounded-md border border-cyan-300/25 bg-slate-900/50 text-xl transition hover:border-cyan-300/65 hover:bg-slate-900/70",
-                        i === avatar && "border-cyan-300 bg-cyan-500/20"
-                      )}
-                      aria-label={fr.onlineLobby.avatarAria.replace("{index}", String(i + 1))}
-                    >
-                      {emoji}
-                    </button>
-                  ))}
+              <div className="flex items-center justify-between gap-3 rounded-md border border-cyan-300/20 bg-slate-900/40 px-3 py-2">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-cyan-300/25 bg-slate-950/60 text-xl">
+                    {AVATARS[avatar] ?? "?"}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="text-xs text-cyan-100/80">{fr.onlineLobby.profileNameLabel}</div>
+                    <div className="truncate text-sm font-semibold text-cyan-50">
+                      {name || fr.onlineOnboarding.displayNamePlaceholder}
+                    </div>
+                  </div>
                 </div>
+                {onEditProfile && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={onEditProfile}
+                    disabled={pending !== "idle"}
+                    className="h-9 border-cyan-300/20 bg-slate-900/45 px-3 text-cyan-100 hover:bg-slate-900/70"
+                  >
+                    {fr.onlineLobby.editProfile}
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -405,74 +400,82 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
         )}
 
         {roomCode && (
-          <>
-            <div className="neon-surface mx-auto mt-5 flex max-w-md items-center justify-center gap-2 p-2">
-              <span className="text-xs text-cyan-100/80">{fr.onlineLobby.codeLabel}:</span>
-              <span className="rounded bg-cyan-500/15 px-2 py-1 text-sm font-semibold tracking-[0.12em] text-cyan-200">
-                {roomCode}
-              </span>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={copyRoom}
-                disabled={pending !== "idle"}
-                className="border-cyan-300/30 bg-slate-900/45 text-cyan-100 hover:bg-slate-900/70"
-              >
-                {copied ? fr.onlineLobby.copied : fr.onlineLobby.copy}
-              </Button>
-            </div>
-
-            <section className="neon-surface mx-auto mt-6 grid w-full max-w-lg gap-2 p-4 sm:p-5">
+          <section className="mx-auto mt-6 grid w-full max-w-4xl gap-3 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
+            <div className="neon-surface grid gap-2 p-4 sm:p-5">
               {canStart ? (
-                <div
-                  className={cn(
-                    "rounded-md border px-3 py-3",
-                    launchReady
-                      ? "border-emerald-500/40 bg-emerald-500/10"
-                      : "border-amber-500/40 bg-amber-500/10"
-                  )}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-xs uppercase tracking-[0.1em] text-cyan-100/90">
-                      {fr.onlineLobby.hostPanelTitle}
-                    </p>
-                    <span
-                      className={cn(
-                        "rounded-full border px-2 py-0.5 text-[10px] font-semibold",
-                        launchReady
-                          ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-200"
-                          : "border-amber-500/40 bg-amber-500/15 text-amber-200"
-                      )}
-                    >
-                      {launchReady
-                        ? fr.onlineLobby.hostReady
-                        : fr.onlineLobby.hostBlocked}
-                    </span>
-                  </div>
-                  <p className="mt-2 text-xs text-slate-300">
-                    {fr.onlineLobby.hostLaunchHint}
-                  </p>
-                  <div className="mt-3 grid gap-1.5 text-xs">
-                    {launchChecklist.map((item) => (
-                      <div
-                        key={item.label}
+                <>
+                  <div
+                    className={cn(
+                      "rounded-md border px-3 py-3",
+                      launchReady
+                        ? "border-emerald-500/40 bg-emerald-500/10"
+                        : "border-amber-500/40 bg-amber-500/10"
+                    )}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs uppercase tracking-[0.1em] text-cyan-100/90">
+                        {fr.onlineLobby.hostPanelTitle}
+                      </p>
+                      <span
                         className={cn(
-                          "rounded border px-2 py-1",
-                          item.ok
-                            ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-100"
-                            : "border-amber-500/30 bg-amber-500/10 text-amber-100"
+                          "rounded-full border px-2 py-0.5 text-[10px] font-semibold",
+                          launchReady
+                            ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-200"
+                            : "border-amber-500/40 bg-amber-500/15 text-amber-200"
                         )}
                       >
-                        <span className="font-semibold">
-                          {item.ok
-                            ? `${fr.onlineLobby.checklistReady}: `
-                            : `${fr.onlineLobby.checklistBlocked}: `}
-                        </span>
-                        {item.label}
-                      </div>
-                    ))}
+                        {launchReady
+                          ? fr.onlineLobby.hostReady
+                          : fr.onlineLobby.hostBlocked}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-xs text-slate-300">
+                      {launchReady ? fr.onlineLobby.hostReadyHint : fr.onlineLobby.hostBlockedHint}
+                    </p>
                   </div>
-                </div>
+
+                  {launchBlockers.length > 0 && (
+                    <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-3">
+                      <p className="text-xs uppercase tracking-[0.1em] text-amber-100/90">
+                        {fr.onlineLobby.launchBlockedTitle}
+                      </p>
+                      <div className="mt-2 grid gap-1.5 text-xs text-amber-100">
+                        {launchBlockers.map((blocker) => (
+                          <div key={blocker} className="rounded border border-amber-500/30 bg-amber-500/10 px-2 py-1">
+                            {blocker}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-1">
+                    <label className="text-xs text-cyan-100/85">{fr.onlineLobby.roundsLabel}</label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={30}
+                      step={1}
+                      value={maxRounds}
+                      onChange={(e) => {
+                        const raw = Number(e.target.value);
+                        const bounded = Number.isFinite(raw)
+                          ? Math.max(1, Math.min(30, Math.floor(raw)))
+                          : 12;
+                        setMaxRounds(bounded);
+                      }}
+                      className="h-11 border-cyan-300/20 bg-slate-900/50 text-cyan-50"
+                    />
+                  </div>
+
+                  <Button
+                    onClick={submitStart}
+                    disabled={!canLaunch || pending !== "idle"}
+                    className="h-12 border border-cyan-300 bg-cyan-500 text-base font-semibold text-slate-950 hover:bg-cyan-400"
+                  >
+                    {fr.onlineLobby.hostPrimaryAction}
+                  </Button>
+                </>
               ) : (
                 <div className="rounded-md border border-cyan-300/20 bg-slate-900/40 px-3 py-3">
                   <p className="text-xs uppercase tracking-[0.1em] text-cyan-100/90">
@@ -486,33 +489,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
                   </p>
                 </div>
               )}
-              {canStart && (
-                <div className="space-y-1">
-                  <label className="text-xs text-cyan-100/85">{fr.onlineLobby.roundsLabel}</label>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={30}
-                    step={1}
-                    value={maxRounds}
-                    onChange={(e) => {
-                      const raw = Number(e.target.value);
-                      const bounded = Number.isFinite(raw)
-                        ? Math.max(1, Math.min(30, Math.floor(raw)))
-                        : 12;
-                      setMaxRounds(bounded);
-                    }}
-                    className="h-11 border-cyan-300/20 bg-slate-900/50 text-cyan-50"
-                  />
-                </div>
-              )}
-              <Button
-                onClick={submitStart}
-                disabled={!canLaunch || pending !== "idle"}
-                className="h-11 border border-cyan-300 bg-cyan-500 font-semibold text-slate-950 hover:bg-cyan-400"
-              >
-                {primaryLabel}
-              </Button>
+
               <Button
                 onClick={submitLeave}
                 disabled={pending !== "idle"}
@@ -521,10 +498,50 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
               >
                 {canStart ? fr.onlineLobby.cancelParty : fr.onlineLobby.leaveParty}
               </Button>
-            </section>
-          </>
+            </div>
+
+            <div className="neon-surface grid gap-3 p-4 sm:p-5">
+              <div className="rounded-md border border-cyan-300/25 bg-slate-900/45 p-3">
+                <div className="mb-2 text-xs uppercase tracking-[0.1em] text-cyan-100/90">
+                  {fr.onlineLobby.lobbyStatusTitle}
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-300">{fr.onlineLobby.connectedPlayersLabel}</span>
+                  <span className="font-semibold text-cyan-100">{connectedPlayersCount}</span>
+                </div>
+                <div className="mt-1 flex items-center justify-between text-xs">
+                  <span className="text-slate-300">{fr.onlineLobby.offlinePlayersLabel}</span>
+                  <span className={cn("font-semibold", offlinePlayers.length > 0 ? "text-amber-200" : "text-emerald-200")}>
+                    {offlinePlayers.length}
+                  </span>
+                </div>
+              </div>
+
+              <div className="rounded-md border border-cyan-300/25 bg-slate-900/45 p-3">
+                <div className="mb-2 text-xs uppercase tracking-[0.1em] text-cyan-100/90">
+                  {fr.onlineLobby.codeLabel}
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="rounded bg-cyan-500/15 px-2 py-1 text-sm font-semibold tracking-[0.12em] text-cyan-200">
+                    {roomCode}
+                  </span>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={copyRoom}
+                    disabled={pending !== "idle"}
+                    className="border-cyan-300/30 bg-slate-900/45 text-cyan-100 hover:bg-slate-900/70"
+                  >
+                    {copied ? fr.onlineLobby.copied : fr.onlineLobby.copy}
+                  </Button>
+                </div>
+                <p className="mt-2 text-xs text-slate-300">{fr.onlineLobby.inviteHint}</p>
+              </div>
+            </div>
+          </section>
         )}
 
+        {roomCode && (
         <section className="neon-surface mt-6 p-4 sm:p-5">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-cyan-100/80">
@@ -572,6 +589,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
             )}
           </div>
         </section>
+        )}
       </div>
 
       <AlertDialog open={leaveDialogOpen} onOpenChange={setLeaveDialogOpen}>

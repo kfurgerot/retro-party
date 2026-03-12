@@ -31,21 +31,41 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
     .sort((a, b) => b.upVotes - a.upVotes || a.downVotes - b.downVotes)
     .slice(0, 5);
   const topQuestion = topQuestions[0] ?? null;
+  const totalQuestions = questionHistory.length;
+  const totalUpVotes = questionHistory.reduce((sum, q) => sum + (q.upVotes ?? 0), 0);
+  const totalDownVotes = questionHistory.reduce((sum, q) => sum + (q.downVotes ?? 0), 0);
+  const totalVotes = totalUpVotes + totalDownVotes;
+  const usefulRatio = totalVotes > 0 ? Math.round((totalUpVotes / totalVotes) * 100) : 0;
 
   return (
     <div className="scanlines relative min-h-svh w-full overflow-hidden px-3 py-4 sm:px-6 sm:py-8">
       <RetroScreenBackground />
       <div className="relative z-10 mx-auto flex h-full w-full max-w-6xl flex-col gap-3 sm:gap-4">
-        <Card className="neon-surface p-4 text-center sm:p-6">
-          <div className="text-[10px] uppercase tracking-[0.16em] text-cyan-200/80">{fr.results.summaryTitle}</div>
-          <div className="mt-1 text-xl font-bold text-cyan-100 sm:text-3xl">{fr.results.title}</div>
-          <div className="mt-1 text-xs text-slate-300 sm:text-sm">{fr.results.subtitle}</div>
+        <Card className="neon-surface p-4 sm:p-6">
+          <div className="text-center">
+            <div className="text-[10px] uppercase tracking-[0.16em] text-cyan-200/80">{fr.results.summaryTitle}</div>
+            <div className="mt-1 text-xl font-bold text-cyan-100 sm:text-3xl">{fr.results.title}</div>
+            <div className="mt-1 text-xs text-slate-300 sm:text-sm">{fr.results.subtitle}</div>
+          </div>
+
           {winner && (
-            <div className="mt-3 rounded-md border border-amber-300/45 bg-amber-500/12 px-3 py-2 text-sm font-semibold text-amber-100">
-              {fr.results.winnerAnnouncement.replace("{name}", winner.name)}
+            <div className="mt-4 rounded-md border border-amber-300/45 bg-amber-500/12 p-3">
+              <div className="flex items-center justify-center gap-3">
+                <span className="inline-flex h-12 w-12 items-center justify-center rounded border border-amber-200/50 bg-slate-950/55 text-2xl">
+                  {AVATARS[winner.avatar] ?? "?"}
+                </span>
+                <div>
+                  <div className="text-[10px] uppercase tracking-[0.1em] text-amber-100/80">{fr.results.winner}</div>
+                  <div className="text-base font-bold text-amber-100 sm:text-lg">{winner.name}</div>
+                </div>
+              </div>
+              <div className="mt-2 text-center text-sm text-amber-100">
+                {fr.results.winnerAnnouncement.replace("{name}", winner.name)}
+              </div>
             </div>
           )}
-          <div className="mt-3 grid grid-cols-2 gap-2 text-left sm:mx-auto sm:max-w-md">
+
+          <div className="mt-4 grid grid-cols-2 gap-2 text-left sm:grid-cols-4">
             <div className="neon-card rounded-md px-3 py-2">
               <div className="text-[11px] uppercase tracking-[0.1em] text-cyan-100/80">{fr.results.totalKudobox}</div>
               <div className="text-lg font-bold text-cyan-50">{totalStars}</div>
@@ -53,6 +73,14 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
             <div className="neon-card rounded-md px-3 py-2">
               <div className="text-[11px] uppercase tracking-[0.1em] text-cyan-100/80">{fr.results.totalPoints}</div>
               <div className="text-lg font-bold text-cyan-50">{totalPoints}</div>
+            </div>
+            <div className="neon-card rounded-md px-3 py-2">
+              <div className="text-[11px] uppercase tracking-[0.1em] text-cyan-100/80">{fr.results.playersTitle}</div>
+              <div className="text-lg font-bold text-cyan-50">{players.length}</div>
+            </div>
+            <div className="neon-card rounded-md px-3 py-2">
+              <div className="text-[11px] uppercase tracking-[0.1em] text-cyan-100/80">{fr.results.questionsCount}</div>
+              <div className="text-lg font-bold text-cyan-50">{totalQuestions}</div>
             </div>
           </div>
         </Card>
@@ -117,6 +145,16 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
 
           <Card className="neon-surface min-h-0 p-3 sm:p-4">
             <div className="text-[10px] uppercase tracking-[0.12em] text-cyan-200/80">{fr.results.questionInsightsTitle}</div>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <div className="rounded-md border border-cyan-300/25 bg-slate-900/55 px-3 py-2">
+                <div className="text-[10px] uppercase tracking-[0.08em] text-cyan-100/80">{fr.results.usefulRate}</div>
+                <div className="text-lg font-bold text-cyan-50">{usefulRatio}%</div>
+              </div>
+              <div className="rounded-md border border-cyan-300/25 bg-slate-900/55 px-3 py-2">
+                <div className="text-[10px] uppercase tracking-[0.08em] text-cyan-100/80">{fr.results.totalVotes}</div>
+                <div className="text-lg font-bold text-cyan-50">{totalVotes}</div>
+              </div>
+            </div>
             {topQuestion && (
               <div className="mt-2 rounded-md border border-cyan-300/35 bg-cyan-500/10 px-3 py-2">
                 <div className="text-[11px] uppercase tracking-[0.08em] text-cyan-100/80">{fr.results.mostUsefulCard}</div>
