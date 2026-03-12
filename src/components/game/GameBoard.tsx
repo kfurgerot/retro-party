@@ -662,6 +662,10 @@ const GameBoardComponent: React.FC<GameBoardProps> = ({
   const focusedPosition = focusedPlayer
     ? (displayPositions[focusedPlayer.id] ?? focusedPlayer.position)
     : null;
+  const optionSet = useMemo(
+    () => new Set(pendingPathChoice?.options ?? []),
+    [pendingPathChoice?.options]
+  );
   const highlightedPathEdges = useMemo(() => {
     const edges = new Set<string>();
     const path = lastMoveTrace?.path ?? [];
@@ -782,6 +786,9 @@ const GameBoardComponent: React.FC<GameBoardProps> = ({
             const py = tile.y - bounds.minY;
 
             const playersHere = playersByTile.get(tile.id) ?? [];
+            const isPathOrigin = pendingPathChoice?.atTileId === tile.id;
+            const isPathOption = optionSet.has(tile.id);
+            const showTileIndex = isPathOrigin || isPathOption;
 
             return (
               <div
@@ -795,9 +802,11 @@ const GameBoardComponent: React.FC<GameBoardProps> = ({
                 title={`${idx + 1} - ${tile.type}`}
               >
                 <span>{TileIcon[tile.type] ?? "?"}</span>
-                <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 rounded border border-slate-300/35 bg-slate-900/75 px-1 py-0 text-[10px] font-semibold text-slate-100">
-                  {tile.id + 1}
-                </span>
+                {showTileIndex && (
+                  <span className="absolute -top-2 -right-2 hidden rounded border border-slate-300/35 bg-slate-900/85 px-1 py-0 text-[10px] font-semibold text-slate-100 shadow-[0_1px_0_rgba(0,0,0,0.6)] lg:inline-flex">
+                    {tile.id + 1}
+                  </span>
+                )}
 
                 {/* Players on tile */}
                 {playersHere.length > 0 && (
@@ -937,7 +946,7 @@ const GameBoardComponent: React.FC<GameBoardProps> = ({
 
       {focusedPlayer && focusedPosition != null && (
         <div className="pointer-events-none absolute bottom-2 left-2 z-20 rounded border border-cyan-300/35 bg-slate-900/75 px-2 py-1 text-[11px] text-cyan-100">
-          {focusedPlayer.name} · {focusedPosition + 1}
+          {focusedPlayer.name}
         </div>
       )}
     </div>

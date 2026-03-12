@@ -143,7 +143,9 @@ const BoardV2Component: React.FC<BoardV2Props> = ({
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <div className="text-[11px] text-slate-300">
-                          {fr.gameScreen.boardV2Node.replace("{index}", String(tile.id + 1))}
+                          {isPathOrigin || isPathOption
+                            ? fr.gameScreen.boardV2Node.replace("{index}", String(tile.id + 1))
+                            : fr.gameScreen.boardV2NodeSimple}
                         </div>
                         <div className="text-sm font-semibold text-cyan-50">
                           {fr.gameScreen.boardV2Type.replace("{type}", tile.type)}

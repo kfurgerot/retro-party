@@ -616,6 +616,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     0,
     Math.min(100, Math.round((gameState.currentRound / Math.max(1, gameState.maxRounds)) * 100))
   );
+  const turnQueue = useMemo(() => playersByTurnOrder.slice(0, Math.min(playersByTurnOrder.length, 5)), [playersByTurnOrder]);
 
   const handleConfirmPreRollChoice = (itemType: ShopItemType) => {
     const item = beforeRollInventory.find((entry) => entry.type === itemType);
@@ -654,6 +655,29 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               <div className="truncate text-[10px] text-cyan-100/85">
                 {primaryAction}
               </div>
+              <div className="mt-2">
+                <div className="text-[10px] uppercase tracking-[0.08em] text-cyan-100/75">
+                  {fr.gameScreen.turnQueue}
+                </div>
+                <div className="mt-1 flex gap-1.5 overflow-x-auto pb-0.5">
+                  {turnQueue.map((entry) => (
+                    <div
+                      key={`mobile-turn-${entry.player.id}`}
+                      className={cn(
+                        "shrink-0 rounded border px-2 py-1",
+                        entry.isCurrent
+                          ? "border-cyan-300/45 bg-cyan-500/15 text-cyan-100"
+                          : entry.isNext
+                          ? "border-emerald-300/40 bg-emerald-500/12 text-emerald-100"
+                          : "border-cyan-300/20 bg-slate-900/35 text-slate-200"
+                      )}
+                    >
+                      <div className="max-w-[110px] truncate text-[11px] font-semibold">{entry.player.name}</div>
+                      <div className="text-[10px] opacity-85">{getTurnOrderLabel(entry.turnDistance)}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
               <div className="mt-1.5 h-1 w-full overflow-hidden rounded bg-slate-900/60">
                 <div className="h-full rounded bg-cyan-400/90" style={{ width: `${roundProgressPct}%` }} />
               </div>
@@ -678,6 +702,29 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 {fr.gameScreen.currentTurn}
               </div>
               <div className="truncate text-lg font-bold sm:text-xl">{currentPlayer?.name ?? "-"}</div>
+              <div className="mt-2">
+                <div className="text-[10px] uppercase tracking-[0.08em] text-cyan-100/75">
+                  {fr.gameScreen.turnQueue}
+                </div>
+                <div className="mt-1 flex flex-wrap gap-1.5">
+                  {turnQueue.map((entry) => (
+                    <div
+                      key={`desktop-turn-${entry.player.id}`}
+                      className={cn(
+                        "rounded border px-2 py-1",
+                        entry.isCurrent
+                          ? "border-cyan-300/45 bg-cyan-500/15 text-cyan-100"
+                          : entry.isNext
+                          ? "border-emerald-300/40 bg-emerald-500/12 text-emerald-100"
+                          : "border-cyan-300/20 bg-slate-900/35 text-slate-200"
+                      )}
+                    >
+                      <div className="max-w-[130px] truncate text-[11px] font-semibold">{entry.player.name}</div>
+                      <div className="text-[10px] opacity-85">{getTurnOrderLabel(entry.turnDistance)}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </Card>
 
             <Card className={cn(neonCard, "min-w-0 px-3 py-2 sm:px-4 sm:py-3")}>
