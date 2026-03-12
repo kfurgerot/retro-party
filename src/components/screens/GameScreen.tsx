@@ -34,6 +34,11 @@ import { ShopModal } from "../game/ShopModal";
 import { PreRollChoiceModal } from "../game/PreRollChoiceModal";
 import { SHOP_CATALOG } from "@/data/shopCatalog";
 import { fr } from "@/i18n/fr";
+import {
+  CTA_NEON_DANGER,
+  CTA_NEON_PRIMARY,
+  CTA_NEON_SECONDARY_SUBTLE,
+} from "@/lib/uiTokens";
 
 const TURN_ANNOUNCE_MS = 2000;
 
@@ -443,16 +448,11 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     ? "border-cyan-400/40 bg-cyan-500/15 text-cyan-100"
     : "border-cyan-300/20 bg-slate-900/40 text-slate-300";
 
-  const neonCard =
-    "border-cyan-300/30 bg-slate-900/55 text-cyan-50 shadow-[0_0_0_1px_rgba(34,211,238,0.18),0_0_24px_rgba(34,211,238,0.12)] backdrop-blur";
-  const neonPanel =
-    "rounded-lg border border-cyan-300/25 bg-slate-900/40 shadow-[0_0_0_1px_rgba(34,211,238,0.12),0_0_20px_rgba(34,211,238,0.08)]";
-  const neutralSecondaryBtn =
-    "border-cyan-300/20 bg-slate-900/45 text-cyan-100 hover:bg-slate-900/70";
-  const activeCyanBtn =
-    "border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_0_2px_rgba(34,211,238,0.35)] hover:bg-cyan-400";
-  const dangerLeaveBtn =
-    "border-rose-300 bg-rose-500 text-white shadow-[0_0_0_2px_rgba(251,113,133,0.35)] hover:bg-rose-400";
+  const neonCard = "neon-card";
+  const neonPanel = "neon-surface";
+  const neutralSecondaryBtn = CTA_NEON_SECONDARY_SUBTLE;
+  const activeCyanBtn = CTA_NEON_PRIMARY;
+  const dangerLeaveBtn = CTA_NEON_DANGER;
 
   const canOpenQuestionCard =
     !!gameState.currentQuestion &&
@@ -478,7 +478,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       <RetroScreenBackground />
 
       <div className="relative z-10 flex h-svh w-full flex-col overflow-hidden p-2 sm:p-3">
-        <div className="grid grid-cols-2 gap-2 rounded-lg border border-cyan-300/20 bg-slate-950/25 p-2 sm:grid-cols-4 lg:flex lg:flex-wrap lg:items-center lg:justify-between lg:gap-3">
+        <div className="neon-surface-soft grid grid-cols-2 gap-2 p-2 sm:grid-cols-4 lg:flex lg:flex-wrap lg:items-center lg:justify-between lg:gap-3">
           <Card className={cn(neonCard, "min-w-0 px-3 py-2 sm:px-4 sm:py-3")}>
             <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">
               {fr.gameScreen.round}

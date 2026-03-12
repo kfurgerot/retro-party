@@ -33,6 +33,7 @@ import {
 import { api, TemplateItem, TemplateQuestion } from "@/net/api";
 import { RetroScreenBackground } from "@/components/screens/RetroScreenBackground";
 import { fr } from "@/i18n/fr";
+import { CTA_NEON_PRIMARY, CTA_NEON_SECONDARY } from "@/lib/uiTokens";
 
 type ThemeTab = "all" | "blue" | "green" | "red" | "violet" | "bonus" | "other";
 type ThemeKey = Exclude<ThemeTab, "all" | "other">;
@@ -69,10 +70,8 @@ const THEME_META: Record<
   },
 };
 const THEME_ORDER: ThemeKey[] = ["blue", "green", "red", "violet", "bonus"];
-const neutralSecondaryBtn =
-  "border-cyan-300/50 bg-cyan-500/15 text-cyan-50 shadow-[0_0_0_1px_rgba(34,211,238,0.18)] hover:bg-cyan-500/25 hover:text-cyan-50";
-const activeCyanBtn =
-  "border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_0_2px_rgba(34,211,238,0.35)] hover:bg-cyan-400";
+const neutralSecondaryBtn = CTA_NEON_SECONDARY;
+const activeCyanBtn = CTA_NEON_PRIMARY;
 
 function normalizeCategory(value: string | null | undefined): ThemeTab {
   if (!value) return "other";

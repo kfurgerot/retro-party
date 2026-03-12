@@ -140,6 +140,22 @@
     box-shadow: var(--pixel-shadow);
   }
 
+  /* Shared neon surfaces for lobby/game panels */
+  .neon-card {
+    @apply border border-cyan-300/30 bg-slate-900/55 text-cyan-50 backdrop-blur;
+    box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.18), 0 0 24px rgba(34, 211, 238, 0.12);
+  }
+
+  .neon-surface {
+    @apply rounded-lg border border-cyan-300/25 bg-slate-900/40 backdrop-blur;
+    box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.12), 0 0 24px rgba(34, 211, 238, 0.08);
+  }
+
+  .neon-surface-soft {
+    @apply rounded-lg border border-cyan-300/20 bg-slate-950/25 backdrop-blur-sm;
+    box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.1), 0 0 20px rgba(34, 211, 238, 0.06);
+  }
+
   /* Scanline effect */
   .scanlines::after {
     content: '';

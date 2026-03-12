@@ -7,17 +7,16 @@ import { Label } from "@/components/ui/label";
 import { api, HostUser, TemplateItem } from "@/net/api";
 import { RetroScreenBackground } from "@/components/screens/RetroScreenBackground";
 import { fr } from "@/i18n/fr";
-import { cn } from "@/lib/utils";
+import {
+  CTA_NEON_DANGER,
+  CTA_NEON_PRIMARY,
+  CTA_NEON_SECONDARY,
+} from "@/lib/uiTokens";
 
 type AuthMode = "login" | "register";
-const neutralSecondaryBtn =
-  "border-cyan-300/50 bg-cyan-500/15 text-cyan-50 shadow-[0_0_0_1px_rgba(34,211,238,0.18)] hover:bg-cyan-500/25 hover:text-cyan-50";
-const activeCyanBtn =
-  "border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_0_2px_rgba(34,211,238,0.35)] hover:bg-cyan-400";
-const dangerBtn =
-  "border-rose-300 bg-rose-500 text-white shadow-[0_0_0_2px_rgba(251,113,133,0.3)] hover:bg-rose-400";
-const neonPanel =
-  "rounded-lg border border-cyan-300/20 bg-slate-950/30 shadow-[0_0_0_1px_rgba(34,211,238,0.12),0_0_20px_rgba(34,211,238,0.08)]";
+const neutralSecondaryBtn = CTA_NEON_SECONDARY;
+const activeCyanBtn = CTA_NEON_PRIMARY;
+const dangerBtn = CTA_NEON_DANGER;
 
 const PreparePage = () => {
   const navigate = useNavigate();
@@ -202,7 +201,7 @@ const PreparePage = () => {
           {infoMessage && <p className="text-sm text-emerald-300">{infoMessage}</p>}
 
           {!loading && !user && (
-            <form onSubmit={submitAuth} className={cn("grid gap-3 p-3 sm:p-4", neonPanel)}>
+            <form onSubmit={submitAuth} className="neon-surface grid gap-3 p-3 sm:p-4">
               <div className="flex gap-2">
                 <Button
                   type="button"
@@ -266,7 +265,7 @@ const PreparePage = () => {
 
           {!loading && user && (
             <>
-              <div className={cn("flex flex-wrap items-end gap-2 p-3 sm:p-4", neonPanel)}>
+              <div className="neon-surface flex flex-wrap items-end gap-2 p-3 sm:p-4">
                 <div className="w-full min-w-0 flex-1 space-y-1 sm:min-w-56">
                   <Label htmlFor="templateName">{fr.prepare.newTemplate}</Label>
                   <Input
@@ -311,7 +310,7 @@ const PreparePage = () => {
                   {templates.map((template) => (
                     <div
                       key={template.id}
-                      className={cn("flex flex-wrap items-center justify-between gap-3 p-3 sm:p-4", neonPanel)}
+                      className="neon-surface flex flex-wrap items-center justify-between gap-3 p-3 sm:p-4"
                     >
                       <div className="min-w-0 flex-1">
                         <p className="font-semibold text-cyan-100 break-words">{template.name}</p>

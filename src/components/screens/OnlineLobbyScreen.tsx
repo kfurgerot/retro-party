@@ -45,8 +45,6 @@ const MAX_PLAYERS = 20;
 const cleanName = (v: string) => v.replace(/\s+/g, " ").trim().slice(0, 16);
 const cleanCode = (v: string) =>
   v.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
-const neonPanel =
-  "rounded-lg border border-cyan-300/25 bg-slate-900/35 shadow-[0_0_0_1px_rgba(34,211,238,0.12),0_0_24px_rgba(34,211,238,0.08)]";
 
 export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
   connected,
@@ -248,7 +246,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
         )}
 
         {!roomCode && (
-          <section className={cn("mx-auto mt-6 grid w-full max-w-lg gap-3 p-4 sm:p-5", neonPanel)}>
+          <section className="neon-surface mx-auto mt-6 grid w-full max-w-lg gap-3 p-4 sm:p-5">
             <div className="rounded-md border border-cyan-300/25 bg-slate-950/45 p-3">
               <p className="mb-2 text-xs uppercase tracking-[0.12em] text-cyan-100/80">
                 {fr.onlineLobby.profileTitle}
@@ -364,7 +362,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
 
         {roomCode && (
           <>
-            <div className={cn("mx-auto mt-5 flex max-w-md items-center justify-center gap-2 p-2", neonPanel)}>
+            <div className="neon-surface mx-auto mt-5 flex max-w-md items-center justify-center gap-2 p-2">
               <span className="text-xs text-cyan-100/80">{fr.onlineLobby.codeLabel}:</span>
               <span className="rounded bg-cyan-500/15 px-2 py-1 text-sm font-semibold tracking-[0.12em] text-cyan-200">
                 {roomCode}
@@ -380,7 +378,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
               </Button>
             </div>
 
-            <section className={cn("mx-auto mt-6 grid w-full max-w-lg gap-2 p-4 sm:p-5", neonPanel)}>
+            <section className="neon-surface mx-auto mt-6 grid w-full max-w-lg gap-2 p-4 sm:p-5">
               <p className="text-center text-xs text-slate-300">
                 {canStart
                   ? fr.onlineLobby.hostLaunchHint
@@ -425,7 +423,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
           </>
         )}
 
-        <section className={cn("mt-6 p-4 sm:p-5", neonPanel)}>
+        <section className="neon-surface mt-6 p-4 sm:p-5">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-cyan-100/80">
               {fr.onlineLobby.playersTitle}
