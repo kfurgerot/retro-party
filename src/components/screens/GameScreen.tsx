@@ -105,6 +105,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const [sidebarTab, setSidebarTab] = useState<"players" | "legend">("players");
   const [playersOpen, setPlayersOpen] = useState(false);
   const [legendOpen, setLegendOpen] = useState(false);
+  const [mobileInfoOpen, setMobileInfoOpen] = useState(false);
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
   const [whoSaidItIntroAt, setWhoSaidItIntroAt] = useState<number | null>(null);
   const [turnIntroEndsAt, setTurnIntroEndsAt] = useState<number | null>(null);
@@ -468,6 +469,10 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     else setSidebarTab("legend");
   };
 
+  const openMobileInfo = () => {
+    if (isMobile()) setMobileInfoOpen(true);
+  };
+
   const infoTitle = gameState.currentQuestion
     ? gameState.currentQuestion.status === "pending"
       ? fr.gameScreen.infoQuestionReady
@@ -631,6 +636,9 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 )}
               </div>
               <div className="truncate text-base font-bold text-cyan-50">{currentPlayer?.name ?? "-"}</div>
+              <div className="mt-1 truncate text-[11px] text-cyan-100/85">
+                {primaryAction}
+              </div>
               <div className="mt-2 h-1.5 w-full overflow-hidden rounded bg-slate-900/60">
                 <div className="h-full rounded bg-cyan-400/90" style={{ width: `${roundProgressPct}%` }} />
               </div>
@@ -893,8 +901,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         <div className="sticky bottom-0 z-30 mt-1 pb-[env(safe-area-inset-bottom)] lg:hidden">
           <Card className={cn(neonCard, "border px-2 py-1.5 backdrop-blur-md")}>
             <div className="flex flex-col gap-3">
-              <div className="flex min-w-0 items-end gap-3">
-                <div className="origin-left shrink-0 scale-[0.88]">
+              <div className="flex justify-center">
+                <div className="origin-center scale-[0.88]">
                   <Dice
                     value={gameState.diceValue}
                     rollResult={gameState.lastRollResult ?? null}
@@ -907,30 +915,12 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                     onMove={handleMove}
                     onOpenQuestionCard={onOpenQuestionCard}
                     playerIndex={myIndex}
+                    compact
                   />
-                </div>
-
-                <div className="min-w-0 flex-1 self-end rounded border border-cyan-300/15 bg-slate-950/25 px-2 py-1 text-right">
-                  <div
-                    className={`mb-1 inline-flex rounded-full border px-2 py-1 text-[11px] ${turnStatusClass}`}
-                  >
-                    {gameState.currentQuestion ? fr.gameScreen.statusQuestion : isMyTurn ? fr.gameScreen.statusYourTurn : fr.gameScreen.statusWaiting}
-                  </div>
-                  <div className="truncate text-[10px] uppercase tracking-[0.1em] text-cyan-100/70">
-                    {fr.gameScreen.primaryAction}
-                  </div>
-                  <div className="truncate text-xs font-semibold text-cyan-100 sm:text-sm">
-                    {primaryAction}
-                  </div>
-                  <div className="truncate text-xs text-cyan-100/90 sm:text-sm">{infoTitle}</div>
-                  <div className="truncate text-[11px] text-slate-300 sm:text-xs">{infoHint}</div>
-                  <div className="mt-0.5 truncate text-[10px] text-cyan-100/80">
-                    {fr.gameScreen.latestEvent}: {latestActivity}
-                  </div>
                 </div>
               </div>
 
-              <div className={`grid gap-2 ${onLeave ? "grid-cols-3" : "grid-cols-2"}`}>
+              <div className={cn("grid gap-2", onLeave ? "grid-cols-2" : "grid-cols-3")}>
                 <Button
                   className="h-10 w-full border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_0_2px_rgba(34,211,238,0.35)] hover:bg-cyan-400"
                   size="sm"
@@ -948,6 +938,16 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                   aria-label={fr.gameScreen.mobileLegendAria}
                 >
                   {fr.gameScreen.legend}
+                </Button>
+
+                <Button
+                  className="h-10 w-full border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_0_2px_rgba(34,211,238,0.35)] hover:bg-cyan-400"
+                  size="sm"
+                  variant="secondary"
+                  onClick={openMobileInfo}
+                  aria-label={fr.gameScreen.mobileInfoAria}
+                >
+                  {fr.gameScreen.mobileInfo}
                 </Button>
 
                 {onLeave && (
@@ -1052,6 +1052,66 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 <span className="leading-tight">{l.label}</span>
               </div>
             ))}
+          </div>
+        </DrawerContent>
+      </Drawer>
+
+      <Drawer open={mobileInfoOpen} onOpenChange={setMobileInfoOpen}>
+        <DrawerContent className="border-cyan-300/30 bg-slate-950/95 text-cyan-50 lg:hidden">
+          <DrawerHeader className="pb-2">
+            <div className="flex items-center justify-between gap-2">
+              <DrawerTitle>{fr.gameScreen.mobileInfoTitle}</DrawerTitle>
+              <DrawerClose asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-cyan-100 hover:bg-slate-800/60 hover:text-cyan-50"
+                >
+                  {fr.gameScreen.close}
+                </Button>
+              </DrawerClose>
+            </div>
+          </DrawerHeader>
+
+          <div className="grid gap-2 px-4 pb-4">
+            <div className="rounded border border-cyan-300/20 bg-slate-950/30 px-3 py-2">
+              <div
+                className={`mb-1 inline-flex rounded-full border px-2 py-1 text-[11px] ${turnStatusClass}`}
+              >
+                {gameState.currentQuestion ? fr.gameScreen.statusQuestion : isMyTurn ? fr.gameScreen.statusYourTurn : fr.gameScreen.statusWaiting}
+              </div>
+              <div className="text-[10px] uppercase tracking-[0.1em] text-cyan-100/70">
+                {fr.gameScreen.primaryAction}
+              </div>
+              <div className="text-sm font-semibold text-cyan-100">{primaryAction}</div>
+              <div className="text-xs text-cyan-100/90">{infoTitle}</div>
+              <div className="text-xs text-slate-300">{infoHint}</div>
+            </div>
+            <div
+              className={cn(
+                "rounded border px-3 py-2",
+                isEventPulseActive
+                  ? "border-cyan-300/45 bg-cyan-500/12 text-cyan-50"
+                  : "border-cyan-300/15 bg-slate-950/20 text-slate-200/90"
+              )}
+            >
+              <div className="mb-1 flex items-center justify-between gap-2">
+                <span className="text-[10px] uppercase tracking-[0.1em] text-cyan-100/75">
+                  {fr.gameScreen.boardEventTitle}
+                </span>
+                <span
+                  className={cn(
+                    "inline-flex rounded-full border px-1.5 py-0.5 text-[9px] uppercase tracking-[0.08em]",
+                    isEventPulseActive
+                      ? "border-cyan-300/45 bg-cyan-500/20 text-cyan-100"
+                      : "border-cyan-300/20 bg-slate-900/35 text-cyan-100/70"
+                  )}
+                >
+                  {isEventPulseActive ? fr.gameScreen.newEvent : fr.gameScreen.live}
+                </span>
+              </div>
+              <div className="text-xs font-semibold">{latestActivity}</div>
+            </div>
           </div>
         </DrawerContent>
       </Drawer>

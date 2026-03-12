@@ -19,6 +19,7 @@ interface DiceProps {
   onOpenQuestionCard?: () => void;
 
   playerIndex?: number;
+  compact?: boolean;
 }
 
 const DiceFace: React.FC<{ value: number }> = ({ value }) => {
@@ -77,6 +78,7 @@ const DiceComponent: React.FC<DiceProps> = ({
   onMove,
   onOpenQuestionCard,
   playerIndex = 0,
+  compact = false,
 }) => {
   const [lastRolledValue, setLastRolledValue] = React.useState<number>(1);
 
@@ -103,6 +105,15 @@ const DiceComponent: React.FC<DiceProps> = ({
   };
 
   const label = (() => {
+    if (compact) {
+      if (isRolling) return `${fr.dice.rollShort}...`;
+      if (canRoll && pendingDoubleRollFirstDie != null) return fr.dice.rollShortSecond;
+      if (canRoll) return fr.dice.rollShort;
+      if (canMove && value != null) return `${fr.dice.moveShort} (${value})`;
+      if (canOpen) return fr.dice.openShort;
+      return fr.dice.waitingShort;
+    }
+
     if (isRolling) return `${fr.terms.rollDice}...`;
     if (canRoll && pendingDoubleRollFirstDie != null) return `${fr.terms.rollDice} (${fr.dice.secondDie}) [${playerKey}]`;
     if (canRoll) return `${fr.terms.rollDice} [${playerKey}]`;
@@ -148,7 +159,7 @@ const DiceComponent: React.FC<DiceProps> = ({
   }, [disabled, isRolling, canRoll, canMove, canOpen, value, playerIndex]);
 
   return (
-    <div className="flex flex-col items-center gap-4">
+    <div className={cn("flex flex-col items-center", compact ? "gap-2" : "gap-4")}>
       <div className={cn("transition-transform", isRolling && "animate-dice-roll")}>
         <DiceFace value={value ?? lastRolledValue} />
       </div>
@@ -157,7 +168,9 @@ const DiceComponent: React.FC<DiceProps> = ({
         onClick={handleAction}
         disabled={disabled}
         className={cn(
-          "px-6 py-3 font-pixel text-xs uppercase",
+          compact
+            ? "px-4 py-2 text-[11px] font-semibold uppercase"
+            : "px-6 py-3 font-pixel text-xs uppercase",
           "bg-accent text-accent-foreground border-4 border-accent",
           "shadow-[4px_4px_0px_rgba(0,0,0,0.5)]",
           "hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_rgba(0,0,0,0.5)]",
@@ -169,7 +182,7 @@ const DiceComponent: React.FC<DiceProps> = ({
         {label}
       </button>
 
-      {rollDetails && (
+      {rollDetails && !compact && (
         <div className="text-xs text-cyan-100 text-center">
           {rollDetails.map((line) => (
             <div key={line}>{line}</div>
