@@ -37,6 +37,7 @@ import { ENABLE_BOARD_V2 } from "@/lib/uiMode";
 import { perfLog, perfMark, perfMeasure } from "@/lib/perf";
 
 const TURN_ANNOUNCE_MS = 2000;
+const MOVE_STEP_MS = 320;
 
 type ActivityKind = "move" | "decision" | "question" | "shop" | "minigame" | "system";
 
@@ -155,12 +156,15 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const [bugIntroEndsAt, setBugIntroEndsAt] = useState<number | null>(null);
   const [selectedPreRollType, setSelectedPreRollType] = useState<ShopItemType | null>(null);
   const [eventPulseEndsAt, setEventPulseEndsAt] = useState<number | null>(null);
+  const [isQuestionActionUnlocked, setIsQuestionActionUnlocked] = useState(true);
   const [turnTransitionStartMark] = useState(() => `turn-transition-start-${Date.now()}`);
   const previousTurnKeyRef = useRef<string | null>(null);
   const previousMinigameKeyRef = useRef<string | null>(null);
 
   const autoMoveKeyRef = useRef<string | null>(null);
   const moveAnimationFallbackRef = useRef<number | null>(null);
+  const questionActionUnlockTimerRef = useRef<number | null>(null);
+  const questionActionUnlockKeyRef = useRef<string | null>(null);
   const lastWhoSaidItIdleRef = useRef<string | null>(null);
   const turnIntroTimerRef = useRef<number | null>(null);
   const bugIntroTimerRef = useRef<number | null>(null);
@@ -559,6 +563,50 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     : isMyTurn
     ? fr.gameScreen.waiting
     : fr.gameScreen.hintOpponentTurn;
+
+  useEffect(() => {
+    const q = gameState.currentQuestion;
+    if (!q || q.status !== "pending" || !myPlayerId || q.targetPlayerId !== myPlayerId) {
+      questionActionUnlockKeyRef.current = null;
+      setIsQuestionActionUnlocked(true);
+      if (questionActionUnlockTimerRef.current) {
+        window.clearTimeout(questionActionUnlockTimerRef.current);
+        questionActionUnlockTimerRef.current = null;
+      }
+      return;
+    }
+
+    const key = `${q.id}-${q.status}-${q.targetPlayerId}`;
+    if (questionActionUnlockKeyRef.current === key) return;
+    questionActionUnlockKeyRef.current = key;
+
+    const trace = gameState.lastMoveTrace;
+    const isMyMoveTrace =
+      !!trace &&
+      trace.playerId === myPlayerId &&
+      Array.isArray(trace.path) &&
+      trace.path.length > 1;
+    const delayMs = isMyMoveTrace
+      ? Math.max(260, (trace.path.length - 1) * MOVE_STEP_MS + 120)
+      : 0;
+
+    if (questionActionUnlockTimerRef.current) {
+      window.clearTimeout(questionActionUnlockTimerRef.current);
+      questionActionUnlockTimerRef.current = null;
+    }
+
+    if (delayMs <= 0) {
+      setIsQuestionActionUnlocked(true);
+      return;
+    }
+
+    setIsQuestionActionUnlocked(false);
+    questionActionUnlockTimerRef.current = window.setTimeout(() => {
+      setIsQuestionActionUnlocked(true);
+      questionActionUnlockTimerRef.current = null;
+    }, delayMs);
+  }, [gameState.currentQuestion, gameState.lastMoveTrace, myPlayerId]);
+
   const canOpenQuestionCard =
     !!gameState.currentQuestion &&
     gameState.currentQuestion.status === "pending" &&
@@ -566,11 +614,15 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     !isPathChoiceActive &&
     !isShopActive &&
     !isMoveAnimating &&
+    isQuestionActionUnlocked &&
+    gameState.turnPhase !== "moving" &&
     !!currentPlayer &&
     !!myPlayerId &&
     currentPlayer.id === myPlayerId &&
     gameState.currentQuestion.targetPlayerId === myPlayerId;
-  const showRollOverlay = canRoll;
+  const showRollOverlay =
+    canRoll ||
+    (isMyTurn && gameState.isRolling && gameState.turnPhase === "rolling");
   const showOpenCardOverlay = canOpenQuestionCard;
   const showFullscreenActionOverlay = showRollOverlay || showOpenCardOverlay;
   const turnOwnerName = currentPlayer?.name ?? fr.pointDuel.playerFallback;
@@ -648,6 +700,10 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       if (eventPulseTimerRef.current) {
         window.clearTimeout(eventPulseTimerRef.current);
         eventPulseTimerRef.current = null;
+      }
+      if (questionActionUnlockTimerRef.current) {
+        window.clearTimeout(questionActionUnlockTimerRef.current);
+        questionActionUnlockTimerRef.current = null;
       }
     },
     []
@@ -769,28 +825,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 {fr.gameScreen.currentTurn}
               </div>
               <div className="truncate text-lg font-bold sm:text-xl">{currentPlayer?.name ?? "-"}</div>
-              <div className="mt-2">
-                <div className="text-[10px] uppercase tracking-[0.08em] text-cyan-100/75">
-                  {fr.gameScreen.turnQueue}
-                </div>
-                <div className="mt-1 flex flex-wrap gap-1.5">
-                  {turnQueue.map((entry) => (
-                    <div
-                      key={`desktop-turn-${entry.player.id}`}
-                      className={cn(
-                        "rounded border px-2 py-1",
-                        entry.isCurrent
-                          ? "border-cyan-300/45 bg-cyan-500/15 text-cyan-100"
-                          : entry.isNext
-                          ? "border-emerald-300/40 bg-emerald-500/12 text-emerald-100"
-                          : "border-cyan-300/20 bg-slate-900/35 text-slate-200"
-                      )}
-                    >
-                      <div className="max-w-[130px] truncate text-[11px] font-semibold">{entry.player.name}</div>
-                      <div className="text-[10px] opacity-85">{getTurnOrderLabel(entry.turnDistance)}</div>
-                    </div>
-                  ))}
-                </div>
+              <div className="mt-1 truncate text-xs text-slate-300">
+                {fr.gameScreen.nextUpLabel}: <span className="font-semibold text-slate-200">{nextPlayer?.name ?? "-"}</span>
               </div>
             </Card>
 
