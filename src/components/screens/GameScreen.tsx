@@ -106,6 +106,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const [playersOpen, setPlayersOpen] = useState(false);
   const [legendOpen, setLegendOpen] = useState(false);
   const [mobileInfoOpen, setMobileInfoOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
   const [whoSaidItIntroAt, setWhoSaidItIntroAt] = useState<number | null>(null);
   const [turnIntroEndsAt, setTurnIntroEndsAt] = useState<number | null>(null);
@@ -473,6 +474,10 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     if (isMobile()) setMobileInfoOpen(true);
   };
 
+  const openMobileMenu = () => {
+    if (isMobile()) setMobileMenuOpen(true);
+  };
+
   const infoTitle = gameState.currentQuestion
     ? gameState.currentQuestion.status === "pending"
       ? fr.gameScreen.infoQuestionReady
@@ -622,45 +627,38 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       <RetroScreenBackground />
 
       <div className="relative z-10 flex h-svh w-full flex-col overflow-hidden p-2 sm:p-3">
-        <div className="neon-surface-soft p-2">
-          <div className="grid grid-cols-2 gap-2 lg:hidden">
-            <Card className={cn(neonCard, "col-span-2 px-3 py-2")}>
+        <div className="neon-surface-soft p-1.5 sm:p-2">
+          <div className="lg:hidden">
+            <Card className={cn(neonCard, "px-2.5 py-2")}>
               <div className="flex items-center justify-between gap-2">
-                <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">
+                <div className="text-[10px] uppercase tracking-[0.1em] text-cyan-100/80">
                   {fr.gameScreen.currentTurn}
                 </div>
-                {isMyTurn && (
-                  <span className="inline-flex rounded-full border border-cyan-300/45 bg-cyan-500/15 px-2 py-0.5 text-[11px] text-cyan-100">
-                    {fr.gameScreen.you}
+                <div className="flex items-center gap-1.5">
+                  <span className="inline-flex rounded border border-cyan-300/30 bg-slate-900/45 px-1.5 py-0.5 text-[10px] text-cyan-100">
+                    {fr.gameScreen.points}: {myPoints}
                   </span>
-                )}
+                  <span className="inline-flex rounded border border-cyan-300/30 bg-slate-900/45 px-1.5 py-0.5 text-[10px] text-cyan-100">
+                    {fr.gameScreen.kudobox}: {myStars}
+                  </span>
+                  {isMyTurn && (
+                    <span className="inline-flex rounded-full border border-cyan-300/45 bg-cyan-500/15 px-2 py-0.5 text-[10px] text-cyan-100">
+                      {fr.gameScreen.you}
+                    </span>
+                  )}
+                </div>
               </div>
-              <div className="truncate text-base font-bold text-cyan-50">{currentPlayer?.name ?? "-"}</div>
-              <div className="mt-1 truncate text-[11px] text-cyan-100/85">
+              <div className="truncate text-sm font-bold text-cyan-50">{currentPlayer?.name ?? "-"}</div>
+              <div className="truncate text-[10px] text-cyan-100/85">
                 {primaryAction}
               </div>
-              <div className="mt-2 h-1.5 w-full overflow-hidden rounded bg-slate-900/60">
+              <div className="mt-1.5 h-1 w-full overflow-hidden rounded bg-slate-900/60">
                 <div className="h-full rounded bg-cyan-400/90" style={{ width: `${roundProgressPct}%` }} />
               </div>
-              <div className="mt-1 text-[11px] text-slate-300">
+              <div className="mt-1 text-[10px] text-slate-300">
                 {fr.gameScreen.round} {gameState.currentRound}/{gameState.maxRounds}
               </div>
             </Card>
-
-            <Card className={cn(neonCard, "min-w-0 px-3 py-2")}>
-              <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">
-                {fr.gameScreen.points}
-              </div>
-              <div className="text-lg font-bold">{myPoints}</div>
-            </Card>
-
-            <Card className={cn(neonCard, "min-w-0 px-3 py-2")}>
-              <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">
-                {fr.gameScreen.kudobox}
-              </div>
-              <div className="text-lg font-bold">{myStars}</div>
-            </Card>
-
           </div>
 
           <div className="hidden lg:flex lg:flex-wrap lg:items-center lg:justify-between lg:gap-3">
@@ -920,26 +918,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 </div>
               </div>
 
-              <div className={cn("grid gap-2", onLeave ? "grid-cols-2" : "grid-cols-3")}>
-                <Button
-                  className="h-10 w-full border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_0_2px_rgba(34,211,238,0.35)] hover:bg-cyan-400"
-                  size="sm"
-                  variant="secondary"
-                  onClick={openPlayers}
-                >
-                  {fr.gameScreen.players}
-                </Button>
-
-                <Button
-                  className="h-10 w-full border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_0_2px_rgba(34,211,238,0.35)] hover:bg-cyan-400"
-                  size="sm"
-                  variant="secondary"
-                  onClick={openLegend}
-                  aria-label={fr.gameScreen.mobileLegendAria}
-                >
-                  {fr.gameScreen.legend}
-                </Button>
-
+              <div className="grid grid-cols-2 gap-2">
                 <Button
                   className="h-10 w-full border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_0_2px_rgba(34,211,238,0.35)] hover:bg-cyan-400"
                   size="sm"
@@ -950,16 +929,15 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                   {fr.gameScreen.mobileInfo}
                 </Button>
 
-                {onLeave && (
-                  <Button
-                    className={cn("h-10 w-full", dangerLeaveBtn)}
-                    size="sm"
-                    variant="secondary"
-                    onClick={requestLeave}
-                  >
-                    {fr.gameScreen.leave}
-                  </Button>
-                )}
+                <Button
+                  className="h-10 w-full border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_0_2px_rgba(34,211,238,0.35)] hover:bg-cyan-400"
+                  size="sm"
+                  variant="secondary"
+                  onClick={openMobileMenu}
+                  aria-label={fr.gameScreen.mobileMenuAria}
+                >
+                  {fr.gameScreen.mobileMenu}
+                </Button>
               </div>
             </div>
           </Card>
@@ -1112,6 +1090,63 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               </div>
               <div className="text-xs font-semibold">{latestActivity}</div>
             </div>
+          </div>
+        </DrawerContent>
+      </Drawer>
+
+      <Drawer open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+        <DrawerContent className="border-cyan-300/30 bg-slate-950/95 text-cyan-50 lg:hidden">
+          <DrawerHeader className="pb-2">
+            <div className="flex items-center justify-between gap-2">
+              <DrawerTitle>{fr.gameScreen.mobileMenuTitle}</DrawerTitle>
+              <DrawerClose asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-cyan-100 hover:bg-slate-800/60 hover:text-cyan-50"
+                >
+                  {fr.gameScreen.close}
+                </Button>
+              </DrawerClose>
+            </div>
+          </DrawerHeader>
+
+          <div className="grid gap-2 px-4 pb-4">
+            <Button
+              className="h-10 w-full border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_0_2px_rgba(34,211,238,0.35)] hover:bg-cyan-400"
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                openPlayers();
+              }}
+            >
+              {fr.gameScreen.players}
+            </Button>
+            <Button
+              className="h-10 w-full border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_0_2px_rgba(34,211,238,0.35)] hover:bg-cyan-400"
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                openLegend();
+              }}
+            >
+              {fr.gameScreen.legend}
+            </Button>
+            {onLeave && (
+              <Button
+                className={cn("h-10 w-full", dangerLeaveBtn)}
+                size="sm"
+                variant="secondary"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  requestLeave();
+                }}
+              >
+                {fr.gameScreen.leave}
+              </Button>
+            )}
           </div>
         </DrawerContent>
       </Drawer>
