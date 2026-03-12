@@ -13,19 +13,19 @@ interface WhoSaidItMinigameProps {
 }
 
 const ROLE_CONFIG: Array<{ role: WhoSaidItRole; label: string; keyHint: string }> = [
-  { role: "MANAGER", label: "Manager", keyHint: "1" },
+  { role: "MANAGER", label: fr.whoSaidIt.roleManager, keyHint: "1" },
   { role: "PO", label: "PO", keyHint: "2" },
-  { role: "DEV", label: "Dev", keyHint: "3" },
-  { role: "SCRUM_MASTER", label: "Scrum Master", keyHint: "4" },
-  { role: "QA_SUPPORT", label: "QA / Support", keyHint: "5" },
+  { role: "DEV", label: fr.whoSaidIt.roleDev, keyHint: "3" },
+  { role: "SCRUM_MASTER", label: fr.whoSaidIt.roleScrumMaster, keyHint: "4" },
+  { role: "QA_SUPPORT", label: fr.whoSaidIt.roleQaSupport, keyHint: "5" },
 ];
 
 const ROLE_LABELS: Record<WhoSaidItRole, string> = {
-  MANAGER: "Manager",
+  MANAGER: fr.whoSaidIt.roleManager,
   PO: "PO",
-  DEV: "Dev",
-  SCRUM_MASTER: "Scrum Master",
-  QA_SUPPORT: "QA / Support",
+  DEV: fr.whoSaidIt.roleDev,
+  SCRUM_MASTER: fr.whoSaidIt.roleScrumMaster,
+  QA_SUPPORT: fr.whoSaidIt.roleQaSupport,
 };
 
 export const WhoSaidItMinigame: React.FC<WhoSaidItMinigameProps> = ({
@@ -104,6 +104,19 @@ export const WhoSaidItMinigame: React.FC<WhoSaidItMinigameProps> = ({
   };
 
   const timerSeconds = Math.ceil(timeLeftMs / 1000);
+  const isSpectator = !myPlayerId || !players.some((p) => p.id === myPlayerId);
+  const phaseLabel =
+    phase === "answer"
+      ? fr.whoSaidIt.answerPhase
+      : phase === "reveal"
+        ? fr.whoSaidIt.revelation
+        : phase === "done"
+          ? fr.whoSaidIt.result
+          : fr.whoSaidIt.preparation;
+  const urgencyClass =
+    timerSeconds <= 5
+      ? "border-rose-400/50 bg-rose-500/20 text-rose-100"
+      : "border-cyan-300/35 bg-slate-900/70 text-cyan-50";
 
   return (
     <div className="absolute inset-0 z-50 flex h-full w-full flex-col overflow-hidden bg-slate-950/95 p-3 sm:p-6">
@@ -111,54 +124,70 @@ export const WhoSaidItMinigame: React.FC<WhoSaidItMinigameProps> = ({
         <div className="rounded border border-cyan-300/35 bg-slate-900/70 px-3 py-2 text-sm font-semibold">
           {fr.whoSaidIt.round} {Math.max(1, roundIndex)} / {state.totalRounds}
         </div>
-        <div className="rounded border border-cyan-300/35 bg-slate-900/70 px-3 py-2 text-sm font-semibold">
-          {phase === "answer" ? `${timerSeconds}s` : phase === "reveal" ? fr.whoSaidIt.revelation : phase === "done" ? fr.whoSaidIt.result : fr.whoSaidIt.preparation}
+        <div
+          className={cn(
+            "rounded border px-3 py-2 text-sm font-semibold",
+            phase === "answer" ? urgencyClass : "border-cyan-300/35 bg-slate-900/70"
+          )}
+        >
+          {phase === "answer" ? `${phaseLabel} - ${timerSeconds}s` : phaseLabel}
         </div>
       </div>
 
-      <div className="mx-auto mt-3 flex w-full max-w-4xl flex-1 flex-col gap-3 overflow-hidden">
-        <Card className="flex min-h-[170px] items-center justify-center border-cyan-300/35 bg-slate-900/70 p-6 text-center">
-          <p className="text-xl font-semibold leading-relaxed text-cyan-50 sm:text-2xl">{quoteText}</p>
+      <div className="mx-auto mt-3 flex w-full max-w-4xl min-h-0 flex-1 flex-col gap-3">
+        <Card className="border-cyan-300/35 bg-slate-900/70 p-4 text-center sm:p-6">
+          <p className="mx-auto max-h-[28svh] overflow-y-auto text-lg font-semibold leading-relaxed text-cyan-50 sm:max-h-[32svh] sm:text-2xl">
+            {quoteText}
+          </p>
         </Card>
 
         {phase === "answer" && (
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5">
-            {ROLE_CONFIG.map((role) => {
-              const isSelected = selectedRole === role.role;
-              return (
-                <Button
-                  key={role.role}
-                  type="button"
-                  size="lg"
-                  onClick={() => submit(role.role)}
-                  disabled={!!selectedRole}
-                  className={cn(
-                    "h-16 text-base font-semibold",
-                    isSelected
-                      ? "border-cyan-300 bg-cyan-500 text-slate-950"
-                      : "border-cyan-300/35 bg-slate-900/75 text-cyan-50 hover:bg-slate-800"
-                  )}
-                >
-                  <span>{role.keyHint}. {role.label}</span>
-                </Button>
-              );
-            })}
+          <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+            {isSpectator && (
+              <Card className="mb-2 border-cyan-300/35 bg-slate-900/70 p-2 text-center text-xs text-amber-200">
+                {fr.buzzwordDuel.spectator}
+              </Card>
+            )}
+            <div className="grid grid-cols-1 gap-2">
+              {ROLE_CONFIG.map((role) => {
+                const isSelected = selectedRole === role.role;
+                return (
+                  <Button
+                    key={role.role}
+                    type="button"
+                    size="lg"
+                    onClick={() => submit(role.role)}
+                    disabled={!!selectedRole || isSpectator}
+                    className={cn(
+                      "!h-auto min-h-16 !whitespace-normal items-center justify-center px-3 py-3 text-center text-sm font-semibold sm:px-4 sm:text-base",
+                      isSelected
+                        ? "border-cyan-300 bg-cyan-500 text-slate-950"
+                        : "border-cyan-300/35 bg-slate-900/75 text-cyan-50 hover:bg-slate-800"
+                    )}
+                  >
+                    <span className="flex w-full items-center justify-center gap-2">
+                      <span className="w-full whitespace-normal break-words text-center leading-tight">{role.label}</span>
+                      <span className="hidden shrink-0 rounded border border-cyan-300/35 bg-slate-950/55 px-2 py-0.5 text-xs lg:inline-flex">
+                        {role.keyHint}
+                      </span>
+                    </span>
+                  </Button>
+                );
+              })}
+            </div>
           </div>
-        )}
-
-        {phase === "answer" && (
-          <Card className="border-cyan-300/35 bg-slate-900/70 p-3 text-center text-cyan-100">
-            {selectedRole ? fr.whoSaidIt.sentAnswer : fr.whoSaidIt.chooseRoleBeforeEnd}
-          </Card>
         )}
 
         {phase === "reveal" && (
           <Card className="border-cyan-300/35 bg-slate-900/70 p-4 text-cyan-50">
-            <div className="text-lg font-bold">{fr.whoSaidIt.correctAnswer}: {state.answerRole ? ROLE_LABELS[state.answerRole] : "-"}</div>
+            <div className="text-lg font-bold">
+              {fr.whoSaidIt.correctAnswer}: {state.answerRole ? ROLE_LABELS[state.answerRole] : "-"}
+            </div>
             <div className="mt-3 grid gap-2">
               {ROLE_CONFIG.map(({ role, label }) => {
                 const votes = state.distribution[role] ?? 0;
                 const percent = totalVotes > 0 ? Math.round((votes / totalVotes) * 100) : 0;
+                const isCorrect = state.answerRole === role;
                 return (
                   <div key={role} className="space-y-1">
                     <div className="flex items-center justify-between text-xs">
@@ -166,11 +195,17 @@ export const WhoSaidItMinigame: React.FC<WhoSaidItMinigameProps> = ({
                       <span>{percent}%</span>
                     </div>
                     <div className="h-2 overflow-hidden rounded bg-slate-800">
-                      <div className="h-full bg-cyan-400" style={{ width: `${percent}%` }} />
+                      <div
+                        className={cn("h-full", isCorrect ? "bg-emerald-400" : "bg-cyan-400")}
+                        style={{ width: `${percent}%` }}
+                      />
                     </div>
                   </div>
                 );
               })}
+            </div>
+            <div className="mt-3 text-sm">
+              {fr.whoSaidIt.yourChoice}: {selectedRole ? ROLE_LABELS[selectedRole] : fr.whoSaidIt.none}
             </div>
             <div className="mt-4 text-sm">
               {fr.whoSaidIt.winners}: {winnerNames.length ? winnerNames.join(", ") : fr.whoSaidIt.none}
@@ -183,11 +218,18 @@ export const WhoSaidItMinigame: React.FC<WhoSaidItMinigameProps> = ({
           <Card className="border-cyan-300/35 bg-slate-900/70 p-4 text-cyan-50">
             <div className="text-lg font-bold">{fr.whoSaidIt.minigameFinished}</div>
             <div className="mt-2 text-sm">
-              {fr.whoSaidIt.pointsGained}: +{myPlayerId && state.summary ? state.summary.pointsGained[myPlayerId] ?? 0 : 0}
+              {fr.whoSaidIt.pointsGained}: +
+              {myPlayerId && state.summary ? state.summary.pointsGained[myPlayerId] ?? 0 : 0}
             </div>
           </Card>
         )}
       </div>
+
+      {phase === "answer" && selectedRole && (
+        <Card className="mx-auto mt-2 w-full max-w-4xl border-cyan-300/35 bg-slate-900/85 p-2 text-center text-sm text-cyan-100">
+          {`${fr.whoSaidIt.sentAnswer} - ${fr.whoSaidIt.yourChoice}: ${ROLE_LABELS[selectedRole]}`}
+        </Card>
+      )}
     </div>
   );
 };
