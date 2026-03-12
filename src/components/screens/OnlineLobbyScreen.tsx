@@ -84,6 +84,50 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
     connected && !roomCode && mode === "join" && validName && validCode;
   const canLaunch =
     connected && !!roomCode && canStart && lobbyPlayers.length >= 1;
+  const connectedPlayersCount = useMemo(
+    () => lobbyPlayers.filter((player) => player.connected !== false).length,
+    [lobbyPlayers]
+  );
+  const offlinePlayers = useMemo(
+    () => lobbyPlayers.filter((player) => player.connected === false),
+    [lobbyPlayers]
+  );
+  const sortedPlayers = useMemo(
+    () =>
+      [...lobbyPlayers].sort((a, b) => {
+        const hostGap = Number(b.isHost) - Number(a.isHost);
+        if (hostGap !== 0) return hostGap;
+        const aConnected = a.connected !== false;
+        const bConnected = b.connected !== false;
+        const connectionGap = Number(bConnected) - Number(aConnected);
+        if (connectionGap !== 0) return connectionGap;
+        return a.name.localeCompare(b.name, "fr");
+      }),
+    [lobbyPlayers]
+  );
+  const hostPlayerName =
+    lobbyPlayers.find((player) => player.isHost)?.name ?? fr.terms.host;
+  const launchChecklist = useMemo(
+    () => [
+      { ok: canStart, label: fr.onlineLobby.checkHostControl },
+      {
+        ok: connectedPlayersCount >= 2,
+        label: fr.onlineLobby.checkTwoPlayers.replace(
+          "{count}",
+          String(connectedPlayersCount)
+        ),
+      },
+      {
+        ok: offlinePlayers.length === 0,
+        label: fr.onlineLobby.checkAllConnected.replace(
+          "{count}",
+          String(offlinePlayers.length)
+        ),
+      },
+    ],
+    [canStart, connectedPlayersCount, offlinePlayers.length]
+  );
+  const launchReady = launchChecklist.every((item) => item.ok);
 
   const subtitle = useMemo(() => {
     if (!connected) return fr.onlineOnboarding.connecting;
@@ -379,11 +423,69 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
             </div>
 
             <section className="neon-surface mx-auto mt-6 grid w-full max-w-lg gap-2 p-4 sm:p-5">
-              <p className="text-center text-xs text-slate-300">
-                {canStart
-                  ? fr.onlineLobby.hostLaunchHint
-                  : fr.onlineLobby.waitingHost}
-              </p>
+              {canStart ? (
+                <div
+                  className={cn(
+                    "rounded-md border px-3 py-3",
+                    launchReady
+                      ? "border-emerald-500/40 bg-emerald-500/10"
+                      : "border-amber-500/40 bg-amber-500/10"
+                  )}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs uppercase tracking-[0.1em] text-cyan-100/90">
+                      {fr.onlineLobby.hostPanelTitle}
+                    </p>
+                    <span
+                      className={cn(
+                        "rounded-full border px-2 py-0.5 text-[10px] font-semibold",
+                        launchReady
+                          ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-200"
+                          : "border-amber-500/40 bg-amber-500/15 text-amber-200"
+                      )}
+                    >
+                      {launchReady
+                        ? fr.onlineLobby.hostReady
+                        : fr.onlineLobby.hostBlocked}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-xs text-slate-300">
+                    {fr.onlineLobby.hostLaunchHint}
+                  </p>
+                  <div className="mt-3 grid gap-1.5 text-xs">
+                    {launchChecklist.map((item) => (
+                      <div
+                        key={item.label}
+                        className={cn(
+                          "rounded border px-2 py-1",
+                          item.ok
+                            ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-100"
+                            : "border-amber-500/30 bg-amber-500/10 text-amber-100"
+                        )}
+                      >
+                        <span className="font-semibold">
+                          {item.ok
+                            ? `${fr.onlineLobby.checklistReady}: `
+                            : `${fr.onlineLobby.checklistBlocked}: `}
+                        </span>
+                        {item.label}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-md border border-cyan-300/20 bg-slate-900/40 px-3 py-3">
+                  <p className="text-xs uppercase tracking-[0.1em] text-cyan-100/90">
+                    {fr.onlineLobby.waitingHostTitle}
+                  </p>
+                  <p className="mt-2 text-xs text-slate-300">
+                    {fr.onlineLobby.waitingHostDescription.replace(
+                      "{host}",
+                      hostPlayerName
+                    )}
+                  </p>
+                </div>
+              )}
               {canStart && (
                 <div className="space-y-1">
                   <label className="text-xs text-cyan-100/85">{fr.onlineLobby.roundsLabel}</label>
@@ -432,9 +534,9 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
           </div>
 
           <div className="grid max-h-[38vh] gap-2 overflow-auto pr-1 sm:grid-cols-2">
-            {lobbyPlayers.map((p, i) => (
+            {sortedPlayers.map((p, i) => (
               <div
-                key={i}
+                key={`${p.name}-${p.avatar}-${i}`}
                 className="flex items-center justify-between rounded-md border border-cyan-300/20 bg-slate-900/55 px-3 py-2"
               >
                 <div className="flex items-center gap-2">
@@ -444,6 +546,11 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
                   <span className="text-sm font-medium text-cyan-50">{p.name}</span>
                 </div>
                 <div className="flex items-center gap-2">
+                  {p.connected !== false && (
+                    <span className="rounded-full border border-emerald-500/35 bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-200">
+                      {fr.onlineLobby.online}
+                    </span>
+                  )}
                   {p.connected === false && (
                     <span className="rounded-full border border-amber-500/35 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-200">
                       {fr.onlineLobby.offline}

@@ -433,7 +433,11 @@ function sanitizeState(state) {
     preRollChoiceResolved: !!state.preRollChoiceResolved,
     preRollSelectedItemId: state.preRollSelectedItemId ?? null,
     lastRollResult: state.lastRollResult ?? null,
-    actionLogs: Array.isArray(state.actionLogs) ? state.actionLogs : [],
+    actionLogs: Array.isArray(state.actionLogs)
+      ? state.actionLogs
+          .filter((entry) => entry != null)
+          .map((entry) => (typeof entry === "string" ? entry : String(entry)))
+      : [],
     currentQuestion: state.currentQuestion
       ? {
           id: state.currentQuestion.id,

@@ -7,6 +7,7 @@ import { OnlineLobbyScreen } from '@/components/screens/OnlineLobbyScreen';
 import { GameScreen } from '@/components/screens/GameScreen';
 import { ResultsScreen } from '@/components/screens/ResultsScreen';
 import { perfLog, perfMark, perfMeasure } from "@/lib/perf";
+import { fr } from "@/i18n/fr";
 
 const Index: React.FC = () => {
   const location = useLocation();
@@ -103,6 +104,22 @@ const Index: React.FC = () => {
       );
     }
 
+    if (
+      online.gameState.phase === "playing" &&
+      (online.gameState.players.length === 0 || online.gameState.tiles.length === 0)
+    ) {
+      return (
+        <div className="scanlines relative flex min-h-svh items-center justify-center bg-slate-950 px-4">
+          <div className="neon-surface w-full max-w-md p-5 text-center">
+            <div className="text-sm font-semibold text-cyan-100">{fr.onlineOnboarding.connecting}</div>
+            <div className="mt-2 text-xs text-slate-300">
+              Initialisation de la partie...
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <GameScreen
         gameState={online.gameState}
@@ -140,6 +157,22 @@ const Index: React.FC = () => {
         questionHistory={local.gameState.questionHistory}
         onPlayAgain={local.resetGame}
       />
+    );
+  }
+
+  if (
+    local.gameState.phase === "playing" &&
+    (local.gameState.players.length === 0 || local.gameState.tiles.length === 0)
+  ) {
+    return (
+      <div className="scanlines relative flex min-h-svh items-center justify-center bg-slate-950 px-4">
+        <div className="neon-surface w-full max-w-md p-5 text-center">
+          <div className="text-sm font-semibold text-cyan-100">{fr.onlineOnboarding.connecting}</div>
+          <div className="mt-2 text-xs text-slate-300">
+            Initialisation de la partie...
+          </div>
+        </div>
+      </div>
     );
   }
 

@@ -6,6 +6,11 @@ import { generateRandomBoard } from "./boardGenerator.js";
 import { pickQuestion } from "./questions.js";
 import { BUZZWORD_DUEL_BANK } from "./buzzwordBank.js";
 import { SHOP_CATALOG } from "./shopCatalog.js";
+import {
+  actionLogMessage,
+  currentPlayerName,
+  playerName,
+} from "./actionLogMessages.js";
 
 const BUG_SMASH_DURATION_MS = 20000;
 const BUG_SMASH_ANNOUNCE_MS = 4000;
@@ -291,7 +296,7 @@ export function rollDice(state, socketId) {
           pendingPreRollEffect: { type: consumed.type },
           preRollActionUsed: true,
         },
-        `pre-roll item used: ${consumed.type}`
+        actionLogMessage.preRollEffectArmed(currentPlayerName(consumedState), consumed.type)
       );
       console.debug(`[retro-party] pre-roll item used: ${consumed.type}`);
     } else {
@@ -316,9 +321,9 @@ export function rollDice(state, socketId) {
       const withLogs = appendActionLog(
         appendActionLog(
           workingState,
-          "rolling with effect: double_roll"
+          actionLogMessage.rollSecondDieStart(currentPlayerName(workingState))
         ),
-        `roll result = ${JSON.stringify({ dice: rollResult.dice, bonus: rollResult.bonus, total: rollResult.total })}`
+        actionLogMessage.rollSecondDieResult(currentPlayerName(workingState), firstDie, die2, rollResult.total)
       );
       const clearedPreRoll = consumePendingPreRollEffect(withLogs);
       const next = consumePendingDoubleRoll(clearedPreRoll);
@@ -343,9 +348,9 @@ export function rollDice(state, socketId) {
     const withLogs = appendActionLog(
       appendActionLog(
         workingState,
-        "rolling with effect: double_roll (first die)"
+        actionLogMessage.rollDoubleFirstDieStart(currentPlayerName(workingState))
       ),
-      `roll result = ${JSON.stringify({ dice: firstRollResult.dice, bonus: firstRollResult.bonus, total: firstRollResult.total })}`
+      actionLogMessage.rollDoubleFirstDieResult(currentPlayerName(workingState), die1)
     );
     return {
       ...withLogs,
@@ -366,9 +371,11 @@ export function rollDice(state, socketId) {
   const withLogs = appendActionLog(
     appendActionLog(
       workingState,
-      `rolling with effect: ${rollResult.effectType}`
+      actionLogMessage.rollStart(currentPlayerName(workingState))
     ),
-    `roll result = ${JSON.stringify({ dice: rollResult.dice, bonus: rollResult.bonus, total: rollResult.total })}`
+    rollResult.bonus > 0
+      ? actionLogMessage.rollResultWithBonus(currentPlayerName(workingState), rollResult.dice[0], rollResult.bonus, rollResult.total)
+      : actionLogMessage.rollResult(currentPlayerName(workingState), rollResult.total)
   );
   const next = consumePendingPreRollEffect(withLogs);
   return {
@@ -887,7 +894,7 @@ export function startPointDuel(state, firstPlayerId, secondPlayerId, now = Date.
       },
       turnPhase: "resolving",
     },
-    `${playerA.name} declenche un duel contre ${playerB.name}`
+    actionLogMessage.pointDuelStart(playerA.name, playerB.name)
   );
 }
 
@@ -968,11 +975,11 @@ export function resolvePointDuelStep(state, now = Date.now()) {
       },
     };
     if (!result.winnerId) {
-      return appendActionLog(withResult, "Duel: egalite, aucun point vole");
+      return appendActionLog(withResult, actionLogMessage.pointDuelTie());
     }
     return appendActionLog(
       withResult,
-      `Duel: ${winnerName} vole ${result.stolenPoints} points a ${loserName ?? "adversaire"}`
+      actionLogMessage.pointDuelSteal(winnerName, result.stolenPoints, loserName)
     );
   }
 
@@ -986,11 +993,13 @@ export function resolvePointDuelStep(state, now = Date.now()) {
 export function rollPointDuelDie(state, socketId, now = Date.now()) {
   if (!isPointDuelActiveState(state)) return state;
   const duel = state.currentMinigame;
+  const attackerName = playerName(state, duel.attackerId, "Attaquant");
+  const defenderName = playerName(state, duel.defenderId, "Defenseur");
 
   if (duel.phase === "waiting_attacker_roll") {
     if (duel.attackerId !== socketId) return state;
     const attackerRoll = rollDie();
-    return {
+    return appendActionLog({
       ...state,
       currentMinigame: {
         ...duel,
@@ -998,13 +1007,13 @@ export function rollPointDuelDie(state, socketId, now = Date.now()) {
         attackerRoll,
         nextStepAt: now + POINT_DUEL_ROLL_REVEAL_MS,
       },
-    };
+    }, actionLogMessage.pointDuelAttackerRoll(attackerName, attackerRoll));
   }
 
   if (duel.phase === "waiting_defender_roll") {
     if (duel.defenderId !== socketId) return state;
     const defenderRoll = rollDie();
-    return {
+    return appendActionLog({
       ...state,
       currentMinigame: {
         ...duel,
@@ -1012,7 +1021,7 @@ export function rollPointDuelDie(state, socketId, now = Date.now()) {
         defenderRoll,
         nextStepAt: now + POINT_DUEL_ROLL_REVEAL_MS,
       },
-    };
+    }, actionLogMessage.pointDuelDefenderRoll(defenderName, defenderRoll));
   }
 
   return state;
@@ -1047,14 +1056,15 @@ export function movePlayer(state, socketId, steps) {
   const numericSteps = Math.max(0, Math.floor(Number(steps) || 0));
   if (numericSteps <= 0) return state;
   console.debug(`[retro-party] moving player with total roll: ${numericSteps}`);
-  const loggedState = appendActionLog(state, `moving player with total roll: ${numericSteps}`);
+  const activePlayerName = currentPlayerName(state);
+  const loggedState = appendActionLog(state, actionLogMessage.moveStart(activePlayerName, numericSteps));
 
   const players = loggedState.players.map((p) => ({ ...p }));
   const cur = players[state.currentPlayerIndex];
   const moved = advancePlayerAlongBoard(loggedState, cur, numericSteps);
 
   if (!moved.finished) {
-    return {
+    const withPending = {
       ...loggedState,
       players,
       isRolling: false,
@@ -1065,12 +1075,25 @@ export function movePlayer(state, socketId, steps) {
       pendingShop: moved.pendingShop,
       turnPhase: "resolving",
     };
+    if (moved.pendingPathChoice) {
+      return appendActionLog(withPending, actionLogMessage.moveIntersection(activePlayerName));
+    }
+    if (moved.pendingKudoPurchase) {
+      return appendActionLog(withPending, actionLogMessage.moveKudobox(activePlayerName));
+    }
+    if (moved.pendingShop) {
+      return appendActionLog(withPending, actionLogMessage.moveShop(activePlayerName));
+    }
+    return withPending;
   }
-
-  return {
-    ...buildLandingState(loggedState, players),
-    lastMoveTrace: moved.moveTrace,
-  };
+  const landedTileType = state.tiles[cur.position]?.type;
+  return appendActionLog(
+    {
+      ...buildLandingState(loggedState, players),
+      lastMoveTrace: moved.moveTrace,
+    },
+    actionLogMessage.moveFinished(activePlayerName, landedTileType)
+  );
 }
 
 export function choosePath(state, socketId, nextTileId) {
@@ -1094,7 +1117,7 @@ export function choosePath(state, socketId, nextTileId) {
   );
 
   if (!moved.finished) {
-    return {
+    const withPending = {
       ...state,
       players,
       lastMoveTrace: moved.moveTrace,
@@ -1105,12 +1128,15 @@ export function choosePath(state, socketId, nextTileId) {
       diceValue: null,
       turnPhase: "resolving",
     };
+    return appendActionLog(withPending, actionLogMessage.pathContinue(cur.name));
   }
-
-  return {
-    ...buildLandingState(state, players),
-    lastMoveTrace: moved.moveTrace,
-  };
+  return appendActionLog(
+    {
+      ...buildLandingState(state, players),
+      lastMoveTrace: moved.moveTrace,
+    },
+    actionLogMessage.pathValidated(cur.name)
+  );
 }
 
 export function resolveKudoPurchase(state, socketId, buyKudo) {
@@ -1126,8 +1152,10 @@ export function resolveKudoPurchase(state, socketId, buyKudo) {
   const stateWithTiles = { ...state, tiles };
   const cur = players[state.currentPlayerIndex];
   if (!cur || cur.id !== socketId) return state;
+  const canBuyKudo = cur.points >= KUDO_COST;
+  const didBuyKudo = !!buyKudo && canBuyKudo;
 
-  if (buyKudo && cur.points >= KUDO_COST) {
+  if (didBuyKudo) {
     cur.points = Math.max(0, Math.floor(Number(cur.points ?? 0) - KUDO_COST));
     cur.stars = Math.max(0, Math.floor(Number(cur.stars ?? 0) + 1));
     relocatePurchasedStar(tiles, state.pendingKudoPurchase.atTileId);
@@ -1148,17 +1176,27 @@ export function resolveKudoPurchase(state, socketId, buyKudo) {
         pendingShop: null,
         turnPhase: "finished",
       };
-      return nextTurn(cleared);
+      return nextTurn(
+        appendActionLog(
+          cleared,
+          didBuyKudo
+            ? actionLogMessage.kudoConverted(cur.name, KUDO_COST)
+            : actionLogMessage.kudoPassed(cur.name)
+        )
+      );
     }
-    return {
-      ...buildLandingState(stateWithTiles, players),
-      pendingKudoPurchase: null,
-    };
+    return appendActionLog(
+      {
+        ...buildLandingState(stateWithTiles, players),
+        pendingKudoPurchase: null,
+      },
+      didBuyKudo ? actionLogMessage.kudoBought(cur.name) : actionLogMessage.kudoSkipped(cur.name)
+    );
   }
 
   const moved = advancePlayerAlongBoard(stateWithTiles, cur, remaining);
   if (!moved.finished) {
-    return {
+    const withPending = {
       ...stateWithTiles,
       players,
       lastMoveTrace: moved.moveTrace,
@@ -1171,13 +1209,19 @@ export function resolveKudoPurchase(state, socketId, buyKudo) {
       currentMinigame: null,
       turnPhase: "resolving",
     };
+    return appendActionLog(
+      withPending,
+      didBuyKudo ? actionLogMessage.kudoBoughtAndContinue(cur.name) : actionLogMessage.kudoRefusedAndContinue(cur.name)
+    );
   }
-
-  return {
-    ...buildLandingState(stateWithTiles, players),
-    pendingKudoPurchase: null,
-    lastMoveTrace: moved.moveTrace,
-  };
+  return appendActionLog(
+    {
+      ...buildLandingState(stateWithTiles, players),
+      pendingKudoPurchase: null,
+      lastMoveTrace: moved.moveTrace,
+    },
+    didBuyKudo ? actionLogMessage.kudoBought(cur.name) : actionLogMessage.kudoSkipped(cur.name)
+  );
 }
 
 export function startBuzzwordDuel(state, firstPlayerId, secondPlayerId, now = Date.now()) {
@@ -1232,13 +1276,14 @@ export function openQuestion(state, socketId) {
   if (state.pendingShop) return state;
   if (!state.currentQuestion || state.currentQuestion.status !== "pending") return state;
   if (state.currentQuestion.targetPlayerId !== socketId) return state;
-  return {
+  const nextState = {
     ...state,
     currentQuestion: {
       ...state.currentQuestion,
       status: "open",
     },
   };
+  return appendActionLog(nextState, actionLogMessage.questionOpened(playerName(state, socketId)));
 }
 
 export function voteQuestion(state, socketId, vote) {
@@ -1278,10 +1323,11 @@ export function validateQuestion(state, socketId) {
   ];
 
   if (ENABLE_RED_TILE_MINIGAME && state.currentQuestion.nextMinigame === "BUG_SMASH") {
-    return {
-      ...state,
-      questionHistory,
-      currentQuestion: null,
+    return appendActionLog(
+      {
+        ...state,
+        questionHistory,
+        currentQuestion: null,
       currentMinigame: {
         minigameId: "BUG_SMASH",
         targetPlayerId: state.currentQuestion.targetPlayerId,
@@ -1292,10 +1338,12 @@ export function validateQuestion(state, socketId) {
       diceValue: null,
       isRolling: false,
       pendingPathChoice: null,
-      pendingKudoPurchase: null,
-      pendingShop: null,
-      turnPhase: "resolving",
-    };
+        pendingKudoPurchase: null,
+        pendingShop: null,
+        turnPhase: "resolving",
+      },
+      actionLogMessage.questionValidatedWithBugSmash(playerName(state, socketId))
+    );
   }
 
   const cleared = {
@@ -1309,7 +1357,16 @@ export function validateQuestion(state, socketId) {
     questionHistory,
     turnPhase: "finished",
   };
-  return nextTurn(cleared);
+  return nextTurn(
+    appendActionLog(
+      cleared,
+      actionLogMessage.questionValidated(
+        playerName(state, socketId),
+        state.currentQuestion.votes.up.length,
+        state.currentQuestion.votes.down.length
+      )
+    )
+  );
 }
 
 export function openShopForPlayer(state, socketId) {
@@ -1381,7 +1438,9 @@ function continueFromPendingShop(state, players, socketId) {
 export function closeShopForPlayer(state, socketId) {
   if (!state.pendingShop || state.pendingShop.playerId !== socketId) return state;
   const players = state.players.map((p) => ({ ...p, inventory: [...(p.inventory ?? [])] }));
-  return continueFromPendingShop(state, players, socketId);
+  const cur = players[state.currentPlayerIndex];
+  const withLog = appendActionLog(state, actionLogMessage.shopClosed(cur?.name ?? "Joueur"));
+  return continueFromPendingShop(withLog, players, socketId);
 }
 
 export function buyShopItem(state, socketId, itemType) {
@@ -1408,7 +1467,7 @@ export function buyShopItem(state, socketId, itemType) {
       players,
       turnPhase: "resolving",
     },
-    `${cur.name} achete ${catalogEntry.label} pour ${catalogEntry.cost} points`
+    actionLogMessage.shopBoughtItem(cur.name, catalogEntry.label, catalogEntry.cost)
   );
   return continueFromPendingShop(logged, players, socketId);
 }
@@ -1439,6 +1498,7 @@ export function resolvePreRollChoice(state, socketId, itemInstanceId = null) {
   if (state.pendingPreRollEffect || state.pendingDoubleRoll) return state;
 
   const usableItems = getBeforeRollInventoryForCurrentPlayer(state, socketId);
+  const curName = currentPlayerName(state);
   if (usableItems.length === 0) {
     return {
       ...state,
@@ -1448,20 +1508,21 @@ export function resolvePreRollChoice(state, socketId, itemInstanceId = null) {
   }
 
   if (!itemInstanceId) {
-    return {
+    return appendActionLog({
       ...state,
       preRollChoiceResolved: true,
       preRollSelectedItemId: null,
-    };
+    }, actionLogMessage.preRollNoItem(curName));
   }
 
   const selected = usableItems.find((item) => item.id === itemInstanceId);
   if (!selected) return state;
-  return {
+  const selectedLabel = SHOP_CATALOG[selected.type]?.label ?? "objet";
+  return appendActionLog({
     ...state,
     preRollChoiceResolved: true,
     preRollSelectedItemId: selected.id,
-  };
+  }, actionLogMessage.preRollPreparedItem(curName, selectedLabel));
 }
 
 export function consumeInventoryItem(state, socketId, itemInstanceId) {
@@ -1521,9 +1582,7 @@ export function useShopItem(state, socketId, itemInstanceId, payload = {}) {
       turnPhase: "pre_roll",
     };
     console.debug(`[retro-party] pending effect set: ${consumed.type}`);
-    const withUseLog = appendActionLog(nextState, `pre-roll item used: ${consumed.type}`);
-    const withPendingLog = appendActionLog(withUseLog, `pending effect set: ${consumed.type}`);
-    return appendActionLog(withPendingLog, `${cur.name} utilise ${itemDef.label}`);
+    return appendActionLog(nextState, actionLogMessage.itemActivated(cur.name, itemDef.label));
   }
 
   if (consumed.type === "swap_position") {
@@ -1545,7 +1604,7 @@ export function useShopItem(state, socketId, itemInstanceId, payload = {}) {
         players,
         turnPhase: "pre_roll",
       },
-      `${cur.name} utilise ${itemDef.label} sur ${target.name}`
+      actionLogMessage.itemUsedOnTarget(cur.name, itemDef.label, target.name)
     );
   }
 
@@ -1563,7 +1622,7 @@ export function useShopItem(state, socketId, itemInstanceId, payload = {}) {
         players,
         turnPhase: "pre_roll",
       },
-      `${cur.name} vole ${stolen} points a ${target.name}`
+      actionLogMessage.itemStolePoints(cur.name, stolen, target.name)
     );
   }
 
@@ -1596,7 +1655,7 @@ export function useShopItem(state, socketId, itemInstanceId, payload = {}) {
       pendingPreRollEffect: null,
       pendingDoubleRoll: null,
     };
-    return appendActionLog(nextState, `${cur.name} utilise ${itemDef.label}`);
+    return appendActionLog(nextState, actionLogMessage.itemTeleportStar(cur.name, itemDef.label));
   }
 
   return state;
@@ -1634,10 +1693,11 @@ export function nextTurn(state) {
   }
 
   if (nextRound > state.maxRounds) {
-    return {
-      ...state,
-      phase: "results",
-      players,
+    return appendActionLog(
+      {
+        ...state,
+        phase: "results",
+        players,
       currentRound: state.maxRounds,
       currentPlayerIndex: state.currentPlayerIndex,
       diceValue: null,
@@ -1647,16 +1707,18 @@ export function nextTurn(state) {
       pendingShop: null,
       turnPhase: "finished",
       pendingPreRollEffect: null,
-      pendingDoubleRoll: null,
-      preRollChoiceResolved: true,
-      preRollSelectedItemId: null,
-    };
+        pendingDoubleRoll: null,
+        preRollChoiceResolved: true,
+        preRollSelectedItemId: null,
+      },
+      actionLogMessage.gameFinished()
+    );
   }
-
-  return {
-    ...state,
-    players,
-    currentPlayerIndex: nextIndex,
+  return appendActionLog(
+    {
+      ...state,
+      players,
+      currentPlayerIndex: nextIndex,
     currentRound: nextRound,
     diceValue: null,
     isRolling: false,
@@ -1666,10 +1728,12 @@ export function nextTurn(state) {
     turnPhase: "pre_roll",
     preRollActionUsed: false,
     pendingPreRollEffect: null,
-    pendingDoubleRoll: null,
-    preRollChoiceResolved: false,
-    preRollSelectedItemId: null,
-  };
+      pendingDoubleRoll: null,
+      preRollChoiceResolved: false,
+      preRollSelectedItemId: null,
+    },
+    actionLogMessage.nextTurn(players[nextIndex]?.name, nextRound, state.maxRounds)
+  );
 }
 
 export function resetGame() {
@@ -1953,7 +2017,12 @@ export function completeBugSmash(state, socketId, score) {
     pendingShop: null,
     turnPhase: "finished",
   };
-  return nextTurn(cleared);
+  return nextTurn(
+    appendActionLog(
+      cleared,
+      actionLogMessage.bugSmashCompleted(target.name, clampedScore, starsEarned)
+    )
+  );
 }
 
 export function updateBugSmashProgress(state, socketId, score) {

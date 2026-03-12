@@ -110,6 +110,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const [turnIntroEndsAt, setTurnIntroEndsAt] = useState<number | null>(null);
   const [bugIntroEndsAt, setBugIntroEndsAt] = useState<number | null>(null);
   const [selectedPreRollType, setSelectedPreRollType] = useState<ShopItemType | null>(null);
+  const [eventPulseEndsAt, setEventPulseEndsAt] = useState<number | null>(null);
   const [turnTransitionStartMark] = useState(() => `turn-transition-start-${Date.now()}`);
   const previousTurnKeyRef = useRef<string | null>(null);
   const previousMinigameKeyRef = useRef<string | null>(null);
@@ -119,6 +120,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const lastWhoSaidItIdleRef = useRef<string | null>(null);
   const turnIntroTimerRef = useRef<number | null>(null);
   const bugIntroTimerRef = useRef<number | null>(null);
+  const eventPulseTimerRef = useRef<number | null>(null);
+  const previousActivityRef = useRef<string>("");
 
   const currentPlayer = gameState.players[gameState.currentPlayerIndex];
   const bugSmashState = gameState.currentMinigame?.minigameId === "BUG_SMASH" ? gameState.currentMinigame : null;
@@ -504,6 +507,17 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     : isMyTurn
     ? fr.gameScreen.waiting
     : fr.gameScreen.hintOpponentTurn;
+  const canOpenQuestionCard =
+    !!gameState.currentQuestion &&
+    gameState.currentQuestion.status === "pending" &&
+    !isMinigameActive &&
+    !isPathChoiceActive &&
+    !isShopActive &&
+    !isMoveAnimating &&
+    !!currentPlayer &&
+    !!myPlayerId &&
+    currentPlayer.id === myPlayerId &&
+    gameState.currentQuestion.targetPlayerId === myPlayerId;
   const turnOwnerName = currentPlayer?.name ?? fr.pointDuel.playerFallback;
   const primaryAction = isPathChoiceActive
     ? canChoosePath
@@ -528,8 +542,13 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     : isMyTurn
     ? fr.gameScreen.actionWaitTurn
     : fr.gameScreen.actionObserve.replace("{name}", turnOwnerName);
-  const activityFeed = (gameState.actionLogs ?? []).slice(-5).reverse();
+  const activityFeed = (gameState.actionLogs ?? [])
+    .filter((entry) => entry != null)
+    .map((entry) => (typeof entry === "string" ? entry : String(entry)))
+    .slice(-5)
+    .reverse();
   const latestActivity = activityFeed[0] ?? fr.gameScreen.noRecentActivity;
+  const isEventPulseActive = eventPulseEndsAt != null;
   const getTurnOrderLabel = useCallback((turnDistance: number) => {
     if (turnDistance === 0) return fr.gameScreen.nowPlaying;
     if (turnDistance === 1) return fr.gameScreen.nextUp;
@@ -546,6 +565,30 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     onLeave?.();
   };
 
+  useEffect(() => {
+    if (!latestActivity || latestActivity === fr.gameScreen.noRecentActivity) return;
+    if (previousActivityRef.current === latestActivity) return;
+    previousActivityRef.current = latestActivity;
+    if (eventPulseTimerRef.current) {
+      window.clearTimeout(eventPulseTimerRef.current);
+    }
+    setEventPulseEndsAt(Date.now() + 2200);
+    eventPulseTimerRef.current = window.setTimeout(() => {
+      setEventPulseEndsAt(null);
+      eventPulseTimerRef.current = null;
+    }, 2200);
+  }, [latestActivity]);
+
+  useEffect(
+    () => () => {
+      if (eventPulseTimerRef.current) {
+        window.clearTimeout(eventPulseTimerRef.current);
+        eventPulseTimerRef.current = null;
+      }
+    },
+    []
+  );
+
   const turnStatusClass = gameState.currentQuestion
     ? "border-amber-500/30 bg-amber-500/10 text-amber-200"
     : isMyTurn
@@ -561,18 +604,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     0,
     Math.min(100, Math.round((gameState.currentRound / Math.max(1, gameState.maxRounds)) * 100))
   );
-
-  const canOpenQuestionCard =
-    !!gameState.currentQuestion &&
-    gameState.currentQuestion.status === "pending" &&
-    !isMinigameActive &&
-    !isPathChoiceActive &&
-    !isShopActive &&
-    !isMoveAnimating &&
-    !!currentPlayer &&
-    !!myPlayerId &&
-    currentPlayer.id === myPlayerId &&
-    gameState.currentQuestion.targetPlayerId === myPlayerId;
 
   const handleConfirmPreRollChoice = (itemType: ShopItemType) => {
     const item = beforeRollInventory.find((entry) => entry.type === itemType);
@@ -622,15 +653,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               <div className="text-lg font-bold">{myStars}</div>
             </Card>
 
-            {onLeave && (
-              <Button
-                className={cn("col-span-2 h-10", dangerLeaveBtn)}
-                variant="secondary"
-                onClick={requestLeave}
-              >
-                {fr.gameScreen.leaveGame}
-              </Button>
-            )}
           </div>
 
           <div className="hidden lg:flex lg:flex-wrap lg:items-center lg:justify-between lg:gap-3">
@@ -676,9 +698,40 @@ export const GameScreen: React.FC<GameScreenProps> = ({
           </div>
         </div>
 
-        <div className="mt-2 grid min-h-0 flex-1 grid-cols-1 gap-3 sm:mt-3 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="mt-2 grid min-h-0 flex-1 grid-cols-1 gap-2 sm:mt-3 lg:grid-cols-[minmax(0,1fr)_340px]">
           <div className="flex min-h-0 flex-col gap-3">
-            <div className={cn("min-h-0 flex-1 overflow-hidden p-1", neonPanel)}>
+            <Card
+              className={cn(
+                neonCard,
+                "hidden shrink-0 px-3 py-2 lg:block",
+                isEventPulseActive && "border-cyan-300/50 bg-cyan-500/15 shadow-[0_0_0_2px_rgba(34,211,238,0.28)]"
+              )}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">
+                    {fr.gameScreen.boardEventTitle}
+                  </div>
+                  <div className="truncate text-sm font-semibold text-cyan-50">{latestActivity}</div>
+                  <div className="truncate text-[11px] text-slate-300">
+                    {isMyTurn
+                      ? fr.gameScreen.boardEventHintPlay
+                      : fr.gameScreen.boardEventHintWatch.replace("{name}", turnOwnerName)}
+                  </div>
+                </div>
+                <span
+                  className={cn(
+                    "inline-flex shrink-0 rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-[0.08em]",
+                    isEventPulseActive
+                      ? "border-cyan-300/50 bg-cyan-500/20 text-cyan-100"
+                      : "border-cyan-300/20 bg-slate-900/35 text-cyan-100/75"
+                  )}
+                >
+                  {isEventPulseActive ? fr.gameScreen.newEvent : fr.gameScreen.live}
+                </span>
+              </div>
+            </Card>
+            <div className={cn("min-h-[38svh] flex-1 overflow-hidden p-1 lg:min-h-0", neonPanel)}>
               <GameBoard
                 tiles={gameState.tiles}
                 players={gameState.players}
@@ -837,8 +890,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
             </Card>
           </div>
         </div>
-        <div className="sticky bottom-0 z-30 mt-2 pb-[env(safe-area-inset-bottom)] lg:hidden">
-          <Card className={cn(neonCard, "border px-2 py-2 backdrop-blur-md")}>
+        <div className="sticky bottom-0 z-30 mt-1 pb-[env(safe-area-inset-bottom)] lg:hidden">
+          <Card className={cn(neonCard, "border px-2 py-1.5 backdrop-blur-md")}>
             <div className="flex flex-col gap-3">
               <div className="flex min-w-0 items-end gap-3">
                 <div className="origin-left shrink-0 scale-[0.88]">
@@ -871,11 +924,10 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                   </div>
                   <div className="truncate text-xs text-cyan-100/90 sm:text-sm">{infoTitle}</div>
                   <div className="truncate text-[11px] text-slate-300 sm:text-xs">{infoHint}</div>
+                  <div className="mt-0.5 truncate text-[10px] text-cyan-100/80">
+                    {fr.gameScreen.latestEvent}: {latestActivity}
+                  </div>
                 </div>
-              </div>
-              <div className="truncate rounded border border-cyan-300/15 bg-slate-950/20 px-2 py-1 text-[11px] text-slate-200/90">
-                <span className="text-cyan-100/75">{fr.gameScreen.latestEvent}: </span>
-                {latestActivity}
               </div>
 
               <div className={`grid gap-2 ${onLeave ? "grid-cols-3" : "grid-cols-2"}`}>
