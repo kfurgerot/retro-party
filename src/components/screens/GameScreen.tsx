@@ -212,6 +212,28 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     );
     return idx >= 0 ? idx : 0;
   }, [gameState.players, myPlayerId]);
+  const nextPlayer = useMemo(() => {
+    if (gameState.players.length === 0) return null;
+    const nextIndex = (gameState.currentPlayerIndex + 1) % gameState.players.length;
+    return gameState.players[nextIndex] ?? null;
+  }, [gameState.players, gameState.currentPlayerIndex]);
+  const playersByTurnOrder = useMemo(() => {
+    const total = gameState.players.length;
+    if (total === 0) return [];
+    return gameState.players
+      .map((player, index) => {
+        const turnDistance = ((index - gameState.currentPlayerIndex) + total) % total;
+        return {
+          player,
+          index,
+          turnDistance,
+          isCurrent: turnDistance === 0,
+          isNext: turnDistance === 1,
+          isMe: !!myPlayerId && player.id === myPlayerId,
+        };
+      })
+      .sort((a, b) => a.turnDistance - b.turnDistance);
+  }, [gameState.players, gameState.currentPlayerIndex, myPlayerId]);
 
   useEffect(() => {
     setHasMovedThisTurn(false);
@@ -482,6 +504,37 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     : isMyTurn
     ? fr.gameScreen.waiting
     : fr.gameScreen.hintOpponentTurn;
+  const turnOwnerName = currentPlayer?.name ?? fr.pointDuel.playerFallback;
+  const primaryAction = isPathChoiceActive
+    ? canChoosePath
+      ? fr.gameScreen.actionChooseRoute
+      : fr.gameScreen.actionWaitRoute.replace("{name}", turnOwnerName)
+    : isKudoPurchaseActive
+    ? canResolveKudoPurchase
+      ? fr.gameScreen.actionResolveKudo
+      : fr.gameScreen.actionWaitKudo.replace("{name}", turnOwnerName)
+    : isShopActive
+    ? pendingShop?.playerId === myPlayerId
+      ? fr.gameScreen.actionShopNow
+      : fr.gameScreen.actionWaitShop.replace("{name}", turnOwnerName)
+    : canOpenQuestionCard
+    ? fr.gameScreen.actionOpenQuestion
+    : canRoll
+    ? fr.gameScreen.actionRoll
+    : canMove
+    ? fr.gameScreen.actionMove
+    : isMoveAnimating
+    ? fr.gameScreen.actionMoving
+    : isMyTurn
+    ? fr.gameScreen.actionWaitTurn
+    : fr.gameScreen.actionObserve.replace("{name}", turnOwnerName);
+  const activityFeed = (gameState.actionLogs ?? []).slice(-5).reverse();
+  const latestActivity = activityFeed[0] ?? fr.gameScreen.noRecentActivity;
+  const getTurnOrderLabel = useCallback((turnDistance: number) => {
+    if (turnDistance === 0) return fr.gameScreen.nowPlaying;
+    if (turnDistance === 1) return fr.gameScreen.nextUp;
+    return fr.gameScreen.turnIn.replace("{count}", String(turnDistance));
+  }, []);
 
   const requestLeave = () => {
     if (!onLeave) return;
@@ -504,6 +557,10 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const neutralSecondaryBtn = CTA_NEON_SECONDARY_SUBTLE;
   const activeCyanBtn = CTA_NEON_PRIMARY;
   const dangerLeaveBtn = CTA_NEON_DANGER;
+  const roundProgressPct = Math.max(
+    0,
+    Math.min(100, Math.round((gameState.currentRound / Math.max(1, gameState.maxRounds)) * 100))
+  );
 
   const canOpenQuestionCard =
     !!gameState.currentQuestion &&
@@ -529,50 +586,94 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       <RetroScreenBackground />
 
       <div className="relative z-10 flex h-svh w-full flex-col overflow-hidden p-2 sm:p-3">
-        <div className="neon-surface-soft grid grid-cols-2 gap-2 p-2 sm:grid-cols-4 lg:flex lg:flex-wrap lg:items-center lg:justify-between lg:gap-3">
-          <Card className={cn(neonCard, "min-w-0 px-3 py-2 sm:px-4 sm:py-3")}>
-            <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">
-              {fr.gameScreen.round}
-            </div>
-            <div className="text-lg font-bold sm:text-xl">
-              {gameState.currentRound} / {gameState.maxRounds}
-            </div>
-          </Card>
+        <div className="neon-surface-soft p-2">
+          <div className="grid grid-cols-2 gap-2 lg:hidden">
+            <Card className={cn(neonCard, "col-span-2 px-3 py-2")}>
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">
+                  {fr.gameScreen.currentTurn}
+                </div>
+                {isMyTurn && (
+                  <span className="inline-flex rounded-full border border-cyan-300/45 bg-cyan-500/15 px-2 py-0.5 text-[11px] text-cyan-100">
+                    {fr.gameScreen.you}
+                  </span>
+                )}
+              </div>
+              <div className="truncate text-base font-bold text-cyan-50">{currentPlayer?.name ?? "-"}</div>
+              <div className="mt-2 h-1.5 w-full overflow-hidden rounded bg-slate-900/60">
+                <div className="h-full rounded bg-cyan-400/90" style={{ width: `${roundProgressPct}%` }} />
+              </div>
+              <div className="mt-1 text-[11px] text-slate-300">
+                {fr.gameScreen.round} {gameState.currentRound}/{gameState.maxRounds}
+              </div>
+            </Card>
 
-          <Card className={cn(neonCard, "min-w-0 px-3 py-2 sm:px-4 sm:py-3")}>
-            <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">
-              {fr.gameScreen.currentTurn}
-            </div>
-            <div className="truncate text-lg font-bold sm:text-xl">{currentPlayer?.name ?? "-"}</div>
-          </Card>
+            <Card className={cn(neonCard, "min-w-0 px-3 py-2")}>
+              <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">
+                {fr.gameScreen.points}
+              </div>
+              <div className="text-lg font-bold">{myPoints}</div>
+            </Card>
 
-          <Card className={cn(neonCard, "min-w-0 px-3 py-2 sm:px-4 sm:py-3")}>
-            <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">
-              {fr.gameScreen.points}
-            </div>
-            <div className="text-lg font-bold sm:text-xl">
-              {myPoints}
-            </div>
-          </Card>
+            <Card className={cn(neonCard, "min-w-0 px-3 py-2")}>
+              <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">
+                {fr.gameScreen.kudobox}
+              </div>
+              <div className="text-lg font-bold">{myStars}</div>
+            </Card>
 
-          <Card className={cn(neonCard, "min-w-0 px-3 py-2 sm:px-4 sm:py-3")}>
-            <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">
-              {fr.gameScreen.kudobox}
-            </div>
-            <div className="text-lg font-bold sm:text-xl">
-              {myStars}
-            </div>
-          </Card>
+            {onLeave && (
+              <Button
+                className={cn("col-span-2 h-10", dangerLeaveBtn)}
+                variant="secondary"
+                onClick={requestLeave}
+              >
+                {fr.gameScreen.leaveGame}
+              </Button>
+            )}
+          </div>
 
-          {onLeave && (
-            <Button
-              className={cn("hidden lg:inline-flex", dangerLeaveBtn)}
-              variant="secondary"
-              onClick={requestLeave}
-            >
-              {fr.gameScreen.leaveGame}
-            </Button>
-          )}
+          <div className="hidden lg:flex lg:flex-wrap lg:items-center lg:justify-between lg:gap-3">
+            <Card className={cn(neonCard, "min-w-0 px-3 py-2 sm:px-4 sm:py-3")}>
+              <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">
+                {fr.gameScreen.round}
+              </div>
+              <div className="text-lg font-bold sm:text-xl">
+                {gameState.currentRound} / {gameState.maxRounds}
+              </div>
+            </Card>
+
+            <Card className={cn(neonCard, "min-w-0 px-3 py-2 sm:px-4 sm:py-3")}>
+              <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">
+                {fr.gameScreen.currentTurn}
+              </div>
+              <div className="truncate text-lg font-bold sm:text-xl">{currentPlayer?.name ?? "-"}</div>
+            </Card>
+
+            <Card className={cn(neonCard, "min-w-0 px-3 py-2 sm:px-4 sm:py-3")}>
+              <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">
+                {fr.gameScreen.points}
+              </div>
+              <div className="text-lg font-bold sm:text-xl">{myPoints}</div>
+            </Card>
+
+            <Card className={cn(neonCard, "min-w-0 px-3 py-2 sm:px-4 sm:py-3")}>
+              <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">
+                {fr.gameScreen.kudobox}
+              </div>
+              <div className="text-lg font-bold sm:text-xl">{myStars}</div>
+            </Card>
+
+            {onLeave && (
+              <Button
+                className={cn("hidden lg:inline-flex", dangerLeaveBtn)}
+                variant="secondary"
+                onClick={requestLeave}
+              >
+                {fr.gameScreen.leaveGame}
+              </Button>
+            )}
+          </div>
         </div>
 
         <div className="mt-2 grid min-h-0 flex-1 grid-cols-1 gap-3 sm:mt-3 lg:grid-cols-[minmax(0,1fr)_340px]">
@@ -615,6 +716,12 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                     className={`mb-2 inline-flex rounded-full border px-2 py-1 text-[11px] ${turnStatusClass}`}
                   >
                     {gameState.currentQuestion ? fr.gameScreen.statusQuestion : isMyTurn ? fr.gameScreen.statusYourTurn : fr.gameScreen.statusWaiting}
+                  </div>
+                  <div className="truncate text-[11px] uppercase tracking-[0.12em] text-cyan-100/70">
+                    {fr.gameScreen.primaryAction}
+                  </div>
+                  <div className="truncate text-sm font-semibold text-cyan-100">
+                    {primaryAction}
                   </div>
                   <div className="truncate text-sm text-cyan-100/90">{infoTitle}</div>
                   <div className="truncate text-xs text-slate-300">{infoHint}</div>
@@ -659,13 +766,41 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 
               {sidebarTab === "players" ? (
                 <div className="mt-3 grid max-h-[58vh] gap-2 overflow-auto pr-1">
-                  {gameState.players.map((p) => (
-                    <PlayerCard
-                      key={p.id}
-                      player={p}
-                      isActive={currentPlayer?.id === p.id}
-                      compact
-                    />
+                  <div className="rounded border border-cyan-300/20 bg-slate-950/30 px-2 py-2 text-xs">
+                    <div className="text-cyan-100/80">
+                      {fr.gameScreen.nowPlayingLabel} <span className="font-semibold text-cyan-100">{currentPlayer?.name ?? "-"}</span>
+                    </div>
+                    <div className="text-slate-300">
+                      {fr.gameScreen.nextUpLabel} <span className="font-semibold text-slate-200">{nextPlayer?.name ?? "-"}</span>
+                    </div>
+                  </div>
+                  {playersByTurnOrder.map((entry) => (
+                    <div key={entry.player.id} className="grid gap-1">
+                      <div className="flex items-center justify-between px-1 text-[11px]">
+                        <span
+                          className={cn(
+                            "inline-flex rounded-full border px-2 py-0.5",
+                            entry.isCurrent
+                              ? "border-cyan-300/45 bg-cyan-500/15 text-cyan-100"
+                              : entry.isNext
+                              ? "border-emerald-300/40 bg-emerald-500/10 text-emerald-100"
+                              : "border-cyan-300/20 bg-slate-900/40 text-slate-300"
+                          )}
+                        >
+                          {getTurnOrderLabel(entry.turnDistance)}
+                        </span>
+                        {entry.isMe && (
+                          <span className="inline-flex rounded border border-violet-300/40 bg-violet-500/10 px-2 py-0.5 text-violet-100">
+                            {fr.gameScreen.you}
+                          </span>
+                        )}
+                      </div>
+                      <PlayerCard
+                        player={entry.player}
+                        isActive={entry.isCurrent}
+                        compact
+                      />
+                    </div>
                   ))}
                 </div>
               ) : (
@@ -680,6 +815,25 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                   ))}
                 </div>
               )}
+            </Card>
+
+            <Card className={cn(neonCard, "px-3 py-3")}>
+              <div className="mb-2 text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">
+                {fr.gameScreen.activityFeed}
+              </div>
+              <div className="grid gap-1.5 text-xs text-cyan-50/90">
+                {activityFeed.length > 0 ? (
+                  activityFeed.map((log, index) => (
+                    <div key={`${log}-${index}`} className={cn("rounded border px-2 py-1", index === 0 ? "border-cyan-300/30 bg-cyan-500/10 text-cyan-100" : "border-cyan-300/15 bg-slate-950/25 text-cyan-50/85")}>
+                      {log}
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded border border-cyan-300/15 bg-slate-950/25 px-2 py-1 text-slate-300">
+                    {fr.gameScreen.noRecentActivity}
+                  </div>
+                )}
+              </div>
             </Card>
           </div>
         </div>
@@ -709,9 +863,19 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                   >
                     {gameState.currentQuestion ? fr.gameScreen.statusQuestion : isMyTurn ? fr.gameScreen.statusYourTurn : fr.gameScreen.statusWaiting}
                   </div>
+                  <div className="truncate text-[10px] uppercase tracking-[0.1em] text-cyan-100/70">
+                    {fr.gameScreen.primaryAction}
+                  </div>
+                  <div className="truncate text-xs font-semibold text-cyan-100 sm:text-sm">
+                    {primaryAction}
+                  </div>
                   <div className="truncate text-xs text-cyan-100/90 sm:text-sm">{infoTitle}</div>
                   <div className="truncate text-[11px] text-slate-300 sm:text-xs">{infoHint}</div>
                 </div>
+              </div>
+              <div className="truncate rounded border border-cyan-300/15 bg-slate-950/20 px-2 py-1 text-[11px] text-slate-200/90">
+                <span className="text-cyan-100/75">{fr.gameScreen.latestEvent}: </span>
+                {latestActivity}
               </div>
 
               <div className={`grid gap-2 ${onLeave ? "grid-cols-3" : "grid-cols-2"}`}>
@@ -769,13 +933,41 @@ export const GameScreen: React.FC<GameScreenProps> = ({
           </DrawerHeader>
 
           <div className="grid max-h-[60svh] gap-2 overflow-auto px-4 pb-4">
-            {gameState.players.map((p) => (
-              <PlayerCard
-                key={p.id}
-                player={p}
-                isActive={currentPlayer?.id === p.id}
-                compact
-              />
+            <div className="rounded border border-cyan-300/20 bg-slate-950/30 px-2 py-2 text-xs">
+              <div className="text-cyan-100/80">
+                {fr.gameScreen.nowPlayingLabel} <span className="font-semibold text-cyan-100">{currentPlayer?.name ?? "-"}</span>
+              </div>
+              <div className="text-slate-300">
+                {fr.gameScreen.nextUpLabel} <span className="font-semibold text-slate-200">{nextPlayer?.name ?? "-"}</span>
+              </div>
+            </div>
+            {playersByTurnOrder.map((entry) => (
+              <div key={entry.player.id} className="grid gap-1">
+                <div className="flex items-center justify-between px-1 text-[11px]">
+                  <span
+                    className={cn(
+                      "inline-flex rounded-full border px-2 py-0.5",
+                      entry.isCurrent
+                        ? "border-cyan-300/45 bg-cyan-500/15 text-cyan-100"
+                        : entry.isNext
+                        ? "border-emerald-300/40 bg-emerald-500/10 text-emerald-100"
+                        : "border-cyan-300/20 bg-slate-900/40 text-slate-300"
+                    )}
+                  >
+                    {getTurnOrderLabel(entry.turnDistance)}
+                  </span>
+                  {entry.isMe && (
+                    <span className="inline-flex rounded border border-violet-300/40 bg-violet-500/10 px-2 py-0.5 text-violet-100">
+                      {fr.gameScreen.you}
+                    </span>
+                  )}
+                </div>
+                <PlayerCard
+                  player={entry.player}
+                  isActive={entry.isCurrent}
+                  compact
+                />
+              </div>
             ))}
           </div>
         </DrawerContent>
