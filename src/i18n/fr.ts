@@ -261,6 +261,8 @@ export const fr = {
     actionShopNow: "Choisis un objet dans la boutique ou continue.",
     actionWaitShop: "En attente des achats de {name}.",
     actionOpenQuestion: "Ouvre la carte et reponds.",
+    fullscreenRollHint: "Le de apparait uniquement pendant cette action.",
+    fullscreenQuestionHint: "Valide l'ouverture de la carte pour poursuivre le tour.",
     actionRoll: "Lance le de pour demarrer ton deplacement.",
     actionMove: "Deplacement en cours de validation.",
     actionMoving: "Animation de deplacement en cours.",

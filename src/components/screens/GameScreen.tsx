@@ -570,6 +570,9 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     !!myPlayerId &&
     currentPlayer.id === myPlayerId &&
     gameState.currentQuestion.targetPlayerId === myPlayerId;
+  const showRollOverlay = canRoll;
+  const showOpenCardOverlay = canOpenQuestionCard;
+  const showFullscreenActionOverlay = showRollOverlay || showOpenCardOverlay;
   const turnOwnerName = currentPlayer?.name ?? fr.pointDuel.playerFallback;
   const primaryAction = isPathChoiceActive
     ? canChoosePath
@@ -883,25 +886,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               )}
             </div>
             <Card className={cn(neonCard, "hidden shrink-0 px-4 py-3 lg:block")}>
-              <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-6">
-                <div />
-                <div className="flex justify-center">
-                  <Dice
-                    value={gameState.diceValue}
-                    rollResult={gameState.lastRollResult ?? null}
-                    pendingDoubleRollFirstDie={pendingDoubleRollFirstDie}
-                    isRolling={gameState.isRolling}
-                    canRoll={canRoll}
-                    canMove={canMove}
-                    canOpenQuestionCard={canOpenQuestionCard}
-                    onRoll={onRollDice}
-                    onMove={handleMove}
-                    onOpenQuestionCard={onOpenQuestionCard}
-                    playerIndex={myIndex}
-                  />
-                </div>
-
-                <div className="max-w-[360px] justify-self-end rounded-md border border-cyan-300/15 bg-slate-950/30 px-3 py-2 text-right">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
                   <div
                     className={`mb-2 inline-flex rounded-full border px-2 py-1 text-[11px] ${turnStatusClass}`}
                   >
@@ -1040,9 +1026,44 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         </div>
         <div className="sticky bottom-0 z-30 mt-1 pb-[env(safe-area-inset-bottom)] lg:hidden">
           <Card className={cn(neonCard, "border px-2 py-1.5 backdrop-blur-md")}>
-            <div className="flex flex-col gap-3">
-              <div className="flex justify-center">
-                <div className="origin-center scale-[0.88]">
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                className="h-10 w-full border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_0_2px_rgba(34,211,238,0.35)] hover:bg-cyan-400"
+                size="sm"
+                variant="secondary"
+                onClick={openMobileInfo}
+                aria-label={fr.gameScreen.mobileInfoAria}
+              >
+                {fr.gameScreen.mobileInfo}
+              </Button>
+
+              <Button
+                className="h-10 w-full border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_0_2px_rgba(34,211,238,0.35)] hover:bg-cyan-400"
+                size="sm"
+                variant="secondary"
+                onClick={openMobileMenu}
+                aria-label={fr.gameScreen.mobileMenuAria}
+              >
+                {fr.gameScreen.mobileMenu}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      </div>
+
+      {showFullscreenActionOverlay && (
+        <div className="pointer-events-auto fixed inset-0 z-40 flex items-center justify-center bg-slate-950/78 px-4 backdrop-blur-sm">
+          <Card className={cn(neonCard, "w-full max-w-xl border-cyan-300/40 px-4 py-4 sm:px-6 sm:py-6")}>
+            {showRollOverlay ? (
+              <div className="grid gap-4">
+                <div className="text-center">
+                  <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/75">
+                    {fr.gameScreen.primaryAction}
+                  </div>
+                  <div className="mt-1 text-lg font-bold text-cyan-50">{fr.gameScreen.actionRoll}</div>
+                  <div className="mt-1 text-sm text-slate-300">{fr.gameScreen.fullscreenRollHint}</div>
+                </div>
+                <div className="flex justify-center">
                   <Dice
                     value={gameState.diceValue}
                     rollResult={gameState.lastRollResult ?? null}
@@ -1050,42 +1071,35 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                     isRolling={gameState.isRolling}
                     canRoll={canRoll}
                     canMove={canMove}
-                    canOpenQuestionCard={canOpenQuestionCard}
+                    canOpenQuestionCard={false}
                     onRoll={onRollDice}
                     onMove={handleMove}
                     onOpenQuestionCard={onOpenQuestionCard}
                     playerIndex={myIndex}
-                    compact
-                    showCompactDetails
                   />
                 </div>
               </div>
-
-              <div className="grid grid-cols-2 gap-2">
+            ) : (
+              <div className="grid gap-4">
+                <div className="text-center">
+                  <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/75">
+                    {fr.gameScreen.primaryAction}
+                  </div>
+                  <div className="mt-1 text-lg font-bold text-cyan-50">{fr.gameScreen.actionOpenQuestion}</div>
+                  <div className="mt-1 text-sm text-slate-300">{fr.gameScreen.fullscreenQuestionHint}</div>
+                </div>
                 <Button
-                  className="h-10 w-full border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_0_2px_rgba(34,211,238,0.35)] hover:bg-cyan-400"
-                  size="sm"
+                  className={cn("h-12 w-full text-base", activeCyanBtn)}
                   variant="secondary"
-                  onClick={openMobileInfo}
-                  aria-label={fr.gameScreen.mobileInfoAria}
+                  onClick={onOpenQuestionCard}
                 >
-                  {fr.gameScreen.mobileInfo}
-                </Button>
-
-                <Button
-                  className="h-10 w-full border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_0_2px_rgba(34,211,238,0.35)] hover:bg-cyan-400"
-                  size="sm"
-                  variant="secondary"
-                  onClick={openMobileMenu}
-                  aria-label={fr.gameScreen.mobileMenuAria}
-                >
-                  {fr.gameScreen.mobileMenu}
+                  {fr.dice.openCard}
                 </Button>
               </div>
-            </div>
+            )}
           </Card>
         </div>
-      </div>
+      )}
 
       <Drawer open={playersOpen} onOpenChange={setPlayersOpen}>
         <DrawerContent className="border-cyan-300/30 bg-slate-950/95 text-cyan-50 lg:hidden">
