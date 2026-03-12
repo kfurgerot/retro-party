@@ -37,6 +37,46 @@ import { ENABLE_BOARD_V2 } from "@/lib/uiMode";
 import { perfLog, perfMark, perfMeasure } from "@/lib/perf";
 
 const TURN_ANNOUNCE_MS = 2000;
+
+type ActivityKind = "move" | "decision" | "question" | "shop" | "minigame" | "system";
+
+function classifyActivityKind(log: string): ActivityKind {
+  const normalized = log.toLowerCase();
+  if (
+    normalized.includes("duel") ||
+    normalized.includes("bug smash") ||
+    normalized.includes("mini-jeu")
+  ) {
+    return "minigame";
+  }
+  if (
+    normalized.includes("question") ||
+    normalized.includes("vote") ||
+    normalized.includes("carte")
+  ) {
+    return "question";
+  }
+  if (normalized.includes("boutique") || normalized.includes("achete")) {
+    return "shop";
+  }
+  if (
+    normalized.includes("choisit") ||
+    normalized.includes("valide") ||
+    normalized.includes("continue sans") ||
+    normalized.includes("refuse")
+  ) {
+    return "decision";
+  }
+  if (
+    normalized.includes("avance") ||
+    normalized.includes("arrive") ||
+    normalized.includes("deplacement") ||
+    normalized.includes("teleporte")
+  ) {
+    return "move";
+  }
+  return "system";
+}
 const QuestionModal = lazy(() =>
   import("../game/QuestionModal").then((module) => ({ default: module.QuestionModal }))
 );
@@ -554,12 +594,21 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     : isMyTurn
     ? fr.gameScreen.actionWaitTurn
     : fr.gameScreen.actionObserve.replace("{name}", turnOwnerName);
-  const activityFeed = (gameState.actionLogs ?? [])
+  const activityFeedRaw = (gameState.actionLogs ?? [])
     .filter((entry) => entry != null)
     .map((entry) => (typeof entry === "string" ? entry : String(entry)))
     .slice(-5)
     .reverse();
-  const latestActivity = activityFeed[0] ?? fr.gameScreen.noRecentActivity;
+  const activityFeed = useMemo(
+    () =>
+      activityFeedRaw.map((log) => ({
+        log,
+        kind: classifyActivityKind(log),
+      })),
+    [activityFeedRaw]
+  );
+  const latestActivity = activityFeed[0]?.log ?? fr.gameScreen.noRecentActivity;
+  const latestActivityKind = activityFeed[0]?.kind ?? "system";
   const isEventPulseActive = eventPulseEndsAt != null;
   const getTurnOrderLabel = useCallback((turnDistance: number) => {
     if (turnDistance === 0) return fr.gameScreen.nowPlaying;
@@ -617,6 +666,22 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     Math.min(100, Math.round((gameState.currentRound / Math.max(1, gameState.maxRounds)) * 100))
   );
   const turnQueue = useMemo(() => playersByTurnOrder.slice(0, Math.min(playersByTurnOrder.length, 5)), [playersByTurnOrder]);
+  const activityKindLabel: Record<ActivityKind, string> = {
+    move: fr.gameScreen.activityTypeMove,
+    decision: fr.gameScreen.activityTypeDecision,
+    question: fr.gameScreen.activityTypeQuestion,
+    shop: fr.gameScreen.activityTypeShop,
+    minigame: fr.gameScreen.activityTypeMinigame,
+    system: fr.gameScreen.activityTypeSystem,
+  };
+  const activityKindClass: Record<ActivityKind, string> = {
+    move: "border-sky-300/35 bg-sky-500/12 text-sky-100",
+    decision: "border-amber-300/35 bg-amber-500/12 text-amber-100",
+    question: "border-violet-300/35 bg-violet-500/12 text-violet-100",
+    shop: "border-orange-300/35 bg-orange-500/12 text-orange-100",
+    minigame: "border-emerald-300/35 bg-emerald-500/12 text-emerald-100",
+    system: "border-cyan-300/25 bg-slate-900/35 text-cyan-100/85",
+  };
 
   const handleConfirmPreRollChoice = (itemType: ShopItemType) => {
     const item = beforeRollInventory.find((entry) => entry.type === itemType);
@@ -655,28 +720,27 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               <div className="truncate text-[10px] text-cyan-100/85">
                 {primaryAction}
               </div>
-              <div className="mt-2">
-                <div className="text-[10px] uppercase tracking-[0.08em] text-cyan-100/75">
-                  {fr.gameScreen.turnQueue}
-                </div>
-                <div className="mt-1 flex gap-1.5 overflow-x-auto pb-0.5">
-                  {turnQueue.map((entry) => (
-                    <div
-                      key={`mobile-turn-${entry.player.id}`}
-                      className={cn(
-                        "shrink-0 rounded border px-2 py-1",
-                        entry.isCurrent
-                          ? "border-cyan-300/45 bg-cyan-500/15 text-cyan-100"
-                          : entry.isNext
-                          ? "border-emerald-300/40 bg-emerald-500/12 text-emerald-100"
-                          : "border-cyan-300/20 bg-slate-900/35 text-slate-200"
-                      )}
-                    >
-                      <div className="max-w-[110px] truncate text-[11px] font-semibold">{entry.player.name}</div>
-                      <div className="text-[10px] opacity-85">{getTurnOrderLabel(entry.turnDistance)}</div>
-                    </div>
-                  ))}
-                </div>
+              <div className="mt-1.5 flex items-center gap-1.5 overflow-x-auto pb-0.5">
+                {turnQueue.slice(0, 3).map((entry) => (
+                  <span
+                    key={`mobile-turn-${entry.player.id}`}
+                    className={cn(
+                      "inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[10px]",
+                      entry.isCurrent
+                        ? "border-cyan-300/45 bg-cyan-500/15 text-cyan-100"
+                        : entry.isNext
+                        ? "border-emerald-300/40 bg-emerald-500/12 text-emerald-100"
+                        : "border-cyan-300/20 bg-slate-900/35 text-slate-200"
+                    )}
+                  >
+                    {entry.player.name}
+                  </span>
+                ))}
+                {turnQueue.length > 3 && (
+                  <span className="inline-flex shrink-0 items-center rounded-full border border-cyan-300/20 bg-slate-900/35 px-2 py-0.5 text-[10px] text-slate-300">
+                    +{turnQueue.length - 3}
+                  </span>
+                )}
               </div>
               <div className="mt-1.5 h-1 w-full overflow-hidden rounded bg-slate-900/60">
                 <div className="h-full rounded bg-cyan-400/90" style={{ width: `${roundProgressPct}%` }} />
@@ -766,6 +830,11 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 <div className="min-w-0">
                   <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">
                     {fr.gameScreen.boardEventTitle}
+                  </div>
+                  <div className="mt-1 mb-1">
+                    <span className={cn("inline-flex rounded border px-1.5 py-0.5 text-[10px] uppercase tracking-[0.08em]", activityKindClass[latestActivityKind])}>
+                      {activityKindLabel[latestActivityKind]}
+                    </span>
                   </div>
                   <div className="truncate text-sm font-semibold text-cyan-50">{latestActivity}</div>
                   <div className="truncate text-[11px] text-slate-300">
@@ -944,9 +1013,20 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               </div>
               <div className="grid gap-1.5 text-xs text-cyan-50/90">
                 {activityFeed.length > 0 ? (
-                  activityFeed.map((log, index) => (
-                    <div key={`${log}-${index}`} className={cn("rounded border px-2 py-1", index === 0 ? "border-cyan-300/30 bg-cyan-500/10 text-cyan-100" : "border-cyan-300/15 bg-slate-950/25 text-cyan-50/85")}>
-                      {log}
+                  activityFeed.map((entry, index) => (
+                    <div
+                      key={`${entry.log}-${index}`}
+                      className={cn(
+                        "rounded border px-2 py-1",
+                        index === 0 ? "border-cyan-300/30 bg-cyan-500/10 text-cyan-100" : "border-cyan-300/15 bg-slate-950/25 text-cyan-50/85"
+                      )}
+                    >
+                      <div className="mb-1">
+                        <span className={cn("inline-flex rounded border px-1.5 py-0.5 text-[10px] uppercase tracking-[0.08em]", activityKindClass[entry.kind])}>
+                          {activityKindLabel[entry.kind]}
+                        </span>
+                      </div>
+                      <div>{entry.log}</div>
                     </div>
                   ))
                 ) : (
@@ -1149,6 +1229,11 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                   )}
                 >
                   {isEventPulseActive ? fr.gameScreen.newEvent : fr.gameScreen.live}
+                </span>
+              </div>
+              <div className="mb-1">
+                <span className={cn("inline-flex rounded border px-1.5 py-0.5 text-[10px] uppercase tracking-[0.08em]", activityKindClass[latestActivityKind])}>
+                  {activityKindLabel[latestActivityKind]}
                 </span>
               </div>
               <div className="text-xs font-semibold">{latestActivity}</div>
