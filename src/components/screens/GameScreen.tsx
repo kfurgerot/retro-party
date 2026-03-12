@@ -921,25 +921,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 />
               )}
             </div>
-            <Card className={cn(neonCard, "hidden shrink-0 px-4 py-3 lg:block")}>
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <div
-                    className={`mb-2 inline-flex rounded-full border px-2 py-1 text-[11px] ${turnStatusClass}`}
-                  >
-                    {gameState.currentQuestion ? fr.gameScreen.statusQuestion : isMyTurn ? fr.gameScreen.statusYourTurn : fr.gameScreen.statusWaiting}
-                  </div>
-                  <div className="truncate text-[11px] uppercase tracking-[0.12em] text-cyan-100/70">
-                    {fr.gameScreen.primaryAction}
-                  </div>
-                  <div className="truncate text-sm font-semibold text-cyan-100">
-                    {primaryAction}
-                  </div>
-                  <div className="truncate text-sm text-cyan-100/90">{infoTitle}</div>
-                  <div className="truncate text-xs text-slate-300">{infoHint}</div>
-                </div>
-              </div>
-            </Card>
           </div>
 
           <div className="hidden min-h-0 min-w-0 flex-col gap-3 lg:flex">
