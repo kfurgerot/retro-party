@@ -61,9 +61,9 @@ const Home = () => {
   }
 
   return (
-    <div className="scanlines relative flex min-h-svh w-full items-center justify-center overflow-hidden px-4 py-8">
+    <div className="scanlines relative flex min-h-svh w-full items-start justify-center overflow-hidden px-4 pb-8 pt-4 sm:pt-6">
       <RetroScreenBackground />
-      <Card className="relative z-10 w-full max-w-2xl border-cyan-300/60 bg-card/88 shadow-[0_0_0_2px_rgba(34,211,238,0.3),0_0_34px_rgba(34,211,238,0.32)] backdrop-blur">
+      <Card className="relative z-10 flex min-h-[82svh] w-full max-w-4xl flex-col border-cyan-300/60 bg-card/88 shadow-[0_0_0_2px_rgba(34,211,238,0.3),0_0_34px_rgba(34,211,238,0.32)] backdrop-blur">
         <CardHeader>
           <div className="mb-2 flex justify-end text-[10px] uppercase tracking-[0.16em] text-cyan-200/80">
             <span className="rounded-full border border-cyan-300/40 px-2 py-0.5">
@@ -72,7 +72,7 @@ const Home = () => {
           </div>
           <CardTitle className="text-center text-2xl text-cyan-200">{fr.home.title}</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="flex flex-1 flex-col space-y-4">
           <p className="text-center text-sm text-slate-300">
             {fr.home.modeDescription}
           </p>

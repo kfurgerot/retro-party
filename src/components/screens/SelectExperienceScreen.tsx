@@ -71,10 +71,10 @@ export const SelectExperienceScreen: React.FC<SelectExperienceScreenProps> = ({
   const computedStepLabel = hasProgress ? `${fr.onlineOnboarding.step} ${stepCurrent}/${stepTotal}` : stepLabel;
 
   return (
-    <div className="scanlines relative flex min-h-svh w-full items-center justify-center overflow-hidden px-4 py-8">
+    <div className="scanlines relative flex min-h-svh w-full items-start justify-center overflow-hidden px-4 pb-8 pt-4 sm:pt-6">
       <RetroScreenBackground />
 
-      <div className="relative z-10 w-full max-w-5xl rounded border border-cyan-300/60 bg-card/88 p-5 shadow-[0_0_0_2px_rgba(34,211,238,0.3),0_0_34px_rgba(34,211,238,0.32)] backdrop-blur sm:p-8">
+      <div className="relative z-10 flex min-h-[82svh] w-full max-w-4xl flex-col rounded border border-cyan-300/60 bg-card/88 p-5 shadow-[0_0_0_2px_rgba(34,211,238,0.3),0_0_34px_rgba(34,211,238,0.32)] backdrop-blur sm:p-8">
         <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-cyan-200/80">
           <span>{fr.selectExperience.brand}</span>
           <div className="flex items-center gap-2">
@@ -100,7 +100,7 @@ export const SelectExperienceScreen: React.FC<SelectExperienceScreenProps> = ({
           </div>
         ) : null}
 
-        <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-8 grid flex-1 content-start grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {TOOLS.map((tool) => (
             <button
               key={tool.id}

@@ -66,10 +66,10 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
       : 100;
 
   return (
-    <div className="scanlines relative flex min-h-svh w-full items-center justify-center overflow-hidden px-4 py-8">
+    <div className="scanlines relative flex min-h-svh w-full items-start justify-center overflow-hidden px-4 pb-8 pt-4 sm:pt-6">
       <RetroScreenBackground />
 
-      <div className="relative z-10 w-full max-w-3xl rounded border border-cyan-300/60 bg-card/88 p-5 shadow-[0_0_0_2px_rgba(34,211,238,0.3),0_0_34px_rgba(34,211,238,0.32)] backdrop-blur sm:p-8">
+      <div className="relative z-10 flex min-h-[82svh] w-full max-w-4xl flex-col rounded border border-cyan-300/60 bg-card/88 p-5 shadow-[0_0_0_2px_rgba(34,211,238,0.3),0_0_34px_rgba(34,211,238,0.32)] backdrop-blur sm:p-8">
         <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.16em] text-cyan-200/80">
           <span>{fr.onlineOnboarding.brand}</span>
           <span className="rounded-full border border-cyan-300/40 px-2 py-0.5">
@@ -90,7 +90,7 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
           />
         </div>
 
-        <div className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">
+        <div className="mt-6 grid flex-1 content-start gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">
           <div className="neon-surface rounded-md p-4 sm:p-5">
             {step === 1 && (
               <div className="space-y-2">
