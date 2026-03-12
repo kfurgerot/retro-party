@@ -639,6 +639,20 @@ const GameBoardComponent: React.FC<GameBoardProps> = ({
     };
   }, []);
 
+  const playersByTile = useMemo(() => {
+    const byTile = new Map<number, Player[]>();
+    for (const player of players) {
+      const tileId = displayPositions[player.id] ?? player.position;
+      const list = byTile.get(tileId);
+      if (list) {
+        list.push(player);
+      } else {
+        byTile.set(tileId, [player]);
+      }
+    }
+    return byTile;
+  }, [displayPositions, players]);
+
   return (
     <div
       ref={containerRef}
@@ -748,9 +762,7 @@ const GameBoardComponent: React.FC<GameBoardProps> = ({
             const px = tile.x - bounds.minX;
             const py = tile.y - bounds.minY;
 
-            const playersHere = players
-              .map((p) => ({ p }))
-              .filter(({ p }) => (displayPositions[p.id] ?? p.position) === tile.id);
+            const playersHere = playersByTile.get(tile.id) ?? [];
 
             return (
               <div
@@ -767,7 +779,7 @@ const GameBoardComponent: React.FC<GameBoardProps> = ({
                 {/* Players on tile */}
                 {playersHere.length > 0 && (
                   <div className="absolute -top-6 left-1/2 z-10 flex -translate-x-1/2 gap-1">
-                    {playersHere.slice(0, 3).map(({ p }, k) => (
+                    {playersHere.slice(0, 3).map((p, k) => (
                       <div
                         key={`${p.id}-${k}`}
                         className={cn(
@@ -893,6 +905,102 @@ const GameBoardComponent: React.FC<GameBoardProps> = ({
   );
 };
 
-export const GameBoard = React.memo(GameBoardComponent);
+function areTilesEqual(prevTiles: Tile[], nextTiles: Tile[]) {
+  if (prevTiles === nextTiles) return true;
+  if (prevTiles.length !== nextTiles.length) return false;
+  for (let i = 0; i < prevTiles.length; i += 1) {
+    const a = prevTiles[i];
+    const b = nextTiles[i];
+    if (
+      a.id !== b.id ||
+      a.type !== b.type ||
+      a.x !== b.x ||
+      a.y !== b.y
+    ) {
+      return false;
+    }
+    const aNext = a.nextTileIds ?? [];
+    const bNext = b.nextTileIds ?? [];
+    if (aNext.length !== bNext.length) return false;
+    for (let j = 0; j < aNext.length; j += 1) {
+      if (aNext[j] !== bNext[j]) return false;
+    }
+  }
+  return true;
+}
+
+function arePlayersEqualForBoard(prevPlayers: Player[], nextPlayers: Player[]) {
+  if (prevPlayers === nextPlayers) return true;
+  if (prevPlayers.length !== nextPlayers.length) return false;
+  for (let i = 0; i < prevPlayers.length; i += 1) {
+    const a = prevPlayers[i];
+    const b = nextPlayers[i];
+    if (
+      a.id !== b.id ||
+      a.position !== b.position ||
+      a.avatar !== b.avatar ||
+      a.color !== b.color ||
+      a.name !== b.name
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function arePendingChoicesEqual(
+  prevChoice: PendingPathChoice | null | undefined,
+  nextChoice: PendingPathChoice | null | undefined
+) {
+  if (prevChoice === nextChoice) return true;
+  if (!prevChoice || !nextChoice) return false;
+  if (
+    prevChoice.playerId !== nextChoice.playerId ||
+    prevChoice.atTileId !== nextChoice.atTileId ||
+    prevChoice.remainingSteps !== nextChoice.remainingSteps ||
+    prevChoice.options.length !== nextChoice.options.length
+  ) {
+    return false;
+  }
+  for (let i = 0; i < prevChoice.options.length; i += 1) {
+    if (prevChoice.options[i] !== nextChoice.options[i]) return false;
+  }
+  return true;
+}
+
+function areMoveTracesEqual(prevTrace: MoveTrace | null | undefined, nextTrace: MoveTrace | null | undefined) {
+  if (prevTrace === nextTrace) return true;
+  if (!prevTrace || !nextTrace) return false;
+  if (
+    prevTrace.id !== nextTrace.id ||
+    prevTrace.playerId !== nextTrace.playerId ||
+    prevTrace.path.length !== nextTrace.path.length ||
+    prevTrace.pointDeltas.length !== nextTrace.pointDeltas.length
+  ) {
+    return false;
+  }
+  for (let i = 0; i < prevTrace.path.length; i += 1) {
+    if (prevTrace.path[i] !== nextTrace.path[i]) return false;
+  }
+  for (let i = 0; i < prevTrace.pointDeltas.length; i += 1) {
+    if (prevTrace.pointDeltas[i] !== nextTrace.pointDeltas[i]) return false;
+  }
+  return true;
+}
+
+function areGameBoardPropsEqual(prev: GameBoardProps, next: GameBoardProps) {
+  return (
+    areTilesEqual(prev.tiles, next.tiles) &&
+    arePlayersEqualForBoard(prev.players, next.players) &&
+    arePendingChoicesEqual(prev.pendingPathChoice, next.pendingPathChoice) &&
+    areMoveTracesEqual(prev.lastMoveTrace, next.lastMoveTrace) &&
+    prev.canChoosePath === next.canChoosePath &&
+    prev.eventOverlayActive === next.eventOverlayActive &&
+    prev.onChoosePath === next.onChoosePath &&
+    prev.onMoveAnimationEnd === next.onMoveAnimationEnd
+  );
+}
+
+export const GameBoard = React.memo(GameBoardComponent, areGameBoardPropsEqual);
 GameBoard.displayName = "GameBoard";
 

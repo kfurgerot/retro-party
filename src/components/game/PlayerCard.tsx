@@ -57,5 +57,19 @@ const PlayerCardComponent: React.FC<PlayerCardProps> = ({ player, isActive, comp
   );
 };
 
-export const PlayerCard = React.memo(PlayerCardComponent);
+function arePlayerCardsEqual(prev: PlayerCardProps, next: PlayerCardProps) {
+  return (
+    prev.isActive === next.isActive &&
+    prev.compact === next.compact &&
+    prev.player.id === next.player.id &&
+    prev.player.name === next.player.name &&
+    prev.player.avatar === next.player.avatar &&
+    prev.player.points === next.player.points &&
+    prev.player.stars === next.player.stars &&
+    prev.player.isHost === next.player.isHost &&
+    prev.player.color === next.player.color
+  );
+}
+
+export const PlayerCard = React.memo(PlayerCardComponent, arePlayerCardsEqual);
 PlayerCard.displayName = "PlayerCard";
