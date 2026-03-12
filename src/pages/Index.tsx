@@ -85,6 +85,8 @@ const Index: React.FC = () => {
             connected={online.connected}
             initialName={onboardingProfile.name || undefined}
             initialAvatar={onboardingProfile.avatar}
+            overallStepStart={3}
+            overallStepTotal={5}
             onSubmit={({ name, avatar }) => {
               setOnboardingProfile({ name, avatar });
               setShowOnlineOnboarding(false);
@@ -119,6 +121,7 @@ const Index: React.FC = () => {
             initialMode={initialParams.mode}
             initialCode={initialParams.code}
             autoSubmitKey={autoSubmitKey}
+            stepLabel={`${fr.onlineOnboarding.step} 5/5`}
           />
         </div>
       );

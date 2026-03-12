@@ -38,6 +38,7 @@ interface OnlineLobbyScreenProps {
   initialMode?: "host" | "join";
   initialCode?: string;
   autoSubmitKey?: number;
+  stepLabel?: string;
 }
 
 type Pending = "idle" | "hosting" | "joining" | "starting";
@@ -62,6 +63,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
   initialMode,
   initialCode,
   autoSubmitKey,
+  stepLabel,
 }) => {
   const [mode, setMode] = useState<"host" | "join">(initialMode ?? "host");
   const [name, setName] = useState(() => cleanName(initialName ?? ""));
@@ -262,9 +264,16 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
       <div className="relative z-10 w-full max-w-4xl rounded border border-cyan-300/60 bg-[linear-gradient(180deg,rgba(8,18,38,0.88)_0%,rgba(8,12,24,0.9)_100%)] p-5 shadow-[0_0_0_2px_rgba(34,211,238,0.3),0_0_34px_rgba(34,211,238,0.32)] backdrop-blur sm:p-8">
         <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] uppercase tracking-[0.2em] text-cyan-200/80">
           <span>{fr.onlineLobby.brand}</span>
-          <span className="rounded-full border border-cyan-300/45 px-2 py-1">
-            {fr.onlineLobby.lobbyBadge}
-          </span>
+          <div className="flex items-center gap-2">
+            {!roomCode && stepLabel ? (
+              <span className="rounded-full border border-cyan-300/40 px-2 py-1">
+                {stepLabel}
+              </span>
+            ) : null}
+            <span className="rounded-full border border-cyan-300/45 px-2 py-1">
+              {fr.onlineLobby.lobbyBadge}
+            </span>
+          </div>
         </div>
 
         <h1 className="mt-4 text-center text-xl text-cyan-200 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)] sm:text-3xl">

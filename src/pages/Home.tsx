@@ -4,13 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RetroScreenBackground } from "@/components/screens/RetroScreenBackground";
 import { PressStartScreen } from "@/components/screens/PressStartScreen";
+import { SelectExperienceScreen, type ExperienceId } from "@/components/screens/SelectExperienceScreen";
 import { fr } from "@/i18n/fr";
 import { CTA_NEON_PRIMARY, CTA_NEON_SECONDARY } from "@/lib/uiTokens";
 import { loadPlayPage } from "@/lib/routeLoaders";
 
 const Home = () => {
   const navigate = useNavigate();
-  const [hasStarted, setHasStarted] = useState(false);
+  const [stage, setStage] = useState<"press-start" | "select-experience" | "select-entry">("press-start");
   const playPrefetchedRef = useRef(false);
 
   const prefetchPlayRoute = () => {
@@ -20,11 +21,11 @@ const Home = () => {
   };
 
   const handleStart = () => {
-    setHasStarted(true);
+    setStage("select-experience");
   };
 
   useEffect(() => {
-    if (!hasStarted) return;
+    if (stage === "press-start") return;
 
     if ("requestIdleCallback" in window) {
       const idleId = window.requestIdleCallback(() => prefetchPlayRoute(), { timeout: 1200 });
@@ -33,10 +34,22 @@ const Home = () => {
 
     const timeoutId = window.setTimeout(() => prefetchPlayRoute(), 400);
     return () => window.clearTimeout(timeoutId);
-  }, [hasStarted]);
+  }, [stage]);
 
-  if (!hasStarted) {
+  if (stage === "press-start") {
     return <PressStartScreen onStart={handleStart} />;
+  }
+  if (stage === "select-experience") {
+    return (
+      <SelectExperienceScreen
+        stepLabel={`${fr.onlineOnboarding.step} 1/5`}
+        onBack={() => setStage("press-start")}
+        onSelect={(experience: ExperienceId) => {
+          if (experience !== "retro-party") return;
+          setStage("select-entry");
+        }}
+      />
+    );
   }
 
   return (
@@ -44,6 +57,11 @@ const Home = () => {
       <RetroScreenBackground />
       <Card className="relative z-10 w-full max-w-2xl border-cyan-300/60 bg-card/88 shadow-[0_0_0_2px_rgba(34,211,238,0.3),0_0_34px_rgba(34,211,238,0.32)] backdrop-blur">
         <CardHeader>
+          <div className="mb-2 flex justify-end text-[10px] uppercase tracking-[0.16em] text-cyan-200/80">
+            <span className="rounded-full border border-cyan-300/40 px-2 py-0.5">
+              {fr.onlineOnboarding.step} 2/5
+            </span>
+          </div>
           <CardTitle className="text-center text-2xl text-cyan-200">{fr.home.title}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -67,6 +85,15 @@ const Home = () => {
               title={fr.home.preparePartyTitle}
             >
               {fr.home.prepareParty}
+            </Button>
+          </div>
+          <div className="pt-1">
+            <Button
+              variant="secondary"
+              className={`w-full sm:w-auto ${CTA_NEON_SECONDARY}`}
+              onClick={() => setStage("select-experience")}
+            >
+              {fr.selectExperience.back}
             </Button>
           </div>
         </CardContent>

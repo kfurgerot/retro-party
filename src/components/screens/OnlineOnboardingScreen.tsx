@@ -13,6 +13,8 @@ interface OnlineOnboardingScreenProps {
   initialAvatar?: number;
   onSubmit: (payload: { name: string; avatar: number }) => void;
   onBack: () => void;
+  overallStepStart?: number;
+  overallStepTotal?: number;
 }
 
 const cleanName = (v: string) => v.replace(/\s+/g, " ").trim().slice(0, 16);
@@ -23,6 +25,8 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
   initialAvatar,
   onSubmit,
   onBack,
+  overallStepStart,
+  overallStepTotal,
 }) => {
   const [step, setStep] = useState<1 | 2>(1);
   const [name, setName] = useState(() => cleanName(initialName ?? ""));
@@ -52,6 +56,10 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
     setStep(1);
   };
 
+  const currentOverallStep =
+    typeof overallStepStart === "number" ? overallStepStart + (step === 2 ? 1 : 0) : null;
+  const showOverallStep = currentOverallStep !== null && typeof overallStepTotal === "number";
+
   return (
     <div className="scanlines relative flex min-h-svh w-full items-center justify-center overflow-hidden px-4 py-8">
       <RetroScreenBackground />
@@ -60,7 +68,9 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
         <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.16em] text-cyan-200/80">
           <span>{fr.onlineOnboarding.brand}</span>
           <span className="rounded-full border border-cyan-300/40 px-2 py-0.5">
-            {fr.onlineOnboarding.step} {step}/2
+            {showOverallStep
+              ? `${fr.onlineOnboarding.step} ${currentOverallStep}/${overallStepTotal}`
+              : `${fr.onlineOnboarding.step} ${step}/2`}
           </span>
         </div>
 

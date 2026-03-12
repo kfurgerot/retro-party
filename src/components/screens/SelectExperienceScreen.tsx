@@ -49,11 +49,13 @@ const TOOLS: ToolItem[] = [
 interface SelectExperienceScreenProps {
   onSelect: (experience: ExperienceId) => void;
   onBack: () => void;
+  stepLabel?: string;
 }
 
 export const SelectExperienceScreen: React.FC<SelectExperienceScreenProps> = ({
   onSelect,
   onBack,
+  stepLabel,
 }) => {
   return (
     <div className="scanlines relative flex min-h-svh w-full items-center justify-center overflow-hidden px-4 py-8">
@@ -62,7 +64,12 @@ export const SelectExperienceScreen: React.FC<SelectExperienceScreenProps> = ({
       <div className="relative z-10 w-full max-w-5xl rounded border border-cyan-300/60 bg-card/88 p-5 shadow-[0_0_0_2px_rgba(34,211,238,0.3),0_0_34px_rgba(34,211,238,0.32)] backdrop-blur sm:p-8">
         <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-cyan-200/80">
           <span>{fr.selectExperience.brand}</span>
-          <span>{fr.selectExperience.badge}</span>
+          <div className="flex items-center gap-2">
+            {stepLabel ? (
+              <span className="rounded-full border border-cyan-300/40 px-2 py-0.5">{stepLabel}</span>
+            ) : null}
+            <span>{fr.selectExperience.badge}</span>
+          </div>
         </div>
 
         <h1 className="mt-4 text-center text-xl text-cyan-200 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)] sm:text-3xl">
