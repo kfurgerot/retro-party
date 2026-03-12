@@ -14,16 +14,16 @@ interface BoardV2Props {
 }
 
 const TILE_ICON: Record<string, string> = {
-  blue: "B",
-  red: "R",
-  green: "V",
-  purple: "I",
-  violet: "I",
-  star: "*",
-  yellow: "*",
-  bonus: "*",
-  shop: "$",
-  start: "D",
+  blue: "💬",
+  red: "🔥",
+  green: "🔧",
+  purple: "🎯",
+  violet: "🎯",
+  star: "🎁",
+  yellow: "🎁",
+  bonus: "🎁",
+  shop: "🛒",
+  start: "▶",
 };
 
 const TILE_BADGE_CLASS: Record<string, string> = {

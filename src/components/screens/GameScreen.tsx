@@ -324,12 +324,12 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 
   const legend = useMemo(
     () => [
-      { k: "blue", label: fr.gameScreen.legendBlue, icon: "B" },
-      { k: "green", label: fr.gameScreen.legendGreen, icon: "V" },
-      { k: "red", label: fr.gameScreen.legendRed, icon: "R" },
-      { k: "violet", label: fr.gameScreen.legendViolet, icon: "I" },
-      { k: "bonus", label: fr.gameScreen.legendBonus, icon: "*" },
-      { k: "shop", label: fr.game.shopLegend, icon: "$" },
+      { k: "blue", label: fr.gameScreen.legendBlue, icon: "💬" },
+      { k: "green", label: fr.gameScreen.legendGreen, icon: "🔧" },
+      { k: "red", label: fr.gameScreen.legendRed, icon: "🔥" },
+      { k: "violet", label: fr.gameScreen.legendViolet, icon: "🎯" },
+      { k: "bonus", label: fr.gameScreen.legendBonus, icon: "🎁" },
+      { k: "shop", label: fr.game.shopLegend, icon: "🛒" },
     ],
     []
   );
