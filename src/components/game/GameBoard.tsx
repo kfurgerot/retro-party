@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 interface GameBoardProps {
   tiles: Tile[];
   players: Player[];
+  focusPlayerId?: string | null;
   onMoveAnimationEnd?: (playerId: string) => void;
   pendingPathChoice?: PendingPathChoice | null;
   lastMoveTrace?: MoveTrace | null;
@@ -66,6 +67,7 @@ const MOVE_STEP_MS = 320;
 const GameBoardComponent: React.FC<GameBoardProps> = ({
   tiles,
   players,
+  focusPlayerId = null,
   onMoveAnimationEnd,
   pendingPathChoice,
   lastMoveTrace,
@@ -653,6 +655,22 @@ const GameBoardComponent: React.FC<GameBoardProps> = ({
     return byTile;
   }, [displayPositions, players]);
 
+  const focusedPlayer = useMemo(
+    () => players.find((player) => player.id === focusPlayerId) ?? null,
+    [focusPlayerId, players]
+  );
+  const focusedPosition = focusedPlayer
+    ? (displayPositions[focusedPlayer.id] ?? focusedPlayer.position)
+    : null;
+  const highlightedPathEdges = useMemo(() => {
+    const edges = new Set<string>();
+    const path = lastMoveTrace?.path ?? [];
+    for (let i = 0; i < path.length - 1; i += 1) {
+      edges.add(`${path[i]}-${path[i + 1]}`);
+    }
+    return edges;
+  }, [lastMoveTrace?.path]);
+
   return (
     <div
       ref={containerRef}
@@ -685,6 +703,7 @@ const GameBoardComponent: React.FC<GameBoardProps> = ({
                 .filter((id) => id >= 0 && id < points.length)
                 .map((nextId, idx) => {
                   const to = points[nextId];
+                  const isHighlighted = highlightedPathEdges.has(`${tile.id}-${nextId}`);
                   return (
                     <g key={`l-${tile.id}-${nextId}-${idx}`}>
                       <line
@@ -701,8 +720,8 @@ const GameBoardComponent: React.FC<GameBoardProps> = ({
                         y1={from.y + TILE_CENTER}
                         x2={to.x + TILE_CENTER}
                         y2={to.y + TILE_CENTER}
-                        stroke="rgba(125, 211, 252, 0.6)"
-                        strokeWidth="5"
+                        stroke={isHighlighted ? "rgba(250, 204, 21, 0.95)" : "rgba(125, 211, 252, 0.6)"}
+                        strokeWidth={isHighlighted ? "7" : "5"}
                         strokeLinecap="round"
                       />
                     </g>
@@ -769,12 +788,16 @@ const GameBoardComponent: React.FC<GameBoardProps> = ({
                 key={tile.id}
                 className={cn(
                   "absolute flex h-16 w-16 items-center justify-center rounded-lg border-4 border-black text-lg font-bold shadow-[4px_4px_0_0_rgba(0,0,0,0.65)]",
-                  TileColors[tile.type] ?? "bg-slate-800"
+                  TileColors[tile.type] ?? "bg-slate-800",
+                  focusedPosition === tile.id && "ring-4 ring-amber-300/85"
                 )}
                 style={{ left: px, top: py }}
                 title={`${idx + 1} - ${tile.type}`}
               >
                 <span>{TileIcon[tile.type] ?? "?"}</span>
+                <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 rounded border border-slate-300/35 bg-slate-900/75 px-1 py-0 text-[10px] font-semibold text-slate-100">
+                  {tile.id + 1}
+                </span>
 
                 {/* Players on tile */}
                 {playersHere.length > 0 && (
@@ -899,6 +922,22 @@ const GameBoardComponent: React.FC<GameBoardProps> = ({
           >
             C
           </button>
+          {focusedPosition != null && (
+            <button
+              type="button"
+              className="h-10 w-10 rounded-md border-4 border-black bg-amber-300 text-sm font-extrabold text-slate-900 shadow-[3px_3px_0_0_rgba(0,0,0,0.6)]"
+              onClick={() => focusOnPosition(focusedPosition, true)}
+              aria-label="Centrer joueur actif"
+            >
+              T
+            </button>
+          )}
+        </div>
+      )}
+
+      {focusedPlayer && focusedPosition != null && (
+        <div className="pointer-events-none absolute bottom-2 left-2 z-20 rounded border border-cyan-300/35 bg-slate-900/75 px-2 py-1 text-[11px] text-cyan-100">
+          {focusedPlayer.name} · {focusedPosition + 1}
         </div>
       )}
     </div>
@@ -992,6 +1031,7 @@ function areGameBoardPropsEqual(prev: GameBoardProps, next: GameBoardProps) {
   return (
     areTilesEqual(prev.tiles, next.tiles) &&
     arePlayersEqualForBoard(prev.players, next.players) &&
+    prev.focusPlayerId === next.focusPlayerId &&
     arePendingChoicesEqual(prev.pendingPathChoice, next.pendingPathChoice) &&
     areMoveTracesEqual(prev.lastMoveTrace, next.lastMoveTrace) &&
     prev.canChoosePath === next.canChoosePath &&

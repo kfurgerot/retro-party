@@ -4,6 +4,7 @@ import { useGameState } from '@/hooks/useGameState';
 import { useOnlineGameState } from '@/hooks/useOnlineGameState';
 import { LobbyScreen } from '@/components/screens/LobbyScreen';
 import { OnlineLobbyScreen } from '@/components/screens/OnlineLobbyScreen';
+import { OnlineOnboardingScreen } from '@/components/screens/OnlineOnboardingScreen';
 import { GameScreen } from '@/components/screens/GameScreen';
 import { ResultsScreen } from '@/components/screens/ResultsScreen';
 import { perfLog, perfMark, perfMeasure } from "@/lib/perf";
@@ -50,6 +51,13 @@ const Index: React.FC = () => {
   const online = useOnlineGameState();
   const [autoSubmitKey] = useState<number>(() => (initialParams.autoSubmit ? Date.now() : 0));
   const [screenTransitionStartMark] = useState(() => `screen-transition-start-${Date.now()}`);
+  const [onboardingProfile, setOnboardingProfile] = useState(() => ({
+    name: initialParams.name,
+    avatar: initialParams.avatar,
+  }));
+  const [showOnlineOnboarding, setShowOnlineOnboarding] = useState<boolean>(
+    () => !initialParams.name && !initialParams.direct
+  );
 
   React.useEffect(() => {
     perfMark(screenTransitionStartMark);
@@ -71,6 +79,21 @@ const Index: React.FC = () => {
 
   if (isOnline) {
     if (online.gameState.phase === 'lobby') {
+      if (!online.code && showOnlineOnboarding) {
+        return (
+          <OnlineOnboardingScreen
+            connected={online.connected}
+            initialName={onboardingProfile.name || undefined}
+            initialAvatar={onboardingProfile.avatar}
+            onSubmit={({ name, avatar }) => {
+              setOnboardingProfile({ name, avatar });
+              setShowOnlineOnboarding(false);
+            }}
+            onBack={() => navigate("/")}
+          />
+        );
+      }
+
       return (
         <div className="h-full w-full">
           <OnlineLobbyScreen
@@ -84,8 +107,8 @@ const Index: React.FC = () => {
             }}
             onStartGame={online.startGame}
             canStart={online.isHost}
-            initialName={initialParams.name || undefined}
-            initialAvatar={initialParams.avatar}
+            initialName={onboardingProfile.name || initialParams.name || undefined}
+            initialAvatar={onboardingProfile.avatar ?? initialParams.avatar}
             initialMode={initialParams.mode}
             initialCode={initialParams.code}
             autoSubmitKey={autoSubmitKey}

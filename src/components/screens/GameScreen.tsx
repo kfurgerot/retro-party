@@ -1,6 +1,7 @@
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BuzzwordCategory, GameState, ShopItemType, WhoSaidItRole, WhoSaidItViewState } from "@/types/game";
 import { GameBoard } from "../game/GameBoard";
+import { BoardV2 } from "../game/BoardV2";
 import { PlayerCard } from "../game/PlayerCard";
 import { Dice } from "../game/Dice";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,7 @@ import {
   CTA_NEON_PRIMARY,
   CTA_NEON_SECONDARY_SUBTLE,
 } from "@/lib/uiTokens";
+import { ENABLE_BOARD_V2 } from "@/lib/uiMode";
 import { perfLog, perfMark, perfMeasure } from "@/lib/perf";
 
 const TURN_ANNOUNCE_MS = 2000;
@@ -738,18 +740,31 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               </div>
             </Card>
             <div className={cn("min-h-[38svh] flex-1 overflow-hidden p-1 lg:min-h-0", neonPanel)}>
-              <GameBoard
-                tiles={gameState.tiles}
-                players={gameState.players}
-                pendingPathChoice={pendingPathChoice}
-                lastMoveTrace={gameState.lastMoveTrace}
-                eventOverlayActive={isArrivalEventActive}
-                canChoosePath={canChoosePath}
-                onChoosePath={onChoosePath}
-                onMoveAnimationEnd={(playerId) => {
-                  if (playerId === currentPlayer?.id) setIsMoveAnimating(false);
-                }}
-              />
+              {ENABLE_BOARD_V2 ? (
+                <BoardV2
+                  tiles={gameState.tiles}
+                  players={gameState.players}
+                  pendingPathChoice={pendingPathChoice}
+                  lastMoveTrace={gameState.lastMoveTrace}
+                  eventOverlayActive={isArrivalEventActive}
+                  canChoosePath={canChoosePath}
+                  onChoosePath={onChoosePath}
+                />
+              ) : (
+                <GameBoard
+                  tiles={gameState.tiles}
+                  players={gameState.players}
+                  focusPlayerId={currentPlayer?.id ?? null}
+                  pendingPathChoice={pendingPathChoice}
+                  lastMoveTrace={gameState.lastMoveTrace}
+                  eventOverlayActive={isArrivalEventActive}
+                  canChoosePath={canChoosePath}
+                  onChoosePath={onChoosePath}
+                  onMoveAnimationEnd={(playerId) => {
+                    if (playerId === currentPlayer?.id) setIsMoveAnimating(false);
+                  }}
+                />
+              )}
             </div>
             <Card className={cn(neonCard, "hidden shrink-0 px-4 py-3 lg:block")}>
               <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-6">
