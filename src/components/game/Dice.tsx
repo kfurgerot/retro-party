@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { getPlayerBoardKey, BOARD_KEYS } from "@/data/keyboardMappings";
+import { BOARD_KEYS } from "@/data/keyboardMappings";
 import { RollResult } from "@/types/game";
 import { fr } from "@/i18n/fr";
 
@@ -20,6 +20,7 @@ interface DiceProps {
 
   playerIndex?: number;
   compact?: boolean;
+  showCompactDetails?: boolean;
 }
 
 const DiceFace: React.FC<{ value: number }> = ({ value }) => {
@@ -79,6 +80,7 @@ const DiceComponent: React.FC<DiceProps> = ({
   onOpenQuestionCard,
   playerIndex = 0,
   compact = false,
+  showCompactDetails = false,
 }) => {
   const [lastRolledValue, setLastRolledValue] = React.useState<number>(1);
 
@@ -92,7 +94,6 @@ const DiceComponent: React.FC<DiceProps> = ({
     if (Number.isFinite(latestDie)) setLastRolledValue(latestDie);
   }, [rollResult]);
 
-  const playerKey = getPlayerBoardKey(playerIndex);
   const canOpen = canOpenQuestionCard && !!onOpenQuestionCard;
   const hasInvalidRollResult = !!rollResult && (!Array.isArray(rollResult.dice) || rollResult.dice.length === 0);
 
@@ -105,21 +106,12 @@ const DiceComponent: React.FC<DiceProps> = ({
   };
 
   const label = (() => {
-    if (compact) {
-      if (isRolling) return `${fr.dice.rollShort}...`;
-      if (canRoll && pendingDoubleRollFirstDie != null) return fr.dice.rollShortSecond;
-      if (canRoll) return fr.dice.rollShort;
-      if (canMove && value != null) return `${fr.dice.moveShort} (${value})`;
-      if (canOpen) return fr.dice.openShort;
-      return fr.dice.waitingShort;
-    }
-
-    if (isRolling) return `${fr.terms.rollDice}...`;
-    if (canRoll && pendingDoubleRollFirstDie != null) return `${fr.terms.rollDice} (${fr.dice.secondDie}) [${playerKey}]`;
-    if (canRoll) return `${fr.terms.rollDice} [${playerKey}]`;
-    if (canMove && value != null) return `${fr.dice.move} (${value})`;
-    if (canOpen) return fr.dice.openCard;
-    return fr.dice.waiting;
+    if (isRolling) return `${fr.dice.rollShort}...`;
+    if (canRoll && pendingDoubleRollFirstDie != null) return fr.dice.rollShortSecond;
+    if (canRoll) return fr.dice.rollShort;
+    if (canMove && value != null) return `${fr.dice.moveShort} (${value})`;
+    if (canOpen) return fr.dice.openShort;
+    return fr.dice.waitingShort;
   })();
 
   const rollDetails = (() => {
@@ -182,8 +174,8 @@ const DiceComponent: React.FC<DiceProps> = ({
         {label}
       </button>
 
-      {rollDetails && !compact && (
-        <div className="text-xs text-cyan-100 text-center">
+      {rollDetails && (!compact || showCompactDetails) && (
+        <div className={cn("text-cyan-100 text-center", compact ? "text-[10px]" : "text-xs")}>
           {rollDetails.map((line) => (
             <div key={line}>{line}</div>
           ))}

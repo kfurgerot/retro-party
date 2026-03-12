@@ -914,6 +914,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                     onOpenQuestionCard={onOpenQuestionCard}
                     playerIndex={myIndex}
                     compact
+                    showCompactDetails
                   />
                 </div>
               </div>
