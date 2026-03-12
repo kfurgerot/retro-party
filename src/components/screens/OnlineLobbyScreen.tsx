@@ -282,9 +282,6 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
           >
             {connected ? fr.onlineLobby.connected : fr.onlineLobby.connecting}
           </span>
-          <span className="rounded-full border border-cyan-300/35 bg-slate-900/40 px-3 py-1 text-cyan-100">
-            {lobbyPlayers.length}/{MAX_PLAYERS} {fr.onlineLobby.playersUnit}
-          </span>
         </div>
 
         <p className="mt-4 text-center text-xs text-slate-300 sm:text-sm">{subtitle}</p>
