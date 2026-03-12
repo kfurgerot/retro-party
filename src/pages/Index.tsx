@@ -20,6 +20,7 @@ const Index: React.FC = () => {
     const name = params.get("name");
     const avatar = Number(params.get("avatar"));
     const auto = params.get("auto");
+    const from = params.get("from");
     return {
       mode: mode === "join" ? "join" : "host",
       code: code ? code.toUpperCase() : "",
@@ -27,6 +28,7 @@ const Index: React.FC = () => {
       avatar: Number.isFinite(avatar) ? Math.max(0, Math.floor(avatar)) : 0,
       autoSubmit: auto === "1",
       direct: auto === "1" || !!code,
+      fromEntry: from === "entry",
     };
   }, [location.search]);
 
@@ -74,7 +76,7 @@ const Index: React.FC = () => {
 
   const leaveOnlineSession = () => {
     online.leaveRoom();
-    navigate("/");
+    navigate(initialParams.fromEntry ? "/?stage=entry" : "/");
   };
 
   if (isOnline) {
@@ -96,7 +98,7 @@ const Index: React.FC = () => {
                 setShowOnlineOnboarding(false);
                 return;
               }
-              navigate("/");
+              navigate(initialParams.fromEntry ? "/?stage=entry" : "/");
             }}
           />
         );

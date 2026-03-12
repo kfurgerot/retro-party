@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RetroScreenBackground } from "@/components/screens/RetroScreenBackground";
@@ -11,7 +11,14 @@ import { loadPlayPage } from "@/lib/routeLoaders";
 
 const Home = () => {
   const navigate = useNavigate();
-  const [stage, setStage] = useState<"press-start" | "select-experience" | "select-entry">("press-start");
+  const location = useLocation();
+  const [stage, setStage] = useState<"press-start" | "select-experience" | "select-entry">(() => {
+    const params = new URLSearchParams(location.search);
+    const stageParam = params.get("stage");
+    if (stageParam === "select-experience") return "select-experience";
+    if (stageParam === "entry") return "select-entry";
+    return "press-start";
+  });
   const playPrefetchedRef = useRef(false);
 
   const prefetchPlayRoute = () => {
@@ -71,7 +78,7 @@ const Home = () => {
           <div className="grid gap-3 sm:grid-cols-2">
             <Button
               className={`h-12 font-semibold ${CTA_NEON_PRIMARY}`}
-              onClick={() => navigate("/play")}
+              onClick={() => navigate("/play?from=entry")}
               onMouseEnter={prefetchPlayRoute}
               onFocus={prefetchPlayRoute}
               title={fr.home.quickPartyTitle}
