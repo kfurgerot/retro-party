@@ -26,21 +26,21 @@ const TOOLS: ToolItem[] = [
   {
     id: "draw-duel",
     Icon: Pencil,
-    title: "Draw Duel",
+    title: fr.selectExperience.drawDuelTitle,
     description: fr.selectExperience.drawDuelDescription,
     available: false,
   },
   {
     id: "agile-radar",
     Icon: Radar,
-    title: "Agile Radar",
+    title: fr.selectExperience.agileRadarTitle,
     description: fr.selectExperience.agileRadarDescription,
     available: false,
   },
   {
     id: "retro-generator",
     Icon: Puzzle,
-    title: "Retro Generator",
+    title: fr.selectExperience.retroGeneratorTitle,
     description: fr.selectExperience.retroGeneratorDescription,
     available: false,
   },
@@ -61,7 +61,7 @@ export const SelectExperienceScreen: React.FC<SelectExperienceScreenProps> = ({
 
       <div className="relative z-10 w-full max-w-5xl rounded border border-cyan-300/60 bg-card/88 p-5 shadow-[0_0_0_2px_rgba(34,211,238,0.3),0_0_34px_rgba(34,211,238,0.32)] backdrop-blur sm:p-8">
         <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-cyan-200/80">
-          <span>Retro Agile Toolbox</span>
+          <span>{fr.selectExperience.brand}</span>
           <span>{fr.selectExperience.badge}</span>
         </div>
 
@@ -77,11 +77,17 @@ export const SelectExperienceScreen: React.FC<SelectExperienceScreenProps> = ({
             <button
               key={tool.id}
               type="button"
-              onClick={() => onSelect(tool.id)}
+              onClick={() => {
+                if (!tool.available) return;
+                onSelect(tool.id);
+              }}
+              disabled={!tool.available}
+              aria-disabled={!tool.available}
               className={cn(
-                "rounded-md border p-4 text-left transition",
-                "border-cyan-300/35 bg-slate-900/45 hover:border-cyan-300 hover:bg-slate-900/70",
-                !tool.available && "opacity-85"
+                "rounded-md border p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
+                tool.available
+                  ? "border-cyan-300/35 bg-slate-900/45 hover:border-cyan-300 hover:bg-slate-900/70"
+                  : "cursor-not-allowed border-cyan-300/20 bg-slate-900/30 opacity-80"
               )}
             >
               <div className="flex items-center justify-between gap-2">

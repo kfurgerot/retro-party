@@ -18,6 +18,7 @@ export const fr = {
     modeDescription: "Choisis ton mode : lance une partie immediatement ou prepare une session personnalisee pour plus tard.",
   },
   pressStart: {
+    brand: "Retro Party Online",
     title: "Appuie sur Demarrer",
     subtitle: "Appuie sur DEMARRER pour entrer dans le salon multijoueur.",
     button: "Demarrer",
@@ -25,6 +26,7 @@ export const fr = {
     copyright: "Copyright (c) 2026 Karl FURGEROT",
   },
   onlineOnboarding: {
+    brand: "Boite a outils Retro Agile",
     step: "Etape",
     nicknameTitle: "Choisis ton pseudo",
     avatarTitle: "Choisis ton avatar",
@@ -39,6 +41,7 @@ export const fr = {
     next: "Suivant",
   },
   onlineLobby: {
+    brand: "Retro Party Online",
     roomActive: "Partie active",
     roomReady: "Partie prete",
     quickConfig: "Configuration rapide",
@@ -81,6 +84,7 @@ export const fr = {
     avatarAria: "Avatar {index}",
   },
   selectExperience: {
+    brand: "Boite a outils Retro Agile",
     badge: "Choix d'experience",
     title: "Choisis ton experience",
     subtitle: "Choisis un outil ou un jeu pour continuer.",
@@ -91,6 +95,9 @@ export const fr = {
     drawDuelDescription: "Duel de dessin rapide pour echauffement icebreaker.",
     agileRadarDescription: "Radar de maturite d'equipe et lanceur de discussion.",
     retroGeneratorDescription: "Genere des formats de retrospective prets a animer.",
+    drawDuelTitle: "Duel Dessin",
+    agileRadarTitle: "Radar Agile",
+    retroGeneratorTitle: "Generateur Retro",
   },
   game: {
     shopLegend: "BOUTIQUE - Boutique",

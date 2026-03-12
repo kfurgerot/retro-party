@@ -57,7 +57,7 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
 
       <div className="relative z-10 w-full max-w-2xl rounded border border-cyan-300/60 bg-card/88 p-5 shadow-[0_0_0_2px_rgba(34,211,238,0.3),0_0_34px_rgba(34,211,238,0.32)] backdrop-blur sm:p-8">
         <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-cyan-200/80">
-          <span>Retro Agile Toolbox</span>
+          <span>{fr.onlineOnboarding.brand}</span>
           <span>{fr.onlineOnboarding.step} {step}/2</span>
         </div>
 
@@ -67,11 +67,14 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
 
         {step === 1 && (
           <div className="mt-8 space-y-2">
-            <p className="text-xs text-slate-300 sm:text-sm">{fr.onlineOnboarding.displayNameLabel}</p>
-            <Input
-              autoFocus
-              value={name}
-              maxLength={16}
+              <label htmlFor="display-name" className="text-xs text-slate-300 sm:text-sm">
+                {fr.onlineOnboarding.displayNameLabel}
+              </label>
+              <Input
+                id="display-name"
+                autoFocus
+                value={name}
+                maxLength={16}
               placeholder={fr.onlineOnboarding.displayNamePlaceholder}
               onChange={(e) => setName(cleanName(e.target.value))}
               onKeyDown={(e) => e.key === "Enter" && validName && goNext()}
@@ -92,7 +95,7 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
                   type="button"
                   onClick={() => setAvatar(i)}
                   className={cn(
-                    "h-12 w-12 rounded-md border border-cyan-400/20 bg-slate-900/50 text-2xl transition hover:border-cyan-300/60 hover:bg-slate-900/70",
+                    "h-12 w-12 rounded-md border border-cyan-400/20 bg-slate-900/50 text-2xl transition hover:border-cyan-300/60 hover:bg-slate-900/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
                     i === avatar && "ring-2 ring-cyan-400"
                   )}
                   aria-label={`Avatar ${i + 1}`}
