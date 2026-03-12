@@ -48,7 +48,11 @@ export const PointDuelMinigame: React.FC<PointDuelMinigameProps> = ({ state, pla
   })();
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/80 px-4">
+    <div
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/80 px-4"
+      role="dialog"
+      aria-modal="true"
+    >
       <div className="w-full max-w-xl rounded-xl border border-cyan-300/35 bg-slate-950/95 p-5 text-cyan-50 shadow-[0_0_24px_rgba(34,211,238,0.18)]">
         <div className="text-center">
           <div className="text-xl font-bold">{title}</div>
@@ -75,7 +79,7 @@ export const PointDuelMinigame: React.FC<PointDuelMinigameProps> = ({ state, pla
               onClick={() => onRoll?.()}
               disabled={!canRollNow}
               className={cn(
-                "rounded border px-4 py-2 text-sm font-semibold",
+                "rounded border px-4 py-2 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
                 canRollNow
                   ? "border-cyan-300 bg-cyan-500 text-slate-950 hover:bg-cyan-400"
                   : "border-slate-500 bg-slate-700/60 text-slate-300 cursor-not-allowed"

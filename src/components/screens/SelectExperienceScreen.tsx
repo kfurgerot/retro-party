@@ -19,7 +19,7 @@ const TOOLS: ToolItem[] = [
   {
     id: "retro-party",
     Icon: Gamepad2,
-    title: "Retro Party",
+    title: fr.selectExperience.retroPartyTitle,
     description: fr.selectExperience.retroPartyDescription,
     available: true,
   },

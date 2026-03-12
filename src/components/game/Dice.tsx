@@ -65,7 +65,7 @@ const DiceFace: React.FC<{ value: number }> = ({ value }) => {
   );
 };
 
-export const Dice: React.FC<DiceProps> = ({
+const DiceComponent: React.FC<DiceProps> = ({
   value,
   rollResult = null,
   pendingDoubleRollFirstDie = null,
@@ -183,3 +183,6 @@ export const Dice: React.FC<DiceProps> = ({
     </div>
   );
 };
+
+export const Dice = React.memo(DiceComponent);
+Dice.displayName = "Dice";

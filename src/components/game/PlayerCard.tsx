@@ -10,7 +10,7 @@ interface PlayerCardProps {
   compact?: boolean;
 }
 
-export const PlayerCard: React.FC<PlayerCardProps> = ({ player, isActive, compact = false }) => {
+const PlayerCardComponent: React.FC<PlayerCardProps> = ({ player, isActive, compact = false }) => {
   if (compact) {
     return (
       <div
@@ -56,3 +56,6 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({ player, isActive, compac
     </PixelCard>
   );
 };
+
+export const PlayerCard = React.memo(PlayerCardComponent);
+PlayerCard.displayName = "PlayerCard";

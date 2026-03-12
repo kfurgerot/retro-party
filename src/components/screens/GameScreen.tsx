@@ -1,11 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BuzzwordCategory, GameState, ShopItemType, WhoSaidItRole, WhoSaidItViewState } from "@/types/game";
 import { GameBoard } from "../game/GameBoard";
 import { PlayerCard } from "../game/PlayerCard";
 import { Dice } from "../game/Dice";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { QuestionModal } from "../game/QuestionModal";
 import {
   Drawer,
   DrawerClose,
@@ -25,13 +24,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { RetroScreenBackground } from "./RetroScreenBackground";
-import { WhoSaidItMinigame } from "../game/WhoSaidItMinigame";
-import { BugSmashMinigame } from "../game/BugSmashMinigame";
-import { BuzzwordDuelMinigame } from "../game/BuzzwordDuelMinigame";
-import { PointDuelMinigame } from "../game/PointDuelMinigame";
 import { LaunchAnnouncement } from "../game/LaunchAnnouncement";
-import { ShopModal } from "../game/ShopModal";
-import { PreRollChoiceModal } from "../game/PreRollChoiceModal";
 import { SHOP_CATALOG } from "@/data/shopCatalog";
 import { fr } from "@/i18n/fr";
 import {
@@ -39,8 +32,30 @@ import {
   CTA_NEON_PRIMARY,
   CTA_NEON_SECONDARY_SUBTLE,
 } from "@/lib/uiTokens";
+import { perfLog, perfMark, perfMeasure } from "@/lib/perf";
 
 const TURN_ANNOUNCE_MS = 2000;
+const QuestionModal = lazy(() =>
+  import("../game/QuestionModal").then((module) => ({ default: module.QuestionModal }))
+);
+const ShopModal = lazy(() =>
+  import("../game/ShopModal").then((module) => ({ default: module.ShopModal }))
+);
+const PreRollChoiceModal = lazy(() =>
+  import("../game/PreRollChoiceModal").then((module) => ({ default: module.PreRollChoiceModal }))
+);
+const WhoSaidItMinigame = lazy(() =>
+  import("../game/WhoSaidItMinigame").then((module) => ({ default: module.WhoSaidItMinigame }))
+);
+const BugSmashMinigame = lazy(() =>
+  import("../game/BugSmashMinigame").then((module) => ({ default: module.BugSmashMinigame }))
+);
+const BuzzwordDuelMinigame = lazy(() =>
+  import("../game/BuzzwordDuelMinigame").then((module) => ({ default: module.BuzzwordDuelMinigame }))
+);
+const PointDuelMinigame = lazy(() =>
+  import("../game/PointDuelMinigame").then((module) => ({ default: module.PointDuelMinigame }))
+);
 
 interface GameScreenProps {
   gameState: GameState;
@@ -95,6 +110,9 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const [turnIntroEndsAt, setTurnIntroEndsAt] = useState<number | null>(null);
   const [bugIntroEndsAt, setBugIntroEndsAt] = useState<number | null>(null);
   const [selectedPreRollType, setSelectedPreRollType] = useState<ShopItemType | null>(null);
+  const [turnTransitionStartMark] = useState(() => `turn-transition-start-${Date.now()}`);
+  const previousTurnKeyRef = useRef<string | null>(null);
+  const previousMinigameKeyRef = useRef<string | null>(null);
 
   const autoMoveKeyRef = useRef<string | null>(null);
   const moveAnimationFallbackRef = useRef<number | null>(null);
@@ -141,6 +159,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const isBugIntroActive = bugIntroEndsAt != null;
   const catalogByType = SHOP_CATALOG;
   const myPlayer = gameState.players.find((p) => p.id === myPlayerId) ?? null;
+  const myPoints = myPlayer?.points ?? 0;
+  const myStars = myPlayer?.stars ?? 0;
   const pendingDoubleRollFirstDie = gameState.pendingDoubleRoll?.firstDie ?? null;
   const beforeRollInventory = useMemo(
     () => (myPlayer?.inventory ?? []).filter((item) => catalogByType[item.type]?.timing === "before_roll"),
@@ -181,6 +201,10 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   useEffect(() => {
     if (!shouldShowPreRollChoiceModal) setSelectedPreRollType(null);
   }, [shouldShowPreRollChoiceModal]);
+
+  useEffect(() => {
+    perfMark(turnTransitionStartMark);
+  }, [turnTransitionStartMark]);
 
   const myIndex = useMemo(() => {
     const idx = gameState.players.findIndex(
@@ -281,6 +305,33 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       }
     };
   }, [gameState.currentQuestion, isMoveAnimating]);
+
+  useEffect(() => {
+    const turnKey = `${gameState.currentRound}-${gameState.currentPlayerIndex}-${gameState.turnPhase}`;
+    if (previousTurnKeyRef.current === turnKey) return;
+    const endMark = `turn-transition-end-${Date.now()}`;
+    perfMark(endMark);
+    const duration = perfMeasure(`turn-transition-${turnKey}`, turnTransitionStartMark, endMark);
+    perfLog("turn-transition", {
+      round: gameState.currentRound,
+      playerIndex: gameState.currentPlayerIndex,
+      turnPhase: gameState.turnPhase,
+      durationMs: duration != null ? Math.round(duration) : null,
+    });
+    previousTurnKeyRef.current = turnKey;
+    perfMark(turnTransitionStartMark);
+  }, [gameState.currentRound, gameState.currentPlayerIndex, gameState.turnPhase, turnTransitionStartMark]);
+
+  useEffect(() => {
+    const minigameKey = gameState.currentMinigame?.minigameId ?? "none";
+    if (previousMinigameKeyRef.current === minigameKey) return;
+    perfLog("minigame-transition", {
+      from: previousMinigameKeyRef.current ?? "none",
+      to: minigameKey,
+      round: gameState.currentRound,
+    });
+    previousMinigameKeyRef.current = minigameKey;
+  }, [gameState.currentMinigame?.minigameId, gameState.currentRound]);
 
   useEffect(() => {
     if (!whoSaidItState || whoSaidItState.phase !== "idle") {
@@ -429,7 +480,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     : canMove
     ? fr.gameScreen.hintAutoAdvance
     : isMyTurn
-    ? "..."
+    ? fr.gameScreen.waiting
     : fr.gameScreen.hintOpponentTurn;
 
   const requestLeave = () => {
@@ -500,7 +551,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               {fr.gameScreen.points}
             </div>
             <div className="text-lg font-bold sm:text-xl">
-              {gameState.players.find((p) => p.id === myPlayerId)?.points ?? 0}
+              {myPoints}
             </div>
           </Card>
 
@@ -509,7 +560,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               {fr.gameScreen.kudobox}
             </div>
             <div className="text-lg font-bold sm:text-xl">
-              {gameState.players.find((p) => p.id === myPlayerId)?.stars ?? 0}
+              {myStars}
             </div>
           </Card>
 
@@ -711,7 +762,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                   aria-label={fr.gameScreen.closePlayersPanelAria}
                   className="text-cyan-100 hover:bg-slate-800/60 hover:text-cyan-50"
                 >
-                  X
+                  {fr.gameScreen.close}
                 </Button>
               </DrawerClose>
             </div>
@@ -742,7 +793,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                   aria-label={fr.gameScreen.closeLegendPanelAria}
                   className="text-cyan-100 hover:bg-slate-800/60 hover:text-cyan-50"
                 >
-                  X
+                  {fr.gameScreen.close}
                 </Button>
               </DrawerClose>
             </div>
@@ -780,15 +831,17 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         </AlertDialogContent>
       </AlertDialog>
 
-      {gameState.currentQuestion?.status === "open" && !isMoveAnimating && !isMinigameActive && !isKudoPurchaseActive && !isShopActive && (
-        <QuestionModal
-          question={gameState.currentQuestion}
-          players={gameState.players}
-          myPlayerId={myPlayerId}
-          onVote={onVoteQuestion}
-          onValidate={onValidateQuestion}
-        />
-      )}
+      <Suspense fallback={null}>
+        {gameState.currentQuestion?.status === "open" && !isMoveAnimating && !isMinigameActive && !isKudoPurchaseActive && !isShopActive && (
+          <QuestionModal
+            question={gameState.currentQuestion}
+            players={gameState.players}
+            myPlayerId={myPlayerId}
+            onVote={onVoteQuestion}
+            onValidate={onValidateQuestion}
+          />
+        )}
+      </Suspense>
 
       <AlertDialog open={isKudoPurchaseActive && !isMoveAnimating} onOpenChange={() => {}}>
         <AlertDialogContent className="border-cyan-300/30 bg-slate-950/95 text-cyan-50">
@@ -826,34 +879,36 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         </AlertDialogContent>
       </AlertDialog>
 
-      <ShopModal
-        open={isShopActive && !isMoveAnimating}
-        canInteract={!!myPlayerId && pendingShop?.playerId === myPlayerId && !!onBuyShopItem}
-        points={myPlayer?.points ?? 0}
-        items={Object.values(catalogByType)}
-        onBuy={(itemType) => onBuyShopItem?.(itemType)}
-        onClose={() => onCloseShop?.()}
-        activeBtnClass={activeCyanBtn}
-        neutralBtnClass={neutralSecondaryBtn}
-      />
+      <Suspense fallback={null}>
+        <ShopModal
+          open={isShopActive && !isMoveAnimating}
+          canInteract={!!myPlayerId && pendingShop?.playerId === myPlayerId && !!onBuyShopItem}
+          points={myPlayer?.points ?? 0}
+          items={Object.values(catalogByType)}
+          onBuy={(itemType) => onBuyShopItem?.(itemType)}
+          onClose={() => onCloseShop?.()}
+          activeBtnClass={activeCyanBtn}
+          neutralBtnClass={neutralSecondaryBtn}
+        />
 
-      <PreRollChoiceModal
-        open={shouldShowPreRollChoiceModal}
-        canInteract={!!myPlayerId && isMyTurn && !!onResolvePreRollChoice}
-        items={preRollChoices}
-        selectedType={selectedPreRollType}
-        onSelectType={(itemType) => setSelectedPreRollType(itemType)}
-        onConfirmSelection={() => {
-          if (!selectedPreRollType) return;
-          handleConfirmPreRollChoice(selectedPreRollType);
-        }}
-        onContinue={() => {
-          setSelectedPreRollType(null);
-          onResolvePreRollChoice?.(null);
-        }}
-        activeBtnClass={activeCyanBtn}
-        neutralBtnClass={neutralSecondaryBtn}
-      />
+        <PreRollChoiceModal
+          open={shouldShowPreRollChoiceModal}
+          canInteract={!!myPlayerId && isMyTurn && !!onResolvePreRollChoice}
+          items={preRollChoices}
+          selectedType={selectedPreRollType}
+          onSelectType={(itemType) => setSelectedPreRollType(itemType)}
+          onConfirmSelection={() => {
+            if (!selectedPreRollType) return;
+            handleConfirmPreRollChoice(selectedPreRollType);
+          }}
+          onContinue={() => {
+            setSelectedPreRollType(null);
+            onResolvePreRollChoice?.(null);
+          }}
+          activeBtnClass={activeCyanBtn}
+          neutralBtnClass={neutralSecondaryBtn}
+        />
+      </Suspense>
 
       {isTurnIntroActive && !isPathChoiceActive && !isKudoPurchaseActive && !isShopActive && !gameState.currentQuestion && !isMinigameActive && (
         <LaunchAnnouncement
@@ -887,47 +942,55 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         />
       )}
 
-      {whoSaidItState && whoSaidItState.phase !== "idle" && onWhoSaidItSubmit && (
-        <WhoSaidItMinigame
-          state={whoSaidItState}
-          players={gameState.players}
-          myPlayerId={myPlayerId}
-          onSubmit={onWhoSaidItSubmit}
-        />
-      )}
+      <Suspense
+        fallback={
+          <div className="fixed inset-0 z-[79] flex items-center justify-center bg-slate-950/55 text-sm font-semibold text-cyan-100">
+            {fr.gameScreen.waiting}
+          </div>
+        }
+      >
+        {whoSaidItState && whoSaidItState.phase !== "idle" && onWhoSaidItSubmit && (
+          <WhoSaidItMinigame
+            state={whoSaidItState}
+            players={gameState.players}
+            myPlayerId={myPlayerId}
+            onSubmit={onWhoSaidItSubmit}
+          />
+        )}
 
-      {bugSmashState && onCompleteBugSmash && !isBugIntroActive && (
-        <BugSmashMinigame
-          players={gameState.players}
-          targetPlayerId={bugSmashState.targetPlayerId}
-          myPlayerId={myPlayerId}
-          startAt={bugSmashState.startAt}
-          durationMs={bugSmashState.durationMs}
-          liveScore={bugSmashState.score}
-          canPlay={!onLeave}
-          onProgress={onBugSmashProgress}
-          onComplete={onCompleteBugSmash}
-        />
-      )}
+        {bugSmashState && onCompleteBugSmash && !isBugIntroActive && (
+          <BugSmashMinigame
+            players={gameState.players}
+            targetPlayerId={bugSmashState.targetPlayerId}
+            myPlayerId={myPlayerId}
+            startAt={bugSmashState.startAt}
+            durationMs={bugSmashState.durationMs}
+            liveScore={bugSmashState.score}
+            canPlay={!onLeave}
+            onProgress={onBugSmashProgress}
+            onComplete={onCompleteBugSmash}
+          />
+        )}
 
-      {buzzwordState && onBuzzwordSubmit && !isBuzzwordIntroActive && (
-        <BuzzwordDuelMinigame
-          players={gameState.players}
-          state={buzzwordState}
-          myPlayerId={myPlayerId}
-          canInteract
-          onSubmit={onBuzzwordSubmit}
-        />
-      )}
+        {buzzwordState && onBuzzwordSubmit && !isBuzzwordIntroActive && (
+          <BuzzwordDuelMinigame
+            players={gameState.players}
+            state={buzzwordState}
+            myPlayerId={myPlayerId}
+            canInteract
+            onSubmit={onBuzzwordSubmit}
+          />
+        )}
 
-      {pointDuelState && (
-        <PointDuelMinigame
-          players={gameState.players}
-          state={pointDuelState}
-          myPlayerId={myPlayerId}
-          onRoll={onPointDuelRoll}
-        />
-      )}
+        {pointDuelState && (
+          <PointDuelMinigame
+            players={gameState.players}
+            state={pointDuelState}
+            myPlayerId={myPlayerId}
+            onRoll={onPointDuelRoll}
+          />
+        )}
+      </Suspense>
     </div>
   );
 };

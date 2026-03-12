@@ -6,6 +6,7 @@ import { LobbyScreen } from '@/components/screens/LobbyScreen';
 import { OnlineLobbyScreen } from '@/components/screens/OnlineLobbyScreen';
 import { GameScreen } from '@/components/screens/GameScreen';
 import { ResultsScreen } from '@/components/screens/ResultsScreen';
+import { perfLog, perfMark, perfMeasure } from "@/lib/perf";
 
 const Index: React.FC = () => {
   const location = useLocation();
@@ -47,6 +48,20 @@ const Index: React.FC = () => {
   // Online state (rooms + websocket)
   const online = useOnlineGameState();
   const [autoSubmitKey] = useState<number>(() => (initialParams.autoSubmit ? Date.now() : 0));
+  const [screenTransitionStartMark] = useState(() => `screen-transition-start-${Date.now()}`);
+
+  React.useEffect(() => {
+    perfMark(screenTransitionStartMark);
+  }, [screenTransitionStartMark]);
+
+  React.useEffect(() => {
+    const view = isOnline ? online.gameState.phase : local.gameState.phase;
+    const endMark = `screen-transition-end-${Date.now()}`;
+    perfMark(endMark);
+    const duration = perfMeasure(`screen-transition-${view}`, screenTransitionStartMark, endMark);
+    perfLog("screen-transition", { view, durationMs: duration != null ? Math.round(duration) : null });
+    perfMark(screenTransitionStartMark);
+  }, [isOnline, online.gameState.phase, local.gameState.phase, screenTransitionStartMark]);
 
   const leaveOnlineSession = () => {
     online.leaveRoom();

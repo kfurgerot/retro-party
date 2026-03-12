@@ -63,7 +63,7 @@ const BOARD_MARGIN = 96;
 const FOLLOW_MOBILE_SCALE = 1.2;
 const FOLLOW_DESKTOP_SCALE = 1.05;
 const MOVE_STEP_MS = 320;
-export const GameBoard: React.FC<GameBoardProps> = ({
+const GameBoardComponent: React.FC<GameBoardProps> = ({
   tiles,
   players,
   onMoveAnimationEnd,
@@ -892,4 +892,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     </div>
   );
 };
+
+export const GameBoard = React.memo(GameBoardComponent);
+GameBoard.displayName = "GameBoard";
 

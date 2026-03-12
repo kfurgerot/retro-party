@@ -62,7 +62,7 @@ export const PreRollChoiceModal: React.FC<PreRollChoiceModalProps> = ({
                 type="button"
                 disabled={!canInteract}
                 className={cn(
-                  "w-full rounded-md border p-3 text-left",
+                  "w-full rounded-md border p-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
                   isSelected
                     ? "border-cyan-300 bg-cyan-500/20"
                     : "border-cyan-300/25 bg-slate-900/55",

@@ -25,7 +25,12 @@ export const LaunchAnnouncement: React.FC<LaunchAnnouncementProps> = ({
   }, [startAt]);
 
   return (
-    <div className="absolute inset-0 z-40 flex items-center justify-center bg-slate-950/90 p-4">
+    <div
+      className="absolute inset-0 z-40 flex items-center justify-center bg-slate-950/90 p-4"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+    >
       <div className="w-full max-w-xl rounded border border-cyan-300/45 bg-slate-900/75 p-6 text-center text-cyan-50 shadow-[0_0_0_2px_rgba(34,211,238,0.2),0_0_32px_rgba(34,211,238,0.24)] backdrop-blur">
         <div className="text-[11px] uppercase tracking-[0.18em] text-cyan-200/80">
           {fr.launchAnnouncement.preparation}

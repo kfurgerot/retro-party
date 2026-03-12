@@ -78,7 +78,11 @@ export function QuestionModal({ question, players, myPlayerId, onVote, onValidat
   const downCount = question.votes.down.length;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-[1px]">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-[1px]"
+      role="dialog"
+      aria-modal="true"
+    >
       <div className="w-full max-w-2xl">
         <PixelCard
           className={`relative overflow-hidden border-4 p-6 ${theme.border} ${theme.glow} ${theme.panel}`}
@@ -122,13 +126,13 @@ export function QuestionModal({ question, players, myPlayerId, onVote, onValidat
               <div className="flex gap-2">
                 <PixelButton
                   onClick={() => onVote("up")}
-                  className="border-emerald-400 bg-emerald-500/80 text-black"
+                  className="border-emerald-400 bg-emerald-500/80 text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
                 >
                   + {fr.questionModal.useful}
                 </PixelButton>
                 <PixelButton
                   onClick={() => onVote("down")}
-                  className="border-rose-400 bg-rose-500/80 text-white"
+                  className="border-rose-400 bg-rose-500/80 text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-200 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
                 >
                   - {fr.questionModal.toExplore}
                 </PixelButton>

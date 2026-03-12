@@ -5,6 +5,7 @@ import { AVATARS } from "@/types/game";
 import { cn } from "@/lib/utils";
 import { RetroScreenBackground } from "./RetroScreenBackground";
 import { fr } from "@/i18n/fr";
+import { CTA_NEON_PRIMARY, CTA_NEON_SECONDARY } from "@/lib/uiTokens";
 
 interface OnlineOnboardingScreenProps {
   connected: boolean;
@@ -98,7 +99,7 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
                     "h-12 w-12 rounded-md border border-cyan-400/20 bg-slate-900/50 text-2xl transition hover:border-cyan-300/60 hover:bg-slate-900/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
                     i === avatar && "ring-2 ring-cyan-400"
                   )}
-                  aria-label={`Avatar ${i + 1}`}
+                  aria-label={fr.onlineOnboarding.avatarAria.replace("{index}", String(i + 1))}
                 >
                   {a}
                 </button>
@@ -113,7 +114,7 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
               type="button"
               disabled={!canSubmit}
               onClick={() => onSubmit({ name: cleanName(name), avatar })}
-              className="mt-6 h-12 w-full border border-cyan-300 bg-cyan-500 text-sm font-semibold uppercase tracking-wide text-slate-950 shadow-[0_0_12px_rgba(34,211,238,0.45)] hover:bg-cyan-400"
+              className={`mt-6 h-12 w-full text-sm font-semibold uppercase tracking-wide ${CTA_NEON_PRIMARY}`}
             >
               {fr.onlineOnboarding.continue}
             </Button>
@@ -124,7 +125,7 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
           <Button
             type="button"
             variant="secondary"
-            className="border-border/70 bg-background/50 text-foreground hover:bg-background/70"
+            className={CTA_NEON_SECONDARY}
             onClick={goBack}
           >
             {step === 1 ? fr.onlineOnboarding.back : fr.onlineOnboarding.previous}
@@ -135,7 +136,7 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
               type="button"
               onClick={goNext}
               disabled={step === 1 && !validName}
-              className="border border-cyan-300 bg-cyan-500 font-semibold text-slate-950 hover:bg-cyan-400"
+              className={`font-semibold ${CTA_NEON_PRIMARY}`}
             >
               {fr.onlineOnboarding.next}
             </Button>

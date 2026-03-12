@@ -60,7 +60,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                     type="button"
                     disabled={!canInteract || !canAfford}
                     className={cn(
-                      "px-3 py-1 rounded border text-xs font-semibold",
+                      "rounded border px-3 py-1 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
                       canInteract && canAfford
                         ? activeBtnClass
                         : "border-slate-500 bg-slate-700/60 text-slate-300 cursor-not-allowed"

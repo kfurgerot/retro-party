@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
-import { AVATARS } from '@/types/game';
-import { PixelCard } from '../game/PixelCard';
-import { PixelButton } from '../game/PixelButton';
-import { cn } from '@/lib/utils';
-import { fr } from '@/i18n/fr';
+import React, { useState } from "react";
+import { AVATARS } from "@/types/game";
+import { cn } from "@/lib/utils";
+import { fr } from "@/i18n/fr";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { RetroScreenBackground } from "./RetroScreenBackground";
+import { CTA_NEON_PRIMARY, CTA_NEON_SECONDARY } from "@/lib/uiTokens";
 
 interface LobbyScreenProps {
   onStartGame: (names: string[], avatars: number[]) => void;
@@ -34,73 +37,89 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({ onStartGame }) => {
   };
 
   const start = () => {
-    const names = players.map(p => p.name?.trim() || fr.lobbyLocal.defaultPlayer);
-    const avatars = players.map(p => p.avatar);
+    const names = players.map((p) => p.name?.trim() || fr.lobbyLocal.defaultPlayer);
+    const avatars = players.map((p) => p.avatar);
     onStartGame(names, avatars);
   };
 
   return (
-    <div className="scanlines flex w-full flex-col items-center gap-6 p-6">
-      <PixelCard className="w-full max-w-3xl p-6 text-center">
-        <div className="font-pixel text-2xl">Retro Party</div>
-        <div className="mt-2 text-sm opacity-80">
-          {fr.lobbyLocal.choosePlayersHint}
-        </div>
-      </PixelCard>
+    <div className="scanlines relative min-h-svh w-full overflow-hidden px-4 py-6 sm:px-6 sm:py-8">
+      <RetroScreenBackground />
+      <div className="relative z-10 mx-auto flex w-full max-w-4xl flex-col gap-4 sm:gap-5">
+        <Card className="neon-surface p-5 text-center sm:p-6">
+          <div className="text-[10px] uppercase tracking-[0.2em] text-cyan-200/80">{fr.home.title}</div>
+          <h1 className="mt-2 text-xl font-bold text-cyan-100 sm:text-3xl">{fr.home.title}</h1>
+          <div className="mt-3 text-sm text-slate-300">
+            {fr.lobbyLocal.choosePlayersHint}
+          </div>
+        </Card>
 
-      <PixelCard className="w-full max-w-3xl p-6">
-        <div className="font-pixel text-lg mb-4">{fr.lobbyLocal.playerCount}</div>
-        <div className="flex flex-wrap gap-2">
-          {selectableCounts.map(n => (
-            <button
-              key={n}
-              onClick={() => handlePlayerCountSelect(n)}
-              className={cn(
-                "px-4 py-2 border-4 border-black rounded bg-white font-pixel",
-                playerCount === n && "bg-primary text-primary-foreground"
-              )}
-            >
-              {n}
-            </button>
-          ))}
-        </div>
-      </PixelCard>
-
-      {playerCount && (
-        <PixelCard className="w-full max-w-3xl p-6">
-          <div className="font-pixel text-lg mb-4">{fr.lobbyLocal.playersTitle}</div>
-
-          <div className="flex flex-col gap-3">
-            {players.map((p, idx) => (
-              <div key={idx} className="flex items-center gap-3">
-                <div className="text-3xl">{AVATARS[p.avatar] ?? ':)'}</div>
-                <input
-                  className="flex-1 border-4 border-black rounded px-3 py-2 font-pixel text-sm bg-white"
-                  value={p.name}
-                  onChange={(e) => updatePlayer(idx, { name: e.target.value })}
-                />
-                <select
-                  className="border-4 border-black rounded px-2 py-2 font-pixel text-sm bg-white"
-                  value={p.avatar}
-                  onChange={(e) => updatePlayer(idx, { avatar: Number(e.target.value) })}
-                >
-                  {AVATARS.map((a, i) => (
-                    <option key={i} value={i}>
-                      {a} #{i + 1}
-                    </option>
-                  ))}
-                </select>
-              </div>
+        <Card className="neon-surface p-4 sm:p-5">
+          <div className="mb-3 text-sm font-semibold text-cyan-100 sm:text-base">{fr.lobbyLocal.playerCount}</div>
+          <div className="grid grid-cols-5 gap-2 sm:grid-cols-8 lg:grid-cols-10">
+            {selectableCounts.map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => handlePlayerCountSelect(n)}
+                className={cn(
+                  "h-10 rounded border text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
+                  playerCount === n
+                    ? CTA_NEON_PRIMARY
+                    : `${CTA_NEON_SECONDARY} text-cyan-100`
+                )}
+                aria-label={`${fr.lobbyLocal.playerCount} ${n}`}
+              >
+                {n}
+              </button>
             ))}
           </div>
+        </Card>
 
-          <div className="mt-6 flex justify-end">
-            <PixelButton onClick={start} variant="primary" disabled={players.length < 1}>
-              {fr.lobbyLocal.launchParty}
-            </PixelButton>
-          </div>
-        </PixelCard>
-      )}
+        {playerCount && (
+          <Card className="neon-surface p-4 sm:p-5">
+            <div className="mb-3 text-sm font-semibold text-cyan-100 sm:text-base">{fr.lobbyLocal.playersTitle}</div>
+
+            <div className="grid gap-3">
+              {players.map((p, idx) => (
+                <div
+                  key={idx}
+                  className="grid grid-cols-[auto_1fr_auto] items-center gap-2 rounded-md border border-cyan-300/20 bg-slate-900/40 p-2 sm:gap-3 sm:p-3"
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded border border-cyan-300/35 bg-slate-950/55 text-2xl">
+                    {AVATARS[p.avatar] ?? ":)"}
+                  </div>
+                  <Input
+                    aria-label={`${fr.terms.player} ${idx + 1}`}
+                    value={p.name}
+                    maxLength={16}
+                    className="h-10 border-cyan-300/20 bg-slate-900/50 text-cyan-50 placeholder:text-slate-400"
+                    onChange={(e) => updatePlayer(idx, { name: e.target.value })}
+                  />
+                  <select
+                    aria-label={`${fr.onlineLobby.profileAvatarLabel} ${idx + 1}`}
+                    className="h-10 rounded border border-cyan-300/25 bg-slate-900/50 px-2 text-sm text-cyan-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+                    value={p.avatar}
+                    onChange={(e) => updatePlayer(idx, { avatar: Number(e.target.value) })}
+                  >
+                    {AVATARS.map((a, i) => (
+                      <option key={i} value={i}>
+                        {a} #{i + 1}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-5 flex justify-end">
+              <Button onClick={start} className={cn("h-11 px-6 font-semibold", CTA_NEON_PRIMARY)} disabled={players.length < 1}>
+                {fr.lobbyLocal.launchParty}
+              </Button>
+            </div>
+          </Card>
+        )}
+      </div>
     </div>
   );
 };

@@ -11,6 +11,7 @@ export const fr = {
     player: "Joueur",
   },
   home: {
+    title: "Retro Party",
     playNow: "Jouer maintenant",
     prepareParty: "Preparer une partie",
     quickPartyTitle: "Creer ou rejoindre une partie rapide",
@@ -39,6 +40,7 @@ export const fr = {
     back: "Retour",
     previous: "Precedent",
     next: "Suivant",
+    avatarAria: "Avatar {index}",
   },
   onlineLobby: {
     brand: "Retro Party Online",
@@ -92,6 +94,7 @@ export const fr = {
     soon: "Bientot",
     back: "Retour",
     retroPartyDescription: "Jeu de plateau retro multijoueur pour les retros d'equipe.",
+    retroPartyTitle: "Retro Party",
     drawDuelDescription: "Duel de dessin rapide pour echauffement icebreaker.",
     agileRadarDescription: "Radar de maturite d'equipe et lanceur de discussion.",
     retroGeneratorDescription: "Genere des formats de retrospective prets a animer.",
@@ -222,6 +225,7 @@ export const fr = {
     mobileLegendAria: "Afficher la legende",
     closePlayersPanelAria: "Fermer le panneau joueurs",
     closeLegendPanelAria: "Fermer le panneau legende",
+    close: "Fermer",
     leaveQuestionTitle: "Quitter la partie ?",
     cancel: "Annuler",
     leave: "Quitter",
@@ -278,6 +282,7 @@ export const fr = {
   },
   results: {
     title: "Partie terminee",
+    winner: "Gagnant",
     stars: "Etoiles",
     points: "Points",
     totalKudobox: "Total kudobox",
