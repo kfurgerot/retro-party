@@ -58,3 +58,15 @@ export const CTA_NEON_SECONDARY_SUBTLE =
   "border-cyan-300/20 bg-slate-900/45 text-cyan-100 hover:bg-slate-900/70";
 
 export const CTA_NEON_DANGER = GAME_UI_THEME.palette.danger;
+
+export const GAME_DRAWER_CONTENT =
+  "border-cyan-300/30 bg-slate-950/95 pb-[env(safe-area-inset-bottom)] text-cyan-50 lg:hidden";
+
+export const GAME_DRAWER_CLOSE_BUTTON =
+  "h-10 text-cyan-100 hover:bg-slate-800/60 hover:text-cyan-50";
+
+export const GAME_DIALOG_CONTENT =
+  "border-cyan-300/30 bg-slate-950/95 text-cyan-50";
+
+export const GAME_MOBILE_ACTION_BUTTON =
+  "h-12 w-full";

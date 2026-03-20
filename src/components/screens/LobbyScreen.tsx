@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { fr } from "@/i18n/fr";
 import { RetroScreenBackground } from "./RetroScreenBackground";
 import { CTA_NEON_PRIMARY, CTA_NEON_SECONDARY } from "@/lib/uiTokens";
-import { Input, LobbyCard, PrimaryButton, SectionHeader } from "@/components/app-shell";
+import { Card, Input, LobbyCard, PrimaryButton, SectionHeader } from "@/components/app-shell";
 
 interface LobbyScreenProps {
   onStartGame: (names: string[], avatars: number[]) => void;
@@ -19,6 +19,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({ onStartGame }) => {
   const [playerCount, setPlayerCount] = useState<number | null>(null);
   const [players, setPlayers] = useState<PlayerSetup[]>([]);
   const selectableCounts = Array.from({ length: 20 }, (_, i) => i + 1);
+  const canStart = players.length > 0;
 
   const handlePlayerCountSelect = (count: number) => {
     setPlayerCount(count);
@@ -41,7 +42,12 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({ onStartGame }) => {
   };
 
   return (
-    <div className="scanlines relative min-h-svh w-full overflow-hidden px-4 py-6 sm:px-6 sm:py-8">
+    <div
+      className={cn(
+        "scanlines relative min-h-svh w-full overflow-hidden px-4 pt-6 sm:px-6 sm:pt-8",
+        playerCount ? "pb-28 sm:pb-32" : "pb-6 sm:pb-8"
+      )}
+    >
       <RetroScreenBackground />
       <div className="relative z-10 mx-auto flex w-full max-w-4xl flex-col gap-4 sm:gap-5">
         <LobbyCard title={fr.home.title} subtitle={fr.lobbyLocal.choosePlayersHint} className="p-5 text-center sm:p-6">
@@ -110,14 +116,28 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({ onStartGame }) => {
               ))}
             </div>
 
-            <div className="mt-5 flex justify-end">
-              <PrimaryButton onClick={start} className={cn("h-11 px-6 font-semibold", CTA_NEON_PRIMARY)} disabled={players.length < 1}>
+            <div className="mt-5 hidden justify-end sm:flex">
+              <PrimaryButton onClick={start} className={cn("h-11 px-6 font-semibold", CTA_NEON_PRIMARY)} disabled={!canStart}>
                 {fr.lobbyLocal.launchParty}
               </PrimaryButton>
             </div>
           </LobbyCard>
         )}
       </div>
+
+      {playerCount && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:hidden">
+          <Card className="pointer-events-auto mx-auto w-full max-w-4xl border-cyan-300/40 bg-slate-950/92 p-3 shadow-[0_0_0_1px_rgba(34,211,238,0.2),0_8px_28px_rgba(2,6,23,0.55)]">
+            <PrimaryButton
+              onClick={start}
+              className={cn("h-12 w-full font-semibold", CTA_NEON_PRIMARY)}
+              disabled={!canStart}
+            >
+              {fr.lobbyLocal.launchParty}
+            </PrimaryButton>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };

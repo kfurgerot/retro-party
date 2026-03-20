@@ -1,9 +1,10 @@
 import React from "react";
-import { Button } from "@/components/ui/button";
 import { RetroScreenBackground } from "./RetroScreenBackground";
 import { cn } from "@/lib/utils";
 import { fr } from "@/i18n/fr";
 import { Gamepad2, Pencil, Radar, Puzzle, LucideIcon } from "lucide-react";
+import { Card, SecondaryButton } from "@/components/app-shell";
+import { APP_SHELL_SURFACE_SOFT } from "@/lib/uiTokens";
 
 export type ExperienceId = "retro-party" | "draw-duel" | "agile-radar" | "retro-generator";
 
@@ -74,7 +75,7 @@ export const SelectExperienceScreen: React.FC<SelectExperienceScreenProps> = ({
     <div className="scanlines relative flex min-h-svh w-full items-start justify-center overflow-hidden px-4 pb-8 pt-4 sm:pt-6">
       <RetroScreenBackground />
 
-      <div className="relative z-10 flex min-h-[82svh] w-full max-w-4xl flex-col rounded border border-cyan-300/60 bg-card/88 p-5 shadow-[0_0_0_2px_rgba(34,211,238,0.3),0_0_34px_rgba(34,211,238,0.32)] backdrop-blur sm:p-8">
+      <Card className="relative z-10 flex min-h-[82svh] w-full max-w-4xl flex-col p-5 sm:p-8">
         <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-cyan-200/80">
           <span>{fr.selectExperience.brand}</span>
           <div className="flex items-center gap-2">
@@ -112,9 +113,9 @@ export const SelectExperienceScreen: React.FC<SelectExperienceScreenProps> = ({
               disabled={!tool.available}
               aria-disabled={!tool.available}
               className={cn(
-                "rounded-md border p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
+                `${APP_SHELL_SURFACE_SOFT} p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900`,
                 tool.available
-                  ? "border-cyan-300/35 bg-slate-900/45 hover:border-cyan-300 hover:bg-slate-900/70"
+                  ? "hover:border-cyan-300/45 hover:bg-slate-900/70"
                   : "cursor-not-allowed border-cyan-300/20 bg-slate-900/30 opacity-80"
               )}
             >
@@ -138,16 +139,15 @@ export const SelectExperienceScreen: React.FC<SelectExperienceScreenProps> = ({
         </div>
 
         <div className="mt-8">
-          <Button
+          <SecondaryButton
             type="button"
-            variant="secondary"
-            className="border-border/70 bg-background/50 text-foreground hover:bg-background/70"
+            className="h-11"
             onClick={onBack}
           >
             {fr.selectExperience.back}
-          </Button>
+          </SecondaryButton>
         </div>
-      </div>
+      </Card>
     </div>
   );
 };

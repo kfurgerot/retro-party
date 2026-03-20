@@ -9,6 +9,8 @@ import { fr } from "@/i18n/fr";
 import { Input, PrimaryButton, SecondaryButton } from "@/components/app-shell";
 import { cn } from "@/lib/utils";
 import {
+  APP_SHELL_SURFACE,
+  APP_SHELL_SURFACE_SOFT,
   CTA_NEON_DANGER,
   CTA_NEON_PRIMARY,
   CTA_NEON_SECONDARY,
@@ -183,7 +185,12 @@ const PreparePage = () => {
   return (
     <div className="scanlines relative flex min-h-svh w-full items-center justify-center overflow-hidden px-4 py-8">
       <RetroScreenBackground />
-      <Card className="relative z-10 w-full max-w-5xl border-cyan-300/40 bg-[linear-gradient(180deg,rgba(8,18,38,0.82)_0%,rgba(8,12,24,0.88)_100%)] shadow-[0_0_0_1px_rgba(34,211,238,0.18),0_0_24px_rgba(34,211,238,0.12)] backdrop-blur">
+      <Card
+        className={cn(
+          "relative z-10 w-full max-w-5xl bg-[linear-gradient(180deg,rgba(8,18,38,0.82)_0%,rgba(8,12,24,0.88)_100%)]",
+          APP_SHELL_SURFACE
+        )}
+      >
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle className="text-base font-semibold uppercase tracking-[0.14em] text-cyan-100/90 break-words">
             {title}
@@ -203,7 +210,7 @@ const PreparePage = () => {
           {!loading && !user && (
             <form
               onSubmit={submitAuth}
-              className="grid gap-3 rounded-xl border border-cyan-300/20 bg-slate-900/45 p-3 sm:p-4"
+              className={cn("grid gap-3 p-3 sm:p-4", APP_SHELL_SURFACE_SOFT)}
             >
               <div className="flex gap-2">
                 <SecondaryButton
@@ -266,7 +273,7 @@ const PreparePage = () => {
 
           {!loading && user && (
             <>
-              <div className="flex flex-wrap items-end gap-2 rounded-xl border border-cyan-300/20 bg-slate-900/45 p-3 sm:p-4">
+              <div className={cn("flex flex-wrap items-end gap-2 p-3 sm:p-4", APP_SHELL_SURFACE_SOFT)}>
                 <div className="w-full min-w-0 flex-1 space-y-1 sm:min-w-56">
                   <Label htmlFor="templateName">{fr.prepare.newTemplate}</Label>
                   <Input
@@ -309,7 +316,7 @@ const PreparePage = () => {
                   {templates.map((template) => (
                     <div
                       key={template.id}
-                      className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-cyan-300/20 bg-slate-900/45 p-3 sm:p-4"
+                      className={cn("flex flex-wrap items-center justify-between gap-3 p-3 sm:p-4", APP_SHELL_SURFACE_SOFT)}
                     >
                       <div className="min-w-0 flex-1">
                         <p className="font-semibold text-cyan-100 break-words">{template.name}</p>

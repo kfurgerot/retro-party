@@ -1,10 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AVATARS } from "@/types/game";
-import { Button as UiButton } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { RetroScreenBackground } from "./RetroScreenBackground";
 import { fr } from "@/i18n/fr";
 import { Card, Input, PrimaryButton, SecondaryButton, SectionHeader } from "@/components/app-shell";
+import {
+  CTA_NEON_DANGER,
+  CTA_NEON_SECONDARY_SUBTLE,
+  GAME_DIALOG_CONTENT,
+} from "@/lib/uiTokens";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -270,7 +274,12 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
   }, [autoSubmitKey, roomCode, pending, mode, canCreate, canJoin, submitHost, submitJoin]);
 
   return (
-    <div className="scanlines relative flex min-h-svh w-full items-start justify-center overflow-hidden px-4 pb-8 pt-4 sm:pt-6">
+    <div
+      className={cn(
+        "scanlines relative flex min-h-svh w-full items-start justify-center overflow-hidden px-4 pt-4 sm:pt-6",
+        roomCode ? "pb-28 sm:pb-32" : "pb-8"
+      )}
+    >
       <RetroScreenBackground />
 
       <div className="relative z-10 flex min-h-[82svh] w-full max-w-4xl flex-col rounded border border-cyan-300/60 bg-[linear-gradient(180deg,rgba(8,18,38,0.88)_0%,rgba(8,12,24,0.9)_100%)] p-5 shadow-[0_0_0_2px_rgba(34,211,238,0.3),0_0_34px_rgba(34,211,238,0.32)] backdrop-blur sm:p-8">
@@ -338,15 +347,14 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
                   </div>
                 </div>
                 {onEditProfile && (
-                  <UiButton
+                  <SecondaryButton
                     type="button"
-                    variant="secondary"
                     onClick={onEditProfile}
                     disabled={pending !== "idle"}
-                    className="h-9 border-cyan-300/20 bg-slate-900/45 px-3 text-cyan-100 hover:bg-slate-900/70"
+                    className="h-9 min-h-0 px-3 text-xs"
                   >
                     {fr.onlineLobby.editProfile}
-                  </UiButton>
+                  </SecondaryButton>
                 )}
               </div>
             </div>
@@ -514,7 +522,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
               <SecondaryButton
                 onClick={submitLeave}
                 disabled={pending !== "idle"}
-                className="h-11"
+                className="hidden h-11 lg:inline-flex"
               >
                 {canStart ? fr.onlineLobby.cancelParty : fr.onlineLobby.leaveParty}
               </SecondaryButton>
@@ -545,15 +553,13 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
                   <span className="rounded bg-cyan-500/15 px-2 py-1 text-sm font-semibold tracking-[0.12em] text-cyan-200">
                     {roomCode}
                   </span>
-                  <UiButton
-                    variant="secondary"
-                    size="sm"
+                  <SecondaryButton
                     onClick={copyRoom}
                     disabled={pending !== "idle"}
-                    className="border-cyan-300/30 bg-slate-900/45 text-cyan-100 hover:bg-slate-900/70"
+                    className="h-9 min-h-0 px-3 text-xs"
                   >
                     {copied ? fr.onlineLobby.copied : fr.onlineLobby.copy}
-                  </UiButton>
+                  </SecondaryButton>
                 </div>
                 <p className="mt-2 text-xs text-slate-300">{fr.onlineLobby.inviteHint}</p>
               </div>
@@ -612,8 +618,63 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
         )}
       </div>
 
+      {roomCode && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] lg:hidden">
+          <Card className="pointer-events-auto mx-auto w-full max-w-4xl border-cyan-300/40 bg-slate-950/92 p-3 shadow-[0_0_0_1px_rgba(34,211,238,0.2),0_8px_28px_rgba(2,6,23,0.55)]">
+            {canStart ? (
+              <div className="grid gap-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs uppercase tracking-[0.1em] text-cyan-100/85">
+                    {fr.onlineLobby.hostPanelTitle}
+                  </span>
+                  <span
+                    className={cn(
+                      "rounded-full border px-2 py-0.5 text-[10px] font-semibold",
+                      launchReady
+                        ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-200"
+                        : "border-amber-500/40 bg-amber-500/15 text-amber-200"
+                    )}
+                  >
+                    {launchReady ? fr.onlineLobby.hostReady : fr.onlineLobby.hostBlocked}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <SecondaryButton
+                    onClick={submitLeave}
+                    disabled={pending !== "idle"}
+                    className="h-12"
+                  >
+                    {fr.onlineLobby.cancelParty}
+                  </SecondaryButton>
+                  <PrimaryButton
+                    onClick={submitStart}
+                    disabled={!canLaunch || pending !== "idle"}
+                    className="h-12"
+                  >
+                    {fr.onlineLobby.hostPrimaryAction}
+                  </PrimaryButton>
+                </div>
+              </div>
+            ) : (
+              <div className="grid gap-2">
+                <p className="text-xs text-slate-300">
+                  {fr.onlineLobby.waitingHostDescription.replace("{host}", hostPlayerName)}
+                </p>
+                <SecondaryButton
+                  onClick={submitLeave}
+                  disabled={pending !== "idle"}
+                  className="h-12"
+                >
+                  {fr.onlineLobby.leaveParty}
+                </SecondaryButton>
+              </div>
+            )}
+          </Card>
+        </div>
+      )}
+
       <AlertDialog open={leaveDialogOpen} onOpenChange={setLeaveDialogOpen}>
-        <AlertDialogContent className="border-cyan-300/30 bg-slate-950/95 text-cyan-50">
+        <AlertDialogContent className={GAME_DIALOG_CONTENT}>
           <AlertDialogHeader>
             <AlertDialogTitle>
               {canStart ? fr.onlineLobby.cancelPartyQuestion : fr.onlineLobby.leavePartyQuestion}
@@ -625,11 +686,11 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-cyan-300/20 bg-slate-900/45 text-cyan-100 hover:bg-slate-900/70">
+            <AlertDialogCancel className={CTA_NEON_SECONDARY_SUBTLE}>
               {fr.onlineLobby.cancel}
             </AlertDialogCancel>
             <AlertDialogAction
-              className="border-rose-300 bg-rose-500 text-white shadow-[0_0_0_2px_rgba(251,113,133,0.35)] hover:bg-rose-400"
+              className={CTA_NEON_DANGER}
               onClick={confirmLeave}
             >
               {canStart ? fr.onlineLobby.cancelParty : fr.onlineLobby.leaveParty}

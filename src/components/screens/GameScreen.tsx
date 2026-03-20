@@ -32,6 +32,10 @@ import {
   CTA_NEON_DANGER,
   CTA_NEON_PRIMARY,
   CTA_NEON_SECONDARY_SUBTLE,
+  GAME_DIALOG_CONTENT,
+  GAME_DRAWER_CLOSE_BUTTON,
+  GAME_DRAWER_CONTENT,
+  GAME_MOBILE_ACTION_BUTTON,
 } from "@/lib/uiTokens";
 import { ENABLE_BOARD_V2 } from "@/lib/uiMode";
 import { perfLog, perfMark, perfMeasure } from "@/lib/perf";
@@ -1018,7 +1022,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
           <Card className={cn(neonCard, "border px-2 py-2 shadow-[0_-8px_24px_rgba(2,6,23,0.35)] backdrop-blur-md lg:hidden")}>
             <div className="grid grid-cols-2 gap-2">
               <Button
-                className={cn("h-12 w-full", activeCyanBtn)}
+                className={cn(GAME_MOBILE_ACTION_BUTTON, activeCyanBtn)}
                 size="sm"
                 variant="secondary"
                 onClick={openMobileInfo}
@@ -1028,7 +1032,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               </Button>
 
               <Button
-                className={cn("h-12 w-full", activeCyanBtn)}
+                className={cn(GAME_MOBILE_ACTION_BUTTON, activeCyanBtn)}
                 size="sm"
                 variant="secondary"
                 onClick={openMobileMenu}
@@ -1042,7 +1046,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       </div>
 
       <Drawer open={playersOpen} onOpenChange={setPlayersOpen}>
-        <DrawerContent className="border-cyan-300/30 bg-slate-950/95 pb-[env(safe-area-inset-bottom)] text-cyan-50 lg:hidden">
+        <DrawerContent className={GAME_DRAWER_CONTENT}>
           <DrawerHeader className="pb-2">
             <div className="flex items-center justify-between gap-2">
               <DrawerTitle>{fr.gameScreen.players}</DrawerTitle>
@@ -1051,7 +1055,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                   variant="ghost"
                   size="sm"
                   aria-label={fr.gameScreen.closePlayersPanelAria}
-                  className="h-10 text-cyan-100 hover:bg-slate-800/60 hover:text-cyan-50"
+                  className={GAME_DRAWER_CLOSE_BUTTON}
                 >
                   {fr.gameScreen.close}
                 </Button>
@@ -1124,7 +1128,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       </Drawer>
 
       <Drawer open={legendOpen} onOpenChange={setLegendOpen}>
-        <DrawerContent className="border-cyan-300/30 bg-slate-950/95 pb-[env(safe-area-inset-bottom)] text-cyan-50 lg:hidden">
+        <DrawerContent className={GAME_DRAWER_CONTENT}>
           <DrawerHeader className="pb-2">
             <div className="flex items-center justify-between gap-2">
               <DrawerTitle>{fr.gameScreen.legend}</DrawerTitle>
@@ -1133,7 +1137,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                   variant="ghost"
                   size="sm"
                   aria-label={fr.gameScreen.closeLegendPanelAria}
-                  className="h-10 text-cyan-100 hover:bg-slate-800/60 hover:text-cyan-50"
+                  className={GAME_DRAWER_CLOSE_BUTTON}
                 >
                   {fr.gameScreen.close}
                 </Button>
@@ -1155,7 +1159,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       </Drawer>
 
       <Drawer open={mobileInfoOpen} onOpenChange={setMobileInfoOpen}>
-        <DrawerContent className="border-cyan-300/30 bg-slate-950/95 pb-[env(safe-area-inset-bottom)] text-cyan-50 lg:hidden">
+        <DrawerContent className={GAME_DRAWER_CONTENT}>
           <DrawerHeader className="pb-2">
             <div className="flex items-center justify-between gap-2">
               <DrawerTitle>{fr.gameScreen.mobileInfoTitle}</DrawerTitle>
@@ -1163,7 +1167,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-10 text-cyan-100 hover:bg-slate-800/60 hover:text-cyan-50"
+                  className={GAME_DRAWER_CLOSE_BUTTON}
                 >
                   {fr.gameScreen.close}
                 </Button>
@@ -1190,7 +1194,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       </Drawer>
 
       <Drawer open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-        <DrawerContent className="border-cyan-300/30 bg-slate-950/95 pb-[env(safe-area-inset-bottom)] text-cyan-50 lg:hidden">
+        <DrawerContent className={GAME_DRAWER_CONTENT}>
           <DrawerHeader className="pb-2">
             <div className="flex items-center justify-between gap-2">
               <DrawerTitle>{fr.gameScreen.mobileMenuTitle}</DrawerTitle>
@@ -1198,7 +1202,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-10 text-cyan-100 hover:bg-slate-800/60 hover:text-cyan-50"
+                  className={GAME_DRAWER_CLOSE_BUTTON}
                 >
                   {fr.gameScreen.close}
                 </Button>
@@ -1208,7 +1212,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 
           <div className="grid gap-2 px-4 pb-4">
             <Button
-              className={cn("h-12 w-full", activeCyanBtn)}
+              className={cn(GAME_MOBILE_ACTION_BUTTON, activeCyanBtn)}
               size="sm"
               variant="secondary"
               onClick={() => {
@@ -1219,7 +1223,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               {fr.gameScreen.players}
             </Button>
             <Button
-              className={cn("h-12 w-full", activeCyanBtn)}
+              className={cn(GAME_MOBILE_ACTION_BUTTON, activeCyanBtn)}
               size="sm"
               variant="secondary"
               onClick={() => {
@@ -1231,7 +1235,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
             </Button>
             {onLeave && (
               <Button
-                className={cn("h-12 w-full", dangerLeaveBtn)}
+                className={cn(GAME_MOBILE_ACTION_BUTTON, dangerLeaveBtn)}
                 size="sm"
                 variant="secondary"
                 onClick={() => {
@@ -1247,7 +1251,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       </Drawer>
 
       <AlertDialog open={leaveDialogOpen} onOpenChange={setLeaveDialogOpen}>
-        <AlertDialogContent className="border-cyan-300/30 bg-slate-950/95 text-cyan-50">
+        <AlertDialogContent className={GAME_DIALOG_CONTENT}>
           <AlertDialogHeader>
             <AlertDialogTitle>{fr.gameScreen.leaveQuestionTitle}</AlertDialogTitle>
             <AlertDialogDescription className="text-slate-300">
@@ -1278,7 +1282,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       </Suspense>
 
       <AlertDialog open={isKudoPurchaseActive && !isMoveAnimating} onOpenChange={() => {}}>
-        <AlertDialogContent className="border-cyan-300/30 bg-slate-950/95 text-cyan-50">
+        <AlertDialogContent className={GAME_DIALOG_CONTENT}>
           <AlertDialogHeader>
             <AlertDialogTitle>{fr.gameScreen.buyKudoTitle}</AlertDialogTitle>
             <AlertDialogDescription className="text-slate-300">

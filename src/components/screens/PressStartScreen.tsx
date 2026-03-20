@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { Button } from "@/components/ui/button";
+import { Card, PrimaryButton } from "@/components/app-shell";
 import { RetroScreenBackground } from "./RetroScreenBackground";
 import { fr } from "@/i18n/fr";
 
@@ -24,7 +24,7 @@ export const PressStartScreen: React.FC<PressStartScreenProps> = ({ onStart }) =
     <div className="scanlines relative flex min-h-svh w-full items-center justify-center overflow-hidden px-4 py-8">
       <RetroScreenBackground />
 
-      <div className="relative z-10 w-full max-w-2xl rounded border border-cyan-300/60 bg-card/88 p-5 text-center shadow-[0_0_0_2px_rgba(34,211,238,0.3),0_0_34px_rgba(34,211,238,0.32)] backdrop-blur sm:p-8">
+      <Card className="relative z-10 w-full max-w-2xl p-5 text-center sm:p-8">
         <div className="text-[10px] uppercase tracking-[0.25em] text-cyan-200/80">
           {fr.pressStart.brand}
         </div>
@@ -36,12 +36,12 @@ export const PressStartScreen: React.FC<PressStartScreenProps> = ({ onStart }) =
         </p>
 
         <div className="mt-8">
-          <Button
+          <PrimaryButton
             onClick={onStart}
-            className="h-12 w-full animate-pixel-pulse border border-cyan-300 bg-cyan-500 text-sm font-semibold uppercase tracking-wide text-slate-950 shadow-[0_0_12px_rgba(34,211,238,0.45)] hover:bg-cyan-400 sm:w-auto sm:px-12"
+            className="h-12 w-full animate-pixel-pulse uppercase tracking-wide sm:w-auto sm:px-12"
           >
             {fr.pressStart.button}
-          </Button>
+          </PrimaryButton>
         </div>
 
         <div className="mt-4 text-[10px] text-slate-400 sm:text-xs">
@@ -57,7 +57,7 @@ export const PressStartScreen: React.FC<PressStartScreenProps> = ({ onStart }) =
             karl.furgerot@gmail.com
           </a>
         </div>
-      </div>
+      </Card>
     </div>
   );
 };

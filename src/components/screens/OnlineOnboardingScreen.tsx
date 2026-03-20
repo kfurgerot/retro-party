@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { RetroScreenBackground } from "./RetroScreenBackground";
 import { fr } from "@/i18n/fr";
 import { Card, Input, PrimaryButton, SecondaryButton, SectionHeader } from "@/components/app-shell";
+import { APP_SHELL_INPUT } from "@/lib/uiTokens";
 
 interface OnlineOnboardingScreenProps {
   connected: boolean;
@@ -34,6 +35,7 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
   });
 
   const validName = name.length >= 2;
+  const canNext = validName;
   const canSubmit = connected && validName;
 
   const stepTitle = useMemo(() => {
@@ -64,10 +66,10 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
       : 100;
 
   return (
-    <div className="scanlines relative flex min-h-svh w-full items-start justify-center overflow-hidden px-4 pb-8 pt-4 sm:pt-6">
+    <div className="scanlines relative flex min-h-svh w-full items-start justify-center overflow-hidden px-4 pb-28 pt-4 sm:pb-8 sm:pt-6">
       <RetroScreenBackground />
 
-      <div className="relative z-10 flex min-h-[82svh] w-full max-w-4xl flex-col rounded border border-cyan-300/60 bg-card/88 p-5 shadow-[0_0_0_2px_rgba(34,211,238,0.3),0_0_34px_rgba(34,211,238,0.32)] backdrop-blur sm:p-8">
+      <Card className="relative z-10 flex min-h-[82svh] w-full max-w-4xl flex-col p-5 sm:p-8">
         <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.16em] text-cyan-200/80">
           <span>{fr.onlineOnboarding.brand}</span>
           <span className="rounded-full border border-cyan-300/40 px-2 py-0.5">
@@ -103,7 +105,7 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
                   placeholder={fr.onlineOnboarding.displayNamePlaceholder}
                   onChange={(e) => setName(cleanName(e.target.value))}
                   onKeyDown={(e) => e.key === "Enter" && validName && goNext()}
-                  className="h-11 border-cyan-300/25 bg-slate-900/45 text-cyan-50 placeholder:text-slate-400"
+                  className={APP_SHELL_INPUT}
                 />
                 {!validName && name.length > 0 && (
                   <p className="text-xs text-amber-300">{fr.onlineOnboarding.minName}</p>
@@ -121,7 +123,7 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
                       type="button"
                       onClick={() => setAvatar(i)}
                       className={cn(
-                        "h-12 w-12 rounded-md border border-cyan-400/20 bg-slate-900/50 text-2xl transition hover:border-cyan-300/60 hover:bg-slate-900/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
+                        "h-12 w-12 rounded-md border border-cyan-400/20 bg-slate-900/50 text-2xl transition hover:border-cyan-300/60 hover:bg-slate-900/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 sm:h-12 sm:w-12",
                         i === avatar && "ring-2 ring-cyan-400"
                       )}
                       aria-label={fr.onlineOnboarding.avatarAria.replace("{index}", String(i + 1))}
@@ -168,7 +170,7 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
           </Card>
         </div>
 
-        <div className="mt-6 flex justify-between gap-2">
+        <div className="mt-6 hidden justify-between gap-2 sm:flex">
           <SecondaryButton
             type="button"
             className="h-11"
@@ -181,7 +183,7 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
             <PrimaryButton
               type="button"
               onClick={goNext}
-              disabled={!validName}
+              disabled={!canNext}
               className="font-semibold"
             >
               {fr.onlineOnboarding.next}
@@ -197,6 +199,40 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
             </PrimaryButton>
           )}
         </div>
+      </Card>
+
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:hidden">
+        <Card className="pointer-events-auto mx-auto w-full max-w-4xl border-cyan-300/40 bg-slate-950/92 p-3 shadow-[0_0_0_1px_rgba(34,211,238,0.2),0_8px_28px_rgba(2,6,23,0.55)]">
+          <div className="grid grid-cols-2 gap-2">
+            <SecondaryButton
+              type="button"
+              className="h-12 min-h-0"
+              onClick={goBack}
+            >
+              {step === 1 ? fr.onlineOnboarding.back : fr.onlineOnboarding.previous}
+            </SecondaryButton>
+
+            {step === 1 ? (
+              <PrimaryButton
+                type="button"
+                onClick={goNext}
+                disabled={!canNext}
+                className="h-12 min-h-0 font-semibold"
+              >
+                {fr.onlineOnboarding.next}
+              </PrimaryButton>
+            ) : (
+              <PrimaryButton
+                type="button"
+                disabled={!canSubmit}
+                onClick={() => onSubmit({ name: cleanName(name), avatar })}
+                className="h-12 min-h-0 font-semibold uppercase tracking-wide"
+              >
+                {fr.onlineOnboarding.continue}
+              </PrimaryButton>
+            )}
+          </div>
+        </Card>
       </div>
     </div>
   );
