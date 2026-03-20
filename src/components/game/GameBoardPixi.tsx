@@ -3,7 +3,6 @@ import { AVATARS, MoveTrace, PendingPathChoice, Player, Tile } from "@/types/gam
 import { cn } from "@/lib/utils";
 import { GameBoardProps } from "./gameBoardTypes";
 import { PixiBoardCanvas, PixiFloatingDelta } from "./PixiBoardCanvas";
-import { Dice } from "./Dice";
 
 type Point = { x: number; y: number };
 
@@ -78,6 +77,7 @@ const GameBoardPixiComponent: React.FC<GameBoardProps> = ({
   }, [scale, offset]);
 
   const pointers = useRef(new Map<number, Point>());
+  const blockedPointers = useRef(new Set<number>());
   const gesture = useRef<
     | null
     | {
@@ -309,7 +309,69 @@ const GameBoardPixiComponent: React.FC<GameBoardProps> = ({
     setOffset(clampOffset(clampedScale, nextOffset, rect.width, rect.height));
   };
 
+  const isPointerOverActionOverlay = useCallback((clientX: number, clientY: number) => {
+    if (!focusPlayerId || !actionOverlay) return false;
+    if (!actionOverlay.canRoll && !actionOverlay.canMove && !actionOverlay.canOpenQuestionCard && !actionOverlay.isRolling) {
+      return false;
+    }
+
+    const focusedPlayer = players.find((player) => player.id === focusPlayerId);
+    if (!focusedPlayer) return false;
+    const tileId = displayPositions[focusedPlayer.id] ?? focusedPlayer.position;
+    const p = points[tileId];
+    if (!p) return false;
+
+    const el = containerRef.current;
+    if (!el) return false;
+    const rect = el.getBoundingClientRect();
+
+    const tilePlayers = players.filter((player) => (displayPositions[player.id] ?? player.position) === tileId);
+    const playerIndex = tilePlayers.findIndex((player) => player.id === focusPlayerId);
+    const shownCount = Math.min(tilePlayers.length, 3);
+
+    let avatarX = p.x + TILE_CENTER;
+    if (playerIndex >= 0 && playerIndex < 3) {
+      avatarX = p.x + TILE_CENTER - ((shownCount - 1) * 10) + playerIndex * 20;
+    } else if (playerIndex >= 3) {
+      avatarX = p.x + TILE_CENTER + 22;
+    }
+    const avatarY = p.y - 18;
+
+    // Matches PixiBoardCanvas action panel placement.
+    const canvasInset = 8;
+    const anchorX = avatarX * scale + offset.x + canvasInset;
+    const anchorY = avatarY * scale + offset.y + canvasInset;
+    const actionScale = Math.max(0.72, Math.min(1.08, 0.8 + (scale - 0.7) * 0.2));
+
+    const halfWidth = 84 * actionScale;
+    const topY = -118 * actionScale;
+    const bottomY = 19 * actionScale;
+    const safePad = 8;
+
+    const localX = clientX - rect.left - anchorX;
+    const localY = clientY - rect.top - anchorY;
+    return (
+      localX >= -halfWidth - safePad &&
+      localX <= halfWidth + safePad &&
+      localY >= topY - safePad &&
+      localY <= bottomY + safePad
+    );
+  }, [
+    actionOverlay,
+    displayPositions,
+    focusPlayerId,
+    offset.x,
+    offset.y,
+    players,
+    points,
+    scale,
+  ]);
+
   const onPointerDown: React.PointerEventHandler<HTMLDivElement> = (e) => {
+    if (isPointerOverActionOverlay(e.clientX, e.clientY)) {
+      blockedPointers.current.add(e.pointerId);
+      return;
+    }
     const el = containerRef.current;
     if (!el) return;
 
@@ -337,6 +399,9 @@ const GameBoardPixiComponent: React.FC<GameBoardProps> = ({
   };
 
   const onPointerMove: React.PointerEventHandler<HTMLDivElement> = (e) => {
+    if (blockedPointers.current.has(e.pointerId)) {
+      return;
+    }
     const el = containerRef.current;
     if (!el) return;
 
@@ -379,6 +444,10 @@ const GameBoardPixiComponent: React.FC<GameBoardProps> = ({
   };
 
   const onPointerUp: React.PointerEventHandler<HTMLDivElement> = (e) => {
+    if (blockedPointers.current.has(e.pointerId)) {
+      blockedPointers.current.delete(e.pointerId);
+      return;
+    }
     pointers.current.delete(e.pointerId);
     if (pointers.current.size === 0) {
       gesture.current = null;
@@ -393,7 +462,6 @@ const GameBoardPixiComponent: React.FC<GameBoardProps> = ({
   };
 
   const onWheel: React.WheelEventHandler<HTMLDivElement> = (e) => {
-    if (!e.ctrlKey) return;
     e.preventDefault();
 
     const el = containerRef.current;
@@ -637,36 +705,6 @@ const GameBoardPixiComponent: React.FC<GameBoardProps> = ({
     [offset.x, offset.y, scale]
   );
 
-  const focusedActionAnchor = useMemo(() => {
-    if (!focusPlayerId || !actionOverlay) return null;
-    if (!actionOverlay.canRoll && !actionOverlay.canMove && !actionOverlay.canOpenQuestionCard && !actionOverlay.isRolling) {
-      return null;
-    }
-    const focused = players.find((player) => player.id === focusPlayerId);
-    if (!focused) return null;
-    const tileId = displayPositions[focused.id] ?? focused.position;
-    const p = points[tileId];
-    if (!p) return null;
-    const tilePlayers = playersByTile.get(tileId) ?? [];
-    const playerIndex = tilePlayers.findIndex((player) => player.id === focused.id);
-    const shownCount = Math.min(tilePlayers.length, 3);
-
-    let avatarX = p.x + TILE_CENTER;
-    if (playerIndex >= 0 && playerIndex < 3) {
-      avatarX = p.x + TILE_CENTER - ((shownCount - 1) * 10) + playerIndex * 20;
-    } else if (playerIndex >= 3) {
-      avatarX = p.x + TILE_CENTER + 22;
-    }
-
-    const avatarY = p.y - 18;
-    return worldToScreen({ x: avatarX, y: avatarY });
-  }, [actionOverlay, displayPositions, focusPlayerId, players, playersByTile, points, worldToScreen]);
-
-  const overlayScale = useMemo(() => {
-    const next = 0.78 + Math.max(0, Math.min(1.2, scale - 0.7)) * 0.2;
-    return Math.max(0.72, Math.min(1.05, next));
-  }, [scale]);
-
   return (
     <div
       ref={containerRef}
@@ -688,6 +726,8 @@ const GameBoardPixiComponent: React.FC<GameBoardProps> = ({
         tileCenter={TILE_CENTER}
         tileSize={TILE_SIZE}
         playersByTile={playersByTile}
+        playerDisplayPositions={displayPositions}
+        focusPlayerId={focusPlayerId}
         movingPlayerId={movingPlayerId}
         focusedPosition={focusedPosition}
         highlightedPathEdges={highlightedPathEdges}
@@ -695,6 +735,7 @@ const GameBoardPixiComponent: React.FC<GameBoardProps> = ({
         pendingPathChoiceOptions={pendingPathChoice?.options ?? []}
         canChoosePath={canChoosePath}
         floatingDeltas={floatingDeltas}
+        actionOverlay={actionOverlay}
       />
 
       {pendingPathChoice && (() => {
@@ -742,38 +783,6 @@ const GameBoardPixiComponent: React.FC<GameBoardProps> = ({
             );
           });
       })()}
-
-      {focusedActionAnchor && actionOverlay && (
-        <div
-          className="absolute z-30 -translate-x-1/2 -translate-y-full"
-          style={{ left: focusedActionAnchor.x, top: focusedActionAnchor.y - 10 }}
-          onPointerDown={(e) => e.stopPropagation()}
-          onPointerMove={(e) => e.stopPropagation()}
-          onPointerUp={(e) => e.stopPropagation()}
-          onWheel={(e) => e.stopPropagation()}
-        >
-          <div
-            className="rounded-xl border-2 border-cyan-300/35 bg-slate-900/85 px-2 py-2 shadow-[0_8px_22px_rgba(2,6,23,0.48)] backdrop-blur-sm"
-            style={{ transform: `scale(${overlayScale})`, transformOrigin: "bottom center" }}
-          >
-            <Dice
-              value={actionOverlay.diceValue}
-              rollResult={actionOverlay.rollResult ?? null}
-              pendingDoubleRollFirstDie={actionOverlay.pendingDoubleRollFirstDie ?? null}
-              isRolling={actionOverlay.isRolling}
-              canRoll={actionOverlay.canRoll}
-              canMove={actionOverlay.canMove}
-              canOpenQuestionCard={actionOverlay.canOpenQuestionCard}
-              onRoll={() => actionOverlay.onRoll?.()}
-              onMove={(steps) => actionOverlay.onMove?.(steps)}
-              onOpenQuestionCard={() => actionOverlay.onOpenQuestionCard?.()}
-              playerIndex={actionOverlay.playerIndex ?? 0}
-              compact
-              showCompactDetails={false}
-            />
-          </div>
-        </div>
-      )}
 
       {showControls && (
         <div

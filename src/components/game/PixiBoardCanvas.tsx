@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef } from "react";
 import { Application, Container, Graphics, Text, TextStyle } from "pixi.js";
 import { AVATARS, Player, Tile } from "@/types/game";
+import { FancyButton } from "@pixi/ui";
+import { BoardActionOverlay } from "./gameBoardTypes";
 
 type Point = { x: number; y: number };
 
@@ -22,6 +24,8 @@ interface PixiBoardCanvasProps {
   tileCenter: number;
   tileSize: number;
   playersByTile: Map<number, Player[]>;
+  playerDisplayPositions: Record<string, number>;
+  focusPlayerId?: string | null;
   movingPlayerId: string | null;
   focusedPosition: number | null;
   highlightedPathEdges: Set<string>;
@@ -29,6 +33,7 @@ interface PixiBoardCanvasProps {
   pendingPathChoiceOptions: number[];
   canChoosePath: boolean;
   floatingDeltas: PixiFloatingDelta[];
+  actionOverlay?: BoardActionOverlay | null;
 }
 
 const TILE_HEX_COLORS: Record<string, number> = {
@@ -67,6 +72,8 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
   tileCenter,
   tileSize,
   playersByTile,
+  playerDisplayPositions,
+  focusPlayerId = null,
   movingPlayerId,
   focusedPosition,
   highlightedPathEdges,
@@ -74,10 +81,12 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
   pendingPathChoiceOptions,
   canChoosePath,
   floatingDeltas,
+  actionOverlay = null,
 }) => {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const appRef = useRef<Application | null>(null);
   const worldRef = useRef<Container | null>(null);
+  const uiRef = useRef<Container | null>(null);
 
   const sharedStyles = useMemo(
     () => ({
@@ -137,6 +146,11 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
     const world = new Container();
     worldRef.current = world;
     app.stage.addChild(world);
+
+    const uiLayer = new Container();
+    uiRef.current = uiLayer;
+    app.stage.addChild(uiLayer);
+
     host.appendChild(app.view as HTMLCanvasElement);
 
     const resizeObserver = new ResizeObserver(() => {
@@ -153,6 +167,7 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
       app.destroy(true, true);
       appRef.current = null;
       worldRef.current = null;
+      uiRef.current = null;
     };
   }, []);
 
@@ -355,6 +370,221 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
     tiles,
   ]);
 
+  useEffect(() => {
+    const uiLayer = uiRef.current;
+    const app = appRef.current;
+    if (!uiLayer) return;
+
+    uiLayer.removeChildren().forEach((child) => {
+      child.destroy({ children: true });
+    });
+
+    if (!focusPlayerId || !actionOverlay) return;
+    if (!actionOverlay.canRoll && !actionOverlay.canMove && !actionOverlay.canOpenQuestionCard && !actionOverlay.isRolling) {
+      return;
+    }
+
+    let tileId = playerDisplayPositions[focusPlayerId];
+    if (tileId == null) {
+      for (const [candidateTileId, tilePlayers] of playersByTile.entries()) {
+        if (tilePlayers.some((player) => player.id === focusPlayerId)) {
+          tileId = candidateTileId;
+          break;
+        }
+      }
+    }
+    if (tileId == null) return;
+    const p = points[tileId];
+    if (!p) return;
+
+    const tilePlayers = playersByTile.get(tileId) ?? [];
+    const playerIndex = tilePlayers.findIndex((player) => player.id === focusPlayerId);
+    const shownCount = Math.min(tilePlayers.length, 3);
+
+    let avatarX = p.x + tileCenter;
+    if (playerIndex >= 0 && playerIndex < 3) {
+      avatarX = p.x + tileCenter - ((shownCount - 1) * 10) + playerIndex * 20;
+    } else if (playerIndex >= 3) {
+      avatarX = p.x + tileCenter + 22;
+    }
+    const avatarY = p.y - 18;
+
+    const anchorX = avatarX * scale + offset.x;
+    const anchorY = avatarY * scale + offset.y;
+    const actionScale = Math.max(0.72, Math.min(1.08, 0.8 + (scale - 0.7) * 0.2));
+
+    const buttonWidth = 154;
+    const buttonHeight = 42;
+    const isCardMode = actionOverlay.canOpenQuestionCard;
+    const topPanel = new Graphics();
+    topPanel.lineStyle(2, 0x67e8f9, 0.45, 0.5, true);
+    topPanel.beginFill(0x0f172a, 0.9);
+    topPanel.drawRoundedRect(-94, -118, 188, 124, 12);
+    topPanel.endFill();
+    const separator = new Graphics();
+    separator.lineStyle(2, 0x67e8f9, 0.3, 0.5, true);
+    separator.moveTo(-76, -26);
+    separator.lineTo(76, -26);
+
+    const modeText = actionOverlay.canOpenQuestionCard
+      ? "Ouvrir carte"
+      : actionOverlay.canMove
+        ? `Avancer ${actionOverlay.diceValue ?? ""}`.trim()
+        : actionOverlay.canRoll
+          ? "Lancer de"
+          : "Action";
+    const resolvedRollValue =
+      actionOverlay.rollResult?.total ??
+      (actionOverlay.diceValue != null ? actionOverlay.diceValue : null);
+
+    const face = new Graphics();
+    face.lineStyle(2, 0x0f172a, 0.95, 0.5, true);
+    face.beginFill(0xf8fafc, 1);
+    face.drawRoundedRect(-32, -95, 64, 64, 8);
+    face.endFill();
+    if (!isCardMode) {
+      const rollLabel = actionOverlay.isRolling ? "?" : String(resolvedRollValue ?? "?");
+      const valueFontSize = rollLabel.length > 1 ? 16 : 20;
+      const valueText = new Text(
+        rollLabel,
+        new TextStyle({
+          fontFamily: "Press Start 2P, monospace",
+          fill: 0x0f172a,
+          fontSize: valueFontSize,
+        })
+      );
+      valueText.anchor.set(0.5);
+      valueText.x = 0;
+      valueText.y = -64;
+      face.addChild(valueText);
+    } else {
+      // Small card icon to clearly distinguish "open card" from dice action.
+      const backCard = new Graphics();
+      backCard.lineStyle(2, 0x64748b, 0.7, 0.5, true);
+      backCard.beginFill(0xe2e8f0, 1);
+      backCard.drawRoundedRect(-10, -84, 26, 34, 5);
+      backCard.endFill();
+      face.addChild(backCard);
+
+      const frontCard = new Graphics();
+      frontCard.lineStyle(2, 0x0f172a, 0.95, 0.5, true);
+      frontCard.beginFill(0xffffff, 1);
+      frontCard.drawRoundedRect(-18, -78, 28, 38, 5);
+      frontCard.endFill();
+      face.addChild(frontCard);
+
+      const cardContent = new Graphics();
+      cardContent.beginFill(0x0f172a, 0.95);
+      cardContent.drawCircle(-12, -72, 2);
+      cardContent.drawCircle(4, -46, 2);
+      cardContent.drawRect(-12, -65, 12, 2);
+      cardContent.drawRect(-12, -60, 16, 2);
+      cardContent.drawRect(-12, -55, 10, 2);
+      cardContent.endFill();
+      face.addChild(cardContent);
+    }
+
+    const defaultView = new Graphics();
+    defaultView.lineStyle(2, 0x67e8f9, 0.55, 0.5, true);
+    defaultView.beginFill(0x06b6d4, 0.92);
+    defaultView.drawRoundedRect(0, 0, buttonWidth, buttonHeight, 10);
+    defaultView.endFill();
+
+    const hoverView = new Graphics();
+    hoverView.lineStyle(2, 0xa5f3fc, 0.75, 0.5, true);
+    hoverView.beginFill(0x22d3ee, 1);
+    hoverView.drawRoundedRect(0, 0, buttonWidth, buttonHeight, 10);
+    hoverView.endFill();
+
+    const pressedView = new Graphics();
+    pressedView.lineStyle(2, 0x67e8f9, 0.7, 0.5, true);
+    pressedView.beginFill(0x0891b2, 0.95);
+    pressedView.drawRoundedRect(0, 0, buttonWidth, buttonHeight, 10);
+    pressedView.endFill();
+
+    const actionButton = new FancyButton({
+      defaultView,
+      hoverView,
+      pressedView,
+      text: new Text(modeText, new TextStyle({
+        fontFamily: "Press Start 2P, monospace",
+        fill: 0x0f172a,
+        fontSize: 9,
+      })),
+      anchor: 0.5,
+      animations: {
+        hover: { props: { scale: { x: 1.03, y: 1.03 } }, duration: 90 },
+        pressed: { props: { scale: { x: 0.98, y: 0.98 } }, duration: 70 },
+      },
+    });
+    actionButton.x = 0;
+    actionButton.y = -2;
+    actionButton.onPress.connect(() => {
+      if (actionOverlay.canRoll) {
+        actionOverlay.onRoll?.();
+        return;
+      }
+      if (actionOverlay.canMove && actionOverlay.diceValue != null) {
+        actionOverlay.onMove?.(actionOverlay.diceValue);
+        return;
+      }
+      if (actionOverlay.canOpenQuestionCard) {
+        actionOverlay.onOpenQuestionCard?.();
+      }
+    });
+
+    const panelContainer = new Container();
+    panelContainer.x = anchorX;
+    panelContainer.y = anchorY;
+    panelContainer.scale.set(actionScale);
+    panelContainer.addChild(topPanel);
+    panelContainer.addChild(face);
+    panelContainer.addChild(separator);
+    panelContainer.addChild(actionButton);
+    panelContainer.eventMode = "static";
+
+    uiLayer.addChild(panelContainer);
+    let elapsed = 0;
+    let tickerFn: ((delta: number) => void) | null = null;
+    if (actionOverlay.isRolling && !isCardMode && app?.ticker) {
+      // Dice rolling animation while backend resolves roll.
+      let shownValue = 1;
+      let switchAccumulator = 0;
+      const rollingValueText = face.children.find((child) => child instanceof Text) as Text | undefined;
+      tickerFn = (delta) => {
+        elapsed += delta;
+        switchAccumulator += delta;
+        if (switchAccumulator >= 5) {
+          shownValue = shownValue >= 6 ? 1 : shownValue + 1;
+          if (rollingValueText) {
+            rollingValueText.text = String(shownValue);
+          }
+          switchAccumulator = 0;
+        }
+        face.rotation = Math.sin(elapsed * 0.38) * 0.22;
+        face.y = Math.sin(elapsed * 0.62) * 2.2;
+        actionButton.innerView.rotation = Math.sin(elapsed * 0.2) * 0.03;
+      };
+      app.ticker.add(tickerFn);
+    }
+
+    return () => {
+      if (tickerFn && app?.ticker) {
+        app.ticker.remove(tickerFn);
+      }
+    };
+  }, [
+    actionOverlay,
+    focusPlayerId,
+    offset.x,
+    offset.y,
+    playerDisplayPositions,
+    playersByTile,
+    points,
+    scale,
+    tileCenter,
+  ]);
+
   return (
     <div className="absolute inset-0 p-2">
       <div
@@ -368,3 +598,4 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
     </div>
   );
 };
+

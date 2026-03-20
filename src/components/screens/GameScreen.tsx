@@ -37,6 +37,7 @@ import { perfLog, perfMark, perfMeasure } from "@/lib/perf";
 
 const TURN_ANNOUNCE_MS = 2000;
 const MOVE_STEP_MS = 320;
+const ROLL_RESULT_READ_MS = 1000;
 
 type ActivityKind = "move" | "decision" | "question" | "shop" | "minigame" | "system";
 
@@ -155,12 +156,14 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const [bugIntroEndsAt, setBugIntroEndsAt] = useState<number | null>(null);
   const [selectedPreRollType, setSelectedPreRollType] = useState<ShopItemType | null>(null);
   const [isQuestionActionUnlocked, setIsQuestionActionUnlocked] = useState(true);
+  const [isMoveActionUnlocked, setIsMoveActionUnlocked] = useState(true);
   const [turnTransitionStartMark] = useState(() => `turn-transition-start-${Date.now()}`);
   const previousTurnKeyRef = useRef<string | null>(null);
   const previousMinigameKeyRef = useRef<string | null>(null);
 
   const autoMoveKeyRef = useRef<string | null>(null);
   const moveAnimationFallbackRef = useRef<number | null>(null);
+  const moveActionUnlockTimerRef = useRef<number | null>(null);
   const questionActionUnlockTimerRef = useRef<number | null>(null);
   const questionActionUnlockKeyRef = useRef<string | null>(null);
   const lastWhoSaidItIdleRef = useRef<string | null>(null);
@@ -285,12 +288,51 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   useEffect(() => {
     setHasMovedThisTurn(false);
     setIsMoveAnimating(false);
+    setIsMoveActionUnlocked(true);
     autoMoveKeyRef.current = null;
     if (moveAnimationFallbackRef.current) {
       window.clearTimeout(moveAnimationFallbackRef.current);
       moveAnimationFallbackRef.current = null;
     }
+    if (moveActionUnlockTimerRef.current) {
+      window.clearTimeout(moveActionUnlockTimerRef.current);
+      moveActionUnlockTimerRef.current = null;
+    }
   }, [gameState.currentPlayerIndex, gameState.currentRound]);
+
+  useEffect(() => {
+    const shouldDelayMove =
+      gameState.phase === "playing" &&
+      isMyTurn &&
+      gameState.turnPhase === "moving" &&
+      gameState.diceValue != null &&
+      !hasMovedThisTurn;
+
+    if (!shouldDelayMove) {
+      setIsMoveActionUnlocked(true);
+      if (moveActionUnlockTimerRef.current) {
+        window.clearTimeout(moveActionUnlockTimerRef.current);
+        moveActionUnlockTimerRef.current = null;
+      }
+      return;
+    }
+
+    setIsMoveActionUnlocked(false);
+    if (moveActionUnlockTimerRef.current) {
+      window.clearTimeout(moveActionUnlockTimerRef.current);
+    }
+    moveActionUnlockTimerRef.current = window.setTimeout(() => {
+      setIsMoveActionUnlocked(true);
+      moveActionUnlockTimerRef.current = null;
+    }, ROLL_RESULT_READ_MS);
+
+    return () => {
+      if (moveActionUnlockTimerRef.current) {
+        window.clearTimeout(moveActionUnlockTimerRef.current);
+        moveActionUnlockTimerRef.current = null;
+      }
+    };
+  }, [gameState.phase, gameState.turnPhase, gameState.diceValue, hasMovedThisTurn, isMyTurn]);
 
   const canRoll =
     gameState.phase === "playing" &&
@@ -315,6 +357,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     gameState.turnPhase === "moving" &&
     !gameState.currentQuestion &&
     !gameState.isRolling &&
+    isMoveActionUnlocked &&
     gameState.diceValue != null &&
     !hasMovedThisTurn;
 
@@ -674,6 +717,10 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       if (questionActionUnlockTimerRef.current) {
         window.clearTimeout(questionActionUnlockTimerRef.current);
         questionActionUnlockTimerRef.current = null;
+      }
+      if (moveActionUnlockTimerRef.current) {
+        window.clearTimeout(moveActionUnlockTimerRef.current);
+        moveActionUnlockTimerRef.current = null;
       }
     },
     []
