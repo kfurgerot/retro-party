@@ -78,7 +78,6 @@ const GameBoardPixiComponent: React.FC<GameBoardProps> = ({
   }, [scale, offset]);
 
   const pointers = useRef(new Map<number, Point>());
-  const blockedPointers = useRef(new Set<number>());
   const gesture = useRef<
     | null
     | {
@@ -338,7 +337,7 @@ const GameBoardPixiComponent: React.FC<GameBoardProps> = ({
     }
     const avatarY = p.y - 18;
 
-    // Matches PixiBoardCanvas action panel placement.
+    // Matches PixiBoardCanvas action panel placement (above active player).
     const canvasInset = 8;
     const anchorX = avatarX * scale + offset.x + canvasInset;
     const anchorY = avatarY * scale + offset.y + canvasInset;
@@ -370,7 +369,7 @@ const GameBoardPixiComponent: React.FC<GameBoardProps> = ({
 
   const onPointerDown: React.PointerEventHandler<HTMLDivElement> = (e) => {
     if (isPointerOverActionOverlay(e.clientX, e.clientY)) {
-      blockedPointers.current.add(e.pointerId);
+      // Let Pixi overlay handle click/tap without board gesture capture.
       return;
     }
     const el = containerRef.current;
@@ -400,9 +399,6 @@ const GameBoardPixiComponent: React.FC<GameBoardProps> = ({
   };
 
   const onPointerMove: React.PointerEventHandler<HTMLDivElement> = (e) => {
-    if (blockedPointers.current.has(e.pointerId)) {
-      return;
-    }
     const el = containerRef.current;
     if (!el) return;
 
@@ -445,10 +441,6 @@ const GameBoardPixiComponent: React.FC<GameBoardProps> = ({
   };
 
   const onPointerUp: React.PointerEventHandler<HTMLDivElement> = (e) => {
-    if (blockedPointers.current.has(e.pointerId)) {
-      blockedPointers.current.delete(e.pointerId);
-      return;
-    }
     pointers.current.delete(e.pointerId);
     if (pointers.current.size === 0) {
       gesture.current = null;

@@ -29,6 +29,8 @@ export function createDiceResultCard({ isCardMode, isRolling, resolvedRollValue 
         fontFamily: "Press Start 2P, monospace",
         fill: PIXI_GAME_THEME.colors.ink,
         fontSize,
+        align: "center",
+        padding: 4,
       })
     );
     valueText.anchor.set(0.5);
@@ -64,4 +66,3 @@ export function createDiceResultCard({ isCardMode, isRolling, resolvedRollValue 
 
   return { face, rollingValueText: null };
 }
-

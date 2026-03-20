@@ -911,8 +911,21 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 
               {sidebarTab === "players" ? (
                 <div className="mt-3 grid min-h-0 flex-1 gap-2 overflow-auto pr-1">
-                  <div className="rounded border border-cyan-300/20 bg-slate-950/30 px-2 py-2 text-xs">
-                    <div className="text-cyan-100/80">
+                  <div
+                    className={cn(
+                      "rounded border px-2 py-2 text-xs",
+                      isMyTurn
+                        ? "border-cyan-300/40 bg-cyan-500/15 shadow-[0_0_0_1px_rgba(34,211,238,0.25)_inset]"
+                        : "border-cyan-300/20 bg-slate-950/30"
+                    )}
+                  >
+                    <div className="flex items-center gap-2 text-cyan-100/80">
+                      <span
+                        className={cn(
+                          "inline-flex h-2 w-2 rounded-full",
+                          isMyTurn ? "bg-cyan-300 animate-pulse" : "bg-slate-500"
+                        )}
+                      />
                       {fr.gameScreen.nowPlayingLabel} <span className="font-semibold text-cyan-100">{currentPlayer?.name ?? "-"}</span>
                     </div>
                     <div className="text-slate-300">
@@ -920,7 +933,17 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                     </div>
                   </div>
                   {playersByTurnOrder.map((entry) => (
-                    <div key={entry.player.id} className="grid gap-1">
+                    <div
+                      key={entry.player.id}
+                      className={cn(
+                        "grid gap-1 rounded-md border p-1.5 transition-colors",
+                        entry.isCurrent
+                          ? "border-cyan-300/35 bg-cyan-500/10"
+                          : entry.isNext
+                          ? "border-emerald-300/30 bg-emerald-500/5"
+                          : "border-cyan-300/10 bg-slate-950/20"
+                      )}
+                    >
                       <div className="flex items-center justify-between px-1 text-[11px]">
                         <span
                           className={cn(
@@ -1037,8 +1060,21 @@ export const GameScreen: React.FC<GameScreenProps> = ({
           </DrawerHeader>
 
           <div className="grid max-h-[62svh] gap-2 overflow-auto px-4 pb-4">
-            <div className="rounded border border-cyan-300/20 bg-slate-950/30 px-2 py-2 text-xs">
-              <div className="text-cyan-100/80">
+            <div
+              className={cn(
+                "rounded border px-2 py-2 text-xs",
+                isMyTurn
+                  ? "border-cyan-300/40 bg-cyan-500/15 shadow-[0_0_0_1px_rgba(34,211,238,0.25)_inset]"
+                  : "border-cyan-300/20 bg-slate-950/30"
+              )}
+            >
+              <div className="flex items-center gap-2 text-cyan-100/80">
+                <span
+                  className={cn(
+                    "inline-flex h-2 w-2 rounded-full",
+                    isMyTurn ? "bg-cyan-300 animate-pulse" : "bg-slate-500"
+                  )}
+                />
                 {fr.gameScreen.nowPlayingLabel} <span className="font-semibold text-cyan-100">{currentPlayer?.name ?? "-"}</span>
               </div>
               <div className="text-slate-300">
@@ -1046,7 +1082,17 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               </div>
             </div>
             {playersByTurnOrder.map((entry) => (
-              <div key={entry.player.id} className="grid gap-1">
+              <div
+                key={entry.player.id}
+                className={cn(
+                  "grid gap-1 rounded-md border p-1.5 transition-colors",
+                  entry.isCurrent
+                    ? "border-cyan-300/35 bg-cyan-500/10"
+                    : entry.isNext
+                    ? "border-emerald-300/30 bg-emerald-500/5"
+                    : "border-cyan-300/10 bg-slate-950/20"
+                )}
+              >
                 <div className="flex items-center justify-between px-1 text-[11px]">
                   <span
                     className={cn(
@@ -1135,7 +1181,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               <div className="text-[10px] uppercase tracking-[0.1em] text-cyan-100/70">
                 {fr.gameScreen.primaryAction}
               </div>
-              <div className="text-sm font-semibold text-cyan-100">{primaryAction}</div>
+              <div className="text-sm font-semibold leading-snug text-cyan-100">{primaryAction}</div>
               <div className="text-xs text-cyan-100/90">{infoTitle}</div>
               <div className="text-xs text-slate-300">{infoHint}</div>
             </div>

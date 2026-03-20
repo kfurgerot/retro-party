@@ -1,8 +1,8 @@
 export const PIXI_GAME_THEME = {
   panel: {
-    width: 188,
-    height: 124,
-    x: -94,
+    width: 204,
+    height: 126,
+    x: -102,
     y: -118,
     radius: 12,
     border: 0x67e8f9,
@@ -10,10 +10,10 @@ export const PIXI_GAME_THEME = {
     fill: 0x0f172a,
     fillAlpha: 0.9,
     separatorY: -26,
-    separatorHalfWidth: 76,
+    separatorHalfWidth: 84,
   },
   button: {
-    width: 154,
+    width: 168,
     height: 42,
     radius: 10,
     y: -2,
@@ -35,9 +35,9 @@ export const PIXI_GAME_THEME = {
     cyanPressed: 0x0891b2,
   },
   text: {
-    actionSize: 8,
-    diceSizeSingle: 20,
-    diceSizeDouble: 16,
+    actionSize: 7,
+    diceSizeSingle: 18,
+    diceSizeDouble: 14,
   },
 } as const;
 
@@ -47,4 +47,3 @@ export const ACTION_OVERLAY_HITBOX = {
   bottomY: 19,
   safePadding: 8,
 } as const;
-

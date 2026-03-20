@@ -117,9 +117,23 @@ export const TurnBanner: React.FC<TurnBannerProps> = ({
       <Card className={cn(neonCardClass, "min-w-0 px-3 py-2 sm:px-4 sm:py-3")}>
         <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">{currentTurnLabel}</div>
         <div className="truncate text-lg font-bold sm:text-xl">{currentPlayerName}</div>
+        <div className="mt-1">
+          <ActionBadge tone={isMyTurn ? "active" : "neutral"} label={isMyTurn ? youLabel : nextUpLabel} />
+        </div>
         <div className="mt-1 truncate text-xs text-slate-300">
           {nextUpLabel}: <span className="font-semibold text-slate-200">{nextPlayerName}</span>
         </div>
+      </Card>
+
+      <Card
+        className={cn(
+          neonCardClass,
+          "min-w-[220px] max-w-[420px] px-3 py-2 sm:px-4 sm:py-3",
+          isMyTurn ? "border-cyan-300/45 bg-cyan-500/10" : ""
+        )}
+      >
+        <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">Action</div>
+        <div className="truncate text-sm font-semibold text-cyan-100">{primaryAction}</div>
       </Card>
 
       <Card className={cn(neonCardClass, "min-w-0 px-3 py-2 sm:px-4 sm:py-3")}>
@@ -140,4 +154,3 @@ export const TurnBanner: React.FC<TurnBannerProps> = ({
     </div>
   );
 };
-

@@ -8,6 +8,7 @@ interface GameButtonOptions {
 }
 
 export function createGameButton({ label, onPress }: GameButtonOptions) {
+  const compactLabel = label.length > 11;
   const defaultView = new Graphics();
   defaultView.lineStyle(2, PIXI_GAME_THEME.panel.border, 0.55, 0.5, true);
   defaultView.beginFill(PIXI_GAME_THEME.colors.cyan, 0.92);
@@ -53,7 +54,9 @@ export function createGameButton({ label, onPress }: GameButtonOptions) {
       new TextStyle({
         fontFamily: "Press Start 2P, monospace",
         fill: PIXI_GAME_THEME.colors.ink,
-        fontSize: PIXI_GAME_THEME.text.actionSize,
+        fontSize: compactLabel ? Math.max(6, PIXI_GAME_THEME.text.actionSize - 1) : PIXI_GAME_THEME.text.actionSize,
+        align: "center",
+        padding: 2,
       })
     ),
     anchor: 0.5,
@@ -68,4 +71,3 @@ export function createGameButton({ label, onPress }: GameButtonOptions) {
   button.onPress.connect(onPress);
   return button;
 }
-

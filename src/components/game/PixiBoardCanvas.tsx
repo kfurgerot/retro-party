@@ -182,6 +182,7 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
 
   useEffect(() => {
     const world = worldRef.current;
+    const app = appRef.current;
     if (!world) return;
 
     world.removeChildren().forEach((child) => {
@@ -295,6 +296,7 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
     world.addChild(tilesLayer);
 
     const playersLayer = new Container();
+    const activeAvatarNodes: Array<{ chip: Graphics; avatar: Text; baseAvatarY: number }> = [];
     tiles.forEach((tile) => {
       const p = points[tile.id];
       if (!p) return;
@@ -318,6 +320,10 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
         avatar.x = px;
         avatar.y = py + 0.5;
         playersLayer.addChild(avatar);
+
+        if (focusPlayerId && player.id === focusPlayerId && movingPlayerId !== player.id) {
+          activeAvatarNodes.push({ chip, avatar, baseAvatarY: py + 0.5 });
+        }
       });
 
       if (tilePlayers.length > 3) {
@@ -341,6 +347,13 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
 
     const floatLayer = new Container();
     floatingDeltas.forEach((delta) => {
+      const badge = new Graphics();
+      badge.lineStyle(2, 0x0f172a, 0.85, 0.5, true);
+      badge.beginFill(delta.positive ? 0x22c55e : 0xef4444, 0.28);
+      badge.drawRoundedRect(delta.x - 24, delta.y - 13, 48, 26, 8);
+      badge.endFill();
+      floatLayer.addChild(badge);
+
       const text = new Text(
         delta.text,
         delta.positive ? sharedStyles.floatingDeltaPositive : sharedStyles.floatingDeltaNegative
@@ -351,9 +364,31 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
       floatLayer.addChild(text);
     });
     world.addChild(floatLayer);
+
+    let tickerFn: ((delta: number) => void) | null = null;
+    if (activeAvatarNodes.length > 0 && app?.ticker) {
+      let elapsed = 0;
+      tickerFn = (delta) => {
+        elapsed += delta;
+        const bob = Math.sin(elapsed * 0.12) * 2.2;
+        activeAvatarNodes.forEach((node) => {
+          node.avatar.y = node.baseAvatarY + bob;
+          const pulse = 0.88 + Math.max(0, Math.sin(elapsed * 0.08)) * 0.12;
+          node.chip.alpha = pulse;
+        });
+      };
+      app.ticker.add(tickerFn);
+    }
+
+    return () => {
+      if (tickerFn && app?.ticker) {
+        app.ticker.remove(tickerFn);
+      }
+    };
   }, [
     canChoosePath,
     floatingDeltas,
+    focusPlayerId,
     focusedPosition,
     highlightedPathEdges,
     movingPlayerId,
@@ -423,7 +458,7 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
       : actionOverlay.canMove
         ? `Avancer ${actionOverlay.diceValue ?? ""}`.trim()
         : actionOverlay.canRoll
-          ? "Lancer dé"
+          ? "Lancer de"
           : "Action";
     const resolvedRollValue =
       actionOverlay.rollResult?.total ??
@@ -464,23 +499,45 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
     uiLayer.addChild(panelContainer);
     let elapsed = 0;
     let tickerFn: ((delta: number) => void) | null = null;
-    if (actionOverlay.isRolling && !isCardMode && app?.ticker) {
-      // Dice rolling animation while backend resolves roll.
+    if (app?.ticker) {
       let shownValue = 1;
       let switchAccumulator = 0;
       tickerFn = (delta) => {
         elapsed += delta;
-        switchAccumulator += delta;
-        if (switchAccumulator >= 5) {
-          shownValue = shownValue >= 6 ? 1 : shownValue + 1;
-          if (rollingValueText) {
-            rollingValueText.text = String(shownValue);
+        if (actionOverlay.isRolling && !isCardMode) {
+          // Dice rolling animation while backend resolves roll.
+          switchAccumulator += delta;
+          if (switchAccumulator >= 5) {
+            shownValue = shownValue >= 6 ? 1 : shownValue + 1;
+            if (rollingValueText) {
+              rollingValueText.text = String(shownValue);
+            }
+            switchAccumulator = 0;
           }
-          switchAccumulator = 0;
+          face.rotation = Math.sin(elapsed * 0.38) * 0.22;
+          face.y = Math.sin(elapsed * 0.62) * 2.2;
+          face.scale.set(1);
+          actionButton.innerView.rotation = Math.sin(elapsed * 0.2) * 0.03;
+          actionButton.innerView.y = 0;
+          return;
         }
-        face.rotation = Math.sin(elapsed * 0.38) * 0.22;
-        face.y = Math.sin(elapsed * 0.62) * 2.2;
-        actionButton.innerView.rotation = Math.sin(elapsed * 0.2) * 0.03;
+
+        // Subtle prompt animation in idle so players understand the expected action.
+        const canPrompt = actionOverlay.canRoll || actionOverlay.canOpenQuestionCard;
+        if (!canPrompt) {
+          face.rotation = 0;
+          face.y = 0;
+          face.scale.set(1);
+          actionButton.innerView.rotation = 0;
+          actionButton.innerView.y = 0;
+          return;
+        }
+        const bob = Math.sin(elapsed * 0.11);
+        face.y = bob * 2;
+        face.rotation = Math.sin(elapsed * 0.09) * (isCardMode ? 0.06 : 0.04);
+        face.scale.set(1 + Math.sin(elapsed * 0.08) * 0.02);
+        actionButton.innerView.rotation = Math.sin(elapsed * 0.06) * 0.015;
+        actionButton.innerView.y = Math.sin(elapsed * 0.11 + 0.8) * 1.4;
       };
       app.ticker.add(tickerFn);
     }
