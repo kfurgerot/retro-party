@@ -296,14 +296,19 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
     world.addChild(tilesLayer);
 
     const playersLayer = new Container();
-    const activeAvatarNodes: Array<{ chip: Graphics; avatar: Text; baseAvatarY: number }> = [];
+    const activeAvatarNodes: Array<{
+      chip: Graphics;
+      avatar: Text;
+      baseChipY: number;
+      baseAvatarY: number;
+    }> = [];
     tiles.forEach((tile) => {
       const p = points[tile.id];
       if (!p) return;
       const tilePlayers = playersByTile.get(tile.id) ?? [];
       tilePlayers.slice(0, 3).forEach((player, index) => {
         const px = p.x + tileCenter - ((Math.min(tilePlayers.length, 3) - 1) * 10) + index * 20;
-        const py = p.y - 18;
+        const py = p.y + tileCenter;
         const chip = new Graphics();
         chip.lineStyle(2, Number.parseInt(player.color.replace("#", "0x"), 16) || 0xffffff, 1, 0.5, true);
         chip.beginFill(0xffffff, 1);
@@ -322,13 +327,18 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
         playersLayer.addChild(avatar);
 
         if (focusPlayerId && player.id === focusPlayerId && movingPlayerId !== player.id) {
-          activeAvatarNodes.push({ chip, avatar, baseAvatarY: py + 0.5 });
+          activeAvatarNodes.push({
+            chip,
+            avatar,
+            baseChipY: 0,
+            baseAvatarY: py + 0.5,
+          });
         }
       });
 
       if (tilePlayers.length > 3) {
         const overflowX = p.x + tileCenter + 22;
-        const overflowY = p.y - 18;
+        const overflowY = p.y + tileCenter;
         const overflow = new Graphics();
         overflow.lineStyle(2, 0x020617, 1, 0.5, true);
         overflow.beginFill(0xffffff, 1);
@@ -372,6 +382,7 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
         elapsed += delta;
         const bob = Math.sin(elapsed * 0.12) * 2.2;
         activeAvatarNodes.forEach((node) => {
+          node.chip.y = node.baseChipY + bob;
           node.avatar.y = node.baseAvatarY + bob;
           const pulse = 0.88 + Math.max(0, Math.sin(elapsed * 0.08)) * 0.12;
           node.chip.alpha = pulse;
@@ -444,7 +455,7 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
     } else if (playerIndex >= 3) {
       avatarX = p.x + tileCenter + 22;
     }
-    const avatarY = p.y - 18;
+    const avatarY = p.y + tileCenter;
 
     const anchorX = avatarX * scale + offset.x;
     const anchorY = avatarY * scale + offset.y;

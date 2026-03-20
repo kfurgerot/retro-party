@@ -335,7 +335,7 @@ const GameBoardPixiComponent: React.FC<GameBoardProps> = ({
     } else if (playerIndex >= 3) {
       avatarX = p.x + TILE_CENTER + 22;
     }
-    const avatarY = p.y - 18;
+    const avatarY = p.y + TILE_CENTER;
 
     // Matches PixiBoardCanvas action panel placement (above active player).
     const canvasInset = 8;
