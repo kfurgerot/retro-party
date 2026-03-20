@@ -150,11 +150,12 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 }) => {
   const [hasMovedThisTurn, setHasMovedThisTurn] = useState(false);
   const [isMoveAnimating, setIsMoveAnimating] = useState(false);
-  const [sidebarTab, setSidebarTab] = useState<"players" | "legend">("players");
+  const [sidebarTab, setSidebarTab] = useState<"players" | "legend" | "activity">("players");
   const [playersOpen, setPlayersOpen] = useState(false);
   const [legendOpen, setLegendOpen] = useState(false);
   const [mobileInfoOpen, setMobileInfoOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileActivityOpen, setMobileActivityOpen] = useState(false);
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
   const [whoSaidItIntroAt, setWhoSaidItIntroAt] = useState<number | null>(null);
   const [turnIntroEndsAt, setTurnIntroEndsAt] = useState<number | null>(null);
@@ -568,6 +569,10 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     if (isMobile()) setMobileMenuOpen(true);
   };
 
+  const openMobileActivity = () => {
+    if (isMobile()) setMobileActivityOpen(true);
+  };
+
   const infoTitle = gameState.currentQuestion
     ? gameState.currentQuestion.status === "pending"
       ? fr.gameScreen.infoQuestionReady
@@ -883,7 +888,11 @@ export const GameScreen: React.FC<GameScreenProps> = ({
             <Card className={cn(neonCard, "flex min-h-0 flex-1 flex-col px-3 py-3")}>
               <div className="flex items-center justify-between gap-2">
                 <div className="text-base font-bold">
-                  {sidebarTab === "players" ? fr.gameScreen.players : fr.gameScreen.legend}
+                  {sidebarTab === "players"
+                    ? fr.gameScreen.players
+                    : sidebarTab === "legend"
+                    ? fr.gameScreen.legend
+                    : fr.gameScreen.activityFeed}
                 </div>
                 <div className="flex gap-2">
                   <Button
@@ -909,6 +918,18 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                     onClick={() => setSidebarTab("legend")}
                   >
                     {fr.gameScreen.legend}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className={
+                      sidebarTab === "activity"
+                        ? activeCyanBtn
+                        : `${neutralSecondaryBtn} opacity-95`
+                    }
+                    onClick={() => setSidebarTab("activity")}
+                  >
+                    {fr.gameScreen.activityFeed}
                   </Button>
                 </div>
               </div>
@@ -975,7 +996,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                     </div>
                   ))}
                 </div>
-              ) : (
+              ) : sidebarTab === "legend" ? (
                 <div className="mt-3 grid min-h-0 flex-1 gap-2 overflow-auto pr-1 text-sm text-cyan-50">
                   {legend.map((l) => (
                     <div key={l.k} className="flex items-center gap-2">
@@ -986,41 +1007,42 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                     </div>
                   ))}
                 </div>
-              )}
-            </Card>
-
-            <Card className={cn(neonCard, "flex max-h-[32svh] min-h-[170px] shrink-0 flex-col px-3 py-3")}>
-              <div className="mb-2 text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">
-                {fr.gameScreen.activityFeed}
-              </div>
-              <div className="grid min-h-0 flex-1 gap-1.5 overflow-auto text-xs text-cyan-50/90">
-                {activityFeed.length > 0 ? (
-                  activityFeed.map((entry, index) => (
-                    <div
-                      key={`${entry.log}-${index}`}
-                      className={cn(
-                        "rounded border px-2 py-1",
-                        index === 0 ? "border-cyan-300/30 bg-cyan-500/10 text-cyan-100" : "border-cyan-300/15 bg-slate-950/25 text-cyan-50/85"
-                      )}
-                    >
-                      <div className="mb-1">
-                        <ActionBadge label={activityKindLabel[entry.kind]} tone={activityKindClass[entry.kind]} className="rounded border px-1.5 py-0.5" />
+              ) : (
+                <div className="mt-3 grid min-h-0 flex-1 gap-1.5 overflow-auto pr-1 text-xs text-cyan-50/90">
+                  {activityFeed.length > 0 ? (
+                    activityFeed.map((entry, index) => (
+                      <div
+                        key={`${entry.log}-${index}`}
+                        className={cn(
+                          "rounded border px-2 py-1",
+                          index === 0
+                            ? "border-cyan-300/30 bg-cyan-500/10 text-cyan-100"
+                            : "border-cyan-300/15 bg-slate-950/25 text-cyan-50/85"
+                        )}
+                      >
+                        <div className="mb-1">
+                          <ActionBadge
+                            label={activityKindLabel[entry.kind]}
+                            tone={activityKindClass[entry.kind]}
+                            className="rounded border px-1.5 py-0.5"
+                          />
+                        </div>
+                        <div>{entry.log}</div>
                       </div>
-                      <div>{entry.log}</div>
+                    ))
+                  ) : (
+                    <div className="rounded border border-cyan-300/15 bg-slate-950/25 px-2 py-1 text-slate-300">
+                      {fr.gameScreen.noRecentActivity}
                     </div>
-                  ))
-                ) : (
-                  <div className="rounded border border-cyan-300/15 bg-slate-950/25 px-2 py-1 text-slate-300">
-                    {fr.gameScreen.noRecentActivity}
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
             </Card>
           </div>
         </div>
         <div className="sticky bottom-0 z-30 mt-1 pb-[calc(env(safe-area-inset-bottom)+4px)]">
           <Card className={cn(neonCard, "border px-2 py-2 shadow-[0_-8px_24px_rgba(2,6,23,0.35)] backdrop-blur-md xl:hidden")}>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               <Button
                 className={cn(GAME_MOBILE_ACTION_BUTTON, activeCyanBtn)}
                 size="sm"
@@ -1029,6 +1051,16 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 aria-label={fr.gameScreen.mobileInfoAria}
               >
                 {fr.gameScreen.mobileInfo}
+              </Button>
+
+              <Button
+                className={cn(GAME_MOBILE_ACTION_BUTTON, activeCyanBtn)}
+                size="sm"
+                variant="secondary"
+                onClick={openMobileActivity}
+                aria-label={fr.gameScreen.activityFeed}
+              >
+                {fr.gameScreen.mobileFeed}
               </Button>
 
               <Button
@@ -1217,6 +1249,17 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               variant="secondary"
               onClick={() => {
                 setMobileMenuOpen(false);
+                openMobileActivity();
+              }}
+            >
+              {fr.gameScreen.activityFeed}
+            </Button>
+            <Button
+              className={cn(GAME_MOBILE_ACTION_BUTTON, activeCyanBtn)}
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                setMobileMenuOpen(false);
                 openPlayers();
               }}
             >
@@ -1245,6 +1288,54 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               >
                 {fr.gameScreen.leave}
               </Button>
+            )}
+          </div>
+        </DrawerContent>
+      </Drawer>
+
+      <Drawer open={mobileActivityOpen} onOpenChange={setMobileActivityOpen}>
+        <DrawerContent className={GAME_DRAWER_CONTENT}>
+          <DrawerHeader className="pb-2">
+            <div className="flex items-center justify-between gap-2">
+              <DrawerTitle>{fr.gameScreen.activityFeed}</DrawerTitle>
+              <DrawerClose asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={GAME_DRAWER_CLOSE_BUTTON}
+                >
+                  {fr.gameScreen.close}
+                </Button>
+              </DrawerClose>
+            </div>
+          </DrawerHeader>
+
+          <div className="grid max-h-[62svh] gap-1.5 overflow-auto px-4 pb-4 text-xs text-cyan-50/90">
+            {activityFeed.length > 0 ? (
+              activityFeed.map((entry, index) => (
+                <div
+                  key={`${entry.log}-${index}`}
+                  className={cn(
+                    "rounded border px-2 py-1",
+                    index === 0
+                      ? "border-cyan-300/30 bg-cyan-500/10 text-cyan-100"
+                      : "border-cyan-300/15 bg-slate-950/25 text-cyan-50/85"
+                  )}
+                >
+                  <div className="mb-1">
+                    <ActionBadge
+                      label={activityKindLabel[entry.kind]}
+                      tone={activityKindClass[entry.kind]}
+                      className="rounded border px-1.5 py-0.5"
+                    />
+                  </div>
+                  <div>{entry.log}</div>
+                </div>
+              ))
+            ) : (
+              <div className="rounded border border-cyan-300/15 bg-slate-950/25 px-2 py-1 text-slate-300">
+                {fr.gameScreen.noRecentActivity}
+              </div>
             )}
           </div>
         </DrawerContent>

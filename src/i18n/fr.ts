@@ -297,6 +297,7 @@ export const fr = {
     legend: "Legende",
     mobileLegendAria: "Afficher la legende",
     mobileInfo: "Infos",
+    mobileFeed: "Fil",
     mobileInfoTitle: "Infos du tour",
     mobileInfoAria: "Afficher les infos du tour",
     mobileMenu: "Menu",
