@@ -3,6 +3,7 @@ import { AVATARS, MoveTrace, PendingPathChoice, Player, Tile } from "@/types/gam
 import { cn } from "@/lib/utils";
 import { GameBoardProps } from "./gameBoardTypes";
 import { PixiBoardCanvas, PixiFloatingDelta } from "./PixiBoardCanvas";
+import { Dice } from "./Dice";
 
 type Point = { x: number; y: number };
 
@@ -32,6 +33,7 @@ const GameBoardPixiComponent: React.FC<GameBoardProps> = ({
   canChoosePath = false,
   onChoosePath,
   eventOverlayActive = false,
+  actionOverlay = null,
 }) => {
   const bounds = useMemo(() => {
     if (!tiles.length) return { minX: 0, minY: 0, maxX: 800, maxY: 500 };
@@ -63,6 +65,7 @@ const GameBoardPixiComponent: React.FC<GameBoardProps> = ({
   const pendingAutoZoomOutRef = useRef(false);
   const pendingAutoZoomTargetRef = useRef<number | null>(null);
   const autoZoomTimeoutRef = useRef<number | null>(null);
+  const previousFocusPlayerIdRef = useRef<string | null>(null);
 
   const scaleRef = useRef(1);
   const offsetRef = useRef<Point>({ x: 0, y: 0 });
@@ -616,6 +619,16 @@ const GameBoardPixiComponent: React.FC<GameBoardProps> = ({
     return edges;
   }, [lastMoveTrace?.path]);
 
+  useLayoutEffect(() => {
+    if (!focusPlayerId || movingPlayerId) return;
+    if (previousFocusPlayerIdRef.current === focusPlayerId) return;
+    const focused = players.find((player) => player.id === focusPlayerId);
+    if (!focused) return;
+    const position = displayPositions[focused.id] ?? focused.position;
+    previousFocusPlayerIdRef.current = focusPlayerId;
+    focusOnPosition(position, true);
+  }, [displayPositions, focusOnPosition, focusPlayerId, movingPlayerId, players]);
+
   const worldToScreen = useCallback(
     (worldPoint: Point) => ({
       x: worldPoint.x * scale + offset.x + 8,
@@ -623,6 +636,36 @@ const GameBoardPixiComponent: React.FC<GameBoardProps> = ({
     }),
     [offset.x, offset.y, scale]
   );
+
+  const focusedActionAnchor = useMemo(() => {
+    if (!focusPlayerId || !actionOverlay) return null;
+    if (!actionOverlay.canRoll && !actionOverlay.canMove && !actionOverlay.canOpenQuestionCard && !actionOverlay.isRolling) {
+      return null;
+    }
+    const focused = players.find((player) => player.id === focusPlayerId);
+    if (!focused) return null;
+    const tileId = displayPositions[focused.id] ?? focused.position;
+    const p = points[tileId];
+    if (!p) return null;
+    const tilePlayers = playersByTile.get(tileId) ?? [];
+    const playerIndex = tilePlayers.findIndex((player) => player.id === focused.id);
+    const shownCount = Math.min(tilePlayers.length, 3);
+
+    let avatarX = p.x + TILE_CENTER;
+    if (playerIndex >= 0 && playerIndex < 3) {
+      avatarX = p.x + TILE_CENTER - ((shownCount - 1) * 10) + playerIndex * 20;
+    } else if (playerIndex >= 3) {
+      avatarX = p.x + TILE_CENTER + 22;
+    }
+
+    const avatarY = p.y - 18;
+    return worldToScreen({ x: avatarX, y: avatarY });
+  }, [actionOverlay, displayPositions, focusPlayerId, players, playersByTile, points, worldToScreen]);
+
+  const overlayScale = useMemo(() => {
+    const next = 0.78 + Math.max(0, Math.min(1.2, scale - 0.7)) * 0.2;
+    return Math.max(0.72, Math.min(1.05, next));
+  }, [scale]);
 
   return (
     <div
@@ -699,6 +742,38 @@ const GameBoardPixiComponent: React.FC<GameBoardProps> = ({
             );
           });
       })()}
+
+      {focusedActionAnchor && actionOverlay && (
+        <div
+          className="absolute z-30 -translate-x-1/2 -translate-y-full"
+          style={{ left: focusedActionAnchor.x, top: focusedActionAnchor.y - 10 }}
+          onPointerDown={(e) => e.stopPropagation()}
+          onPointerMove={(e) => e.stopPropagation()}
+          onPointerUp={(e) => e.stopPropagation()}
+          onWheel={(e) => e.stopPropagation()}
+        >
+          <div
+            className="rounded-xl border-2 border-cyan-300/35 bg-slate-900/85 px-2 py-2 shadow-[0_8px_22px_rgba(2,6,23,0.48)] backdrop-blur-sm"
+            style={{ transform: `scale(${overlayScale})`, transformOrigin: "bottom center" }}
+          >
+            <Dice
+              value={actionOverlay.diceValue}
+              rollResult={actionOverlay.rollResult ?? null}
+              pendingDoubleRollFirstDie={actionOverlay.pendingDoubleRollFirstDie ?? null}
+              isRolling={actionOverlay.isRolling}
+              canRoll={actionOverlay.canRoll}
+              canMove={actionOverlay.canMove}
+              canOpenQuestionCard={actionOverlay.canOpenQuestionCard}
+              onRoll={() => actionOverlay.onRoll?.()}
+              onMove={(steps) => actionOverlay.onMove?.(steps)}
+              onOpenQuestionCard={() => actionOverlay.onOpenQuestionCard?.()}
+              playerIndex={actionOverlay.playerIndex ?? 0}
+              compact
+              showCompactDetails={false}
+            />
+          </div>
+        </div>
+      )}
 
       {showControls && (
         <div
@@ -842,6 +917,32 @@ function areMoveTracesEqual(prevTrace: MoveTrace | null | undefined, nextTrace: 
   return true;
 }
 
+function areBoardActionsEqual(prevAction: GameBoardProps["actionOverlay"], nextAction: GameBoardProps["actionOverlay"]) {
+  if (prevAction === nextAction) return true;
+  if (!prevAction || !nextAction) return false;
+  const prevDice = prevAction.rollResult?.dice ?? [];
+  const nextDice = nextAction.rollResult?.dice ?? [];
+  if (prevDice.length !== nextDice.length) return false;
+  for (let i = 0; i < prevDice.length; i += 1) {
+    if (prevDice[i] !== nextDice[i]) return false;
+  }
+  return (
+    prevAction.canRoll === nextAction.canRoll &&
+    prevAction.canMove === nextAction.canMove &&
+    prevAction.canOpenQuestionCard === nextAction.canOpenQuestionCard &&
+    prevAction.isRolling === nextAction.isRolling &&
+    prevAction.diceValue === nextAction.diceValue &&
+    prevAction.pendingDoubleRollFirstDie === nextAction.pendingDoubleRollFirstDie &&
+    prevAction.playerIndex === nextAction.playerIndex &&
+    prevAction.onRoll === nextAction.onRoll &&
+    prevAction.onMove === nextAction.onMove &&
+    prevAction.onOpenQuestionCard === nextAction.onOpenQuestionCard &&
+    (prevAction.rollResult?.bonus ?? null) === (nextAction.rollResult?.bonus ?? null) &&
+    (prevAction.rollResult?.total ?? null) === (nextAction.rollResult?.total ?? null) &&
+    (prevAction.rollResult?.effectType ?? null) === (nextAction.rollResult?.effectType ?? null)
+  );
+}
+
 function areGameBoardPropsEqual(prev: GameBoardProps, next: GameBoardProps) {
   return (
     areTilesEqual(prev.tiles, next.tiles) &&
@@ -851,6 +952,7 @@ function areGameBoardPropsEqual(prev: GameBoardProps, next: GameBoardProps) {
     areMoveTracesEqual(prev.lastMoveTrace, next.lastMoveTrace) &&
     prev.canChoosePath === next.canChoosePath &&
     prev.eventOverlayActive === next.eventOverlayActive &&
+    areBoardActionsEqual(prev.actionOverlay, next.actionOverlay) &&
     prev.onChoosePath === next.onChoosePath &&
     prev.onMoveAnimationEnd === next.onMoveAnimationEnd
   );

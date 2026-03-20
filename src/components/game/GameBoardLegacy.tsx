@@ -1025,6 +1025,32 @@ function areMoveTracesEqual(prevTrace: MoveTrace | null | undefined, nextTrace: 
   return true;
 }
 
+function areBoardActionsEqual(prevAction: GameBoardProps["actionOverlay"], nextAction: GameBoardProps["actionOverlay"]) {
+  if (prevAction === nextAction) return true;
+  if (!prevAction || !nextAction) return false;
+  const prevDice = prevAction.rollResult?.dice ?? [];
+  const nextDice = nextAction.rollResult?.dice ?? [];
+  if (prevDice.length !== nextDice.length) return false;
+  for (let i = 0; i < prevDice.length; i += 1) {
+    if (prevDice[i] !== nextDice[i]) return false;
+  }
+  return (
+    prevAction.canRoll === nextAction.canRoll &&
+    prevAction.canMove === nextAction.canMove &&
+    prevAction.canOpenQuestionCard === nextAction.canOpenQuestionCard &&
+    prevAction.isRolling === nextAction.isRolling &&
+    prevAction.diceValue === nextAction.diceValue &&
+    prevAction.pendingDoubleRollFirstDie === nextAction.pendingDoubleRollFirstDie &&
+    prevAction.playerIndex === nextAction.playerIndex &&
+    prevAction.onRoll === nextAction.onRoll &&
+    prevAction.onMove === nextAction.onMove &&
+    prevAction.onOpenQuestionCard === nextAction.onOpenQuestionCard &&
+    (prevAction.rollResult?.bonus ?? null) === (nextAction.rollResult?.bonus ?? null) &&
+    (prevAction.rollResult?.total ?? null) === (nextAction.rollResult?.total ?? null) &&
+    (prevAction.rollResult?.effectType ?? null) === (nextAction.rollResult?.effectType ?? null)
+  );
+}
+
 function areGameBoardPropsEqual(prev: GameBoardProps, next: GameBoardProps) {
   return (
     areTilesEqual(prev.tiles, next.tiles) &&
@@ -1034,6 +1060,7 @@ function areGameBoardPropsEqual(prev: GameBoardProps, next: GameBoardProps) {
     areMoveTracesEqual(prev.lastMoveTrace, next.lastMoveTrace) &&
     prev.canChoosePath === next.canChoosePath &&
     prev.eventOverlayActive === next.eventOverlayActive &&
+    areBoardActionsEqual(prev.actionOverlay, next.actionOverlay) &&
     prev.onChoosePath === next.onChoosePath &&
     prev.onMoveAnimationEnd === next.onMoveAnimationEnd
   );

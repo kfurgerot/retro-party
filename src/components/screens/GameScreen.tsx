@@ -3,7 +3,6 @@ import { BuzzwordCategory, GameState, ShopItemType, WhoSaidItRole, WhoSaidItView
 import { GameBoard } from "../game/GameBoard";
 import { BoardV2 } from "../game/BoardV2";
 import { PlayerCard } from "../game/PlayerCard";
-import { Dice } from "../game/Dice";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -155,7 +154,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const [turnIntroEndsAt, setTurnIntroEndsAt] = useState<number | null>(null);
   const [bugIntroEndsAt, setBugIntroEndsAt] = useState<number | null>(null);
   const [selectedPreRollType, setSelectedPreRollType] = useState<ShopItemType | null>(null);
-  const [eventPulseEndsAt, setEventPulseEndsAt] = useState<number | null>(null);
   const [isQuestionActionUnlocked, setIsQuestionActionUnlocked] = useState(true);
   const [turnTransitionStartMark] = useState(() => `turn-transition-start-${Date.now()}`);
   const previousTurnKeyRef = useRef<string | null>(null);
@@ -168,8 +166,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const lastWhoSaidItIdleRef = useRef<string | null>(null);
   const turnIntroTimerRef = useRef<number | null>(null);
   const bugIntroTimerRef = useRef<number | null>(null);
-  const eventPulseTimerRef = useRef<number | null>(null);
-  const previousActivityRef = useRef<string>("");
 
   const currentPlayer = gameState.players[gameState.currentPlayerIndex];
   const bugSmashState = gameState.currentMinigame?.minigameId === "BUG_SMASH" ? gameState.currentMinigame : null;
@@ -620,13 +616,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     !!myPlayerId &&
     currentPlayer.id === myPlayerId &&
     gameState.currentQuestion.targetPlayerId === myPlayerId;
-  const showRollOverlay =
-    canRoll ||
-    (isMyTurn && gameState.isRolling && gameState.turnPhase === "rolling");
-  const showOpenCardOverlay = canOpenQuestionCard;
-  const showInlineActionPanel = showRollOverlay || showOpenCardOverlay;
-  // Action buttons are now restored inline in the game HUD.
-  const showFullscreenActionOverlay = false;
   const turnOwnerName = currentPlayer?.name ?? fr.pointDuel.playerFallback;
   const primaryAction = isPathChoiceActive
     ? canChoosePath
@@ -651,24 +640,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     : isMyTurn
     ? fr.gameScreen.actionWaitTurn
     : fr.gameScreen.actionObserve.replace("{name}", turnOwnerName);
-  const canTriggerInlineRollAction =
-    canRoll || (canMove && gameState.diceValue != null);
-  const canTriggerInlineOpenCardAction = canOpenQuestionCard;
-  const handleInlinePrimaryAction = () => {
-    if (showRollOverlay) {
-      if (canRoll) {
-        onRollDice();
-        return;
-      }
-      if (canMove && gameState.diceValue != null) {
-        handleMove(gameState.diceValue);
-      }
-      return;
-    }
-    if (showOpenCardOverlay) {
-      onOpenQuestionCard();
-    }
-  };
   const activityFeedRaw = (gameState.actionLogs ?? [])
     .filter((entry) => entry != null)
     .map((entry) => (typeof entry === "string" ? entry : String(entry)))
@@ -682,9 +653,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       })),
     [activityFeedRaw]
   );
-  const latestActivity = activityFeed[0]?.log ?? fr.gameScreen.noRecentActivity;
-  const latestActivityKind = activityFeed[0]?.kind ?? "system";
-  const isEventPulseActive = eventPulseEndsAt != null;
   const getTurnOrderLabel = useCallback((turnDistance: number) => {
     if (turnDistance === 0) return fr.gameScreen.nowPlaying;
     if (turnDistance === 1) return fr.gameScreen.nextUp;
@@ -701,26 +669,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     onLeave?.();
   };
 
-  useEffect(() => {
-    if (!latestActivity || latestActivity === fr.gameScreen.noRecentActivity) return;
-    if (previousActivityRef.current === latestActivity) return;
-    previousActivityRef.current = latestActivity;
-    if (eventPulseTimerRef.current) {
-      window.clearTimeout(eventPulseTimerRef.current);
-    }
-    setEventPulseEndsAt(Date.now() + 2200);
-    eventPulseTimerRef.current = window.setTimeout(() => {
-      setEventPulseEndsAt(null);
-      eventPulseTimerRef.current = null;
-    }, 2200);
-  }, [latestActivity]);
-
   useEffect(
     () => () => {
-      if (eventPulseTimerRef.current) {
-        window.clearTimeout(eventPulseTimerRef.current);
-        eventPulseTimerRef.current = null;
-      }
       if (questionActionUnlockTimerRef.current) {
         window.clearTimeout(questionActionUnlockTimerRef.current);
         questionActionUnlockTimerRef.current = null;
@@ -878,42 +828,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 
         <div className="mt-2 grid min-h-0 flex-1 grid-cols-1 gap-2 sm:mt-3 lg:grid-cols-[minmax(0,1fr)_340px]">
           <div className="flex min-h-0 flex-col gap-3">
-            <Card
-              className={cn(
-                neonCard,
-                "hidden shrink-0 px-3 py-2 lg:block",
-                isEventPulseActive && "border-cyan-300/50 bg-cyan-500/15 shadow-[0_0_0_2px_rgba(34,211,238,0.28)]"
-              )}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">
-                    {fr.gameScreen.boardEventTitle}
-                  </div>
-                  <div className="mt-1 mb-1">
-                    <span className={cn("inline-flex rounded border px-1.5 py-0.5 text-[10px] uppercase tracking-[0.08em]", activityKindClass[latestActivityKind])}>
-                      {activityKindLabel[latestActivityKind]}
-                    </span>
-                  </div>
-                  <div className="truncate text-sm font-semibold text-cyan-50">{latestActivity}</div>
-                  <div className="truncate text-[11px] text-slate-300">
-                    {isMyTurn
-                      ? fr.gameScreen.boardEventHintPlay
-                      : fr.gameScreen.boardEventHintWatch.replace("{name}", turnOwnerName)}
-                  </div>
-                </div>
-                <span
-                  className={cn(
-                    "inline-flex shrink-0 rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-[0.08em]",
-                    isEventPulseActive
-                      ? "border-cyan-300/50 bg-cyan-500/20 text-cyan-100"
-                      : "border-cyan-300/20 bg-slate-900/35 text-cyan-100/75"
-                  )}
-                >
-                  {isEventPulseActive ? fr.gameScreen.newEvent : fr.gameScreen.live}
-                </span>
-              </div>
-            </Card>
             <div className={cn("min-h-[38svh] flex-1 overflow-hidden p-1 lg:min-h-0", neonPanel)}>
               {ENABLE_BOARD_V2 ? (
                 <BoardV2
@@ -935,6 +849,19 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                   eventOverlayActive={isArrivalEventActive}
                   canChoosePath={canChoosePath}
                   onChoosePath={onChoosePath}
+                  actionOverlay={{
+                    canRoll,
+                    canMove,
+                    canOpenQuestionCard,
+                    isRolling: gameState.isRolling,
+                    diceValue: gameState.diceValue,
+                    rollResult: gameState.lastRollResult ?? null,
+                    pendingDoubleRollFirstDie,
+                    onRoll: onRollDice,
+                    onMove: handleMove,
+                    onOpenQuestionCard,
+                    playerIndex: myIndex,
+                  }}
                   onMoveAnimationEnd={(playerId) => {
                     if (playerId === currentPlayer?.id) setIsMoveAnimating(false);
                   }}
@@ -944,7 +871,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
           </div>
 
           <div className="hidden min-h-0 min-w-0 flex-col gap-3 lg:flex">
-            <Card className={cn(neonCard, "flex min-h-0 flex-col px-3 py-3")}>
+            <Card className={cn(neonCard, "flex min-h-0 flex-1 flex-col px-3 py-3")}>
               <div className="flex items-center justify-between gap-2">
                 <div className="text-base font-bold">
                   {sidebarTab === "players" ? fr.gameScreen.players : fr.gameScreen.legend}
@@ -978,7 +905,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               </div>
 
               {sidebarTab === "players" ? (
-                <div className="mt-3 grid max-h-[58vh] gap-2 overflow-auto pr-1">
+                <div className="mt-3 grid min-h-0 flex-1 gap-2 overflow-auto pr-1">
                   <div className="rounded border border-cyan-300/20 bg-slate-950/30 px-2 py-2 text-xs">
                     <div className="text-cyan-100/80">
                       {fr.gameScreen.nowPlayingLabel} <span className="font-semibold text-cyan-100">{currentPlayer?.name ?? "-"}</span>
@@ -1017,7 +944,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                   ))}
                 </div>
               ) : (
-                <div className="mt-3 grid max-h-[58vh] gap-2 overflow-auto pr-1 text-sm text-cyan-50">
+                <div className="mt-3 grid min-h-0 flex-1 gap-2 overflow-auto pr-1 text-sm text-cyan-50">
                   {legend.map((l) => (
                     <div key={l.k} className="flex items-center gap-2">
                       <span className="inline-flex h-5 w-5 items-center justify-center rounded-sm border border-cyan-300/35 bg-slate-900/60 text-[11px] font-semibold text-cyan-200">
@@ -1030,11 +957,11 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               )}
             </Card>
 
-            <Card className={cn(neonCard, "px-3 py-3")}>
+            <Card className={cn(neonCard, "flex max-h-[32svh] min-h-[170px] shrink-0 flex-col px-3 py-3")}>
               <div className="mb-2 text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">
                 {fr.gameScreen.activityFeed}
               </div>
-              <div className="grid gap-1.5 text-xs text-cyan-50/90">
+              <div className="grid min-h-0 flex-1 gap-1.5 overflow-auto text-xs text-cyan-50/90">
                 {activityFeed.length > 0 ? (
                   activityFeed.map((entry, index) => (
                     <div
@@ -1063,7 +990,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         </div>
         <div className="sticky bottom-0 z-30 mt-1 pb-[env(safe-area-inset-bottom)]">
           <Card className={cn(neonCard, "border px-2 py-1.5 backdrop-blur-md lg:hidden")}>
-            <div className={cn("grid gap-2", showInlineActionPanel ? "grid-cols-3" : "grid-cols-2")}>
+            <div className="grid grid-cols-2 gap-2">
               <Button
                 className="h-10 w-full border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_0_2px_rgba(34,211,238,0.35)] hover:bg-cyan-400"
                 size="sm"
@@ -1083,113 +1010,10 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               >
                 {fr.gameScreen.mobileMenu}
               </Button>
-              {showInlineActionPanel && (
-                <Button
-                  className="h-10 w-full border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_0_2px_rgba(34,211,238,0.35)] hover:bg-cyan-400"
-                  size="sm"
-                  variant="secondary"
-                  disabled={
-                    showRollOverlay ? !canTriggerInlineRollAction : !canTriggerInlineOpenCardAction
-                  }
-                  onClick={handleInlinePrimaryAction}
-                >
-                  {showRollOverlay ? (canMove ? fr.dice.moveShort : fr.dice.rollShort) : fr.dice.openShort}
-                </Button>
-              )}
             </div>
           </Card>
-
-          {showInlineActionPanel && (
-            <div className="hidden lg:flex lg:justify-center">
-              <Card className={cn(neonCard, "w-full max-w-md border px-4 py-3 backdrop-blur-md")}>
-                {showRollOverlay ? (
-                  <div className="flex items-center justify-center">
-                    <Dice
-                      value={gameState.diceValue}
-                      rollResult={gameState.lastRollResult ?? null}
-                      pendingDoubleRollFirstDie={pendingDoubleRollFirstDie}
-                      isRolling={gameState.isRolling}
-                      canRoll={canRoll}
-                      canMove={canMove}
-                      canOpenQuestionCard={false}
-                      onRoll={onRollDice}
-                      onMove={handleMove}
-                      onOpenQuestionCard={onOpenQuestionCard}
-                      playerIndex={myIndex}
-                      compact
-                      showCompactDetails
-                    />
-                  </div>
-                ) : (
-                  <div className="grid gap-2">
-                    <div className="text-[11px] uppercase tracking-[0.1em] text-cyan-100/80">
-                      {fr.gameScreen.primaryAction}
-                    </div>
-                    <Button
-                      className={cn("h-11 w-full text-sm", activeCyanBtn)}
-                      variant="secondary"
-                      disabled={!canTriggerInlineOpenCardAction}
-                      onClick={handleInlinePrimaryAction}
-                    >
-                      {fr.dice.openCard}
-                    </Button>
-                  </div>
-                )}
-              </Card>
-            </div>
-          )}
         </div>
       </div>
-
-      {showFullscreenActionOverlay && (
-        <div className="pointer-events-auto fixed inset-0 z-40 flex items-center justify-center bg-slate-950/78 px-4 backdrop-blur-sm">
-          <Card className={cn(neonCard, "w-full max-w-xl border-cyan-300/40 px-4 py-4 sm:px-6 sm:py-6")}>
-            {showRollOverlay ? (
-              <div className="grid gap-4">
-                <div className="text-center">
-                  <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/75">
-                    {fr.gameScreen.primaryAction}
-                  </div>
-                  <div className="mt-1 text-lg font-bold text-cyan-50">{fr.gameScreen.actionRoll}</div>
-                  <div className="mt-1 text-sm text-slate-300">{fr.gameScreen.fullscreenRollHint}</div>
-                </div>
-                <div className="flex justify-center">
-                  <Dice
-                    value={gameState.diceValue}
-                    rollResult={gameState.lastRollResult ?? null}
-                    pendingDoubleRollFirstDie={pendingDoubleRollFirstDie}
-                    isRolling={gameState.isRolling}
-                    canRoll={canRoll}
-                    canMove={canMove}
-                    canOpenQuestionCard={false}
-                    onRoll={onRollDice}
-                    onMove={handleMove}
-                    onOpenQuestionCard={onOpenQuestionCard}
-                    playerIndex={myIndex}
-                  />
-                </div>
-              </div>
-            ) : (
-              <div className="grid gap-4">
-                <div className="text-center">
-                  <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/75">
-                    {fr.gameScreen.primaryAction}
-                  </div>
-                  <div className="mt-1 text-lg font-bold text-cyan-50">{fr.gameScreen.actionOpenQuestion}</div>
-                  <div className="mt-1 text-sm text-slate-300">{fr.gameScreen.fullscreenQuestionHint}</div>
-                </div>
-                <Button
-                  className={cn("h-12 w-full text-base", activeCyanBtn)}
-                  variant="secondary"
-                  onClick={onOpenQuestionCard}
-                >
-                  {fr.dice.openCard}
-                </Button>
-              </div>
-            )}
-          </Card>
-        </div>
-      )}
 
       <Drawer open={playersOpen} onOpenChange={setPlayersOpen}>
         <DrawerContent className="border-cyan-300/30 bg-slate-950/95 text-cyan-50 lg:hidden">
@@ -1311,36 +1135,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               <div className="text-sm font-semibold text-cyan-100">{primaryAction}</div>
               <div className="text-xs text-cyan-100/90">{infoTitle}</div>
               <div className="text-xs text-slate-300">{infoHint}</div>
-            </div>
-            <div
-              className={cn(
-                "rounded border px-3 py-2",
-                isEventPulseActive
-                  ? "border-cyan-300/45 bg-cyan-500/12 text-cyan-50"
-                  : "border-cyan-300/15 bg-slate-950/20 text-slate-200/90"
-              )}
-            >
-              <div className="mb-1 flex items-center justify-between gap-2">
-                <span className="text-[10px] uppercase tracking-[0.1em] text-cyan-100/75">
-                  {fr.gameScreen.boardEventTitle}
-                </span>
-                <span
-                  className={cn(
-                    "inline-flex rounded-full border px-1.5 py-0.5 text-[9px] uppercase tracking-[0.08em]",
-                    isEventPulseActive
-                      ? "border-cyan-300/45 bg-cyan-500/20 text-cyan-100"
-                      : "border-cyan-300/20 bg-slate-900/35 text-cyan-100/70"
-                  )}
-                >
-                  {isEventPulseActive ? fr.gameScreen.newEvent : fr.gameScreen.live}
-                </span>
-              </div>
-              <div className="mb-1">
-                <span className={cn("inline-flex rounded border px-1.5 py-0.5 text-[10px] uppercase tracking-[0.08em]", activityKindClass[latestActivityKind])}>
-                  {activityKindLabel[latestActivityKind]}
-                </span>
-              </div>
-              <div className="text-xs font-semibold">{latestActivity}</div>
             </div>
           </div>
         </DrawerContent>

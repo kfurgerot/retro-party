@@ -67,6 +67,17 @@ const DiceFace: React.FC<{ value: number }> = ({ value }) => {
   );
 };
 
+const CardFace: React.FC = () => {
+  return (
+    <div className="relative flex h-20 w-20 items-center justify-center border-4 border-primary bg-foreground">
+      <div className="absolute inset-1 border-2 border-primary/60" />
+      <span className="font-pixel text-[10px] text-background">CARTE</span>
+      <span className="absolute right-1 top-1 text-[10px] text-background">★</span>
+      <span className="absolute bottom-1 left-1 text-[10px] text-background">★</span>
+    </div>
+  );
+};
+
 const DiceComponent: React.FC<DiceProps> = ({
   value,
   rollResult = null,
@@ -98,6 +109,7 @@ const DiceComponent: React.FC<DiceProps> = ({
   const hasInvalidRollResult = !!rollResult && (!Array.isArray(rollResult.dice) || rollResult.dice.length === 0);
 
   const disabled = !canRoll && !canMove && !canOpen;
+  const showCardFace = canOpen && !canRoll && !canMove && !isRolling;
 
   const handleAction = () => {
     if (canRoll) return onRoll();
@@ -153,7 +165,7 @@ const DiceComponent: React.FC<DiceProps> = ({
   return (
     <div className={cn("flex flex-col items-center", compact ? "gap-2" : "gap-4")}>
       <div className={cn("transition-transform", isRolling && "animate-dice-roll")}>
-        <DiceFace value={value ?? lastRolledValue} />
+        {showCardFace ? <CardFace /> : <DiceFace value={value ?? lastRolledValue} />}
       </div>
 
       <button
