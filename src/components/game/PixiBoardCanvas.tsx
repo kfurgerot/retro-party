@@ -65,8 +65,6 @@ const TILE_ICON: Record<string, string> = {
 };
 
 export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
-  width,
-  height,
   scale,
   offset,
   tiles,
@@ -457,9 +455,13 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
     }
     const avatarY = p.y + tileCenter;
 
-    const anchorX = avatarX * scale + offset.x;
-    const anchorY = avatarY * scale + offset.y;
-    const actionScale = Math.max(0.72, Math.min(1.08, 0.8 + (scale - 0.7) * 0.2));
+    const host = hostRef.current;
+    const viewWidth = host?.clientWidth ?? app?.screen.width ?? 1;
+    const viewHeight = host?.clientHeight ?? app?.screen.height ?? 1;
+    const anchorX = viewWidth * 0.5;
+    const bottomInset = Math.max(72, Math.min(112, viewHeight * 0.16));
+    const anchorY = viewHeight - bottomInset;
+    const actionScale = Math.max(0.82, Math.min(1.1, viewWidth / 900));
 
     const isCardMode = actionOverlay.canOpenQuestionCard;
     const { panel: topPanel, separator } = createGamePanel();
@@ -572,14 +574,7 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
 
   return (
     <div className="absolute inset-0 p-2">
-      <div
-        ref={hostRef}
-        className="h-full w-full"
-        style={{
-          minWidth: Math.max(width, 1),
-          minHeight: Math.max(height, 1),
-        }}
-      />
+      <div ref={hostRef} className="h-full w-full" />
     </div>
   );
 };

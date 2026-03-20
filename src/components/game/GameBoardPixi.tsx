@@ -315,33 +315,17 @@ const GameBoardPixiComponent: React.FC<GameBoardProps> = ({
       return false;
     }
 
-    const focusedPlayer = players.find((player) => player.id === focusPlayerId);
-    if (!focusedPlayer) return false;
-    const tileId = displayPositions[focusedPlayer.id] ?? focusedPlayer.position;
-    const p = points[tileId];
-    if (!p) return false;
-
     const el = containerRef.current;
     if (!el) return false;
     const rect = el.getBoundingClientRect();
 
-    const tilePlayers = players.filter((player) => (displayPositions[player.id] ?? player.position) === tileId);
-    const playerIndex = tilePlayers.findIndex((player) => player.id === focusPlayerId);
-    const shownCount = Math.min(tilePlayers.length, 3);
-
-    let avatarX = p.x + TILE_CENTER;
-    if (playerIndex >= 0 && playerIndex < 3) {
-      avatarX = p.x + TILE_CENTER - ((shownCount - 1) * 10) + playerIndex * 20;
-    } else if (playerIndex >= 3) {
-      avatarX = p.x + TILE_CENTER + 22;
-    }
-    const avatarY = p.y + TILE_CENTER;
-
-    // Matches PixiBoardCanvas action panel placement (above active player).
-    const canvasInset = 8;
-    const anchorX = avatarX * scale + offset.x + canvasInset;
-    const anchorY = avatarY * scale + offset.y + canvasInset;
-    const actionScale = Math.max(0.72, Math.min(1.08, 0.8 + (scale - 0.7) * 0.2));
+    // Matches PixiBoardCanvas action panel placement (bottom centered).
+    const anchorX = rect.width * 0.5;
+    const hostHeight = Math.max(1, rect.height - 16);
+    const bottomInset = Math.max(72, Math.min(112, hostHeight * 0.16));
+    const anchorY = 8 + hostHeight - bottomInset;
+    const hostWidth = Math.max(1, rect.width - 16);
+    const actionScale = Math.max(0.82, Math.min(1.1, hostWidth / 900));
 
     const halfWidth = ACTION_OVERLAY_HITBOX.halfWidth * actionScale;
     const topY = ACTION_OVERLAY_HITBOX.topY * actionScale;
@@ -358,13 +342,7 @@ const GameBoardPixiComponent: React.FC<GameBoardProps> = ({
     );
   }, [
     actionOverlay,
-    displayPositions,
     focusPlayerId,
-    offset.x,
-    offset.y,
-    players,
-    points,
-    scale,
   ]);
 
   const onPointerDown: React.PointerEventHandler<HTMLDivElement> = (e) => {
