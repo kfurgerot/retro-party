@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { fr } from "@/i18n/fr";
+import { ChoiceCard } from "./hud";
 
 type ItemChoice = {
   type: ShopItemType;
@@ -57,27 +58,15 @@ export const PreRollChoiceModal: React.FC<PreRollChoiceModalProps> = ({
           {items.map((item) => {
             const isSelected = selectedType === item.type;
             return (
-              <button
+              <ChoiceCard
                 key={item.type}
-                type="button"
+                title={item.label}
+                description={item.description}
+                quantityLabel={`x${item.count}`}
+                selected={isSelected}
                 disabled={!canInteract}
-                className={cn(
-                  "w-full rounded-md border p-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
-                  isSelected
-                    ? "border-cyan-300 bg-cyan-500/20"
-                    : "border-cyan-300/25 bg-slate-900/55",
-                  !canInteract && "cursor-not-allowed opacity-60"
-                )}
                 onClick={() => onSelectType(item.type)}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="text-sm font-semibold">{item.label}</div>
-                    <div className="text-xs text-slate-300 mt-1">{item.description}</div>
-                  </div>
-                  <div className="text-sm font-bold text-cyan-200">x{item.count}</div>
-                </div>
-              </button>
+              />
             );
           })}
         </div>

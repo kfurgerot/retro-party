@@ -1,12 +1,13 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
+import { Button as UiButton } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api, HostUser, TemplateItem } from "@/net/api";
 import { RetroScreenBackground } from "@/components/screens/RetroScreenBackground";
 import { fr } from "@/i18n/fr";
+import { Input, PrimaryButton, SecondaryButton } from "@/components/app-shell";
+import { cn } from "@/lib/utils";
 import {
   CTA_NEON_DANGER,
   CTA_NEON_PRIMARY,
@@ -187,13 +188,12 @@ const PreparePage = () => {
           <CardTitle className="text-base font-semibold uppercase tracking-[0.14em] text-cyan-100/90 break-words">
             {title}
           </CardTitle>
-          <Button
-            variant="secondary"
+          <SecondaryButton
             onClick={() => navigate("/")}
-            className={`w-full sm:w-auto ${neutralSecondaryBtn}`}
+            className={cn(`w-full sm:w-auto ${neutralSecondaryBtn}`)}
           >
             {fr.prepare.home}
-          </Button>
+          </SecondaryButton>
         </CardHeader>
         <CardContent className="space-y-4">
           {loading && <p className="text-sm text-slate-300">{fr.prepare.loading}</p>}
@@ -201,24 +201,25 @@ const PreparePage = () => {
           {infoMessage && <p className="text-sm text-emerald-300">{infoMessage}</p>}
 
           {!loading && !user && (
-            <form onSubmit={submitAuth} className="neon-surface grid gap-3 p-3 sm:p-4">
+            <form
+              onSubmit={submitAuth}
+              className="grid gap-3 rounded-xl border border-cyan-300/20 bg-slate-900/45 p-3 sm:p-4"
+            >
               <div className="flex gap-2">
-                <Button
+                <SecondaryButton
                   type="button"
-                  variant="secondary"
                   className={authMode === "login" ? activeCyanBtn : neutralSecondaryBtn}
                   onClick={() => setAuthMode("login")}
                 >
                   {fr.prepare.login}
-                </Button>
-                <Button
+                </SecondaryButton>
+                <SecondaryButton
                   type="button"
-                  variant="secondary"
                   className={authMode === "register" ? activeCyanBtn : neutralSecondaryBtn}
                   onClick={() => setAuthMode("register")}
                 >
                   {fr.prepare.register}
-                </Button>
+                </SecondaryButton>
               </div>
               {authMode === "register" && (
                 <div className="grid gap-1">
@@ -252,20 +253,20 @@ const PreparePage = () => {
                   required
                 />
               </div>
-              <Button type="submit" variant="secondary" className={`w-full sm:w-fit ${activeCyanBtn}`}>
+              <PrimaryButton type="submit" className={`w-full sm:w-fit ${activeCyanBtn}`}>
                 {authMode === "register" ? fr.prepare.createAccount : fr.prepare.signIn}
-              </Button>
+              </PrimaryButton>
               {authMode === "login" && (
-                <Button type="button" variant="link" className="w-fit p-0" onClick={submitForgotPassword}>
+                <UiButton type="button" variant="link" className="w-fit p-0" onClick={submitForgotPassword}>
                   {fr.prepare.forgotPassword}
-                </Button>
+                </UiButton>
               )}
             </form>
           )}
 
           {!loading && user && (
             <>
-              <div className="neon-surface flex flex-wrap items-end gap-2 p-3 sm:p-4">
+              <div className="flex flex-wrap items-end gap-2 rounded-xl border border-cyan-300/20 bg-slate-900/45 p-3 sm:p-4">
                 <div className="w-full min-w-0 flex-1 space-y-1 sm:min-w-56">
                   <Label htmlFor="templateName">{fr.prepare.newTemplate}</Label>
                   <Input
@@ -284,21 +285,19 @@ const PreparePage = () => {
                     placeholder={fr.prepare.optional}
                   />
                 </div>
-                <Button
-                  variant="secondary"
+                <PrimaryButton
                   onClick={submitCreateTemplate}
                   disabled={creatingTemplate}
-                  className={`w-full sm:w-auto ${activeCyanBtn}`}
+                  className={cn(`w-full sm:w-auto ${activeCyanBtn}`)}
                 >
                   {creatingTemplate ? fr.prepare.creating : fr.prepare.create}
-                </Button>
-                <Button
-                  variant="secondary"
+                </PrimaryButton>
+                <SecondaryButton
                   onClick={handleLogout}
-                  className={`w-full sm:w-auto ${neutralSecondaryBtn}`}
+                  className={cn(`w-full sm:w-auto ${neutralSecondaryBtn}`)}
                 >
                   {fr.prepare.logout}
-                </Button>
+                </SecondaryButton>
               </div>
 
               {loadingTemplates ? (
@@ -310,34 +309,31 @@ const PreparePage = () => {
                   {templates.map((template) => (
                     <div
                       key={template.id}
-                      className="neon-surface flex flex-wrap items-center justify-between gap-3 p-3 sm:p-4"
+                      className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-cyan-300/20 bg-slate-900/45 p-3 sm:p-4"
                     >
                       <div className="min-w-0 flex-1">
                         <p className="font-semibold text-cyan-100 break-words">{template.name}</p>
                         <p className="text-xs text-slate-300 break-words">{template.description || fr.prepare.noDescription}</p>
                       </div>
                       <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
-                        <Button
-                          variant="secondary"
-                          className={`w-full sm:w-auto ${neutralSecondaryBtn}`}
+                        <SecondaryButton
+                          className={cn(`w-full sm:w-auto ${neutralSecondaryBtn}`)}
                           onClick={() => navigate(`/prepare/templates/${template.id}`)}
                         >
                           {fr.prepare.edit}
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          className={`w-full sm:w-auto ${activeCyanBtn}`}
+                        </SecondaryButton>
+                        <PrimaryButton
+                          className={cn(`w-full sm:w-auto ${activeCyanBtn}`)}
                           onClick={() => launchTemplate(template.id)}
                         >
                           {fr.prepare.launchParty}
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          className={`w-full sm:w-auto ${dangerBtn}`}
+                        </PrimaryButton>
+                        <SecondaryButton
+                          className={cn(`w-full sm:w-auto ${dangerBtn}`)}
                           onClick={() => deleteTemplate(template.id)}
                         >
                           {fr.prepare.delete}
-                        </Button>
+                        </SecondaryButton>
                       </div>
                     </div>
                   ))}

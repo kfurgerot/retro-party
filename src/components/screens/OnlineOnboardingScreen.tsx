@@ -1,11 +1,9 @@
 import React, { useMemo, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { AVATARS } from "@/types/game";
 import { cn } from "@/lib/utils";
 import { RetroScreenBackground } from "./RetroScreenBackground";
 import { fr } from "@/i18n/fr";
-import { CTA_NEON_PRIMARY, CTA_NEON_SECONDARY } from "@/lib/uiTokens";
+import { Card, Input, PrimaryButton, SecondaryButton, SectionHeader } from "@/components/app-shell";
 
 interface OnlineOnboardingScreenProps {
   connected: boolean;
@@ -91,7 +89,7 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
         </div>
 
         <div className="mt-6 grid flex-1 content-start gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">
-          <div className="neon-surface rounded-md p-4 sm:p-5">
+          <Card className="rounded-md p-4 sm:p-5">
             {step === 1 && (
               <div className="space-y-2">
                 <label htmlFor="display-name" className="text-xs text-slate-300 sm:text-sm">
@@ -138,12 +136,10 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
                 )}
               </div>
             )}
-          </div>
+          </Card>
 
-          <div className="neon-surface rounded-md p-4">
-            <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">
-              {fr.onlineLobby.profileTitle}
-            </div>
+          <Card className="rounded-md p-4">
+            <SectionHeader title={fr.onlineLobby.profileTitle} />
             <div className="mt-3 flex items-center gap-3 rounded border border-cyan-300/25 bg-slate-900/55 px-3 py-2">
               <span className="inline-flex h-10 w-10 items-center justify-center rounded border border-cyan-300/30 bg-slate-950/65 text-2xl">
                 {AVATARS[avatar] ?? "?"}
@@ -169,37 +165,36 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
                 </span>
               </div>
             </div>
-          </div>
+          </Card>
         </div>
 
         <div className="mt-6 flex justify-between gap-2">
-          <Button
+          <SecondaryButton
             type="button"
-            variant="secondary"
-            className={CTA_NEON_SECONDARY}
+            className="h-11"
             onClick={goBack}
           >
             {step === 1 ? fr.onlineOnboarding.back : fr.onlineOnboarding.previous}
-          </Button>
+          </SecondaryButton>
 
           {step === 1 ? (
-            <Button
+            <PrimaryButton
               type="button"
               onClick={goNext}
               disabled={!validName}
-              className={`font-semibold ${CTA_NEON_PRIMARY}`}
+              className="font-semibold"
             >
               {fr.onlineOnboarding.next}
-            </Button>
+            </PrimaryButton>
           ) : (
-            <Button
+            <PrimaryButton
               type="button"
               disabled={!canSubmit}
               onClick={() => onSubmit({ name: cleanName(name), avatar })}
-              className={`h-11 px-6 text-sm font-semibold uppercase tracking-wide ${CTA_NEON_PRIMARY}`}
+              className="h-11 px-6 text-sm font-semibold uppercase tracking-wide"
             >
               {fr.onlineOnboarding.continue}
-            </Button>
+            </PrimaryButton>
           )}
         </div>
       </div>

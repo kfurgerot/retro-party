@@ -1,0 +1,52 @@
+import React from "react";
+import { cn } from "@/lib/utils";
+
+interface ShopItemCardProps {
+  title: string;
+  description: string;
+  costLabel: string;
+  buyLabel: string;
+  canBuy: boolean;
+  canInteract: boolean;
+  onBuy: () => void;
+  buyButtonClass: string;
+}
+
+export const ShopItemCard: React.FC<ShopItemCardProps> = ({
+  title,
+  description,
+  costLabel,
+  buyLabel,
+  canBuy,
+  canInteract,
+  onBuy,
+  buyButtonClass,
+}) => {
+  return (
+    <div className="rounded-xl border border-cyan-300/25 bg-slate-900/55 p-3">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-sm font-semibold text-cyan-50">{title}</div>
+          <div className="mt-1 text-xs text-slate-300">{description}</div>
+        </div>
+        <div className="text-sm font-bold text-amber-300">{costLabel}</div>
+      </div>
+      <div className="mt-2 flex justify-end">
+        <button
+          type="button"
+          disabled={!canInteract || !canBuy}
+          className={cn(
+            "rounded-lg border px-3 py-1.5 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
+            canInteract && canBuy
+              ? buyButtonClass
+              : "cursor-not-allowed border-slate-500 bg-slate-700/60 text-slate-300"
+          )}
+          onClick={onBuy}
+        >
+          {buyLabel}
+        </button>
+      </div>
+    </div>
+  );
+};
+

@@ -25,6 +25,7 @@ import {
 import { cn } from "@/lib/utils";
 import { RetroScreenBackground } from "./RetroScreenBackground";
 import { LaunchAnnouncement } from "../game/LaunchAnnouncement";
+import { ActionBadge, TurnBanner } from "../game/hud";
 import { SHOP_CATALOG } from "@/data/shopCatalog";
 import { fr } from "@/i18n/fr";
 import {
@@ -750,13 +751,13 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     minigame: fr.gameScreen.activityTypeMinigame,
     system: fr.gameScreen.activityTypeSystem,
   };
-  const activityKindClass: Record<ActivityKind, string> = {
-    move: "border-sky-300/35 bg-sky-500/12 text-sky-100",
-    decision: "border-amber-300/35 bg-amber-500/12 text-amber-100",
-    question: "border-violet-300/35 bg-violet-500/12 text-violet-100",
-    shop: "border-orange-300/35 bg-orange-500/12 text-orange-100",
-    minigame: "border-emerald-300/35 bg-emerald-500/12 text-emerald-100",
-    system: "border-cyan-300/25 bg-slate-900/35 text-cyan-100/85",
+  const activityKindClass: Record<ActivityKind, "move" | "decision" | "question" | "shop" | "minigame" | "system"> = {
+    move: "move",
+    decision: "decision",
+    question: "question",
+    shop: "shop",
+    minigame: "minigame",
+    system: "system",
   };
 
   const handleConfirmPreRollChoice = (itemType: ShopItemType) => {
@@ -773,104 +774,61 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       <div className="relative z-10 flex h-svh w-full flex-col overflow-hidden p-2 sm:p-3">
         <div className="neon-surface-soft p-1.5 sm:p-2">
           <div className="lg:hidden">
-            <Card className={cn(neonCard, "px-2.5 py-2")}>
-              <div className="flex items-center justify-between gap-2">
-                <div className="text-[10px] uppercase tracking-[0.1em] text-cyan-100/80">
-                  {fr.gameScreen.currentTurn}
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="inline-flex rounded border border-cyan-300/30 bg-slate-900/45 px-1.5 py-0.5 text-[10px] text-cyan-100">
-                    {fr.gameScreen.points}: {myPoints}
-                  </span>
-                  <span className="inline-flex rounded border border-cyan-300/30 bg-slate-900/45 px-1.5 py-0.5 text-[10px] text-cyan-100">
-                    {fr.gameScreen.kudobox}: {myStars}
-                  </span>
-                  {isMyTurn && (
-                    <span className="inline-flex rounded-full border border-cyan-300/45 bg-cyan-500/15 px-2 py-0.5 text-[10px] text-cyan-100">
-                      {fr.gameScreen.you}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div className="truncate text-sm font-bold text-cyan-50">{currentPlayer?.name ?? "-"}</div>
-              <div className="truncate text-[10px] text-cyan-100/85">
-                {primaryAction}
-              </div>
-              <div className="mt-1.5 flex items-center gap-1.5 overflow-x-auto pb-0.5">
-                {turnQueue.slice(0, 3).map((entry) => (
-                  <span
-                    key={`mobile-turn-${entry.player.id}`}
-                    className={cn(
-                      "inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[10px]",
-                      entry.isCurrent
-                        ? "border-cyan-300/45 bg-cyan-500/15 text-cyan-100"
-                        : entry.isNext
-                        ? "border-emerald-300/40 bg-emerald-500/12 text-emerald-100"
-                        : "border-cyan-300/20 bg-slate-900/35 text-slate-200"
-                    )}
-                  >
-                    {entry.player.name}
-                  </span>
-                ))}
-                {turnQueue.length > 3 && (
-                  <span className="inline-flex shrink-0 items-center rounded-full border border-cyan-300/20 bg-slate-900/35 px-2 py-0.5 text-[10px] text-slate-300">
-                    +{turnQueue.length - 3}
-                  </span>
-                )}
-              </div>
-              <div className="mt-1.5 h-1 w-full overflow-hidden rounded bg-slate-900/60">
-                <div className="h-full rounded bg-cyan-400/90" style={{ width: `${roundProgressPct}%` }} />
-              </div>
-              <div className="mt-1 text-[10px] text-slate-300">
-                {fr.gameScreen.round} {gameState.currentRound}/{gameState.maxRounds}
-              </div>
-            </Card>
+            <TurnBanner
+              mode="mobile"
+              currentTurnLabel={fr.gameScreen.currentTurn}
+              currentPlayerName={currentPlayer?.name ?? "-"}
+              primaryAction={primaryAction}
+              pointsLabel={fr.gameScreen.points}
+              starsLabel={fr.gameScreen.kudobox}
+              myPoints={myPoints}
+              myStars={myStars}
+              isMyTurn={isMyTurn}
+              youLabel={fr.gameScreen.you}
+              roundLabel={fr.gameScreen.round}
+              currentRound={gameState.currentRound}
+              maxRounds={gameState.maxRounds}
+              roundProgressPct={roundProgressPct}
+              nextUpLabel={fr.gameScreen.nextUpLabel}
+              nextPlayerName={nextPlayer?.name ?? "-"}
+              turnQueue={turnQueue.map((entry) => ({
+                id: entry.player.id,
+                name: entry.player.name,
+                isCurrent: entry.isCurrent,
+                isNext: entry.isNext,
+              }))}
+              neonCardClass={neonCard}
+            />
           </div>
 
-          <div className="hidden lg:flex lg:flex-wrap lg:items-center lg:justify-between lg:gap-3">
-            <Card className={cn(neonCard, "min-w-0 px-3 py-2 sm:px-4 sm:py-3")}>
-              <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">
-                {fr.gameScreen.round}
-              </div>
-              <div className="text-lg font-bold sm:text-xl">
-                {gameState.currentRound} / {gameState.maxRounds}
-              </div>
-            </Card>
-
-            <Card className={cn(neonCard, "min-w-0 px-3 py-2 sm:px-4 sm:py-3")}>
-              <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">
-                {fr.gameScreen.currentTurn}
-              </div>
-              <div className="truncate text-lg font-bold sm:text-xl">{currentPlayer?.name ?? "-"}</div>
-              <div className="mt-1 truncate text-xs text-slate-300">
-                {fr.gameScreen.nextUpLabel}: <span className="font-semibold text-slate-200">{nextPlayer?.name ?? "-"}</span>
-              </div>
-            </Card>
-
-            <Card className={cn(neonCard, "min-w-0 px-3 py-2 sm:px-4 sm:py-3")}>
-              <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">
-                {fr.gameScreen.points}
-              </div>
-              <div className="text-lg font-bold sm:text-xl">{myPoints}</div>
-            </Card>
-
-            <Card className={cn(neonCard, "min-w-0 px-3 py-2 sm:px-4 sm:py-3")}>
-              <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">
-                {fr.gameScreen.kudobox}
-              </div>
-              <div className="text-lg font-bold sm:text-xl">{myStars}</div>
-            </Card>
-
-            {onLeave && (
-              <Button
-                className={cn("hidden lg:inline-flex", dangerLeaveBtn)}
-                variant="secondary"
-                onClick={requestLeave}
-              >
-                {fr.gameScreen.leaveGame}
-              </Button>
-            )}
-          </div>
+          <TurnBanner
+            mode="desktop"
+            currentTurnLabel={fr.gameScreen.currentTurn}
+            currentPlayerName={currentPlayer?.name ?? "-"}
+            primaryAction={primaryAction}
+            pointsLabel={fr.gameScreen.points}
+            starsLabel={fr.gameScreen.kudobox}
+            myPoints={myPoints}
+            myStars={myStars}
+            isMyTurn={isMyTurn}
+            youLabel={fr.gameScreen.you}
+            roundLabel={fr.gameScreen.round}
+            currentRound={gameState.currentRound}
+            maxRounds={gameState.maxRounds}
+            roundProgressPct={roundProgressPct}
+            nextUpLabel={fr.gameScreen.nextUpLabel}
+            nextPlayerName={nextPlayer?.name ?? "-"}
+            turnQueue={turnQueue.map((entry) => ({
+              id: entry.player.id,
+              name: entry.player.name,
+              isCurrent: entry.isCurrent,
+              isNext: entry.isNext,
+            }))}
+            neonCardClass={neonCard}
+            onLeave={onLeave ? requestLeave : undefined}
+            leaveLabel={fr.gameScreen.leaveGame}
+            leaveBtnClass={dangerLeaveBtn}
+          />
         </div>
 
         <div className="mt-2 grid min-h-0 flex-1 grid-cols-1 gap-2 sm:mt-3 lg:grid-cols-[minmax(0,1fr)_340px]">
@@ -1019,9 +977,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                       )}
                     >
                       <div className="mb-1">
-                        <span className={cn("inline-flex rounded border px-1.5 py-0.5 text-[10px] uppercase tracking-[0.08em]", activityKindClass[entry.kind])}>
-                          {activityKindLabel[entry.kind]}
-                        </span>
+                        <ActionBadge label={activityKindLabel[entry.kind]} tone={activityKindClass[entry.kind]} className="rounded border px-1.5 py-0.5" />
                       </div>
                       <div>{entry.log}</div>
                     </div>

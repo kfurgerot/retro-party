@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { AVATARS } from "@/types/game";
 import { cn } from "@/lib/utils";
 import { fr } from "@/i18n/fr";
+import { ActionBadge, PlayerBadge } from "./hud";
 
 interface BuzzwordDuelMinigameProps {
   state: BuzzwordDuelState;
@@ -173,6 +174,23 @@ export const BuzzwordDuelMinigame: React.FC<BuzzwordDuelMinigameProps> = ({
           >
             BULLSHIT (2)
           </Button>
+        </div>
+
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <PlayerBadge
+            name={leftPlayer?.name ?? "-"}
+            avatar={leftPlayer ? AVATARS[leftPlayer.avatar] ?? "?" : undefined}
+            roleLabel={fr.pointDuel.attacker}
+            highlighted={state.phase === "word" || state.phase === "sudden_death"}
+            rightSlot={<ActionBadge tone="active" label={`${leftScore}`} className="tracking-normal px-2 py-1" />}
+          />
+          <PlayerBadge
+            name={rightPlayer?.name ?? "-"}
+            avatar={rightPlayer ? AVATARS[rightPlayer.avatar] ?? "?" : undefined}
+            roleLabel={fr.pointDuel.defender}
+            highlighted={state.phase === "word" || state.phase === "sudden_death"}
+            rightSlot={<ActionBadge tone="active" label={`${rightScore}`} className="tracking-normal px-2 py-1" />}
+          />
         </div>
 
         <div className="text-center text-sm text-cyan-100/85">

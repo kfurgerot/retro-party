@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { fr } from "@/i18n/fr";
+import { ShopItemCard } from "./hud";
 
 interface ShopModalProps {
   open: boolean;
@@ -47,30 +48,17 @@ export const ShopModal: React.FC<ShopModalProps> = ({
           {items.map((item) => {
             const canAfford = points >= item.cost;
             return (
-              <div key={item.type} className="rounded-md border border-cyan-300/25 bg-slate-900/55 p-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="text-sm font-semibold">{item.label}</div>
-                    <div className="text-xs text-slate-300 mt-1">{item.description}</div>
-                  </div>
-                  <div className="text-sm font-bold text-amber-300">{item.cost} {fr.shopModal.pointsUnit}</div>
-                </div>
-                <div className="mt-2 flex justify-end">
-                  <button
-                    type="button"
-                    disabled={!canInteract || !canAfford}
-                    className={cn(
-                      "rounded border px-3 py-1 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
-                      canInteract && canAfford
-                        ? activeBtnClass
-                        : "border-slate-500 bg-slate-700/60 text-slate-300 cursor-not-allowed"
-                    )}
-                    onClick={() => onBuy(item.type)}
-                  >
-                    {fr.shopModal.buy}
-                  </button>
-                </div>
-              </div>
+              <ShopItemCard
+                key={item.type}
+                title={item.label}
+                description={item.description}
+                costLabel={`${item.cost} ${fr.shopModal.pointsUnit}`}
+                buyLabel={fr.shopModal.buy}
+                canBuy={canAfford}
+                canInteract={canInteract}
+                onBuy={() => onBuy(item.type)}
+                buyButtonClass={activeBtnClass}
+              />
             );
           })}
         </div>

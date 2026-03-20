@@ -3,6 +3,7 @@ import { AVATARS, MoveTrace, PendingPathChoice, Player, Tile } from "@/types/gam
 import { cn } from "@/lib/utils";
 import { GameBoardProps } from "./gameBoardTypes";
 import { PixiBoardCanvas, PixiFloatingDelta } from "./PixiBoardCanvas";
+import { ACTION_OVERLAY_HITBOX } from "./pixi-ui/theme";
 
 type Point = { x: number; y: number };
 
@@ -343,10 +344,10 @@ const GameBoardPixiComponent: React.FC<GameBoardProps> = ({
     const anchorY = avatarY * scale + offset.y + canvasInset;
     const actionScale = Math.max(0.72, Math.min(1.08, 0.8 + (scale - 0.7) * 0.2));
 
-    const halfWidth = 84 * actionScale;
-    const topY = -118 * actionScale;
-    const bottomY = 19 * actionScale;
-    const safePad = 8;
+    const halfWidth = ACTION_OVERLAY_HITBOX.halfWidth * actionScale;
+    const topY = ACTION_OVERLAY_HITBOX.topY * actionScale;
+    const bottomY = ACTION_OVERLAY_HITBOX.bottomY * actionScale;
+    const safePad = ACTION_OVERLAY_HITBOX.safePadding;
 
     const localX = clientX - rect.left - anchorX;
     const localY = clientY - rect.top - anchorY;

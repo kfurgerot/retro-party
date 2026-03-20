@@ -123,3 +123,40 @@ Recommandation P3: passer a un **plateau hybride etapes + noeuds**.
 3. Refondre `OnlineLobbyScreen` version host-first (readiness, blocages, lancement guide).
 4. Introduire `BoardV2` en parallele du plateau legacy.
 
+## 10. Plan de refonte technique (React vs Pixi)
+
+### Separation stricte des responsabilites
+- React (app shell): auth, home, onboarding, lobby, prepare, template editor, modales globales, navigation.
+- Pixi (in-game): rendu plateau, actions contextuelles du tour, feedback visuel de lancer, badges in-canvas, animations courtes.
+
+### Architecture cible des dossiers
+```text
+src/
+  components/
+    app-shell/              # UI applicative reusable (hors partie)
+      PrimaryButton.tsx
+      SecondaryButton.tsx
+      Card.tsx
+      Modal.tsx
+      Input.tsx
+      AuthLayout.tsx
+      LobbyCard.tsx
+      SectionHeader.tsx
+    game/
+      pixi-ui/              # Primitives UI Pixi homogenes
+        theme.ts
+        GamePanel.ts
+        GameButton.ts
+        DiceResultCard.ts
+      PixiBoardCanvas.tsx
+      GameBoardPixi.tsx
+  lib/
+    uiTokens.ts             # Tokens centralises app shell + conventions de surface
+```
+
+### Migration etape par etape
+1. Fondations: tokens centralises et composants app-shell.
+2. Ecrans hors partie: migration Home + Lobby vers app-shell.
+3. In-game: factorisation de l'overlay action Pixi en primitives reusables.
+4. HUD/UX: harmonisation des etats de tour et des CTA prioritaires.
+5. Nettoyage: suppression progressive des styles redondants, conservation des feature flags.

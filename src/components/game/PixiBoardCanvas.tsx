@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useRef } from "react";
 import { Application, Container, Graphics, Text, TextStyle } from "pixi.js";
 import { AVATARS, Player, Tile } from "@/types/game";
-import { FancyButton } from "@pixi/ui";
 import { BoardActionOverlay } from "./gameBoardTypes";
+import { createGameButton } from "./pixi-ui/GameButton";
+import { createGamePanel } from "./pixi-ui/GamePanel";
+import { createDiceResultCard } from "./pixi-ui/DiceResultCard";
 
 type Point = { x: number; y: number };
 
@@ -413,126 +415,42 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
     const anchorY = avatarY * scale + offset.y;
     const actionScale = Math.max(0.72, Math.min(1.08, 0.8 + (scale - 0.7) * 0.2));
 
-    const buttonWidth = 154;
-    const buttonHeight = 42;
     const isCardMode = actionOverlay.canOpenQuestionCard;
-    const topPanel = new Graphics();
-    topPanel.lineStyle(2, 0x67e8f9, 0.45, 0.5, true);
-    topPanel.beginFill(0x0f172a, 0.9);
-    topPanel.drawRoundedRect(-94, -118, 188, 124, 12);
-    topPanel.endFill();
-    const separator = new Graphics();
-    separator.lineStyle(2, 0x67e8f9, 0.3, 0.5, true);
-    separator.moveTo(-76, -26);
-    separator.lineTo(76, -26);
+    const { panel: topPanel, separator } = createGamePanel();
 
     const modeText = actionOverlay.canOpenQuestionCard
       ? "Ouvrir carte"
       : actionOverlay.canMove
         ? `Avancer ${actionOverlay.diceValue ?? ""}`.trim()
         : actionOverlay.canRoll
-          ? "Lancer de"
+          ? "Lancer dé"
           : "Action";
     const resolvedRollValue =
       actionOverlay.rollResult?.total ??
       (actionOverlay.diceValue != null ? actionOverlay.diceValue : null);
 
-    const face = new Graphics();
-    face.lineStyle(2, 0x0f172a, 0.95, 0.5, true);
-    face.beginFill(0xf8fafc, 1);
-    face.drawRoundedRect(-32, -95, 64, 64, 8);
-    face.endFill();
-    if (!isCardMode) {
-      const rollLabel = actionOverlay.isRolling ? "?" : String(resolvedRollValue ?? "?");
-      const valueFontSize = rollLabel.length > 1 ? 16 : 20;
-      const valueText = new Text(
-        rollLabel,
-        new TextStyle({
-          fontFamily: "Press Start 2P, monospace",
-          fill: 0x0f172a,
-          fontSize: valueFontSize,
-        })
-      );
-      valueText.anchor.set(0.5);
-      valueText.x = 0;
-      valueText.y = -64;
-      face.addChild(valueText);
-    } else {
-      // Small card icon to clearly distinguish "open card" from dice action.
-      const backCard = new Graphics();
-      backCard.lineStyle(2, 0x64748b, 0.7, 0.5, true);
-      backCard.beginFill(0xe2e8f0, 1);
-      backCard.drawRoundedRect(-10, -84, 26, 34, 5);
-      backCard.endFill();
-      face.addChild(backCard);
+    const { face, rollingValueText } = createDiceResultCard({
+      isCardMode,
+      isRolling: actionOverlay.isRolling,
+      resolvedRollValue,
+    });
 
-      const frontCard = new Graphics();
-      frontCard.lineStyle(2, 0x0f172a, 0.95, 0.5, true);
-      frontCard.beginFill(0xffffff, 1);
-      frontCard.drawRoundedRect(-18, -78, 28, 38, 5);
-      frontCard.endFill();
-      face.addChild(frontCard);
-
-      const cardContent = new Graphics();
-      cardContent.beginFill(0x0f172a, 0.95);
-      cardContent.drawCircle(-12, -72, 2);
-      cardContent.drawCircle(4, -46, 2);
-      cardContent.drawRect(-12, -65, 12, 2);
-      cardContent.drawRect(-12, -60, 16, 2);
-      cardContent.drawRect(-12, -55, 10, 2);
-      cardContent.endFill();
-      face.addChild(cardContent);
-    }
-
-    const defaultView = new Graphics();
-    defaultView.lineStyle(2, 0x67e8f9, 0.55, 0.5, true);
-    defaultView.beginFill(0x06b6d4, 0.92);
-    defaultView.drawRoundedRect(0, 0, buttonWidth, buttonHeight, 10);
-    defaultView.endFill();
-
-    const hoverView = new Graphics();
-    hoverView.lineStyle(2, 0xa5f3fc, 0.75, 0.5, true);
-    hoverView.beginFill(0x22d3ee, 1);
-    hoverView.drawRoundedRect(0, 0, buttonWidth, buttonHeight, 10);
-    hoverView.endFill();
-
-    const pressedView = new Graphics();
-    pressedView.lineStyle(2, 0x67e8f9, 0.7, 0.5, true);
-    pressedView.beginFill(0x0891b2, 0.95);
-    pressedView.drawRoundedRect(0, 0, buttonWidth, buttonHeight, 10);
-    pressedView.endFill();
-
-    const actionButton = new FancyButton({
-      defaultView,
-      hoverView,
-      pressedView,
-      text: new Text(modeText, new TextStyle({
-        fontFamily: "Press Start 2P, monospace",
-        fill: 0x0f172a,
-        fontSize: 9,
-      })),
-      anchor: 0.5,
-      animations: {
-        hover: { props: { scale: { x: 1.03, y: 1.03 } }, duration: 90 },
-        pressed: { props: { scale: { x: 0.98, y: 0.98 } }, duration: 70 },
+    const actionButton = createGameButton({
+      label: modeText,
+      onPress: () => {
+        if (actionOverlay.canRoll) {
+          actionOverlay.onRoll?.();
+          return;
+        }
+        if (actionOverlay.canMove && actionOverlay.diceValue != null) {
+          actionOverlay.onMove?.(actionOverlay.diceValue);
+          return;
+        }
+        if (actionOverlay.canOpenQuestionCard) {
+          actionOverlay.onOpenQuestionCard?.();
+        }
       },
     });
-    actionButton.x = 0;
-    actionButton.y = -2;
-    actionButton.onPress.connect(() => {
-      if (actionOverlay.canRoll) {
-        actionOverlay.onRoll?.();
-        return;
-      }
-      if (actionOverlay.canMove && actionOverlay.diceValue != null) {
-        actionOverlay.onMove?.(actionOverlay.diceValue);
-        return;
-      }
-      if (actionOverlay.canOpenQuestionCard) {
-        actionOverlay.onOpenQuestionCard?.();
-      }
-    });
-
     const panelContainer = new Container();
     panelContainer.x = anchorX;
     panelContainer.y = anchorY;
@@ -550,7 +468,6 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
       // Dice rolling animation while backend resolves roll.
       let shownValue = 1;
       let switchAccumulator = 0;
-      const rollingValueText = face.children.find((child) => child instanceof Text) as Text | undefined;
       tickerFn = (delta) => {
         elapsed += delta;
         switchAccumulator += delta;

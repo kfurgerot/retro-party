@@ -2,11 +2,9 @@ import React, { useState } from "react";
 import { AVATARS } from "@/types/game";
 import { cn } from "@/lib/utils";
 import { fr } from "@/i18n/fr";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { RetroScreenBackground } from "./RetroScreenBackground";
 import { CTA_NEON_PRIMARY, CTA_NEON_SECONDARY } from "@/lib/uiTokens";
+import { Input, LobbyCard, PrimaryButton, SectionHeader } from "@/components/app-shell";
 
 interface LobbyScreenProps {
   onStartGame: (names: string[], avatars: number[]) => void;
@@ -46,16 +44,12 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({ onStartGame }) => {
     <div className="scanlines relative min-h-svh w-full overflow-hidden px-4 py-6 sm:px-6 sm:py-8">
       <RetroScreenBackground />
       <div className="relative z-10 mx-auto flex w-full max-w-4xl flex-col gap-4 sm:gap-5">
-        <Card className="neon-surface p-5 text-center sm:p-6">
+        <LobbyCard title={fr.home.title} subtitle={fr.lobbyLocal.choosePlayersHint} className="p-5 text-center sm:p-6">
           <div className="text-[10px] uppercase tracking-[0.2em] text-cyan-200/80">{fr.home.title}</div>
           <h1 className="mt-2 text-xl font-bold text-cyan-100 sm:text-3xl">{fr.home.title}</h1>
-          <div className="mt-3 text-sm text-slate-300">
-            {fr.lobbyLocal.choosePlayersHint}
-          </div>
-        </Card>
+        </LobbyCard>
 
-        <Card className="neon-surface p-4 sm:p-5">
-          <div className="mb-3 text-sm font-semibold text-cyan-100 sm:text-base">{fr.lobbyLocal.playerCount}</div>
+        <LobbyCard title={fr.lobbyLocal.playerCount}>
           <div className="grid grid-cols-5 gap-2 sm:grid-cols-8 lg:grid-cols-10">
             {selectableCounts.map((n) => (
               <button
@@ -74,11 +68,15 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({ onStartGame }) => {
               </button>
             ))}
           </div>
-        </Card>
+        </LobbyCard>
 
         {playerCount && (
-          <Card className="neon-surface p-4 sm:p-5">
-            <div className="mb-3 text-sm font-semibold text-cyan-100 sm:text-base">{fr.lobbyLocal.playersTitle}</div>
+          <LobbyCard title={fr.lobbyLocal.playersTitle}>
+            <SectionHeader
+              title={fr.lobbyLocal.playersTitle}
+              description={fr.lobbyLocal.choosePlayersHint}
+              className="mb-2"
+            />
 
             <div className="grid gap-3">
               {players.map((p, idx) => (
@@ -113,11 +111,11 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({ onStartGame }) => {
             </div>
 
             <div className="mt-5 flex justify-end">
-              <Button onClick={start} className={cn("h-11 px-6 font-semibold", CTA_NEON_PRIMARY)} disabled={players.length < 1}>
+              <PrimaryButton onClick={start} className={cn("h-11 px-6 font-semibold", CTA_NEON_PRIMARY)} disabled={players.length < 1}>
                 {fr.lobbyLocal.launchParty}
-              </Button>
+              </PrimaryButton>
             </div>
-          </Card>
+          </LobbyCard>
         )}
       </div>
     </div>

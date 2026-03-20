@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AVATARS } from "@/types/game";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Button as UiButton } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { RetroScreenBackground } from "./RetroScreenBackground";
 import { fr } from "@/i18n/fr";
+import { Card, Input, PrimaryButton, SecondaryButton, SectionHeader } from "@/components/app-shell";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -322,11 +322,9 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
         )}
 
         {!roomCode && (
-          <section className="neon-surface mx-auto mt-6 grid w-full max-w-lg gap-3 p-4 sm:p-5">
+          <Card className="mx-auto mt-6 grid w-full max-w-lg gap-3 p-4 sm:p-5">
             <div className="rounded-md border border-cyan-300/25 bg-slate-950/45 p-3">
-              <p className="mb-2 text-xs uppercase tracking-[0.12em] text-cyan-100/80">
-                {fr.onlineLobby.profileTitle}
-              </p>
+              <SectionHeader title={fr.onlineLobby.profileTitle} className="mb-2" />
               <div className="flex items-center justify-between gap-3 rounded-md border border-cyan-300/20 bg-slate-900/40 px-3 py-2">
                 <div className="flex min-w-0 items-center gap-2">
                   <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-cyan-300/25 bg-slate-950/60 text-xl">
@@ -340,7 +338,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
                   </div>
                 </div>
                 {onEditProfile && (
-                  <Button
+                  <UiButton
                     type="button"
                     variant="secondary"
                     onClick={onEditProfile}
@@ -348,7 +346,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
                     className="h-9 border-cyan-300/20 bg-slate-900/45 px-3 text-cyan-100 hover:bg-slate-900/70"
                   >
                     {fr.onlineLobby.editProfile}
-                  </Button>
+                  </UiButton>
                 )}
               </div>
             </div>
@@ -360,30 +358,28 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
             )}
 
             <div className="grid grid-cols-2 gap-2 pt-1">
-              <Button
+              <SecondaryButton
                 type="button"
-                variant="secondary"
                 onClick={() => setMode("host")}
                 disabled={pending !== "idle"}
                 className={cn(
-                  "h-11 border-cyan-300/20 bg-slate-900/45 font-semibold text-cyan-100 transition-all hover:bg-slate-900/70",
+                  "h-11 font-semibold transition-all",
                   mode === "host" && "border-cyan-300 bg-cyan-500 text-slate-950 hover:bg-cyan-400"
                 )}
               >
                 {fr.onlineLobby.hostAction}
-              </Button>
-              <Button
+              </SecondaryButton>
+              <SecondaryButton
                 type="button"
-                variant="secondary"
                 onClick={() => setMode("join")}
                 disabled={pending !== "idle"}
                 className={cn(
-                  "h-11 border-cyan-300/20 bg-slate-900/45 font-semibold text-cyan-100 transition-all hover:bg-slate-900/70",
+                  "h-11 font-semibold transition-all",
                   mode === "join" && "border-cyan-300 bg-cyan-500 text-slate-950 hover:bg-cyan-400"
                 )}
               >
                 {fr.onlineLobby.joinAction}
-              </Button>
+              </SecondaryButton>
             </div>
 
             {mode === "join" && (
@@ -404,30 +400,29 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
               </div>
             )}
 
-            <Button
+            <PrimaryButton
               type="button"
               onClick={mode === "host" ? submitHost : submitJoin}
               disabled={primaryDisabled}
-              className="h-11 border border-cyan-300 bg-cyan-500 font-semibold text-slate-950 shadow-[0_0_0_2px_rgba(34,211,238,0.25)] hover:bg-cyan-400"
+              className="h-11 font-semibold"
             >
               {primaryLabel}
-            </Button>
+            </PrimaryButton>
 
-            <Button
+            <SecondaryButton
               type="button"
-              variant="secondary"
               onClick={submitLeave}
               disabled={pending !== "idle"}
-              className="h-11 border-cyan-300/20 bg-slate-900/45 text-cyan-100 hover:bg-slate-900/70"
+              className="h-11"
             >
               {fr.onlineLobby.backHome}
-            </Button>
-          </section>
+            </SecondaryButton>
+          </Card>
         )}
 
         {roomCode && (
           <section className="mx-auto mt-6 grid w-full max-w-4xl gap-3 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
-            <div className="neon-surface grid gap-2 p-4 sm:p-5">
+            <Card className="grid gap-2 p-4 sm:p-5">
               {canStart ? (
                 <>
                   <div
@@ -494,13 +489,13 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
                     />
                   </div>
 
-                  <Button
+                  <PrimaryButton
                     onClick={submitStart}
                     disabled={!canLaunch || pending !== "idle"}
-                    className="h-12 border border-cyan-300 bg-cyan-500 text-base font-semibold text-slate-950 hover:bg-cyan-400"
+                    className="h-12 text-base font-semibold"
                   >
                     {fr.onlineLobby.hostPrimaryAction}
-                  </Button>
+                  </PrimaryButton>
                 </>
               ) : (
                 <div className="rounded-md border border-cyan-300/20 bg-slate-900/40 px-3 py-3">
@@ -516,17 +511,16 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
                 </div>
               )}
 
-              <Button
+              <SecondaryButton
                 onClick={submitLeave}
                 disabled={pending !== "idle"}
-                variant="secondary"
-                className="h-11 border-cyan-300/20 bg-slate-900/45 text-cyan-100 hover:bg-slate-900/70"
+                className="h-11"
               >
                 {canStart ? fr.onlineLobby.cancelParty : fr.onlineLobby.leaveParty}
-              </Button>
-            </div>
+              </SecondaryButton>
+            </Card>
 
-            <div className="neon-surface grid gap-3 p-4 sm:p-5">
+            <Card className="grid gap-3 p-4 sm:p-5">
               <div className="rounded-md border border-cyan-300/25 bg-slate-900/45 p-3">
                 <div className="mb-2 text-xs uppercase tracking-[0.1em] text-cyan-100/90">
                   {fr.onlineLobby.lobbyStatusTitle}
@@ -551,7 +545,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
                   <span className="rounded bg-cyan-500/15 px-2 py-1 text-sm font-semibold tracking-[0.12em] text-cyan-200">
                     {roomCode}
                   </span>
-                  <Button
+                  <UiButton
                     variant="secondary"
                     size="sm"
                     onClick={copyRoom}
@@ -559,16 +553,16 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
                     className="border-cyan-300/30 bg-slate-900/45 text-cyan-100 hover:bg-slate-900/70"
                   >
                     {copied ? fr.onlineLobby.copied : fr.onlineLobby.copy}
-                  </Button>
+                  </UiButton>
                 </div>
                 <p className="mt-2 text-xs text-slate-300">{fr.onlineLobby.inviteHint}</p>
               </div>
-            </div>
+            </Card>
           </section>
         )}
 
         {roomCode && (
-        <section className="neon-surface mt-6 p-4 sm:p-5">
+        <Card className="mt-6 p-4 sm:p-5">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-cyan-100/80">
               {fr.onlineLobby.playersTitle}
@@ -614,7 +608,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
               </div>
             )}
           </div>
-        </section>
+        </Card>
         )}
       </div>
 
