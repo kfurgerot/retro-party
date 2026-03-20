@@ -1,6 +1,9 @@
 services:
   frontend:
-    build: .
+    build:
+      context: .
+      args:
+        VITE_ENABLE_BOARD_PIXI: ${VITE_ENABLE_BOARD_PIXI:-1}
     container_name: retro-party-frontend-prod
     restart: unless-stopped
     ports:

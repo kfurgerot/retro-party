@@ -8,3 +8,7 @@ export const UI_MODE: UIMode = "modern";
 // Disabled by default to preserve the classic board-game movement feel.
 // Opt-in only via env: VITE_ENABLE_BOARD_V2=1
 export const ENABLE_BOARD_V2 = import.meta.env.VITE_ENABLE_BOARD_V2 === "1";
+
+// Pixi renderer rollout for the legacy board.
+// Default ON, with opt-out via env: VITE_ENABLE_BOARD_PIXI=0
+export const ENABLE_BOARD_PIXI = import.meta.env.VITE_ENABLE_BOARD_PIXI !== "0";
