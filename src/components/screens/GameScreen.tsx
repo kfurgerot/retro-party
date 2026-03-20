@@ -991,11 +991,11 @@ export const GameScreen: React.FC<GameScreenProps> = ({
             </Card>
           </div>
         </div>
-        <div className="sticky bottom-0 z-30 mt-1 pb-[env(safe-area-inset-bottom)]">
-          <Card className={cn(neonCard, "border px-2 py-1.5 backdrop-blur-md lg:hidden")}>
+        <div className="sticky bottom-0 z-30 mt-1 pb-[calc(env(safe-area-inset-bottom)+4px)]">
+          <Card className={cn(neonCard, "border px-2 py-2 shadow-[0_-8px_24px_rgba(2,6,23,0.35)] backdrop-blur-md lg:hidden")}>
             <div className="grid grid-cols-2 gap-2">
               <Button
-                className="h-10 w-full border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_0_2px_rgba(34,211,238,0.35)] hover:bg-cyan-400"
+                className={cn("h-12 w-full", activeCyanBtn)}
                 size="sm"
                 variant="secondary"
                 onClick={openMobileInfo}
@@ -1005,7 +1005,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               </Button>
 
               <Button
-                className="h-10 w-full border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_0_2px_rgba(34,211,238,0.35)] hover:bg-cyan-400"
+                className={cn("h-12 w-full", activeCyanBtn)}
                 size="sm"
                 variant="secondary"
                 onClick={openMobileMenu}
@@ -1019,7 +1019,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       </div>
 
       <Drawer open={playersOpen} onOpenChange={setPlayersOpen}>
-        <DrawerContent className="border-cyan-300/30 bg-slate-950/95 text-cyan-50 lg:hidden">
+        <DrawerContent className="border-cyan-300/30 bg-slate-950/95 pb-[env(safe-area-inset-bottom)] text-cyan-50 lg:hidden">
           <DrawerHeader className="pb-2">
             <div className="flex items-center justify-between gap-2">
               <DrawerTitle>{fr.gameScreen.players}</DrawerTitle>
@@ -1028,7 +1028,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                   variant="ghost"
                   size="sm"
                   aria-label={fr.gameScreen.closePlayersPanelAria}
-                  className="text-cyan-100 hover:bg-slate-800/60 hover:text-cyan-50"
+                  className="h-10 text-cyan-100 hover:bg-slate-800/60 hover:text-cyan-50"
                 >
                   {fr.gameScreen.close}
                 </Button>
@@ -1036,7 +1036,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
             </div>
           </DrawerHeader>
 
-          <div className="grid max-h-[60svh] gap-2 overflow-auto px-4 pb-4">
+          <div className="grid max-h-[62svh] gap-2 overflow-auto px-4 pb-4">
             <div className="rounded border border-cyan-300/20 bg-slate-950/30 px-2 py-2 text-xs">
               <div className="text-cyan-100/80">
                 {fr.gameScreen.nowPlayingLabel} <span className="font-semibold text-cyan-100">{currentPlayer?.name ?? "-"}</span>
@@ -1078,7 +1078,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       </Drawer>
 
       <Drawer open={legendOpen} onOpenChange={setLegendOpen}>
-        <DrawerContent className="border-cyan-300/30 bg-slate-950/95 text-cyan-50 lg:hidden">
+        <DrawerContent className="border-cyan-300/30 bg-slate-950/95 pb-[env(safe-area-inset-bottom)] text-cyan-50 lg:hidden">
           <DrawerHeader className="pb-2">
             <div className="flex items-center justify-between gap-2">
               <DrawerTitle>{fr.gameScreen.legend}</DrawerTitle>
@@ -1087,7 +1087,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                   variant="ghost"
                   size="sm"
                   aria-label={fr.gameScreen.closeLegendPanelAria}
-                  className="text-cyan-100 hover:bg-slate-800/60 hover:text-cyan-50"
+                  className="h-10 text-cyan-100 hover:bg-slate-800/60 hover:text-cyan-50"
                 >
                   {fr.gameScreen.close}
                 </Button>
@@ -1109,7 +1109,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       </Drawer>
 
       <Drawer open={mobileInfoOpen} onOpenChange={setMobileInfoOpen}>
-        <DrawerContent className="border-cyan-300/30 bg-slate-950/95 text-cyan-50 lg:hidden">
+        <DrawerContent className="border-cyan-300/30 bg-slate-950/95 pb-[env(safe-area-inset-bottom)] text-cyan-50 lg:hidden">
           <DrawerHeader className="pb-2">
             <div className="flex items-center justify-between gap-2">
               <DrawerTitle>{fr.gameScreen.mobileInfoTitle}</DrawerTitle>
@@ -1117,7 +1117,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="text-cyan-100 hover:bg-slate-800/60 hover:text-cyan-50"
+                  className="h-10 text-cyan-100 hover:bg-slate-800/60 hover:text-cyan-50"
                 >
                   {fr.gameScreen.close}
                 </Button>
@@ -1144,7 +1144,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       </Drawer>
 
       <Drawer open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-        <DrawerContent className="border-cyan-300/30 bg-slate-950/95 text-cyan-50 lg:hidden">
+        <DrawerContent className="border-cyan-300/30 bg-slate-950/95 pb-[env(safe-area-inset-bottom)] text-cyan-50 lg:hidden">
           <DrawerHeader className="pb-2">
             <div className="flex items-center justify-between gap-2">
               <DrawerTitle>{fr.gameScreen.mobileMenuTitle}</DrawerTitle>
@@ -1152,7 +1152,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="text-cyan-100 hover:bg-slate-800/60 hover:text-cyan-50"
+                  className="h-10 text-cyan-100 hover:bg-slate-800/60 hover:text-cyan-50"
                 >
                   {fr.gameScreen.close}
                 </Button>
@@ -1162,7 +1162,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 
           <div className="grid gap-2 px-4 pb-4">
             <Button
-              className="h-10 w-full border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_0_2px_rgba(34,211,238,0.35)] hover:bg-cyan-400"
+              className={cn("h-12 w-full", activeCyanBtn)}
               size="sm"
               variant="secondary"
               onClick={() => {
@@ -1173,7 +1173,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               {fr.gameScreen.players}
             </Button>
             <Button
-              className="h-10 w-full border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_0_2px_rgba(34,211,238,0.35)] hover:bg-cyan-400"
+              className={cn("h-12 w-full", activeCyanBtn)}
               size="sm"
               variant="secondary"
               onClick={() => {
@@ -1185,7 +1185,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
             </Button>
             {onLeave && (
               <Button
-                className={cn("h-10 w-full", dangerLeaveBtn)}
+                className={cn("h-12 w-full", dangerLeaveBtn)}
                 size="sm"
                 variant="secondary"
                 onClick={() => {

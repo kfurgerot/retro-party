@@ -795,7 +795,7 @@ const GameBoardPixiComponent: React.FC<GameBoardProps> = ({
         >
           <button
             type="button"
-            className="h-10 w-10 rounded-md border-4 border-black bg-white/90 text-lg font-extrabold text-black shadow-[3px_3px_0_0_rgba(0,0,0,0.6)]"
+            className="h-11 w-11 rounded-md border-4 border-black bg-white/90 text-lg font-extrabold text-black shadow-[3px_3px_0_0_rgba(0,0,0,0.6)]"
             onClick={() => zoomAt(scale * 1.15, { x: 80, y: 80 })}
             aria-label="Zoom +"
           >
@@ -803,7 +803,7 @@ const GameBoardPixiComponent: React.FC<GameBoardProps> = ({
           </button>
           <button
             type="button"
-            className="h-10 w-10 rounded-md border-4 border-black bg-white/90 text-lg font-extrabold text-black shadow-[3px_3px_0_0_rgba(0,0,0,0.6)]"
+            className="h-11 w-11 rounded-md border-4 border-black bg-white/90 text-lg font-extrabold text-black shadow-[3px_3px_0_0_rgba(0,0,0,0.6)]"
             onClick={() => zoomAt(scale / 1.15, { x: 80, y: 80 })}
             aria-label="Zoom -"
           >
@@ -811,7 +811,7 @@ const GameBoardPixiComponent: React.FC<GameBoardProps> = ({
           </button>
           <button
             type="button"
-            className="h-10 w-10 rounded-md border-4 border-black bg-white/90 text-sm font-extrabold text-black shadow-[3px_3px_0_0_rgba(0,0,0,0.6)]"
+            className="h-11 w-11 rounded-md border-4 border-black bg-white/90 text-sm font-extrabold text-black shadow-[3px_3px_0_0_rgba(0,0,0,0.6)]"
             onClick={resetView}
             aria-label="Recentrer"
           >
@@ -820,7 +820,7 @@ const GameBoardPixiComponent: React.FC<GameBoardProps> = ({
           {focusedPosition != null && (
             <button
               type="button"
-              className="h-10 w-10 rounded-md border-4 border-black bg-amber-300 text-sm font-extrabold text-slate-900 shadow-[3px_3px_0_0_rgba(0,0,0,0.6)]"
+              className="h-11 w-11 rounded-md border-4 border-black bg-amber-300 text-sm font-extrabold text-slate-900 shadow-[3px_3px_0_0_rgba(0,0,0,0.6)]"
               onClick={() => focusOnPosition(focusedPosition, true)}
               aria-label="Centrer joueur actif"
             >
