@@ -66,7 +66,7 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
       : 100;
 
   return (
-    <div className="scanlines relative flex min-h-svh w-full items-start justify-center overflow-hidden px-4 pb-28 pt-4 sm:pb-8 sm:pt-6">
+    <div className="scanlines relative flex min-h-svh w-full items-start justify-center overflow-hidden px-4 pb-28 pt-4 sm:pb-28 sm:pt-6">
       <RetroScreenBackground />
 
       <Card className="relative z-10 flex min-h-[82svh] w-full max-w-4xl flex-col p-5 sm:p-8">
@@ -170,36 +170,41 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
           </Card>
         </div>
 
-        <div className="mt-6 hidden justify-between gap-2 sm:flex">
-          <SecondaryButton
-            type="button"
-            className="h-11"
-            onClick={goBack}
-          >
-            {step === 1 ? fr.onlineOnboarding.back : fr.onlineOnboarding.previous}
-          </SecondaryButton>
-
-          {step === 1 ? (
-            <PrimaryButton
-              type="button"
-              onClick={goNext}
-              disabled={!canNext}
-              className="font-semibold"
-            >
-              {fr.onlineOnboarding.next}
-            </PrimaryButton>
-          ) : (
-            <PrimaryButton
-              type="button"
-              disabled={!canSubmit}
-              onClick={() => onSubmit({ name: cleanName(name), avatar })}
-              className="h-11 px-6 text-sm font-semibold uppercase tracking-wide"
-            >
-              {fr.onlineOnboarding.continue}
-            </PrimaryButton>
-          )}
-        </div>
       </Card>
+
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 hidden px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:block">
+        <Card className="pointer-events-auto mx-auto w-full max-w-4xl border-cyan-300/40 bg-slate-950/92 p-3 shadow-[0_0_0_1px_rgba(34,211,238,0.2),0_8px_28px_rgba(2,6,23,0.55)]">
+          <div className="flex items-center justify-between gap-2">
+            <SecondaryButton
+              type="button"
+              className="h-11"
+              onClick={goBack}
+            >
+              {step === 1 ? fr.onlineOnboarding.back : fr.onlineOnboarding.previous}
+            </SecondaryButton>
+
+            {step === 1 ? (
+              <PrimaryButton
+                type="button"
+                onClick={goNext}
+                disabled={!canNext}
+                className="h-11 font-semibold"
+              >
+                {fr.onlineOnboarding.next}
+              </PrimaryButton>
+            ) : (
+              <PrimaryButton
+                type="button"
+                disabled={!canSubmit}
+                onClick={() => onSubmit({ name: cleanName(name), avatar })}
+                className="h-11 px-6 text-sm font-semibold uppercase tracking-wide"
+              >
+                {fr.onlineOnboarding.continue}
+              </PrimaryButton>
+            )}
+          </div>
+        </Card>
+      </div>
 
       <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:hidden">
         <Card className="pointer-events-auto mx-auto w-full max-w-4xl border-cyan-300/40 bg-slate-950/92 p-3 shadow-[0_0_0_1px_rgba(34,211,238,0.2),0_8px_28px_rgba(2,6,23,0.55)]">

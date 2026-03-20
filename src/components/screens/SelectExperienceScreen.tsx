@@ -1,9 +1,9 @@
-import React from "react";
+import React, { useMemo, useState } from "react";
 import { RetroScreenBackground } from "./RetroScreenBackground";
 import { cn } from "@/lib/utils";
 import { fr } from "@/i18n/fr";
 import { Gamepad2, Pencil, Radar, Puzzle, LucideIcon } from "lucide-react";
-import { Card, SecondaryButton } from "@/components/app-shell";
+import { Card, PrimaryButton, SecondaryButton } from "@/components/app-shell";
 import { APP_SHELL_SURFACE_SOFT } from "@/lib/uiTokens";
 
 export type ExperienceId = "retro-party" | "draw-duel" | "agile-radar" | "retro-generator";
@@ -62,6 +62,11 @@ export const SelectExperienceScreen: React.FC<SelectExperienceScreenProps> = ({
   stepCurrent,
   stepTotal,
 }) => {
+  const defaultExperience = useMemo<ExperienceId>(() => {
+    const firstAvailable = TOOLS.find((tool) => tool.available);
+    return firstAvailable?.id ?? "retro-party";
+  }, []);
+  const [selectedExperience, setSelectedExperience] = useState<ExperienceId>(defaultExperience);
   const hasProgress =
     typeof stepCurrent === "number" &&
     typeof stepTotal === "number" &&
@@ -72,7 +77,7 @@ export const SelectExperienceScreen: React.FC<SelectExperienceScreenProps> = ({
   const computedStepLabel = hasProgress ? `${fr.onlineOnboarding.step} ${stepCurrent}/${stepTotal}` : stepLabel;
 
   return (
-    <div className="scanlines relative flex min-h-svh w-full items-start justify-center overflow-hidden px-4 pb-8 pt-4 sm:pt-6">
+    <div className="scanlines relative flex min-h-svh w-full items-start justify-center overflow-hidden px-4 pb-28 pt-4 sm:pb-8 sm:pt-6">
       <RetroScreenBackground />
 
       <Card className="relative z-10 flex min-h-[82svh] w-full max-w-4xl flex-col p-5 sm:p-8">
@@ -108,6 +113,10 @@ export const SelectExperienceScreen: React.FC<SelectExperienceScreenProps> = ({
               type="button"
               onClick={() => {
                 if (!tool.available) return;
+                setSelectedExperience(tool.id);
+              }}
+              onDoubleClick={() => {
+                if (!tool.available) return;
                 onSelect(tool.id);
               }}
               disabled={!tool.available}
@@ -117,6 +126,8 @@ export const SelectExperienceScreen: React.FC<SelectExperienceScreenProps> = ({
                 tool.available
                   ? "hover:border-cyan-300/45 hover:bg-slate-900/70"
                   : "cursor-not-allowed border-cyan-300/20 bg-slate-900/30 opacity-80"
+                ,
+                selectedExperience === tool.id && tool.available && "border-cyan-300/50 bg-cyan-500/10"
               )}
             >
               <div className="flex items-center justify-between gap-2">
@@ -138,7 +149,7 @@ export const SelectExperienceScreen: React.FC<SelectExperienceScreenProps> = ({
           ))}
         </div>
 
-        <div className="mt-8">
+        <div className="mt-8 hidden items-center justify-between gap-2 sm:flex">
           <SecondaryButton
             type="button"
             className="h-11"
@@ -146,8 +157,36 @@ export const SelectExperienceScreen: React.FC<SelectExperienceScreenProps> = ({
           >
             {fr.selectExperience.back}
           </SecondaryButton>
+          <PrimaryButton
+            type="button"
+            className="h-11"
+            onClick={() => onSelect(selectedExperience)}
+          >
+            {fr.selectExperience.next}
+          </PrimaryButton>
         </div>
       </Card>
+
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:hidden">
+        <Card className="pointer-events-auto mx-auto w-full max-w-4xl border-cyan-300/40 bg-slate-950/92 p-3 shadow-[0_0_0_1px_rgba(34,211,238,0.2),0_8px_28px_rgba(2,6,23,0.55)]">
+          <div className="grid grid-cols-2 gap-2">
+            <SecondaryButton
+              type="button"
+              className="h-12 min-h-0"
+              onClick={onBack}
+            >
+              {fr.selectExperience.back}
+            </SecondaryButton>
+            <PrimaryButton
+              type="button"
+              className="h-12 min-h-0"
+              onClick={() => onSelect(selectedExperience)}
+            >
+              {fr.selectExperience.next}
+            </PrimaryButton>
+          </div>
+        </Card>
+      </div>
     </div>
   );
 };

@@ -96,14 +96,6 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
     connected && !roomCode && mode === "join" && validName && validCode;
   const canLaunch =
     connected && !!roomCode && canStart && lobbyPlayers.length >= 1;
-  const connectedPlayersCount = useMemo(
-    () => lobbyPlayers.filter((player) => player.connected !== false).length,
-    [lobbyPlayers]
-  );
-  const offlinePlayers = useMemo(
-    () => lobbyPlayers.filter((player) => player.connected === false),
-    [lobbyPlayers]
-  );
   const sortedPlayers = useMemo(
     () =>
       [...lobbyPlayers].sort((a, b) => {
@@ -119,31 +111,6 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
   );
   const hostPlayerName =
     lobbyPlayers.find((player) => player.isHost)?.name ?? fr.terms.host;
-  const launchChecklist = useMemo(
-    () => [
-      { ok: canStart, label: fr.onlineLobby.checkHostControl },
-      {
-        ok: connectedPlayersCount >= 2,
-        label: fr.onlineLobby.checkTwoPlayers.replace(
-          "{count}",
-          String(connectedPlayersCount)
-        ),
-      },
-      {
-        ok: offlinePlayers.length === 0,
-        label: fr.onlineLobby.checkAllConnected.replace(
-          "{count}",
-          String(offlinePlayers.length)
-        ),
-      },
-    ],
-    [canStart, connectedPlayersCount, offlinePlayers.length]
-  );
-  const launchReady = launchChecklist.every((item) => item.ok);
-  const launchBlockers = useMemo(
-    () => launchChecklist.filter((item) => !item.ok).map((item) => item.label),
-    [launchChecklist]
-  );
 
   const subtitle = useMemo(() => {
     if (!connected) return fr.onlineOnboarding.connecting;
@@ -277,7 +244,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
     <div
       className={cn(
         "scanlines relative flex min-h-svh w-full items-start justify-center overflow-hidden px-4 pt-4 sm:pt-6",
-        roomCode ? "pb-28 sm:pb-32" : "pb-8"
+        roomCode ? "pb-28 sm:pb-32" : "pb-28 sm:pb-8"
       )}
     >
       <RetroScreenBackground />
@@ -412,71 +379,35 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
               type="button"
               onClick={mode === "host" ? submitHost : submitJoin}
               disabled={primaryDisabled}
-              className="h-11 font-semibold"
+              className="hidden h-11 font-semibold sm:inline-flex"
+              title={primaryLabel}
             >
-              {primaryLabel}
+              {fr.onlineOnboarding.next}
             </PrimaryButton>
 
             <SecondaryButton
               type="button"
               onClick={submitLeave}
               disabled={pending !== "idle"}
-              className="h-11"
+              className="hidden h-11 sm:inline-flex"
             >
-              {fr.onlineLobby.backHome}
+              {fr.onlineOnboarding.back}
             </SecondaryButton>
+
+            <p className="text-center text-[11px] text-slate-400">
+              {primaryLabel}
+            </p>
           </Card>
         )}
 
         {roomCode && (
-          <section className="mx-auto mt-6 grid w-full max-w-4xl gap-3 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
+          <section className="mx-auto mt-6 grid w-full max-w-4xl gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)]">
             <Card className="grid gap-2 p-4 sm:p-5">
               {canStart ? (
                 <>
-                  <div
-                    className={cn(
-                      "rounded-md border px-3 py-3",
-                      launchReady
-                        ? "border-emerald-500/40 bg-emerald-500/10"
-                        : "border-amber-500/40 bg-amber-500/10"
-                    )}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-xs uppercase tracking-[0.1em] text-cyan-100/90">
-                        {fr.onlineLobby.hostPanelTitle}
-                      </p>
-                      <span
-                        className={cn(
-                          "rounded-full border px-2 py-0.5 text-[10px] font-semibold",
-                          launchReady
-                            ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-200"
-                            : "border-amber-500/40 bg-amber-500/15 text-amber-200"
-                        )}
-                      >
-                        {launchReady
-                          ? fr.onlineLobby.hostReady
-                          : fr.onlineLobby.hostBlocked}
-                      </span>
-                    </div>
-                    <p className="mt-2 text-xs text-slate-300">
-                      {launchReady ? fr.onlineLobby.hostReadyHint : fr.onlineLobby.hostBlockedHint}
-                    </p>
-                  </div>
-
-                  {launchBlockers.length > 0 && (
-                    <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-3">
-                      <p className="text-xs uppercase tracking-[0.1em] text-amber-100/90">
-                        {fr.onlineLobby.launchBlockedTitle}
-                      </p>
-                      <div className="mt-2 grid gap-1.5 text-xs text-amber-100">
-                        {launchBlockers.map((blocker) => (
-                          <div key={blocker} className="rounded border border-amber-500/30 bg-amber-500/10 px-2 py-1">
-                            {blocker}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  <p className="rounded-md border border-cyan-300/25 bg-slate-900/40 px-3 py-3 text-xs text-slate-300">
+                    {fr.onlineLobby.hostLaunchHint}
+                  </p>
 
                   <div className="space-y-1">
                     <label className="text-xs text-cyan-100/85">{fr.onlineLobby.roundsLabel}</label>
@@ -529,22 +460,6 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
             </Card>
 
             <Card className="grid gap-3 p-4 sm:p-5">
-              <div className="rounded-md border border-cyan-300/25 bg-slate-900/45 p-3">
-                <div className="mb-2 text-xs uppercase tracking-[0.1em] text-cyan-100/90">
-                  {fr.onlineLobby.lobbyStatusTitle}
-                </div>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-300">{fr.onlineLobby.connectedPlayersLabel}</span>
-                  <span className="font-semibold text-cyan-100">{connectedPlayersCount}</span>
-                </div>
-                <div className="mt-1 flex items-center justify-between text-xs">
-                  <span className="text-slate-300">{fr.onlineLobby.offlinePlayersLabel}</span>
-                  <span className={cn("font-semibold", offlinePlayers.length > 0 ? "text-amber-200" : "text-emerald-200")}>
-                    {offlinePlayers.length}
-                  </span>
-                </div>
-              </div>
-
               <div className="rounded-md border border-cyan-300/25 bg-slate-900/45 p-3">
                 <div className="mb-2 text-xs uppercase tracking-[0.1em] text-cyan-100/90">
                   {fr.onlineLobby.codeLabel}
@@ -623,21 +538,6 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
           <Card className="pointer-events-auto mx-auto w-full max-w-4xl border-cyan-300/40 bg-slate-950/92 p-3 shadow-[0_0_0_1px_rgba(34,211,238,0.2),0_8px_28px_rgba(2,6,23,0.55)]">
             {canStart ? (
               <div className="grid gap-2">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs uppercase tracking-[0.1em] text-cyan-100/85">
-                    {fr.onlineLobby.hostPanelTitle}
-                  </span>
-                  <span
-                    className={cn(
-                      "rounded-full border px-2 py-0.5 text-[10px] font-semibold",
-                      launchReady
-                        ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-200"
-                        : "border-amber-500/40 bg-amber-500/15 text-amber-200"
-                    )}
-                  >
-                    {launchReady ? fr.onlineLobby.hostReady : fr.onlineLobby.hostBlocked}
-                  </span>
-                </div>
                 <div className="grid grid-cols-2 gap-2">
                   <SecondaryButton
                     onClick={submitLeave}
@@ -671,6 +571,56 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
             )}
           </Card>
         </div>
+      )}
+
+      {!roomCode && (
+        <>
+          <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 hidden px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:block">
+            <Card className="pointer-events-auto mx-auto flex w-full max-w-4xl items-center justify-between gap-2 border-cyan-300/40 bg-slate-950/92 p-3 shadow-[0_0_0_1px_rgba(34,211,238,0.2),0_8px_28px_rgba(2,6,23,0.55)]">
+              <SecondaryButton
+                type="button"
+                onClick={submitLeave}
+                disabled={pending !== "idle"}
+                className="h-11"
+              >
+                {fr.onlineOnboarding.back}
+              </SecondaryButton>
+              <PrimaryButton
+                type="button"
+                onClick={mode === "host" ? submitHost : submitJoin}
+                disabled={primaryDisabled}
+                className="h-11"
+                title={primaryLabel}
+              >
+                {fr.onlineOnboarding.next}
+              </PrimaryButton>
+            </Card>
+          </div>
+
+          <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:hidden">
+            <Card className="pointer-events-auto mx-auto w-full max-w-4xl border-cyan-300/40 bg-slate-950/92 p-3 shadow-[0_0_0_1px_rgba(34,211,238,0.2),0_8px_28px_rgba(2,6,23,0.55)]">
+              <div className="grid grid-cols-2 gap-2">
+                <SecondaryButton
+                  type="button"
+                  onClick={submitLeave}
+                  disabled={pending !== "idle"}
+                  className="h-12 min-h-0"
+                >
+                  {fr.onlineOnboarding.back}
+                </SecondaryButton>
+                <PrimaryButton
+                  type="button"
+                  onClick={mode === "host" ? submitHost : submitJoin}
+                  disabled={primaryDisabled}
+                  className="h-12 min-h-0"
+                  title={primaryLabel}
+                >
+                  {fr.onlineOnboarding.next}
+                </PrimaryButton>
+              </div>
+            </Card>
+          </div>
+        </>
       )}
 
       <AlertDialog open={leaveDialogOpen} onOpenChange={setLeaveDialogOpen}>

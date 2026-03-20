@@ -113,6 +113,7 @@ export const fr = {
     ready: "Pret",
     soon: "Bientot",
     back: "Retour",
+    next: "Suivant",
     retroPartyDescription: "Jeu de plateau retro multijoueur pour les retros d'equipe.",
     retroPartyTitle: "Retro Party",
     drawDuelDescription: "Duel de dessin rapide pour echauffement icebreaker.",
