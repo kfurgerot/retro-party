@@ -624,7 +624,9 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     canRoll ||
     (isMyTurn && gameState.isRolling && gameState.turnPhase === "rolling");
   const showOpenCardOverlay = canOpenQuestionCard;
-  const showFullscreenActionOverlay = showRollOverlay || showOpenCardOverlay;
+  const showInlineActionPanel = showRollOverlay || showOpenCardOverlay;
+  // Action buttons are now restored inline in the game HUD.
+  const showFullscreenActionOverlay = false;
   const turnOwnerName = currentPlayer?.name ?? fr.pointDuel.playerFallback;
   const primaryAction = isPathChoiceActive
     ? canChoosePath
@@ -649,6 +651,24 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     : isMyTurn
     ? fr.gameScreen.actionWaitTurn
     : fr.gameScreen.actionObserve.replace("{name}", turnOwnerName);
+  const canTriggerInlineRollAction =
+    canRoll || (canMove && gameState.diceValue != null);
+  const canTriggerInlineOpenCardAction = canOpenQuestionCard;
+  const handleInlinePrimaryAction = () => {
+    if (showRollOverlay) {
+      if (canRoll) {
+        onRollDice();
+        return;
+      }
+      if (canMove && gameState.diceValue != null) {
+        handleMove(gameState.diceValue);
+      }
+      return;
+    }
+    if (showOpenCardOverlay) {
+      onOpenQuestionCard();
+    }
+  };
   const activityFeedRaw = (gameState.actionLogs ?? [])
     .filter((entry) => entry != null)
     .map((entry) => (typeof entry === "string" ? entry : String(entry)))
@@ -1041,9 +1061,9 @@ export const GameScreen: React.FC<GameScreenProps> = ({
             </Card>
           </div>
         </div>
-        <div className="sticky bottom-0 z-30 mt-1 pb-[env(safe-area-inset-bottom)] lg:hidden">
-          <Card className={cn(neonCard, "border px-2 py-1.5 backdrop-blur-md")}>
-            <div className="grid grid-cols-2 gap-2">
+        <div className="sticky bottom-0 z-30 mt-1 pb-[env(safe-area-inset-bottom)]">
+          <Card className={cn(neonCard, "border px-2 py-1.5 backdrop-blur-md lg:hidden")}>
+            <div className={cn("grid gap-2", showInlineActionPanel ? "grid-cols-3" : "grid-cols-2")}>
               <Button
                 className="h-10 w-full border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_0_2px_rgba(34,211,238,0.35)] hover:bg-cyan-400"
                 size="sm"
@@ -1063,8 +1083,61 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               >
                 {fr.gameScreen.mobileMenu}
               </Button>
+              {showInlineActionPanel && (
+                <Button
+                  className="h-10 w-full border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_0_2px_rgba(34,211,238,0.35)] hover:bg-cyan-400"
+                  size="sm"
+                  variant="secondary"
+                  disabled={
+                    showRollOverlay ? !canTriggerInlineRollAction : !canTriggerInlineOpenCardAction
+                  }
+                  onClick={handleInlinePrimaryAction}
+                >
+                  {showRollOverlay ? (canMove ? fr.dice.moveShort : fr.dice.rollShort) : fr.dice.openShort}
+                </Button>
+              )}
             </div>
           </Card>
+
+          {showInlineActionPanel && (
+            <div className="hidden lg:flex lg:justify-center">
+              <Card className={cn(neonCard, "w-full max-w-md border px-4 py-3 backdrop-blur-md")}>
+                {showRollOverlay ? (
+                  <div className="flex items-center justify-center">
+                    <Dice
+                      value={gameState.diceValue}
+                      rollResult={gameState.lastRollResult ?? null}
+                      pendingDoubleRollFirstDie={pendingDoubleRollFirstDie}
+                      isRolling={gameState.isRolling}
+                      canRoll={canRoll}
+                      canMove={canMove}
+                      canOpenQuestionCard={false}
+                      onRoll={onRollDice}
+                      onMove={handleMove}
+                      onOpenQuestionCard={onOpenQuestionCard}
+                      playerIndex={myIndex}
+                      compact
+                      showCompactDetails
+                    />
+                  </div>
+                ) : (
+                  <div className="grid gap-2">
+                    <div className="text-[11px] uppercase tracking-[0.1em] text-cyan-100/80">
+                      {fr.gameScreen.primaryAction}
+                    </div>
+                    <Button
+                      className={cn("h-11 w-full text-sm", activeCyanBtn)}
+                      variant="secondary"
+                      disabled={!canTriggerInlineOpenCardAction}
+                      onClick={handleInlinePrimaryAction}
+                    >
+                      {fr.dice.openCard}
+                    </Button>
+                  </div>
+                )}
+              </Card>
+            </div>
+          )}
         </div>
       </div>
 

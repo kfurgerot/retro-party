@@ -51,7 +51,7 @@ const PORT = process.env.PORT ? Number(process.env.PORT) : 3001;
 const RECONNECT_GRACE_MS = 30000;
 const MAX_PLAYERS = 20;
 const WHO_SAID_IT_ANNOUNCE_MS = 4000;
-const ENABLE_WHO_SAID_IT_MINIGAME = true;
+const ENABLE_WHO_SAID_IT_MINIGAME = process.env.ENABLE_WHO_SAID_IT_MINIGAME === "1";
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
 
 function isPrivateIpv4(hostname) {
