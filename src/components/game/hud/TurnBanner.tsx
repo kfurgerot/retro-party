@@ -106,7 +106,7 @@ export const TurnBanner: React.FC<TurnBannerProps> = ({
   }
 
   return (
-    <div className="hidden lg:flex lg:flex-wrap lg:items-center lg:justify-between lg:gap-3">
+    <div className="hidden xl:flex xl:flex-wrap xl:items-center xl:justify-between xl:gap-3">
       <Card className={cn(neonCardClass, "min-w-0 px-3 py-2 sm:px-4 sm:py-3")}>
         <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">{roundLabel}</div>
         <div className="text-lg font-bold sm:text-xl">
@@ -147,7 +147,7 @@ export const TurnBanner: React.FC<TurnBannerProps> = ({
       </Card>
 
       {onLeave && leaveLabel ? (
-        <Button className={cn("hidden lg:inline-flex", leaveBtnClass)} variant="secondary" onClick={onLeave}>
+        <Button className={cn("hidden xl:inline-flex", leaveBtnClass)} variant="secondary" onClick={onLeave}>
           {leaveLabel}
         </Button>
       ) : null}

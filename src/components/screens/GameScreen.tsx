@@ -547,7 +547,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 
   const isMobile = () => {
     if (typeof window === "undefined") return true;
-    return window.matchMedia("(max-width: 1023px)").matches;
+    return window.matchMedia("(max-width: 1279px)").matches;
   };
 
   const openPlayers = () => {
@@ -777,7 +777,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 
       <div className="relative z-10 flex h-svh w-full flex-col overflow-hidden p-2 sm:p-3">
         <div className="neon-surface-soft p-1.5 sm:p-2">
-          <div className="lg:hidden">
+          <div className="xl:hidden">
             <TurnBanner
               mode="mobile"
               currentTurnLabel={fr.gameScreen.currentTurn}
@@ -835,9 +835,9 @@ export const GameScreen: React.FC<GameScreenProps> = ({
           />
         </div>
 
-        <div className="mt-2 grid min-h-0 flex-1 grid-cols-1 gap-2 sm:mt-3 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="mt-2 grid min-h-0 flex-1 grid-cols-1 gap-2 sm:mt-3 xl:grid-cols-[minmax(0,1fr)_340px] 2xl:grid-cols-[minmax(0,1fr)_360px]">
           <div className="flex min-h-0 flex-col gap-3">
-            <div className={cn("min-h-[38svh] flex-1 overflow-hidden p-1 lg:min-h-0", neonPanel)}>
+            <div className={cn("min-h-[38svh] flex-1 overflow-hidden p-1 xl:min-h-0", neonPanel)}>
               {ENABLE_BOARD_V2 ? (
                 <BoardV2
                   tiles={gameState.tiles}
@@ -879,7 +879,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
             </div>
           </div>
 
-          <div className="hidden min-h-0 min-w-0 flex-col gap-3 lg:flex">
+          <div className="hidden min-h-0 min-w-0 flex-col gap-3 xl:flex">
             <Card className={cn(neonCard, "flex min-h-0 flex-1 flex-col px-3 py-3")}>
               <div className="flex items-center justify-between gap-2">
                 <div className="text-base font-bold">
@@ -1019,7 +1019,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
           </div>
         </div>
         <div className="sticky bottom-0 z-30 mt-1 pb-[calc(env(safe-area-inset-bottom)+4px)]">
-          <Card className={cn(neonCard, "border px-2 py-2 shadow-[0_-8px_24px_rgba(2,6,23,0.35)] backdrop-blur-md lg:hidden")}>
+          <Card className={cn(neonCard, "border px-2 py-2 shadow-[0_-8px_24px_rgba(2,6,23,0.35)] backdrop-blur-md xl:hidden")}>
             <div className="grid grid-cols-2 gap-2">
               <Button
                 className={cn(GAME_MOBILE_ACTION_BUTTON, activeCyanBtn)}
