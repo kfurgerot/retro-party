@@ -5,6 +5,7 @@ import { RetroScreenBackground } from "./RetroScreenBackground";
 import { fr } from "@/i18n/fr";
 import { Card, Input, PrimaryButton, SecondaryButton, SectionHeader } from "@/components/app-shell";
 import { APP_SHELL_INPUT } from "@/lib/uiTokens";
+import { useAnimatedProgress } from "@/hooks/useAnimatedProgress";
 
 interface OnlineOnboardingScreenProps {
   connected: boolean;
@@ -64,6 +65,12 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
     : step === 1
       ? 50
       : 100;
+  const progressFromPct = showOverallStep
+    ? Math.max(0, Math.min(100, Math.round(((currentOverallStep - 1) / overallStepTotal) * 100)))
+    : step === 1
+      ? 0
+      : 50;
+  const animatedProgressPct = useAnimatedProgress(progressPct, progressFromPct);
 
   return (
     <div className="scanlines relative flex min-h-svh w-full items-start justify-center overflow-hidden px-4 pb-28 pt-4 sm:pb-28 sm:pt-6">
@@ -86,7 +93,7 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
         <div className="mt-4 h-1 w-full overflow-hidden rounded bg-slate-900/55">
           <div
             className="h-full rounded bg-cyan-400/90 transition-all duration-300"
-            style={{ width: `${progressPct}%` }}
+            style={{ width: `${animatedProgressPct}%` }}
           />
         </div>
 

@@ -5,6 +5,7 @@ import { fr } from "@/i18n/fr";
 import { Gamepad2, Pencil, Radar, Puzzle, LucideIcon } from "lucide-react";
 import { Card, PrimaryButton, SecondaryButton } from "@/components/app-shell";
 import { APP_SHELL_SURFACE_SOFT } from "@/lib/uiTokens";
+import { useAnimatedProgress } from "@/hooks/useAnimatedProgress";
 
 export type ExperienceId = "retro-party" | "draw-duel" | "agile-radar" | "retro-generator";
 
@@ -74,6 +75,10 @@ export const SelectExperienceScreen: React.FC<SelectExperienceScreenProps> = ({
   const progressPct = hasProgress
     ? Math.max(0, Math.min(100, Math.round((stepCurrent / stepTotal) * 100)))
     : 0;
+  const progressFromPct = hasProgress
+    ? Math.max(0, Math.min(100, Math.round(((stepCurrent - 1) / stepTotal) * 100)))
+    : 0;
+  const animatedProgressPct = useAnimatedProgress(progressPct, progressFromPct);
   const computedStepLabel = hasProgress ? `${fr.onlineOnboarding.step} ${stepCurrent}/${stepTotal}` : stepLabel;
 
   return (
@@ -98,7 +103,7 @@ export const SelectExperienceScreen: React.FC<SelectExperienceScreenProps> = ({
           <div className="mt-4 h-1 w-full overflow-hidden rounded bg-slate-900/55">
             <div
               className="h-full rounded bg-cyan-400/90 transition-all duration-300"
-              style={{ width: `${progressPct}%` }}
+              style={{ width: `${animatedProgressPct}%` }}
             />
           </div>
         ) : null}

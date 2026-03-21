@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { PressStartScreen } from "@/components/screens/PressStartScreen";
 import { RetroScreenBackground } from "@/components/screens/RetroScreenBackground";
@@ -21,6 +21,7 @@ const Home = () => {
     return "press-start";
   });
   const playPrefetchedRef = useRef(false);
+  const [progressPct, setProgressPct] = useState(20);
 
   const prefetchPlayRoute = () => {
     if (playPrefetchedRef.current) return;
@@ -44,6 +45,21 @@ const Home = () => {
     return () => window.clearTimeout(timeoutId);
   }, [stage]);
 
+  useLayoutEffect(() => {
+    if (stage !== "select-entry") return;
+    setProgressPct(20);
+    let nextFrame = 0;
+    const frame = window.requestAnimationFrame(() => {
+      nextFrame = window.requestAnimationFrame(() => {
+        setProgressPct(40);
+      });
+    });
+    return () => {
+      window.cancelAnimationFrame(frame);
+      if (nextFrame) window.cancelAnimationFrame(nextFrame);
+    };
+  }, [stage]);
+
   if (stage === "press-start") {
     return <PressStartScreen onStart={handleStart} />;
   }
@@ -55,6 +71,7 @@ const Home = () => {
         onBack={() => setStage("press-start")}
         onSelect={(experience: ExperienceId) => {
           if (experience !== "retro-party") return;
+          setProgressPct(20);
           setStage("select-entry");
         }}
       />
@@ -83,7 +100,7 @@ const Home = () => {
         <div className="mt-4 h-1 w-full overflow-hidden rounded bg-slate-900/55">
           <div
             className="h-full rounded bg-cyan-400/90 transition-all duration-300"
-            style={{ width: "40%" }}
+            style={{ width: `${progressPct}%` }}
           />
         </div>
 

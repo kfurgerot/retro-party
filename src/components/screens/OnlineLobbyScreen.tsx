@@ -19,6 +19,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useAnimatedProgress } from "@/hooks/useAnimatedProgress";
 
 type LobbyPlayer = {
   name: string;
@@ -125,6 +126,10 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
   const progressPct = hasProgress
     ? Math.max(0, Math.min(100, Math.round((stepCurrent / stepTotal) * 100)))
     : 0;
+  const progressFromPct = hasProgress
+    ? Math.max(0, Math.min(100, Math.round(((stepCurrent - 1) / stepTotal) * 100)))
+    : 0;
+  const animatedProgressPct = useAnimatedProgress(progressPct, progressFromPct);
 
   useEffect(() => {
     if (!connected) {
@@ -283,10 +288,10 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
 
         <p className="mt-4 text-center text-xs text-slate-300 sm:text-sm">{subtitle}</p>
         {hasProgress ? (
-          <div className="mx-auto mt-3 h-1.5 w-full max-w-xl overflow-hidden rounded bg-slate-900/55">
+          <div className="mt-4 h-1 w-full overflow-hidden rounded bg-slate-900/55">
             <div
               className="h-full rounded bg-cyan-400/90 transition-all duration-300"
-              style={{ width: `${progressPct}%` }}
+              style={{ width: `${animatedProgressPct}%` }}
             />
           </div>
         ) : null}
