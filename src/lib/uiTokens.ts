@@ -66,7 +66,25 @@ export const GAME_DRAWER_CLOSE_BUTTON =
   "h-10 text-cyan-100 hover:bg-slate-800/60 hover:text-cyan-50";
 
 export const GAME_DIALOG_CONTENT =
-  "border-cyan-300/30 bg-slate-950/95 text-cyan-50";
+  "rounded-2xl border-cyan-300/40 bg-slate-950/95 p-5 text-cyan-50 shadow-[0_0_0_1px_rgba(34,211,238,0.2),0_14px_40px_rgba(2,6,23,0.6)] sm:p-6";
 
 export const GAME_MOBILE_ACTION_BUTTON =
-  "h-12 w-full";
+  "h-12 w-full rounded-xl";
+
+export const GAME_HUD_SURFACE =
+  "rounded-2xl border border-cyan-300/32 bg-slate-950/72 text-cyan-50 backdrop-blur shadow-[0_0_0_1px_rgba(34,211,238,0.14),0_10px_26px_rgba(2,6,23,0.45)]";
+
+export const GAME_PANEL_SURFACE =
+  "rounded-xl border border-cyan-300/25 bg-slate-900/58 text-cyan-50 shadow-[0_0_0_1px_rgba(34,211,238,0.1),0_8px_24px_rgba(2,6,23,0.34)]";
+
+export const GAME_SUBPANEL_SURFACE =
+  "rounded-xl border border-cyan-300/18 bg-slate-950/32";
+
+export const GAME_TAB_BUTTON =
+  "h-9 rounded-xl border border-cyan-300/22 bg-slate-900/45 px-3 text-xs font-semibold text-cyan-100 hover:bg-slate-900/65";
+
+export const GAME_TAB_BUTTON_ACTIVE =
+  "border-cyan-300/55 bg-cyan-500/20 text-cyan-50 shadow-[0_0_0_1px_rgba(34,211,238,0.24)]";
+
+export const GAME_SECTION_BADGE =
+  "inline-flex rounded-full border border-cyan-300/28 bg-slate-900/45 px-2 py-0.5 text-[10px] uppercase tracking-[0.08em] text-cyan-100";

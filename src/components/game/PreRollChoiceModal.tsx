@@ -13,6 +13,7 @@ import {
 import { cn } from "@/lib/utils";
 import { fr } from "@/i18n/fr";
 import { ChoiceCard } from "./hud";
+import { GAME_DIALOG_CONTENT } from "@/lib/uiTokens";
 
 type ItemChoice = {
   type: ShopItemType;
@@ -46,7 +47,7 @@ export const PreRollChoiceModal: React.FC<PreRollChoiceModalProps> = ({
 }) => {
   return (
     <AlertDialog open={open} onOpenChange={() => {}}>
-      <AlertDialogContent className="border-cyan-300/30 bg-slate-950/95 text-cyan-50 max-w-2xl">
+      <AlertDialogContent className={cn(GAME_DIALOG_CONTENT, "max-w-2xl")}>
         <AlertDialogHeader>
           <AlertDialogTitle>{fr.preRollChoice.title}</AlertDialogTitle>
           <AlertDialogDescription className="text-slate-300">
@@ -71,16 +72,16 @@ export const PreRollChoiceModal: React.FC<PreRollChoiceModalProps> = ({
           })}
         </div>
 
-        <AlertDialogFooter>
+        <AlertDialogFooter className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:space-x-0">
           <AlertDialogCancel
-            className={cn(neutralBtnClass, "text-cyan-100")}
+            className={cn(neutralBtnClass, "h-11 w-full rounded-xl text-cyan-100")}
             disabled={!canInteract}
             onClick={onContinue}
           >
             {fr.preRollChoice.continue}
           </AlertDialogCancel>
           <AlertDialogAction
-            className={activeBtnClass}
+            className={cn(activeBtnClass, "h-11 w-full rounded-xl")}
             disabled={!canInteract || !selectedType}
             onClick={onConfirmSelection}
           >

@@ -1,5 +1,6 @@
 import React from "react";
 import { cn } from "@/lib/utils";
+import { GAME_DIALOG_CONTENT } from "@/lib/uiTokens";
 
 interface GameModalProps {
   title?: string;
@@ -25,7 +26,7 @@ export const GameModal: React.FC<GameModalProps> = ({
     >
       <div
         className={cn(
-          "game-modal-card w-full max-w-2xl rounded-2xl border border-cyan-300/30 bg-slate-950/95 p-5 text-cyan-50 shadow-[0_0_24px_rgba(34,211,238,0.18)]",
+          `game-modal-card w-full max-w-2xl ${GAME_DIALOG_CONTENT}`,
           contentClassName
         )}
         role="dialog"

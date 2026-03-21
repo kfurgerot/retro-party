@@ -15,15 +15,19 @@ const PlayerCardComponent: React.FC<PlayerCardProps> = ({ player, isActive, comp
     return (
       <div
         className={cn(
-          "flex items-center gap-2 px-2 py-2 border-2 rounded-md",
-          isActive ? "border-primary bg-primary/20" : "border-border bg-card"
+          "flex items-center gap-2 rounded-xl border px-3 py-2.5 transition",
+          isActive
+            ? "border-cyan-300/55 bg-cyan-500/18 shadow-[0_0_0_1px_rgba(34,211,238,0.22)]"
+            : "border-cyan-300/20 bg-slate-900/52"
         )}
         style={{ borderColor: isActive ? player.color : undefined }}
       >
-        <span className="text-xl">{AVATARS[player.avatar] ?? "?"}</span>
+        <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-cyan-300/25 bg-slate-950/55 text-xl">
+          {AVATARS[player.avatar] ?? "?"}
+        </span>
         <div className="flex-1 min-w-0">
-          <div className="text-xs font-semibold truncate">{player.name}</div>
-          <div className="text-[11px] opacity-90">
+          <div className="truncate text-sm font-semibold text-cyan-50">{player.name}</div>
+          <div className="text-[11px] text-cyan-100/85">
             PTS {player.points ?? 0} | KUDO {player.stars}
           </div>
         </div>

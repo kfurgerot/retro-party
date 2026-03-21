@@ -53,6 +53,7 @@ const MAX_PLAYERS = 20;
 const WHO_SAID_IT_ANNOUNCE_MS = 4000;
 const ENABLE_WHO_SAID_IT_MINIGAME = process.env.ENABLE_WHO_SAID_IT_MINIGAME === "1";
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
+const ALLOW_PRIVATE_LAN_ORIGINS = process.env.ALLOW_PRIVATE_LAN_ORIGINS !== "0";
 
 function isPrivateIpv4(hostname) {
   const parts = hostname.split(".");
@@ -109,6 +110,7 @@ const ALLOWED_ORIGINS = getAllowedOrigins();
 function isAllowedCorsOrigin(origin) {
   if (!origin) return true;
   if (ALLOWED_ORIGINS.has(origin)) return true;
+  if (ALLOW_PRIVATE_LAN_ORIGINS && isLocalDevOrigin(origin)) return true;
   return !IS_PRODUCTION && isLocalDevOrigin(origin);
 }
 

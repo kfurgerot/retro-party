@@ -26,7 +26,8 @@ export const ChoiceCard: React.FC<ChoiceCardProps> = ({
       className={cn(
         "w-full rounded-xl border p-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
         selected ? "border-cyan-300 bg-cyan-500/20 shadow-[0_0_0_1px_rgba(34,211,238,0.24)]" : "border-cyan-300/25 bg-slate-900/55",
-        disabled && "cursor-not-allowed opacity-60"
+        disabled && "cursor-not-allowed opacity-60",
+        !disabled && "hover:border-cyan-300/40 hover:bg-slate-900/75"
       )}
       onClick={onClick}
     >
@@ -40,4 +41,3 @@ export const ChoiceCard: React.FC<ChoiceCardProps> = ({
     </Comp>
   );
 };
-

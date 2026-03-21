@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { fr } from "@/i18n/fr";
+import { GAME_DIALOG_CONTENT } from "@/lib/uiTokens";
 
 interface TargetPlayerModalProps {
   open: boolean;
@@ -31,7 +32,7 @@ export const TargetPlayerModal: React.FC<TargetPlayerModalProps> = ({
 }) => {
   return (
     <AlertDialog open={open} onOpenChange={() => {}}>
-      <AlertDialogContent className="border-cyan-300/30 bg-slate-950/95 text-cyan-50">
+      <AlertDialogContent className={GAME_DIALOG_CONTENT}>
         <AlertDialogHeader>
           <AlertDialogTitle>{fr.targetPlayerModal.title}</AlertDialogTitle>
           <AlertDialogDescription className="text-slate-300">
@@ -43,7 +44,7 @@ export const TargetPlayerModal: React.FC<TargetPlayerModalProps> = ({
             <button
               key={player.id}
               type="button"
-              className="rounded border border-cyan-300/25 bg-slate-900/55 px-3 py-2 text-left hover:bg-slate-800/65"
+              className="rounded-xl border border-cyan-300/25 bg-slate-900/55 px-3 py-2 text-left transition hover:border-cyan-300/45 hover:bg-slate-800/65"
               onClick={() => onSelect(player.id)}
             >
               <span className="text-sm font-semibold">{player.name}</span>
@@ -54,7 +55,7 @@ export const TargetPlayerModal: React.FC<TargetPlayerModalProps> = ({
           ))}
         </div>
         <AlertDialogFooter>
-          <AlertDialogCancel className={cn(neutralBtnClass, "text-cyan-100")} onClick={onCancel}>
+          <AlertDialogCancel className={cn(neutralBtnClass, "h-11 rounded-xl text-cyan-100")} onClick={onCancel}>
             {fr.targetPlayerModal.cancel}
           </AlertDialogCancel>
         </AlertDialogFooter>

@@ -1,8 +1,9 @@
 import React, { useMemo } from "react";
 import { QuestionState, Player } from "@/types/game";
-import { PixelCard } from "./PixelCard";
-import { PixelButton } from "./PixelButton";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { fr } from "@/i18n/fr";
+import { CTA_NEON_PRIMARY, GAME_DIALOG_CONTENT } from "@/lib/uiTokens";
 
 type Props = {
   question: QuestionState;
@@ -14,55 +15,43 @@ type Props = {
 
 const TYPE_THEME: Record<
   QuestionState["type"],
-  { title: string; icon: string; border: string; glow: string; badge: string; panel: string }
+  { title: string; icon: string; accent: string; chip: string }
 > = {
   blue: {
     title: fr.questionModal.blueTitle,
     icon: "B",
-    border: "border-[hsl(var(--tile-blue))]",
-    glow: "shadow-[6px_6px_0_rgba(0,0,0,0.55),0_0_24px_hsl(var(--tile-blue)/0.45)]",
-    badge: "bg-[hsl(var(--tile-blue))] text-black",
-    panel: "bg-[linear-gradient(180deg,hsl(var(--tile-blue)/0.25)_0%,hsl(var(--card))_40%)]",
+    accent: "text-sky-100",
+    chip: "border-sky-300/45 bg-sky-500/20 text-sky-100",
   },
   green: {
     title: fr.questionModal.greenTitle,
     icon: "V",
-    border: "border-[hsl(var(--tile-green))]",
-    glow: "shadow-[6px_6px_0_rgba(0,0,0,0.55),0_0_24px_hsl(var(--tile-green)/0.45)]",
-    badge: "bg-[hsl(var(--tile-green))] text-black",
-    panel: "bg-[linear-gradient(180deg,hsl(var(--tile-green)/0.25)_0%,hsl(var(--card))_40%)]",
+    accent: "text-emerald-100",
+    chip: "border-emerald-300/45 bg-emerald-500/20 text-emerald-100",
   },
   red: {
     title: fr.questionModal.redTitle,
     icon: "R",
-    border: "border-[hsl(var(--tile-red))]",
-    glow: "shadow-[6px_6px_0_rgba(0,0,0,0.55),0_0_24px_hsl(var(--tile-red)/0.45)]",
-    badge: "bg-[hsl(var(--tile-red))] text-white",
-    panel: "bg-[linear-gradient(180deg,hsl(var(--tile-red)/0.25)_0%,hsl(var(--card))_40%)]",
+    accent: "text-rose-100",
+    chip: "border-rose-300/45 bg-rose-500/20 text-rose-100",
   },
   purple: {
     title: fr.questionModal.violetTitle,
     icon: "I",
-    border: "border-[hsl(var(--tile-violet))]",
-    glow: "shadow-[6px_6px_0_rgba(0,0,0,0.55),0_0_24px_hsl(var(--tile-violet)/0.45)]",
-    badge: "bg-[hsl(var(--tile-violet))] text-black",
-    panel: "bg-[linear-gradient(180deg,hsl(var(--tile-violet)/0.25)_0%,hsl(var(--card))_40%)]",
+    accent: "text-violet-100",
+    chip: "border-violet-300/45 bg-violet-500/20 text-violet-100",
   },
   violet: {
     title: fr.questionModal.violetTitle,
     icon: "I",
-    border: "border-[hsl(var(--tile-violet))]",
-    glow: "shadow-[6px_6px_0_rgba(0,0,0,0.55),0_0_24px_hsl(var(--tile-violet)/0.45)]",
-    badge: "bg-[hsl(var(--tile-violet))] text-black",
-    panel: "bg-[linear-gradient(180deg,hsl(var(--tile-violet)/0.25)_0%,hsl(var(--card))_40%)]",
+    accent: "text-violet-100",
+    chip: "border-violet-300/45 bg-violet-500/20 text-violet-100",
   },
   bonus: {
     title: fr.questionModal.bonusTitle,
     icon: "*",
-    border: "border-[hsl(var(--tile-star))]",
-    glow: "shadow-[6px_6px_0_rgba(0,0,0,0.55),0_0_24px_hsl(var(--tile-star)/0.45)]",
-    badge: "bg-[hsl(var(--tile-star))] text-black",
-    panel: "bg-[linear-gradient(180deg,hsl(var(--tile-star)/0.25)_0%,hsl(var(--card))_40%)]",
+    accent: "text-amber-100",
+    chip: "border-amber-300/45 bg-amber-500/20 text-amber-100",
   },
 };
 
@@ -83,73 +72,59 @@ export function QuestionModal({ question, players, myPlayerId, onVote, onValidat
       role="dialog"
       aria-modal="true"
     >
-      <div className="w-full max-w-2xl">
-        <PixelCard
-          className={`relative overflow-hidden border-4 p-6 ${theme.border} ${theme.glow} ${theme.panel}`}
-        >
-          <div className="pointer-events-none absolute inset-0 opacity-20 [background:repeating-linear-gradient(180deg,transparent_0,transparent_4px,rgba(255,255,255,0.08)_4px,rgba(255,255,255,0.08)_6px)]" />
-          <div className="pointer-events-none absolute left-2 top-2 h-3 w-3 border-2 border-white/70 bg-black/70" />
-          <div className="pointer-events-none absolute right-2 top-2 h-3 w-3 border-2 border-white/70 bg-black/70" />
-          <div className="pointer-events-none absolute bottom-2 left-2 h-3 w-3 border-2 border-white/70 bg-black/70" />
-          <div className="pointer-events-none absolute bottom-2 right-2 h-3 w-3 border-2 border-white/70 bg-black/70" />
-
-          <div className="relative z-10 flex items-start justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <span
-                  className={`inline-flex h-7 min-w-7 items-center justify-center border-2 border-black px-1 text-xs font-bold ${theme.badge}`}
-                >
-                  {theme.icon}
-                </span>
-                <div className="text-[11px] font-bold uppercase tracking-wide">{theme.title}</div>
-              </div>
-              <div className="mt-2 text-sm opacity-90">
-                {fr.questionModal.questionFor} <span className="font-semibold">{targetName}</span>
-              </div>
+      <div className={cn("w-full max-w-2xl", GAME_DIALOG_CONTENT)}>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className={cn("inline-flex h-7 min-w-7 items-center justify-center rounded-full border px-2 text-xs font-bold", theme.chip)}>
+                {theme.icon}
+              </span>
+              <div className={cn("text-[11px] font-bold uppercase tracking-[0.12em]", theme.accent)}>{theme.title}</div>
             </div>
-            <div className="flex items-center gap-2 text-xs">
-              <span className="rounded border-2 border-emerald-300/70 bg-emerald-500/20 px-2 py-1">
-                +1 {upCount}
-              </span>
-              <span className="rounded border-2 border-rose-300/70 bg-rose-500/20 px-2 py-1">
-                -1 {downCount}
-              </span>
+            <div className="mt-2 text-sm text-cyan-100/90">
+              {fr.questionModal.questionFor} <span className="font-semibold">{targetName}</span>
             </div>
           </div>
-
-          <div className="relative z-10 mt-4 border-2 border-white/20 bg-black/35 p-4 text-base leading-relaxed sm:text-xl">
-            {question.text}
+          <div className="flex items-center gap-2 text-xs">
+            <span className="rounded-full border border-emerald-300/60 bg-emerald-500/18 px-2 py-1 text-emerald-100">
+              +1 {upCount}
+            </span>
+            <span className="rounded-full border border-rose-300/60 bg-rose-500/18 px-2 py-1 text-rose-100">
+              -1 {downCount}
+            </span>
           </div>
+        </div>
 
-          <div className="relative z-10 mt-6 flex flex-wrap items-center justify-between gap-3">
-            {!isTarget ? (
-              <div className="flex gap-2">
-                <PixelButton
-                  onClick={() => onVote("up")}
-                  className="border-emerald-400 bg-emerald-500/80 text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
-                >
-                  + {fr.questionModal.useful}
-                </PixelButton>
-                <PixelButton
-                  onClick={() => onVote("down")}
-                  className="border-rose-400 bg-rose-500/80 text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-200 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
-                >
-                  - {fr.questionModal.toExplore}
-                </PixelButton>
-              </div>
-            ) : (
-              <div className="text-sm opacity-80">
-                {fr.questionModal.answerInstruction}
-              </div>
-            )}
+        <div className="mt-4 rounded-xl border border-cyan-300/25 bg-slate-900/55 p-4 text-base leading-relaxed text-cyan-50 sm:text-xl">
+          {question.text}
+        </div>
 
-            {isTarget && (
-              <PixelButton onClick={onValidate} variant="primary">
-                {fr.questionModal.validateAnswer}
-              </PixelButton>
-            )}
-          </div>
-        </PixelCard>
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+          {!isTarget ? (
+            <div className="flex flex-wrap gap-2">
+              <Button
+                onClick={() => onVote("up")}
+                className="h-11 rounded-xl border border-emerald-300/65 bg-emerald-500/22 px-4 text-sm font-semibold text-emerald-50 hover:bg-emerald-500/34"
+              >
+                + {fr.questionModal.useful}
+              </Button>
+              <Button
+                onClick={() => onVote("down")}
+                className="h-11 rounded-xl border border-rose-300/65 bg-rose-500/22 px-4 text-sm font-semibold text-rose-50 hover:bg-rose-500/34"
+              >
+                - {fr.questionModal.toExplore}
+              </Button>
+            </div>
+          ) : (
+            <div className="text-sm text-slate-300">{fr.questionModal.answerInstruction}</div>
+          )}
+
+          {isTarget && (
+            <Button onClick={onValidate} className={cn("h-11 rounded-xl px-5 text-sm font-semibold", CTA_NEON_PRIMARY)}>
+              {fr.questionModal.validateAnswer}
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );

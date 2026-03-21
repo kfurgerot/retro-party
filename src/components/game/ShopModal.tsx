@@ -13,6 +13,7 @@ import {
 import { cn } from "@/lib/utils";
 import { fr } from "@/i18n/fr";
 import { ShopItemCard } from "./hud";
+import { GAME_DIALOG_CONTENT } from "@/lib/uiTokens";
 
 interface ShopModalProps {
   open: boolean;
@@ -37,7 +38,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
 }) => {
   return (
     <AlertDialog open={open} onOpenChange={() => {}}>
-      <AlertDialogContent className="border-cyan-300/30 bg-slate-950/95 text-cyan-50 max-w-2xl">
+      <AlertDialogContent className={cn(GAME_DIALOG_CONTENT, "max-w-2xl")}>
         <AlertDialogHeader>
           <AlertDialogTitle>{fr.shopModal.title}</AlertDialogTitle>
           <AlertDialogDescription className="text-slate-300">
@@ -62,11 +63,11 @@ export const ShopModal: React.FC<ShopModalProps> = ({
             );
           })}
         </div>
-        <AlertDialogFooter>
-          <AlertDialogCancel className={cn(neutralBtnClass, "text-cyan-100")} onClick={onClose}>
+        <AlertDialogFooter className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:space-x-0">
+          <AlertDialogCancel className={cn(neutralBtnClass, "h-11 w-full rounded-xl text-cyan-100")} onClick={onClose}>
             {fr.shopModal.continue}
           </AlertDialogCancel>
-          <AlertDialogAction className={activeBtnClass} onClick={onClose}>
+          <AlertDialogAction className={cn(activeBtnClass, "h-11 w-full rounded-xl")} onClick={onClose}>
             {fr.shopModal.close}
           </AlertDialogAction>
         </AlertDialogFooter>

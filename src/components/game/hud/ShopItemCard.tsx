@@ -23,7 +23,7 @@ export const ShopItemCard: React.FC<ShopItemCardProps> = ({
   buyButtonClass,
 }) => {
   return (
-    <div className="rounded-xl border border-cyan-300/25 bg-slate-900/55 p-3">
+    <div className="rounded-xl border border-cyan-300/25 bg-slate-900/55 p-3 shadow-[0_0_0_1px_rgba(34,211,238,0.08)]">
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-sm font-semibold text-cyan-50">{title}</div>
@@ -36,7 +36,7 @@ export const ShopItemCard: React.FC<ShopItemCardProps> = ({
           type="button"
           disabled={!canInteract || !canBuy}
           className={cn(
-            "rounded-lg border px-3 py-1.5 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
+            "rounded-xl border px-3 py-2 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
             canInteract && canBuy
               ? buyButtonClass
               : "cursor-not-allowed border-slate-500 bg-slate-700/60 text-slate-300"
@@ -49,4 +49,3 @@ export const ShopItemCard: React.FC<ShopItemCardProps> = ({
     </div>
   );
 };
-

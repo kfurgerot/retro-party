@@ -35,7 +35,12 @@ import {
   GAME_DIALOG_CONTENT,
   GAME_DRAWER_CLOSE_BUTTON,
   GAME_DRAWER_CONTENT,
+  GAME_HUD_SURFACE,
   GAME_MOBILE_ACTION_BUTTON,
+  GAME_PANEL_SURFACE,
+  GAME_SUBPANEL_SURFACE,
+  GAME_TAB_BUTTON,
+  GAME_TAB_BUTTON_ACTIVE,
 } from "@/lib/uiTokens";
 import { ENABLE_BOARD_V2 } from "@/lib/uiMode";
 import { perfLog, perfMark, perfMeasure } from "@/lib/perf";
@@ -742,8 +747,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     ? "border-cyan-400/40 bg-cyan-500/15 text-cyan-100"
     : "border-cyan-300/20 bg-slate-900/40 text-slate-300";
 
-  const neonCard = "neon-card";
-  const neonPanel = "neon-surface";
+  const neonCard = GAME_PANEL_SURFACE;
+  const neonPanel = GAME_SUBPANEL_SURFACE;
   const neutralSecondaryBtn = CTA_NEON_SECONDARY_SUBTLE;
   const activeCyanBtn = CTA_NEON_PRIMARY;
   const dangerLeaveBtn = CTA_NEON_DANGER;
@@ -781,7 +786,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       <RetroScreenBackground />
 
       <div className="relative z-10 flex h-svh w-full flex-col overflow-hidden p-2 sm:p-3">
-        <div className="neon-surface-soft p-1.5 sm:p-2">
+        <div className={cn(GAME_HUD_SURFACE, "p-1.5 sm:p-2")}>
           <div className="xl:hidden">
             <TurnBanner
               mode="mobile"
@@ -885,7 +890,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
           </div>
 
           <div className="hidden min-h-0 min-w-0 flex-col gap-3 xl:flex">
-            <Card className={cn(neonCard, "flex min-h-0 flex-1 flex-col px-3 py-3")}>
+            <Card className={cn(neonCard, "flex min-h-0 flex-1 flex-col rounded-2xl px-3 py-3")}>
               <div className="flex items-center justify-between gap-2">
                 <div className="text-base font-bold">
                   {sidebarTab === "players"
@@ -898,11 +903,10 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                   <Button
                     variant="secondary"
                     size="sm"
-                    className={
-                      sidebarTab === "players"
-                        ? activeCyanBtn
-                        : `${neutralSecondaryBtn} opacity-95`
-                    }
+                    className={cn(
+                      GAME_TAB_BUTTON,
+                      sidebarTab === "players" ? GAME_TAB_BUTTON_ACTIVE : "opacity-95"
+                    )}
                     onClick={() => setSidebarTab("players")}
                   >
                     {fr.gameScreen.players}
@@ -910,11 +914,10 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                   <Button
                     variant="secondary"
                     size="sm"
-                    className={
-                      sidebarTab === "legend"
-                        ? activeCyanBtn
-                        : `${neutralSecondaryBtn} opacity-95`
-                    }
+                    className={cn(
+                      GAME_TAB_BUTTON,
+                      sidebarTab === "legend" ? GAME_TAB_BUTTON_ACTIVE : "opacity-95"
+                    )}
                     onClick={() => setSidebarTab("legend")}
                   >
                     {fr.gameScreen.legend}
@@ -922,11 +925,10 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                   <Button
                     variant="secondary"
                     size="sm"
-                    className={
-                      sidebarTab === "activity"
-                        ? activeCyanBtn
-                        : `${neutralSecondaryBtn} opacity-95`
-                    }
+                    className={cn(
+                      GAME_TAB_BUTTON,
+                      sidebarTab === "activity" ? GAME_TAB_BUTTON_ACTIVE : "opacity-95"
+                    )}
                     onClick={() => setSidebarTab("activity")}
                   >
                     {fr.gameScreen.activityFeed}
@@ -938,10 +940,10 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 <div className="mt-3 grid min-h-0 flex-1 gap-2 overflow-auto pr-1">
                   <div
                     className={cn(
-                      "rounded border px-2 py-2 text-xs",
+                      `px-2 py-2 text-xs ${GAME_SUBPANEL_SURFACE}`,
                       isMyTurn
-                        ? "border-cyan-300/40 bg-cyan-500/15 shadow-[0_0_0_1px_rgba(34,211,238,0.25)_inset]"
-                        : "border-cyan-300/20 bg-slate-950/30"
+                        ? "border-cyan-300/45 bg-cyan-500/18 shadow-[0_0_0_1px_rgba(34,211,238,0.24)_inset]"
+                        : ""
                     )}
                   >
                     <div className="flex items-center gap-2 text-cyan-100/80">
@@ -961,7 +963,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                     <div
                       key={entry.player.id}
                       className={cn(
-                        "grid gap-1 rounded-md border p-1.5 transition-colors",
+                        "grid gap-1 rounded-xl border p-1.5 transition-colors",
                         entry.isCurrent
                           ? "border-cyan-300/35 bg-cyan-500/10"
                           : entry.isNext
@@ -972,7 +974,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                       <div className="flex items-center justify-between px-1 text-[11px]">
                         <span
                           className={cn(
-                            "inline-flex rounded-full border px-2 py-0.5",
+                            "inline-flex rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-[0.08em]",
                             entry.isCurrent
                               ? "border-cyan-300/45 bg-cyan-500/15 text-cyan-100"
                               : entry.isNext
@@ -999,7 +1001,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               ) : sidebarTab === "legend" ? (
                 <div className="mt-3 grid min-h-0 flex-1 gap-2 overflow-auto pr-1 text-sm text-cyan-50">
                   {legend.map((l) => (
-                    <div key={l.k} className="flex items-center gap-2">
+                    <div key={l.k} className={cn("flex items-center gap-2 px-2 py-1.5", GAME_SUBPANEL_SURFACE)}>
                       <span className="inline-flex h-5 w-5 items-center justify-center rounded-sm border border-cyan-300/35 bg-slate-900/60 text-[11px] font-semibold text-cyan-200">
                         {l.icon}
                       </span>
@@ -1014,7 +1016,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                       <div
                         key={`${entry.log}-${index}`}
                         className={cn(
-                          "rounded border px-2 py-1",
+                          "rounded-xl border px-2 py-1.5",
                           index === 0
                             ? "border-cyan-300/30 bg-cyan-500/10 text-cyan-100"
                             : "border-cyan-300/15 bg-slate-950/25 text-cyan-50/85"
@@ -1024,14 +1026,14 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                           <ActionBadge
                             label={activityKindLabel[entry.kind]}
                             tone={activityKindClass[entry.kind]}
-                            className="rounded border px-1.5 py-0.5"
+                            className="rounded-full border px-2 py-0.5"
                           />
                         </div>
                         <div>{entry.log}</div>
                       </div>
                     ))
                   ) : (
-                    <div className="rounded border border-cyan-300/15 bg-slate-950/25 px-2 py-1 text-slate-300">
+                    <div className="rounded-xl border border-cyan-300/15 bg-slate-950/25 px-2 py-1.5 text-slate-300">
                       {fr.gameScreen.noRecentActivity}
                     </div>
                   )}
@@ -1041,10 +1043,10 @@ export const GameScreen: React.FC<GameScreenProps> = ({
           </div>
         </div>
         <div className="sticky bottom-0 z-30 mt-1 pb-[calc(env(safe-area-inset-bottom)+4px)]">
-          <Card className={cn(neonCard, "border px-2 py-2 shadow-[0_-8px_24px_rgba(2,6,23,0.35)] backdrop-blur-md xl:hidden")}>
+          <Card className={cn(GAME_HUD_SURFACE, "px-2 py-2 shadow-[0_-8px_24px_rgba(2,6,23,0.35)] xl:hidden")}>
             <div className="grid grid-cols-3 gap-2">
               <Button
-                className={cn(GAME_MOBILE_ACTION_BUTTON, activeCyanBtn)}
+                className={cn(GAME_MOBILE_ACTION_BUTTON, neutralSecondaryBtn)}
                 size="sm"
                 variant="secondary"
                 onClick={openMobileInfo}
@@ -1054,7 +1056,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               </Button>
 
               <Button
-                className={cn(GAME_MOBILE_ACTION_BUTTON, activeCyanBtn)}
+                className={cn(GAME_MOBILE_ACTION_BUTTON, neutralSecondaryBtn)}
                 size="sm"
                 variant="secondary"
                 onClick={openMobileActivity}
@@ -1064,7 +1066,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               </Button>
 
               <Button
-                className={cn(GAME_MOBILE_ACTION_BUTTON, activeCyanBtn)}
+                className={cn(GAME_MOBILE_ACTION_BUTTON, neutralSecondaryBtn)}
                 size="sm"
                 variant="secondary"
                 onClick={openMobileMenu}
@@ -1098,10 +1100,9 @@ export const GameScreen: React.FC<GameScreenProps> = ({
           <div className="grid max-h-[62svh] gap-2 overflow-auto px-4 pb-4">
             <div
               className={cn(
-                "rounded border px-2 py-2 text-xs",
-                isMyTurn
-                  ? "border-cyan-300/40 bg-cyan-500/15 shadow-[0_0_0_1px_rgba(34,211,238,0.25)_inset]"
-                  : "border-cyan-300/20 bg-slate-950/30"
+                "px-2 py-2 text-xs",
+                GAME_SUBPANEL_SURFACE,
+                isMyTurn ? "border-cyan-300/45 bg-cyan-500/18 shadow-[0_0_0_1px_rgba(34,211,238,0.24)_inset]" : ""
               )}
             >
               <div className="flex items-center gap-2 text-cyan-100/80">
@@ -1121,7 +1122,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               <div
                 key={entry.player.id}
                 className={cn(
-                  "grid gap-1 rounded-md border p-1.5 transition-colors",
+                  "grid gap-1 rounded-xl border p-1.5 transition-colors",
                   entry.isCurrent
                     ? "border-cyan-300/35 bg-cyan-500/10"
                     : entry.isNext
@@ -1132,7 +1133,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 <div className="flex items-center justify-between px-1 text-[11px]">
                   <span
                     className={cn(
-                      "inline-flex rounded-full border px-2 py-0.5",
+                      "inline-flex rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-[0.08em]",
                       entry.isCurrent
                         ? "border-cyan-300/45 bg-cyan-500/15 text-cyan-100"
                         : entry.isNext
@@ -1208,7 +1209,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
           </DrawerHeader>
 
           <div className="grid gap-2 px-4 pb-4">
-            <div className="rounded border border-cyan-300/20 bg-slate-950/30 px-3 py-2">
+            <div className={cn("px-3 py-2", GAME_SUBPANEL_SURFACE)}>
               <div
                 className={`mb-1 inline-flex rounded-full border px-2 py-1 text-[11px] ${turnStatusClass}`}
               >
@@ -1244,9 +1245,9 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 
           <div className="grid gap-2 px-4 pb-4">
             <Button
-              className={cn(GAME_MOBILE_ACTION_BUTTON, activeCyanBtn)}
-              size="sm"
-              variant="secondary"
+                className={cn(GAME_MOBILE_ACTION_BUTTON, neutralSecondaryBtn)}
+                size="sm"
+                variant="secondary"
               onClick={() => {
                 setMobileMenuOpen(false);
                 openMobileActivity();
@@ -1255,9 +1256,9 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               {fr.gameScreen.activityFeed}
             </Button>
             <Button
-              className={cn(GAME_MOBILE_ACTION_BUTTON, activeCyanBtn)}
-              size="sm"
-              variant="secondary"
+                className={cn(GAME_MOBILE_ACTION_BUTTON, neutralSecondaryBtn)}
+                size="sm"
+                variant="secondary"
               onClick={() => {
                 setMobileMenuOpen(false);
                 openPlayers();
@@ -1266,9 +1267,9 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               {fr.gameScreen.players}
             </Button>
             <Button
-              className={cn(GAME_MOBILE_ACTION_BUTTON, activeCyanBtn)}
-              size="sm"
-              variant="secondary"
+                className={cn(GAME_MOBILE_ACTION_BUTTON, neutralSecondaryBtn)}
+                size="sm"
+                variant="secondary"
               onClick={() => {
                 setMobileMenuOpen(false);
                 openLegend();
@@ -1316,7 +1317,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 <div
                   key={`${entry.log}-${index}`}
                   className={cn(
-                    "rounded border px-2 py-1",
+                    "rounded-xl border px-2 py-1.5",
                     index === 0
                       ? "border-cyan-300/30 bg-cyan-500/10 text-cyan-100"
                       : "border-cyan-300/15 bg-slate-950/25 text-cyan-50/85"
@@ -1326,14 +1327,14 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                     <ActionBadge
                       label={activityKindLabel[entry.kind]}
                       tone={activityKindClass[entry.kind]}
-                      className="rounded border px-1.5 py-0.5"
+                      className="rounded-full border px-2 py-0.5"
                     />
                   </div>
                   <div>{entry.log}</div>
                 </div>
               ))
             ) : (
-              <div className="rounded border border-cyan-300/15 bg-slate-950/25 px-2 py-1 text-slate-300">
+              <div className="rounded-xl border border-cyan-300/15 bg-slate-950/25 px-2 py-1.5 text-slate-300">
                 {fr.gameScreen.noRecentActivity}
               </div>
             )}
@@ -1342,18 +1343,18 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       </Drawer>
 
       <AlertDialog open={leaveDialogOpen} onOpenChange={setLeaveDialogOpen}>
-        <AlertDialogContent className={GAME_DIALOG_CONTENT}>
+        <AlertDialogContent className={cn(GAME_DIALOG_CONTENT, "max-w-md")}>
           <AlertDialogHeader>
             <AlertDialogTitle>{fr.gameScreen.leaveQuestionTitle}</AlertDialogTitle>
             <AlertDialogDescription className="text-slate-300">
               {fr.game.backToOnlineLobby}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className={cn(neutralSecondaryBtn, "text-cyan-100")}>
+          <AlertDialogFooter className="mt-1 grid grid-cols-1 gap-2 sm:grid-cols-2 sm:space-x-0">
+            <AlertDialogCancel className={cn(neutralSecondaryBtn, "h-11 w-full rounded-xl text-cyan-100")}>
               {fr.gameScreen.cancel}
             </AlertDialogCancel>
-            <AlertDialogAction className={dangerLeaveBtn} onClick={confirmLeave}>
+            <AlertDialogAction className={cn(dangerLeaveBtn, "h-11 w-full rounded-xl")} onClick={confirmLeave}>
               {fr.gameScreen.leave}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -1373,7 +1374,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       </Suspense>
 
       <AlertDialog open={isKudoPurchaseActive && !isMoveAnimating} onOpenChange={() => {}}>
-        <AlertDialogContent className={GAME_DIALOG_CONTENT}>
+        <AlertDialogContent className={cn(GAME_DIALOG_CONTENT, "max-w-md")}>
           <AlertDialogHeader>
             <AlertDialogTitle>{fr.gameScreen.buyKudoTitle}</AlertDialogTitle>
             <AlertDialogDescription className="text-slate-300">
@@ -1382,17 +1383,17 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 : fr.gameScreen.cannotAffordKudo}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
+          <AlertDialogFooter className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:space-x-0">
             {canResolveKudoPurchase ? (
               <>
                 <AlertDialogCancel
-                  className={cn(neutralSecondaryBtn, "text-cyan-100")}
+                  className={cn(neutralSecondaryBtn, "h-11 w-full rounded-xl text-cyan-100")}
                   onClick={() => onResolveKudoPurchase?.(false)}
                 >
                   {fr.gameScreen.continue}
                 </AlertDialogCancel>
                 <AlertDialogAction
-                  className={activeCyanBtn}
+                  className={cn(activeCyanBtn, "h-11 w-full rounded-xl")}
                   disabled={!pendingKudoPurchase?.canAfford}
                   onClick={() => onResolveKudoPurchase?.(true)}
                 >
@@ -1400,7 +1401,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 </AlertDialogAction>
               </>
             ) : (
-              <AlertDialogCancel className={cn(neutralSecondaryBtn, "text-cyan-100")}>
+              <AlertDialogCancel className={cn(neutralSecondaryBtn, "h-11 rounded-xl text-cyan-100")}>
                 {fr.gameScreen.waiting}
               </AlertDialogCancel>
             )}

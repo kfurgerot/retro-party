@@ -60,14 +60,14 @@ export const TurnBanner: React.FC<TurnBannerProps> = ({
 }) => {
   if (mode === "mobile") {
     return (
-      <Card className={cn(neonCardClass, "px-2.5 py-2")}>
+      <Card className={cn(neonCardClass, "rounded-xl px-3 py-2.5")}>
         <div className="flex items-center justify-between gap-2">
           <div className="text-[10px] uppercase tracking-[0.1em] text-cyan-100/80">{currentTurnLabel}</div>
           <div className="flex items-center gap-1.5">
-            <span className="inline-flex rounded border border-cyan-300/30 bg-slate-900/45 px-1.5 py-0.5 text-[10px] text-cyan-100">
+            <span className="inline-flex rounded-full border border-cyan-300/30 bg-slate-900/45 px-2 py-0.5 text-[10px] text-cyan-100">
               {pointsLabel}: {myPoints}
             </span>
-            <span className="inline-flex rounded border border-cyan-300/30 bg-slate-900/45 px-1.5 py-0.5 text-[10px] text-cyan-100">
+            <span className="inline-flex rounded-full border border-cyan-300/30 bg-slate-900/45 px-2 py-0.5 text-[10px] text-cyan-100">
               {starsLabel}: {myStars}
             </span>
             {isMyTurn ? <ActionBadge tone="active" label={youLabel} /> : null}
@@ -106,15 +106,15 @@ export const TurnBanner: React.FC<TurnBannerProps> = ({
   }
 
   return (
-    <div className="hidden xl:flex xl:flex-wrap xl:items-center xl:justify-between xl:gap-3">
-      <Card className={cn(neonCardClass, "min-w-0 px-3 py-2 sm:px-4 sm:py-3")}>
+    <div className="hidden xl:flex xl:flex-wrap xl:items-center xl:justify-between xl:gap-2">
+      <Card className={cn(neonCardClass, "min-w-0 rounded-xl px-3 py-2 sm:px-4 sm:py-3")}>
         <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">{roundLabel}</div>
         <div className="text-lg font-bold sm:text-xl">
           {currentRound} / {maxRounds}
         </div>
       </Card>
 
-      <Card className={cn(neonCardClass, "min-w-0 px-3 py-2 sm:px-4 sm:py-3")}>
+      <Card className={cn(neonCardClass, "min-w-0 rounded-xl px-3 py-2 sm:px-4 sm:py-3")}>
         <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">{currentTurnLabel}</div>
         <div className="truncate text-lg font-bold sm:text-xl">{currentPlayerName}</div>
         <div className="mt-1">
@@ -128,7 +128,7 @@ export const TurnBanner: React.FC<TurnBannerProps> = ({
       <Card
         className={cn(
           neonCardClass,
-          "min-w-[220px] max-w-[420px] px-3 py-2 sm:px-4 sm:py-3",
+          "min-w-[220px] max-w-[420px] rounded-xl px-3 py-2 sm:px-4 sm:py-3",
           isMyTurn ? "border-cyan-300/45 bg-cyan-500/10" : ""
         )}
       >
@@ -136,12 +136,12 @@ export const TurnBanner: React.FC<TurnBannerProps> = ({
         <div className="truncate text-sm font-semibold text-cyan-100">{primaryAction}</div>
       </Card>
 
-      <Card className={cn(neonCardClass, "min-w-0 px-3 py-2 sm:px-4 sm:py-3")}>
+      <Card className={cn(neonCardClass, "min-w-0 rounded-xl px-3 py-2 sm:px-4 sm:py-3")}>
         <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">{pointsLabel}</div>
         <div className="text-lg font-bold sm:text-xl">{myPoints}</div>
       </Card>
 
-      <Card className={cn(neonCardClass, "min-w-0 px-3 py-2 sm:px-4 sm:py-3")}>
+      <Card className={cn(neonCardClass, "min-w-0 rounded-xl px-3 py-2 sm:px-4 sm:py-3")}>
         <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">{starsLabel}</div>
         <div className="text-lg font-bold sm:text-xl">{myStars}</div>
       </Card>
