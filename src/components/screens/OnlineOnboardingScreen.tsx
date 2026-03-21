@@ -153,20 +153,6 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
                 <div className="text-xs text-slate-300">{fr.onlineOnboarding.avatarTitle}</div>
               </div>
             </div>
-            <div className="mt-3 grid gap-1 text-[11px] text-slate-300">
-              <div>
-                {fr.onlineOnboarding.step} 1:{" "}
-                <span className={cn("font-semibold", validName ? "text-emerald-200" : "text-amber-200")}>
-                  {validName ? fr.onlineLobby.checklistReady : fr.onlineLobby.checklistBlocked}
-                </span>
-              </div>
-              <div>
-                {fr.onlineOnboarding.step} 2:{" "}
-                <span className={cn("font-semibold", step === 2 ? "text-emerald-200" : "text-cyan-200")}>
-                  {step === 2 ? fr.onlineLobby.checklistReady : fr.onlineOnboarding.next}
-                </span>
-              </div>
-            </div>
           </Card>
         </div>
 
