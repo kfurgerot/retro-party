@@ -626,23 +626,23 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
       )}
 
       <AlertDialog open={leaveDialogOpen} onOpenChange={setLeaveDialogOpen}>
-        <AlertDialogContent className={GAME_DIALOG_CONTENT}>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
+        <AlertDialogContent className={cn(GAME_DIALOG_CONTENT, "max-w-md rounded-2xl border-cyan-300/40 p-5 sm:p-6 shadow-[0_0_0_1px_rgba(34,211,238,0.2),0_14px_40px_rgba(2,6,23,0.6)]")}>
+          <AlertDialogHeader className="space-y-3">
+            <AlertDialogTitle className="text-base uppercase tracking-[0.08em] text-cyan-100">
               {canStart ? fr.onlineLobby.cancelPartyQuestion : fr.onlineLobby.leavePartyQuestion}
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-slate-300">
+            <AlertDialogDescription className="text-sm text-slate-300">
               {canStart
                 ? fr.onlineLobby.disconnectAll
                 : fr.onlineLobby.leavingCurrent}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className={CTA_NEON_SECONDARY_SUBTLE}>
+          <AlertDialogFooter className="mt-1 grid grid-cols-1 gap-2 sm:grid-cols-2 sm:space-x-0">
+            <AlertDialogCancel className={cn(CTA_NEON_SECONDARY_SUBTLE, "h-11 w-full rounded-xl text-cyan-100")}>
               {fr.onlineLobby.cancel}
             </AlertDialogCancel>
             <AlertDialogAction
-              className={CTA_NEON_DANGER}
+              className={cn(CTA_NEON_DANGER, "h-11 w-full rounded-xl")}
               onClick={confirmLeave}
             >
               {canStart ? fr.onlineLobby.cancelParty : fr.onlineLobby.leaveParty}
