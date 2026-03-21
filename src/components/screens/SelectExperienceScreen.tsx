@@ -96,9 +96,6 @@ export const SelectExperienceScreen: React.FC<SelectExperienceScreenProps> = ({
         <h1 className="mt-4 text-center text-xl text-cyan-200 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)] sm:text-3xl">
           {fr.selectExperience.title}
         </h1>
-        <p className="mt-2 text-center text-sm text-slate-300">
-          {fr.selectExperience.subtitle}
-        </p>
         {hasProgress ? (
           <div className="mt-4 h-1 w-full overflow-hidden rounded bg-slate-900/55">
             <div

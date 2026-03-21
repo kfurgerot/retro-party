@@ -255,38 +255,22 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
       <RetroScreenBackground />
 
       <div className="relative z-10 flex min-h-[82svh] w-full max-w-4xl flex-col rounded border border-cyan-300/60 bg-[linear-gradient(180deg,rgba(8,18,38,0.88)_0%,rgba(8,12,24,0.9)_100%)] p-5 shadow-[0_0_0_2px_rgba(34,211,238,0.3),0_0_34px_rgba(34,211,238,0.32)] backdrop-blur sm:p-8">
-        <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] uppercase tracking-[0.2em] text-cyan-200/80">
+        <div className="flex flex-wrap items-start justify-between gap-2 text-[10px] uppercase tracking-[0.2em] text-cyan-200/80">
           <span>{fr.onlineLobby.brand}</span>
-          <div className="flex items-center gap-2">
-            {!roomCode && stepLabel ? (
-              <span className="rounded-full border border-cyan-300/40 px-2 py-1">
-                {stepLabel}
-              </span>
-            ) : null}
-            <span className="rounded-full border border-cyan-300/45 px-2 py-1">
-              {fr.onlineLobby.lobbyBadge}
+          {!roomCode && stepLabel ? (
+            <span className="rounded-full border border-cyan-300/40 px-2 py-1">
+              {stepLabel}
             </span>
-          </div>
+          ) : null}
         </div>
 
         <h1 className="mt-4 text-center text-xl text-cyan-200 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)] sm:text-3xl">
           {roomCode ? fr.onlineLobby.roomReady : fr.onlineLobby.quickConfig}
         </h1>
 
-        <div className="mt-3 flex flex-wrap justify-center gap-2 text-xs">
-          <span
-            className={cn(
-              "rounded-full border px-3 py-1",
-              connected
-                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
-                : "border-amber-500/30 bg-amber-500/10 text-amber-200"
-            )}
-          >
-            {connected ? fr.onlineLobby.connected : fr.onlineLobby.connecting}
-          </span>
-        </div>
-
-        <p className="mt-4 text-center text-xs text-slate-300 sm:text-sm">{subtitle}</p>
+        {roomCode ? (
+          <p className="mt-4 text-center text-xs text-slate-300 sm:text-sm">{subtitle}</p>
+        ) : null}
         {hasProgress ? (
           <div className="mt-4 h-1 w-full overflow-hidden rounded bg-slate-900/55">
             <div
@@ -316,6 +300,16 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
                     <div className="truncate text-sm font-semibold text-cyan-50">
                       {name || fr.onlineOnboarding.displayNamePlaceholder}
                     </div>
+                    <span
+                      className={cn(
+                        "mt-1 inline-flex w-fit rounded-full border px-2 py-0.5 text-[10px] tracking-normal",
+                        connected
+                          ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
+                          : "border-amber-500/30 bg-amber-500/10 text-amber-200"
+                      )}
+                    >
+                      {connected ? fr.onlineLobby.connected : fr.onlineLobby.connecting}
+                    </span>
                   </div>
                 </div>
                 {onEditProfile && (
