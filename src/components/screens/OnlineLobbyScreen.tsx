@@ -375,25 +375,6 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
               </div>
             )}
 
-            <PrimaryButton
-              type="button"
-              onClick={mode === "host" ? submitHost : submitJoin}
-              disabled={primaryDisabled}
-              className="hidden h-11 font-semibold sm:inline-flex"
-              title={primaryLabel}
-            >
-              {fr.onlineOnboarding.next}
-            </PrimaryButton>
-
-            <SecondaryButton
-              type="button"
-              onClick={submitLeave}
-              disabled={pending !== "idle"}
-              className="hidden h-11 sm:inline-flex"
-            >
-              {fr.onlineOnboarding.back}
-            </SecondaryButton>
-
             <p className="text-center text-[11px] text-slate-400">
               {primaryLabel}
             </p>
@@ -428,13 +409,6 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
                     />
                   </div>
 
-                  <PrimaryButton
-                    onClick={submitStart}
-                    disabled={!canLaunch || pending !== "idle"}
-                    className="h-12 text-base font-semibold"
-                  >
-                    {fr.onlineLobby.hostPrimaryAction}
-                  </PrimaryButton>
                 </>
               ) : (
                 <div className="rounded-md border border-cyan-300/20 bg-slate-900/40 px-3 py-3">
@@ -450,13 +424,6 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
                 </div>
               )}
 
-              <SecondaryButton
-                onClick={submitLeave}
-                disabled={pending !== "idle"}
-                className="hidden h-11 lg:inline-flex"
-              >
-                {canStart ? fr.onlineLobby.cancelParty : fr.onlineLobby.leaveParty}
-              </SecondaryButton>
             </Card>
 
             <Card className="grid gap-3 p-4 sm:p-5">
@@ -534,15 +501,51 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
       </div>
 
       {roomCode && (
-        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] lg:hidden">
-          <Card className="pointer-events-auto mx-auto w-full max-w-4xl border-cyan-300/40 bg-slate-950/92 p-3 shadow-[0_0_0_1px_rgba(34,211,238,0.2),0_8px_28px_rgba(2,6,23,0.55)]">
-            {canStart ? (
-              <div className="grid gap-2">
+        <>
+          <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 hidden px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:block">
+            <Card className="pointer-events-auto mx-auto w-full max-w-4xl border-cyan-300/40 bg-slate-950/92 p-3 shadow-[0_0_0_1px_rgba(34,211,238,0.2),0_8px_28px_rgba(2,6,23,0.55)]">
+              {canStart ? (
+                <div className="flex items-center justify-between gap-2">
+                  <SecondaryButton
+                    onClick={submitLeave}
+                    disabled={pending !== "idle"}
+                    className={cn("h-11", CTA_NEON_DANGER)}
+                  >
+                    {fr.onlineLobby.cancelParty}
+                  </SecondaryButton>
+                  <PrimaryButton
+                    onClick={submitStart}
+                    disabled={!canLaunch || pending !== "idle"}
+                    className="h-11"
+                  >
+                    {fr.onlineLobby.hostPrimaryAction}
+                  </PrimaryButton>
+                </div>
+              ) : (
+                <div className="grid gap-2">
+                  <p className="text-xs text-slate-300">
+                    {fr.onlineLobby.waitingHostDescription.replace("{host}", hostPlayerName)}
+                  </p>
+                  <SecondaryButton
+                    onClick={submitLeave}
+                    disabled={pending !== "idle"}
+                    className={cn("h-11", CTA_NEON_DANGER)}
+                  >
+                    {fr.onlineLobby.leaveParty}
+                  </SecondaryButton>
+                </div>
+              )}
+            </Card>
+          </div>
+
+          <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:hidden">
+            <Card className="pointer-events-auto mx-auto w-full max-w-4xl border-cyan-300/40 bg-slate-950/92 p-3 shadow-[0_0_0_1px_rgba(34,211,238,0.2),0_8px_28px_rgba(2,6,23,0.55)]">
+              {canStart ? (
                 <div className="grid grid-cols-2 gap-2">
                   <SecondaryButton
                     onClick={submitLeave}
                     disabled={pending !== "idle"}
-                    className="h-12"
+                    className={cn("h-12", CTA_NEON_DANGER)}
                   >
                     {fr.onlineLobby.cancelParty}
                   </SecondaryButton>
@@ -554,23 +557,23 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
                     {fr.onlineLobby.hostPrimaryAction}
                   </PrimaryButton>
                 </div>
-              </div>
-            ) : (
-              <div className="grid gap-2">
-                <p className="text-xs text-slate-300">
-                  {fr.onlineLobby.waitingHostDescription.replace("{host}", hostPlayerName)}
-                </p>
-                <SecondaryButton
-                  onClick={submitLeave}
-                  disabled={pending !== "idle"}
-                  className="h-12"
-                >
-                  {fr.onlineLobby.leaveParty}
-                </SecondaryButton>
-              </div>
-            )}
-          </Card>
-        </div>
+              ) : (
+                <div className="grid gap-2">
+                  <p className="text-xs text-slate-300">
+                    {fr.onlineLobby.waitingHostDescription.replace("{host}", hostPlayerName)}
+                  </p>
+                  <SecondaryButton
+                    onClick={submitLeave}
+                    disabled={pending !== "idle"}
+                    className={cn("h-12", CTA_NEON_DANGER)}
+                  >
+                    {fr.onlineLobby.leaveParty}
+                  </SecondaryButton>
+                </div>
+              )}
+            </Card>
+          </div>
+        </>
       )}
 
       {!roomCode && (
