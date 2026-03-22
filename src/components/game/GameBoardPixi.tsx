@@ -708,7 +708,7 @@ const GameBoardPixiComponent: React.FC<GameBoardProps> = ({
   return (
     <div
       ref={containerRef}
-      className="relative h-full w-full overflow-hidden rounded-lg border-4 border-black bg-slate-900"
+      className="relative h-full w-full overflow-hidden rounded-lg border-4 border-black bg-slate-950"
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
@@ -716,6 +716,28 @@ const GameBoardPixiComponent: React.FC<GameBoardProps> = ({
       onWheel={onWheel}
       style={{ touchAction: "none" }}
     >
+      <div
+        className="pointer-events-none absolute inset-0 z-0"
+        style={{
+          backgroundImage: [
+            "radial-gradient(120% 90% at 50% 8%, rgba(34,211,238,0.24) 0%, rgba(15,23,42,0.06) 48%, rgba(2,6,23,0.72) 100%)",
+            "radial-gradient(55% 38% at 12% 78%, rgba(16,185,129,0.2) 0%, rgba(16,185,129,0) 100%)",
+            "radial-gradient(48% 32% at 88% 22%, rgba(250,204,21,0.14) 0%, rgba(250,204,21,0) 100%)",
+          ].join(","),
+        }}
+      />
+      <div
+        className="pointer-events-none absolute inset-0 z-0 opacity-35"
+        style={{
+          backgroundImage: [
+            "linear-gradient(0deg, rgba(56,189,248,0.12) 1px, transparent 1px)",
+            "linear-gradient(90deg, rgba(56,189,248,0.1) 1px, transparent 1px)",
+          ].join(","),
+          backgroundSize: "24px 24px, 24px 24px",
+          maskImage: "radial-gradient(120% 90% at 50% 52%, black 42%, transparent 100%)",
+        }}
+      />
+
       <PixiBoardCanvas
         width={width}
         height={height}
