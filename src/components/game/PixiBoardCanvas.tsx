@@ -430,7 +430,9 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
           activeAvatarNodes.push({
             chip,
             avatar,
-            baseChipY: py,
+            // Graphics circles are already drawn using world coordinates (px/py),
+            // so their container offset baseline must remain 0.
+            baseChipY: 0,
             baseAvatarY: py + 0.5,
           });
         }
