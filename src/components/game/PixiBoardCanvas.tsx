@@ -23,8 +23,8 @@ interface PixiBoardCanvasProps {
   offset: Point;
   tiles: Tile[];
   points: Point[];
-  tileCenter: number;
-  tileSize: number;
+  tileWidth: number;
+  tileHeight: number;
   playersByTile: Map<number, Player[]>;
   playerDisplayPositions: Record<string, number>;
   focusPlayerId?: string | null;
@@ -69,8 +69,8 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
   offset,
   tiles,
   points,
-  tileCenter,
-  tileSize,
+  tileWidth,
+  tileHeight,
   playersByTile,
   playerDisplayPositions,
   focusPlayerId = null,
@@ -83,6 +83,9 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
   floatingDeltas,
   actionOverlay = null,
 }) => {
+  const tileHalfWidth = tileWidth / 2;
+  const tileHalfHeight = tileHeight / 2;
+
   const hostRef = useRef<HTMLDivElement | null>(null);
   const appRef = useRef<Application | null>(null);
   const worldRef = useRef<Container | null>(null);
@@ -197,10 +200,10 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
         .forEach((nextId) => {
           const to = points[nextId];
           const isHighlighted = highlightedPathEdges.has(`${tile.id}-${nextId}`);
-          const fromX = from.x + tileCenter;
-          const fromY = from.y + tileCenter;
-          const toX = to.x + tileCenter;
-          const toY = to.y + tileCenter;
+          const fromX = from.x + tileHalfWidth;
+          const fromY = from.y + tileHalfHeight;
+          const toX = to.x + tileHalfWidth;
+          const toY = to.y + tileHalfHeight;
           edges.lineStyle(12, 0x0f172a, 0.75, 0.5, true);
           edges.moveTo(fromX, fromY);
           edges.lineTo(toX, toY);
@@ -220,10 +223,10 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
           .forEach((nextId) => {
             const to = points[nextId];
             if (!to) return;
-            const fromX = from.x + tileCenter;
-            const fromY = from.y + tileCenter;
-            const toX = to.x + tileCenter;
-            const toY = to.y + tileCenter;
+            const fromX = from.x + tileHalfWidth;
+            const fromY = from.y + tileHalfHeight;
+            const toX = to.x + tileHalfWidth;
+            const toY = to.y + tileHalfHeight;
             const dx = toX - fromX;
             const dy = toY - fromY;
             const len = Math.hypot(dx, dy) || 1;
@@ -260,34 +263,40 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
       const showIndex = isPathOrigin || isPathOption;
 
       const rect = new Graphics();
+      const centerX = p.x + tileHalfWidth;
+      const centerY = p.y + tileHalfHeight;
       if (isFocused) {
         rect.lineStyle(5, 0xfcd34d, 0.85, 0.5, true);
       } else {
         rect.lineStyle(4, 0x020617, 1, 0.5, true);
       }
       rect.beginFill(tileColor, 1);
-      rect.drawRoundedRect(p.x, p.y, tileSize, tileSize, 8);
+      rect.moveTo(centerX, p.y);
+      rect.lineTo(p.x + tileWidth, centerY);
+      rect.lineTo(centerX, p.y + tileHeight);
+      rect.lineTo(p.x, centerY);
+      rect.lineTo(centerX, p.y);
       rect.endFill();
       tilesLayer.addChild(rect);
 
       const icon = new Text(TILE_ICON[tile.type] ?? "?", sharedStyles.tileIcon);
       icon.anchor.set(0.5);
-      icon.x = p.x + tileCenter;
-      icon.y = p.y + tileCenter + 1;
+      icon.x = centerX;
+      icon.y = centerY + 1;
       tilesLayer.addChild(icon);
 
       if (showIndex) {
         const badge = new Graphics();
         badge.lineStyle(1, 0xcbd5e1, 0.35, 0.5, true);
         badge.beginFill(0x0f172a, 0.85);
-        badge.drawRoundedRect(p.x + tileSize - 17, p.y - 7, 16, 12, 3);
+        badge.drawRoundedRect(centerX + tileHalfWidth * 0.48 - 8, p.y + tileHeight * 0.2 - 6, 16, 12, 3);
         badge.endFill();
         tilesLayer.addChild(badge);
 
         const indexText = new Text(String(tile.id + 1), sharedStyles.tileIndex);
         indexText.anchor.set(0.5);
-        indexText.x = p.x + tileSize - 9;
-        indexText.y = p.y - 1;
+        indexText.x = centerX + tileHalfWidth * 0.48;
+        indexText.y = p.y + tileHeight * 0.2;
         tilesLayer.addChild(indexText);
       }
     });
@@ -305,8 +314,8 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
       if (!p) return;
       const tilePlayers = playersByTile.get(tile.id) ?? [];
       tilePlayers.slice(0, 3).forEach((player, index) => {
-        const px = p.x + tileCenter - ((Math.min(tilePlayers.length, 3) - 1) * 10) + index * 20;
-        const py = p.y + tileCenter;
+        const px = p.x + tileHalfWidth - ((Math.min(tilePlayers.length, 3) - 1) * 10) + index * 20;
+        const py = p.y + tileHalfHeight + 1;
         const chip = new Graphics();
         chip.lineStyle(2, Number.parseInt(player.color.replace("#", "0x"), 16) || 0xffffff, 1, 0.5, true);
         chip.beginFill(0xffffff, 1);
@@ -328,15 +337,15 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
           activeAvatarNodes.push({
             chip,
             avatar,
-            baseChipY: 0,
+            baseChipY: py,
             baseAvatarY: py + 0.5,
           });
         }
       });
 
       if (tilePlayers.length > 3) {
-        const overflowX = p.x + tileCenter + 22;
-        const overflowY = p.y + tileCenter;
+        const overflowX = p.x + tileHalfWidth + 22;
+        const overflowY = p.y + tileHalfHeight + 1;
         const overflow = new Graphics();
         overflow.lineStyle(2, 0x020617, 1, 0.5, true);
         overflow.beginFill(0xffffff, 1);
@@ -411,8 +420,10 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
     sharedStyles.overflow,
     sharedStyles.tileIcon,
     sharedStyles.tileIndex,
-    tileCenter,
-    tileSize,
+    tileHalfHeight,
+    tileHalfWidth,
+    tileHeight,
+    tileWidth,
     tiles,
   ]);
 
@@ -447,13 +458,13 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
     const playerIndex = tilePlayers.findIndex((player) => player.id === focusPlayerId);
     const shownCount = Math.min(tilePlayers.length, 3);
 
-    let avatarX = p.x + tileCenter;
+    let avatarX = p.x + tileHalfWidth;
     if (playerIndex >= 0 && playerIndex < 3) {
-      avatarX = p.x + tileCenter - ((shownCount - 1) * 10) + playerIndex * 20;
+      avatarX = p.x + tileHalfWidth - ((shownCount - 1) * 10) + playerIndex * 20;
     } else if (playerIndex >= 3) {
-      avatarX = p.x + tileCenter + 22;
+      avatarX = p.x + tileHalfWidth + 22;
     }
-    const avatarY = p.y + tileCenter;
+    const avatarY = p.y + tileHalfHeight + 1;
 
     const host = hostRef.current;
     const viewWidth = host?.clientWidth ?? app?.screen.width ?? 1;
@@ -569,7 +580,8 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
     playersByTile,
     points,
     scale,
-    tileCenter,
+    tileHalfHeight,
+    tileHalfWidth,
   ]);
 
   return (
