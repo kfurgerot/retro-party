@@ -66,6 +66,8 @@ const TILE_ICON: Record<string, string> = {
 
 const TILE_ELEVATION = 16;
 const PAWN_LIFT = 14;
+const TILE_VISUAL_INSET_X = 7;
+const TILE_VISUAL_INSET_Y = 4;
 
 function shadeColor(hex: number, amount: number) {
   const r = (hex >> 16) & 0xff;
@@ -107,6 +109,8 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
 }) => {
   const tileHalfWidth = tileWidth / 2;
   const tileHalfHeight = tileHeight / 2;
+  const drawHalfWidth = Math.max(8, tileHalfWidth - TILE_VISUAL_INSET_X);
+  const drawHalfHeight = Math.max(6, tileHalfHeight - TILE_VISUAL_INSET_Y);
 
   const hostRef = useRef<HTMLDivElement | null>(null);
   const appRef = useRef<Application | null>(null);
@@ -298,17 +302,17 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
       const isPathOption = pendingPathChoiceOptions.includes(tile.id);
       const showIndex = isPathOrigin || isPathOption;
 
-      const topY = p.y;
-      const rightX = p.x + tileWidth;
-      const bottomY = p.y + tileHeight;
-      const leftX = p.x;
+      const topY = centerY - drawHalfHeight;
+      const rightX = centerX + drawHalfWidth;
+      const bottomY = centerY + drawHalfHeight;
+      const leftX = centerX - drawHalfWidth;
 
       tileShadows.beginFill(0x020617, isFocused ? 0.34 : 0.24);
       tileShadows.drawEllipse(
-        centerX + tileHalfWidth * 0.18,
+        centerX + drawHalfWidth * 0.18,
         bottomY + TILE_ELEVATION + 3,
-        tileHalfWidth * 0.86,
-        tileHalfHeight * 0.42
+        drawHalfWidth * 0.86,
+        drawHalfHeight * 0.42
       );
       tileShadows.endFill();
 
@@ -354,8 +358,8 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
         if (Math.abs(u) + Math.abs(v) > 1) continue;
         tileTopTexture.beginFill(textureColor, 0.2);
         tileTopTexture.drawCircle(
-          centerX + u * tileHalfWidth * 0.75,
-          centerY + v * tileHalfHeight * 0.75,
+          centerX + u * drawHalfWidth * 0.75,
+          centerY + v * drawHalfHeight * 0.75,
           1.4
         );
         tileTopTexture.endFill();
@@ -371,14 +375,14 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
         const badge = new Graphics();
         badge.lineStyle(1, 0xcbd5e1, 0.35, 0.5, true);
         badge.beginFill(0x0f172a, 0.85);
-        badge.drawRoundedRect(centerX + tileHalfWidth * 0.48 - 8, p.y + tileHeight * 0.2 - 6, 16, 12, 3);
+        badge.drawRoundedRect(centerX + drawHalfWidth * 0.52 - 8, topY + drawHalfHeight * 0.5 - 6, 16, 12, 3);
         badge.endFill();
         tilesLayer.addChild(badge);
 
         const indexText = new Text(String(tile.id + 1), sharedStyles.tileIndex);
         indexText.anchor.set(0.5);
-        indexText.x = centerX + tileHalfWidth * 0.48;
-        indexText.y = p.y + tileHeight * 0.2;
+        indexText.x = centerX + drawHalfWidth * 0.52;
+        indexText.y = topY + drawHalfHeight * 0.5;
         tilesLayer.addChild(indexText);
       }
     });
@@ -532,6 +536,8 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
     sharedStyles.tileIndex,
     tileHalfHeight,
     tileHalfWidth,
+    drawHalfHeight,
+    drawHalfWidth,
     tileHeight,
     tileWidth,
     tiles,
