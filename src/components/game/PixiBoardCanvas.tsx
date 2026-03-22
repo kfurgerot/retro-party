@@ -64,6 +64,28 @@ const TILE_ICON: Record<string, string> = {
   start: "▶",
 };
 
+const TILE_ELEVATION = 16;
+const PAWN_LIFT = 14;
+
+function shadeColor(hex: number, amount: number) {
+  const r = (hex >> 16) & 0xff;
+  const g = (hex >> 8) & 0xff;
+  const b = hex & 0xff;
+  const apply = (value: number) => {
+    if (amount >= 0) return Math.round(value + (255 - value) * amount);
+    return Math.round(value * (1 + amount));
+  };
+  const nr = Math.max(0, Math.min(255, apply(r)));
+  const ng = Math.max(0, Math.min(255, apply(g)));
+  const nb = Math.max(0, Math.min(255, apply(b)));
+  return (nr << 16) | (ng << 8) | nb;
+}
+
+function seededUnit(seed: number) {
+  const x = Math.sin(seed * 12.9898) * 43758.5453;
+  return x - Math.floor(x);
+}
+
 export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
   scale,
   offset,
@@ -253,36 +275,88 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
     }
 
     const tilesLayer = new Container();
+    const tileShadows = new Graphics();
+    const tileSides = new Graphics();
+    const tileTopTexture = new Graphics();
     tiles.forEach((tile) => {
       const p = points[tile.id];
       if (!p) return;
       const tileColor = TILE_HEX_COLORS[tile.type] ?? 0x1e293b;
+      const tileColorLeft = shadeColor(tileColor, -0.3);
+      const tileColorRight = shadeColor(tileColor, -0.42);
       const isFocused = focusedPosition === tile.id;
       const isPathOrigin = pendingPathChoiceAtTileId === tile.id;
       const isPathOption = pendingPathChoiceOptions.includes(tile.id);
       const showIndex = isPathOrigin || isPathOption;
 
-      const rect = new Graphics();
       const centerX = p.x + tileHalfWidth;
       const centerY = p.y + tileHalfHeight;
+      const topY = p.y;
+      const rightX = p.x + tileWidth;
+      const bottomY = p.y + tileHeight;
+      const leftX = p.x;
+
+      tileShadows.beginFill(0x020617, isFocused ? 0.34 : 0.24);
+      tileShadows.drawEllipse(
+        centerX + tileHalfWidth * 0.18,
+        bottomY + TILE_ELEVATION + 3,
+        tileHalfWidth * 0.86,
+        tileHalfHeight * 0.42
+      );
+      tileShadows.endFill();
+
+      tileSides.lineStyle(0);
+      tileSides.beginFill(tileColorLeft, 0.98);
+      tileSides.drawPolygon([
+        leftX, centerY,
+        centerX, bottomY,
+        centerX, bottomY + TILE_ELEVATION,
+        leftX, centerY + TILE_ELEVATION,
+      ]);
+      tileSides.endFill();
+
+      tileSides.beginFill(tileColorRight, 0.98);
+      tileSides.drawPolygon([
+        rightX, centerY,
+        centerX, bottomY,
+        centerX, bottomY + TILE_ELEVATION,
+        rightX, centerY + TILE_ELEVATION,
+      ]);
+      tileSides.endFill();
+
+      const rect = new Graphics();
       if (isFocused) {
         rect.lineStyle(5, 0xfcd34d, 0.85, 0.5, true);
       } else {
         rect.lineStyle(4, 0x020617, 1, 0.5, true);
       }
       rect.beginFill(tileColor, 1);
-      rect.moveTo(centerX, p.y);
-      rect.lineTo(p.x + tileWidth, centerY);
-      rect.lineTo(centerX, p.y + tileHeight);
-      rect.lineTo(p.x, centerY);
-      rect.lineTo(centerX, p.y);
+      rect.moveTo(centerX, topY);
+      rect.lineTo(rightX, centerY);
+      rect.lineTo(centerX, bottomY);
+      rect.lineTo(leftX, centerY);
+      rect.lineTo(centerX, topY);
       rect.endFill();
       tilesLayer.addChild(rect);
+
+      const textureColor = shadeColor(tileColor, 0.36);
+      for (let i = 0; i < 8; i += 1) {
+        const u = seededUnit(tile.id * 101 + i * 17 + 1) * 2 - 1;
+        const v = seededUnit(tile.id * 197 + i * 31 + 5) * 2 - 1;
+        if (Math.abs(u) + Math.abs(v) > 1) continue;
+        tileTopTexture.beginFill(textureColor, 0.2);
+        tileTopTexture.drawCircle(
+          centerX + u * tileHalfWidth * 0.75,
+          centerY + v * tileHalfHeight * 0.75,
+          1.4
+        );
+        tileTopTexture.endFill();
+      }
 
       const icon = new Text(TILE_ICON[tile.type] ?? "?", sharedStyles.tileIcon);
       icon.anchor.set(0.5);
       icon.x = centerX;
-      icon.y = centerY + 1;
+      icon.y = centerY - TILE_ELEVATION * 0.24 + 1;
       tilesLayer.addChild(icon);
 
       if (showIndex) {
@@ -300,6 +374,9 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
         tilesLayer.addChild(indexText);
       }
     });
+    tilesLayer.addChildAt(tileShadows, 0);
+    tilesLayer.addChildAt(tileSides, 1);
+    tilesLayer.addChild(tileTopTexture);
     world.addChild(tilesLayer);
 
     const playersLayer = new Container();
@@ -315,12 +392,28 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
       const tilePlayers = playersByTile.get(tile.id) ?? [];
       tilePlayers.slice(0, 3).forEach((player, index) => {
         const px = p.x + tileHalfWidth - ((Math.min(tilePlayers.length, 3) - 1) * 10) + index * 20;
-        const py = p.y + tileHalfHeight + 1;
+        const groundY = p.y + tileHalfHeight + 1;
+        const py = groundY - PAWN_LIFT;
+
+        const shadow = new Graphics();
+        shadow.beginFill(0x020617, 0.33);
+        shadow.drawEllipse(px + 1.5, groundY + 10, 9.5, 4.2);
+        shadow.endFill();
+        playersLayer.addChild(shadow);
+
+        const stem = new Graphics();
+        stem.beginFill(0x0f172a, 0.58);
+        stem.drawRoundedRect(px - 2, py + 12, 4, PAWN_LIFT - 1, 2);
+        stem.endFill();
+        playersLayer.addChild(stem);
+
         const chip = new Graphics();
         chip.lineStyle(2, Number.parseInt(player.color.replace("#", "0x"), 16) || 0xffffff, 1, 0.5, true);
         chip.beginFill(0xffffff, 1);
         chip.drawCircle(px, py, 14);
         chip.endFill();
+        chip.lineStyle(1, 0xffffff, 0.55, 0.5, true);
+        chip.drawCircle(px - 4, py - 5, 4);
         if (movingPlayerId === player.id) {
           chip.lineStyle(2, 0x67e8f9, 1, 0.5, true);
           chip.drawCircle(px, py, 16);
@@ -345,7 +438,14 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
 
       if (tilePlayers.length > 3) {
         const overflowX = p.x + tileHalfWidth + 22;
-        const overflowY = p.y + tileHalfHeight + 1;
+        const overflowGroundY = p.y + tileHalfHeight + 1;
+        const overflowY = overflowGroundY - (PAWN_LIFT - 2);
+        const overflowShadow = new Graphics();
+        overflowShadow.beginFill(0x020617, 0.3);
+        overflowShadow.drawEllipse(overflowX + 1.2, overflowGroundY + 10, 9.2, 4);
+        overflowShadow.endFill();
+        playersLayer.addChild(overflowShadow);
+
         const overflow = new Graphics();
         overflow.lineStyle(2, 0x020617, 1, 0.5, true);
         overflow.beginFill(0xffffff, 1);
