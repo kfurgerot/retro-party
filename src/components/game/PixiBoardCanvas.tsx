@@ -278,9 +278,18 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
     const tileShadows = new Graphics();
     const tileSides = new Graphics();
     const tileTopTexture = new Graphics();
-    tiles.forEach((tile) => {
-      const p = points[tile.id];
-      if (!p) return;
+    const tilesInDepthOrder = tiles
+      .map((tile) => {
+        const p = points[tile.id];
+        if (!p) return null;
+        const centerX = p.x + tileHalfWidth;
+        const centerY = p.y + tileHalfHeight;
+        return { tile, p, centerX, centerY };
+      })
+      .filter((entry): entry is { tile: Tile; p: Point; centerX: number; centerY: number } => !!entry)
+      .sort((a, b) => (a.centerY - b.centerY) || (a.centerX - b.centerX));
+
+    tilesInDepthOrder.forEach(({ tile, p, centerX, centerY }) => {
       const tileColor = TILE_HEX_COLORS[tile.type] ?? 0x1e293b;
       const tileColorLeft = shadeColor(tileColor, -0.3);
       const tileColorRight = shadeColor(tileColor, -0.42);
@@ -289,8 +298,6 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
       const isPathOption = pendingPathChoiceOptions.includes(tile.id);
       const showIndex = isPathOrigin || isPathOption;
 
-      const centerX = p.x + tileHalfWidth;
-      const centerY = p.y + tileHalfHeight;
       const topY = p.y;
       const rightX = p.x + tileWidth;
       const bottomY = p.y + tileHeight;
@@ -305,22 +312,23 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
       );
       tileShadows.endFill();
 
-      tileSides.lineStyle(0);
-      tileSides.beginFill(tileColorLeft, 0.98);
+      tileSides.lineStyle(1, shadeColor(tileColorLeft, -0.08), 1, 0.5, true);
+      tileSides.beginFill(tileColorLeft, 1);
       tileSides.drawPolygon([
         leftX, centerY,
         centerX, bottomY,
-        centerX, bottomY + TILE_ELEVATION,
-        leftX, centerY + TILE_ELEVATION,
+        centerX, bottomY + TILE_ELEVATION + 1,
+        leftX, centerY + TILE_ELEVATION + 1,
       ]);
       tileSides.endFill();
 
-      tileSides.beginFill(tileColorRight, 0.98);
+      tileSides.lineStyle(1, shadeColor(tileColorRight, -0.08), 1, 0.5, true);
+      tileSides.beginFill(tileColorRight, 1);
       tileSides.drawPolygon([
         rightX, centerY,
         centerX, bottomY,
-        centerX, bottomY + TILE_ELEVATION,
-        rightX, centerY + TILE_ELEVATION,
+        centerX, bottomY + TILE_ELEVATION + 1,
+        rightX, centerY + TILE_ELEVATION + 1,
       ]);
       tileSides.endFill();
 
