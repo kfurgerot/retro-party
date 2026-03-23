@@ -53,6 +53,47 @@ function isValidEmail(value) {
   return true;
 }
 
+function normalizeOrigin(value) {
+  if (typeof value !== "string") return null;
+  const raw = value.trim();
+  if (!raw) return null;
+  try {
+    const parsed = new URL(raw);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
+    return parsed.origin;
+  } catch {
+    return null;
+  }
+}
+
+function getResetPasswordBaseUrl(req) {
+  const explicitBase = process.env.RESET_PASSWORD_URL_BASE?.trim();
+  if (explicitBase) return explicitBase;
+
+  const requestOrigin = normalizeOrigin(req.get("origin"));
+  if (requestOrigin) return `${requestOrigin}/reset-password`;
+
+  const envOrigin = normalizeOrigin(process.env.ORIGIN);
+  if (envOrigin) return `${envOrigin}/reset-password`;
+
+  const forwardedProtoHeader = req.headers["x-forwarded-proto"];
+  const forwardedHostHeader = req.headers["x-forwarded-host"] ?? req.headers.host;
+  const forwardedProto =
+    typeof forwardedProtoHeader === "string"
+      ? forwardedProtoHeader.split(",")[0].trim().toLowerCase()
+      : "";
+  const forwardedHost =
+    typeof forwardedHostHeader === "string"
+      ? forwardedHostHeader.split(",")[0].trim()
+      : "";
+
+  if ((forwardedProto === "http" || forwardedProto === "https") && forwardedHost) {
+    return `${forwardedProto}://${forwardedHost}/reset-password`;
+  }
+
+  return "http://localhost:8088/reset-password";
+}
+
 function getClientIp(req) {
   const forwardedFor = req.headers["x-forwarded-for"];
   if (typeof forwardedFor === "string" && forwardedFor.length > 0) {
@@ -390,8 +431,7 @@ export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCod
 
       if (!user) return res.status(200).json(genericResponse);
 
-      const resetBaseUrl =
-        process.env.RESET_PASSWORD_URL_BASE || `${process.env.ORIGIN || "http://localhost:8088"}/reset-password`;
+      const resetBaseUrl = getResetPasswordBaseUrl(req);
       const rawToken = crypto.randomBytes(32).toString("hex");
       const tokenHash = hashToken(rawToken);
       const expiresAt = new Date(Date.now() + RESET_TOKEN_TTL_MINUTES * 60 * 1000).toISOString();
