@@ -156,9 +156,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 }) => {
   const [hasMovedThisTurn, setHasMovedThisTurn] = useState(false);
   const [isMoveAnimating, setIsMoveAnimating] = useState(false);
-  const [sidebarTab, setSidebarTab] = useState<"players" | "legend" | "activity">("players");
+  const [sidebarTab, setSidebarTab] = useState<"players" | "activity">("players");
   const [playersOpen, setPlayersOpen] = useState(false);
-  const [legendOpen, setLegendOpen] = useState(false);
   const [mobileInfoOpen, setMobileInfoOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileActivityOpen, setMobileActivityOpen] = useState(false);
@@ -379,18 +378,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     gameState.diceValue != null &&
     !hasMovedThisTurn;
 
-  const legend = useMemo(
-    () => [
-      { k: "blue", label: fr.gameScreen.legendBlue, icon: "💬" },
-      { k: "green", label: fr.gameScreen.legendGreen, icon: "🔧" },
-      { k: "red", label: fr.gameScreen.legendRed, icon: "🔥" },
-      { k: "violet", label: fr.gameScreen.legendViolet, icon: "🎯" },
-      { k: "bonus", label: fr.gameScreen.legendBonus, icon: "🎁" },
-      { k: "shop", label: fr.game.shopLegend, icon: "🛒" },
-    ],
-    []
-  );
-
   const handleMove = useCallback(
     (steps: number) => {
       setHasMovedThisTurn(true);
@@ -602,11 +589,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const openPlayers = () => {
     if (isMobile()) setPlayersOpen(true);
     else setSidebarTab("players");
-  };
-
-  const openLegend = () => {
-    if (isMobile()) setLegendOpen(true);
-    else setSidebarTab("legend");
   };
 
   const openMobileInfo = () => {
@@ -938,8 +920,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 <div className="text-base font-bold">
                   {sidebarTab === "players"
                     ? fr.gameScreen.players
-                    : sidebarTab === "legend"
-                    ? fr.gameScreen.legend
                     : fr.gameScreen.activityFeed}
                 </div>
                 <div className="flex gap-2">
@@ -953,17 +933,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                     onClick={() => setSidebarTab("players")}
                   >
                     {fr.gameScreen.players}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className={cn(
-                      GAME_TAB_BUTTON,
-                      sidebarTab === "legend" ? GAME_TAB_BUTTON_ACTIVE : "opacity-95"
-                    )}
-                    onClick={() => setSidebarTab("legend")}
-                  >
-                    {fr.gameScreen.legend}
                   </Button>
                   <Button
                     variant="secondary"
@@ -1038,17 +1007,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                         isActive={entry.isCurrent}
                         compact
                       />
-                    </div>
-                  ))}
-                </div>
-              ) : sidebarTab === "legend" ? (
-                <div className="mt-3 grid min-h-0 flex-1 gap-2 overflow-auto pr-1 text-sm text-cyan-50">
-                  {legend.map((l) => (
-                    <div key={l.k} className={cn("flex items-center gap-2 px-2 py-1.5", GAME_SUBPANEL_SURFACE)}>
-                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-sm border border-cyan-300/35 bg-slate-900/60 text-[11px] font-semibold text-cyan-200">
-                        {l.icon}
-                      </span>
-                      <span className="leading-tight">{l.label}</span>
                     </div>
                   ))}
                 </div>
@@ -1203,37 +1161,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         </DrawerContent>
       </Drawer>
 
-      <Drawer open={legendOpen} onOpenChange={setLegendOpen}>
-        <DrawerContent className={GAME_DRAWER_CONTENT}>
-          <DrawerHeader className="pb-2">
-            <div className="flex items-center justify-between gap-2">
-              <DrawerTitle>{fr.gameScreen.legend}</DrawerTitle>
-              <DrawerClose asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  aria-label={fr.gameScreen.closeLegendPanelAria}
-                  className={GAME_DRAWER_CLOSE_BUTTON}
-                >
-                  {fr.gameScreen.close}
-                </Button>
-              </DrawerClose>
-            </div>
-          </DrawerHeader>
-
-          <div className="grid gap-2 px-4 pb-4 text-sm text-cyan-50">
-            {legend.map((l) => (
-              <div key={l.k} className="flex items-center gap-2">
-                <span className="inline-flex h-5 w-5 items-center justify-center rounded-sm border border-cyan-300/35 bg-slate-900/60 text-[11px] font-semibold text-cyan-200">
-                  {l.icon}
-                </span>
-                <span className="leading-tight">{l.label}</span>
-              </div>
-            ))}
-          </div>
-        </DrawerContent>
-      </Drawer>
-
       <Drawer open={mobileInfoOpen} onOpenChange={setMobileInfoOpen}>
         <DrawerContent className={GAME_DRAWER_CONTENT}>
           <DrawerHeader className="pb-2">
@@ -1308,17 +1235,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               }}
             >
               {fr.gameScreen.players}
-            </Button>
-            <Button
-                className={cn(GAME_MOBILE_ACTION_BUTTON, neutralSecondaryBtn)}
-                size="sm"
-                variant="secondary"
-              onClick={() => {
-                setMobileMenuOpen(false);
-                openLegend();
-              }}
-            >
-              {fr.gameScreen.legend}
             </Button>
             {onLeave && (
               <Button
