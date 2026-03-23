@@ -754,16 +754,15 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
     const isCompactLegend = viewWidth < 920;
     if (legendExpandedRef.current == null) {
       legendExpandedRef.current = !isCompactLegend;
-    } else if (!isCompactLegend && legendExpandedRef.current === false) {
-      // Keep mobile collapsed state optional, but default to expanded on large screens.
-      legendExpandedRef.current = true;
     }
     let legendExpanded = legendExpandedRef.current;
 
     const legendTitleStyle = new TextStyle({
-      fontFamily: "Press Start 2P, monospace",
+      fontFamily: "Nunito, Poppins, Arial, sans-serif",
       fill: 0xe2e8f0,
-      fontSize: 7,
+      fontSize: 12,
+      fontWeight: "800",
+      lineHeight: 14,
     });
     const legendIconStyle = new TextStyle({
       fontFamily: "Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif",
@@ -771,9 +770,11 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
       fontSize: 11,
     });
     const legendLabelStyle = new TextStyle({
-      fontFamily: "Press Start 2P, monospace",
+      fontFamily: "Nunito, Poppins, Arial, sans-serif",
       fill: 0xe2e8f0,
-      fontSize: 6,
+      fontSize: 10,
+      fontWeight: "700",
+      lineHeight: 12,
     });
 
     const legendTitle = new Text("Légende", legendTitleStyle);
@@ -788,7 +789,7 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
 
     legendItems.forEach((item, index) => {
       const row = new Container();
-      row.y = index * 14;
+      row.y = index * 17;
 
       const iconBadge = new Graphics();
       iconBadge.lineStyle(1.4, item.color, 0.95, 0.5, true);
@@ -805,7 +806,7 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
 
       const label = new Text(item.label, legendLabelStyle);
       label.x = 20;
-      label.y = 2;
+      label.y = 1;
       row.addChild(label);
 
       legendRows.addChild(row);
@@ -828,8 +829,12 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
     toggleButton.addChild(toggleText);
 
     const redrawLegend = () => {
-      const panelWidth = legendExpanded ? 168 : 102;
-      const panelHeight = legendExpanded ? 112 : 28;
+      const contentWidth = Math.max(legendRows.width, legendTitle.width);
+      const expandedPanelWidth = Math.max(168, Math.ceil(legendRows.x + contentWidth + 34));
+      const compactPanelWidth = Math.max(112, Math.ceil(legendTitle.x + legendTitle.width + 34));
+      const panelWidth = legendExpanded ? expandedPanelWidth : compactPanelWidth;
+      const expandedPanelHeight = Math.max(112, Math.ceil(legendRows.y + legendRows.height + 10));
+      const panelHeight = legendExpanded ? expandedPanelHeight : 28;
       legendBackground.clear();
       legendBackground.lineStyle(1, 0x38bdf8, 0.45, 0.5, true);
       legendBackground.beginFill(0x020617, legendExpanded ? 0.48 : 0.38);
