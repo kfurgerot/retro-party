@@ -9,7 +9,11 @@ import {
 } from "@/types/game";
 import { socket } from "@/net/socket";
 
-type LobbyPlayer = { socketId?: string; name: string; avatar: number; isHost: boolean };
+type LobbyPlayer = { socketId?: string; name: string; avatar: number; isHost: boolean; connected?: boolean };
+type RoomPresenceNotice = {
+  id: number;
+  message: string;
+};
 type OnlineSession = {
   code: string;
   name: string;
@@ -103,6 +107,7 @@ export function useOnlineGameState() {
   const [myPlayerId, setMyPlayerId] = useState<string | null>(null);
   const [connected, setConnected] = useState<boolean>(socket.connected);
   const [whoSaidIt, setWhoSaidIt] = useState<WhoSaidItViewState | null>(null);
+  const [roomNotice, setRoomNotice] = useState<RoomPresenceNotice | null>(null);
 
   const sessionRef = useRef<OnlineSession | null>(initialSession);
   const pendingProfileRef = useRef<{ name: string; avatar: number; sessionId: string } | null>(
@@ -111,6 +116,8 @@ export function useOnlineGameState() {
       : null
   );
   const minigameCleanupRef = useRef<number | null>(null);
+  const previousLobbyRef = useRef<LobbyPlayer[] | null>(null);
+  const roomNoticeSeqRef = useRef(0);
 
   useEffect(() => {
     const tryResumeSession = () => {
@@ -127,7 +134,59 @@ export function useOnlineGameState() {
     };
 
     const onState = (state: GameState) => setGameState(state);
-    const onLobby = ({ players }: { players: LobbyPlayer[] }) => setLobby(players);
+    const onLobby = ({ players }: { players: LobbyPlayer[] }) => {
+      const nextLobby = Array.isArray(players) ? players : [];
+      const previousLobby = previousLobbyRef.current;
+      setLobby(nextLobby);
+
+      if (!previousLobby) {
+        previousLobbyRef.current = nextLobby;
+        return;
+      }
+
+      const prevById = new Map(previousLobby.map((player) => [player.socketId ?? "", player]));
+      const nextById = new Map(nextLobby.map((player) => [player.socketId ?? "", player]));
+
+      const notices: string[] = [];
+
+      for (const [socketId, player] of nextById) {
+        if (!socketId || prevById.has(socketId)) continue;
+        if (socketId === socket.id) continue;
+        notices.push(`${player.name} a rejoint la partie`);
+      }
+
+      for (const [socketId, player] of prevById) {
+        if (!socketId || nextById.has(socketId)) continue;
+        if (socketId === socket.id) continue;
+        notices.push(`${player.name} a quitte la partie`);
+      }
+
+      for (const [socketId, nextPlayer] of nextById) {
+        if (!socketId) continue;
+        const prevPlayer = prevById.get(socketId);
+        if (!prevPlayer) continue;
+        if (socketId === socket.id) continue;
+
+        const wasConnected = prevPlayer.connected !== false;
+        const isConnectedNow = nextPlayer.connected !== false;
+
+        if (!wasConnected && isConnectedNow) {
+          notices.push(`${nextPlayer.name} a rejoint la partie`);
+        } else if (wasConnected && !isConnectedNow) {
+          notices.push(`${nextPlayer.name} a quitte la partie`);
+        }
+      }
+
+      if (notices.length > 0 && sessionRef.current?.code) {
+        roomNoticeSeqRef.current += 1;
+        setRoomNotice({
+          id: roomNoticeSeqRef.current,
+          message: notices[0],
+        });
+      }
+
+      previousLobbyRef.current = nextLobby;
+    };
     const onRoomKnown = ({ code: roomCode }: { code: string }) => {
       setCode(roomCode);
       if (!pendingProfileRef.current) return;
@@ -157,8 +216,10 @@ export function useOnlineGameState() {
       storeSession(null);
       setCode(null);
       setLobby([]);
+      previousLobbyRef.current = null;
       setGameState(EMPTY_STATE);
       setWhoSaidIt(null);
+      setRoomNotice(null);
     };
     const onError = ({ message }: { message?: string }) => {
       const normalized = message?.toLowerCase() ?? "";
@@ -175,8 +236,10 @@ export function useOnlineGameState() {
       storeSession(null);
       setCode(null);
       setLobby([]);
+      previousLobbyRef.current = null;
       setGameState(EMPTY_STATE);
       setWhoSaidIt(null);
+      setRoomNotice(null);
     };
     const onWhoSaidItStart = ({
       minigameId,
@@ -349,8 +412,10 @@ export function useOnlineGameState() {
     storeSession(null);
     setCode(null);
     setLobby([]);
+    previousLobbyRef.current = null;
     setGameState(EMPTY_STATE);
     setWhoSaidIt(null);
+    setRoomNotice(null);
   }, []);
 
   const startGame = useCallback((maxRounds: number) => socket.emit("start_game", { maxRounds }), []);
@@ -405,6 +470,7 @@ export function useOnlineGameState() {
     code,
     lobby,
     gameState,
+    roomNotice,
     myPlayerId,
     createRoom,
     joinRoom,

@@ -114,6 +114,7 @@ const PointDuelMinigame = lazy(() =>
 interface GameScreenProps {
   gameState: GameState;
   roomCode?: string | null;
+  roomNotice?: { id: number; message: string } | null;
   myPlayerId?: string | null;
   onLeave?: () => void;
   onRollDice: () => void;
@@ -137,6 +138,7 @@ interface GameScreenProps {
 export const GameScreen: React.FC<GameScreenProps> = ({
   gameState,
   roomCode,
+  roomNotice,
   myPlayerId,
   onLeave,
   onRollDice,
@@ -169,6 +171,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const [rollIntroEndsAt, setRollIntroEndsAt] = useState<number | null>(null);
   const [rollAnnouncementValue, setRollAnnouncementValue] = useState<number | null>(null);
   const [bugIntroEndsAt, setBugIntroEndsAt] = useState<number | null>(null);
+  const [presenceNotice, setPresenceNotice] = useState<{ id: number; message: string } | null>(null);
   const [selectedPreRollType, setSelectedPreRollType] = useState<ShopItemType | null>(null);
   const [isQuestionActionUnlocked, setIsQuestionActionUnlocked] = useState(true);
   const [isMoveActionUnlocked, setIsMoveActionUnlocked] = useState(true);
@@ -185,6 +188,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const turnIntroTimerRef = useRef<number | null>(null);
   const lastRollAnnouncementKeyRef = useRef<string | null>(null);
   const bugIntroTimerRef = useRef<number | null>(null);
+  const presenceNoticeTimerRef = useRef<number | null>(null);
   const hasMovedThisTurnRef = useRef(hasMovedThisTurn);
 
   const currentPlayer = gameState.players[gameState.currentPlayerIndex];
@@ -763,6 +767,10 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         window.clearTimeout(moveActionUnlockTimerRef.current);
         moveActionUnlockTimerRef.current = null;
       }
+      if (presenceNoticeTimerRef.current) {
+        window.clearTimeout(presenceNoticeTimerRef.current);
+        presenceNoticeTimerRef.current = null;
+      }
     },
     []
   );
@@ -833,6 +841,18 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     isMinigameActive,
   ]);
 
+  useEffect(() => {
+    if (!roomNotice) return;
+    setPresenceNotice(roomNotice);
+    if (presenceNoticeTimerRef.current) {
+      window.clearTimeout(presenceNoticeTimerRef.current);
+    }
+    presenceNoticeTimerRef.current = window.setTimeout(() => {
+      setPresenceNotice((current) => (current?.id === roomNotice.id ? null : current));
+      presenceNoticeTimerRef.current = null;
+    }, 2800);
+  }, [roomNotice]);
+
   const handleConfirmPreRollChoice = (itemType: ShopItemType) => {
     const item = beforeRollInventory.find((entry) => entry.type === itemType);
     if (!item) return;
@@ -845,6 +865,19 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       <RetroScreenBackground />
 
       <div className="relative z-10 flex h-svh w-full flex-col overflow-hidden p-2 sm:p-3">
+        {presenceNotice ? (
+          <div className="pointer-events-none absolute left-1/2 top-16 z-30 w-[min(92vw,560px)] -translate-x-1/2 sm:top-20">
+            <div
+              className={cn(
+                GAME_HUD_SURFACE,
+                "flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-cyan-50 shadow-[0_10px_40px_rgba(8,47,73,0.45)]"
+              )}
+            >
+              <ActionBadge label="Info" tone="system" />
+              <span className="truncate font-semibold">{presenceNotice.message}</span>
+            </div>
+          </div>
+        ) : null}
         <div className={cn(GAME_HUD_SURFACE, "p-1.5 sm:p-2")}>
           <div className="xl:hidden">
             <TurnBanner
