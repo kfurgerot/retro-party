@@ -777,6 +777,10 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const neutralSecondaryBtn = CTA_NEON_SECONDARY_SUBTLE;
   const activeCyanBtn = CTA_NEON_PRIMARY;
   const dangerLeaveBtn = CTA_NEON_DANGER;
+  const desktopLeaveBtn = cn(
+    GAME_TAB_BUTTON,
+    "border-rose-300/45 bg-rose-500/14 text-rose-100 hover:bg-rose-500/22 hover:text-rose-50"
+  );
   const roundProgressPct = Math.max(
     0,
     Math.min(100, Math.round((gameState.currentRound / Math.max(1, gameState.maxRounds)) * 100))
@@ -866,7 +870,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
             neonCardClass={neonCard}
             onLeave={onLeave ? requestLeave : undefined}
             leaveLabel={fr.gameScreen.leaveGame}
-            leaveBtnClass={dangerLeaveBtn}
+            leaveBtnClass={desktopLeaveBtn}
           />
         </div>
 
@@ -1050,20 +1054,10 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 className={cn(GAME_MOBILE_ACTION_BUTTON, neutralSecondaryBtn)}
                 size="sm"
                 variant="secondary"
-                onClick={openMobileInfo}
-                aria-label={fr.gameScreen.mobileInfoAria}
+                onClick={openPlayers}
+                aria-label={fr.gameScreen.players}
               >
-                {fr.gameScreen.mobileInfo}
-              </Button>
-
-              <Button
-                className={cn(GAME_MOBILE_ACTION_BUTTON, neutralSecondaryBtn)}
-                size="sm"
-                variant="secondary"
-                onClick={openMobileActivity}
-                aria-label={fr.gameScreen.activityFeed}
-              >
-                {fr.gameScreen.mobileFeed}
+                {fr.gameScreen.players}
               </Button>
 
               <Button
@@ -1074,6 +1068,21 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 aria-label={fr.gameScreen.mobileMenuAria}
               >
                 {fr.gameScreen.mobileMenu}
+              </Button>
+
+              <Button
+                className={cn(
+                  GAME_MOBILE_ACTION_BUTTON,
+                  onLeave ? dangerLeaveBtn : neutralSecondaryBtn,
+                  !onLeave && "opacity-60"
+                )}
+                size="sm"
+                variant="secondary"
+                onClick={requestLeave}
+                aria-label={fr.gameScreen.leave}
+                disabled={!onLeave}
+              >
+                {fr.gameScreen.leave}
               </Button>
             </div>
           </Card>
@@ -1220,10 +1229,10 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 variant="secondary"
               onClick={() => {
                 setMobileMenuOpen(false);
-                openMobileActivity();
+                openMobileInfo();
               }}
             >
-              {fr.gameScreen.activityFeed}
+              {fr.gameScreen.mobileInfo}
             </Button>
             <Button
                 className={cn(GAME_MOBILE_ACTION_BUTTON, neutralSecondaryBtn)}
@@ -1231,24 +1240,11 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 variant="secondary"
               onClick={() => {
                 setMobileMenuOpen(false);
-                openPlayers();
+                openMobileActivity();
               }}
             >
-              {fr.gameScreen.players}
+              {fr.gameScreen.mobileFeed}
             </Button>
-            {onLeave && (
-              <Button
-                className={cn(GAME_MOBILE_ACTION_BUTTON, dangerLeaveBtn)}
-                size="sm"
-                variant="secondary"
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  requestLeave();
-                }}
-              >
-                {fr.gameScreen.leave}
-              </Button>
-            )}
           </div>
         </DrawerContent>
       </Drawer>
@@ -1304,8 +1300,11 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       <AlertDialog open={leaveDialogOpen} onOpenChange={setLeaveDialogOpen}>
         <AlertDialogContent className={cn(GAME_DIALOG_CONTENT, "max-w-md")}>
           <AlertDialogHeader>
-            <AlertDialogTitle>{fr.gameScreen.leaveQuestionTitle}</AlertDialogTitle>
-            <AlertDialogDescription className="text-slate-300">
+            <div className="mx-auto mb-2 inline-flex items-center gap-2 rounded-full border border-rose-300/45 bg-rose-500/15 px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-rose-100">
+              <span>Quitter</span>
+            </div>
+            <AlertDialogTitle className="text-center text-2xl">{fr.gameScreen.leaveQuestionTitle}</AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-slate-300">
               {fr.game.backToOnlineLobby}
             </AlertDialogDescription>
           </AlertDialogHeader>
