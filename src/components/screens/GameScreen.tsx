@@ -45,10 +45,10 @@ import {
 import { ENABLE_BOARD_V2 } from "@/lib/uiMode";
 import { perfLog, perfMark, perfMeasure } from "@/lib/perf";
 
-const TURN_ANNOUNCE_MS = 1000;
+const TURN_ANNOUNCE_MS = 2000;
 const MOVE_STEP_MS = 320;
 const ROLL_RESULT_READ_MS = 1000;
-const ROLL_ANNOUNCE_MS = 1000;
+const ROLL_ANNOUNCE_MS = 2000;
 
 type ActivityKind = "move" | "decision" | "question" | "shop" | "minigame" | "system";
 
@@ -1488,6 +1488,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
           title={fr.gameScreen.infoYourTurn}
           subtitle={fr.game.yourTurnLaunch}
           startAt={turnIntroEndsAt ?? undefined}
+          variant="turn"
         />
       )}
 
@@ -1496,6 +1497,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
           title={fr.gameScreen.rollResult}
           subtitle={fr.gameScreen.rollResultSubtitle.replace("{value}", String(rollAnnouncementValue))}
           startAt={rollIntroEndsAt}
+          variant="roll"
+          highlightValue={rollAnnouncementValue}
         />
       )}
 
