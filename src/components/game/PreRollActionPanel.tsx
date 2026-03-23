@@ -68,7 +68,7 @@ export const PreRollActionPanel: React.FC<PreRollActionPanelProps> = ({
           disabled={!canRoll}
           onClick={onRoll}
         >
-          Lancer le de
+          Lancer le dé
         </button>
 
         {groupedItems.map((item) => (

@@ -971,7 +971,7 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
       : actionOverlay.canMove
         ? `Avancer ${actionOverlay.diceValue ?? ""}`.trim()
         : actionOverlay.canRoll
-          ? "Lancer de"
+          ? "Lancer dé"
           : "Action";
     const resolvedRollValue =
       actionOverlay.rollResult?.total ??

@@ -813,7 +813,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   };
   const activePlayerHint = useMemo(() => {
     if (gameState.phase !== "playing") return null;
-    if (gameState.isRolling || gameState.turnPhase === "rolling") return "Lance le de";
+    if (gameState.isRolling || gameState.turnPhase === "rolling") return "Lance le dé";
     if (isPathChoiceActive) return "Choisit une route";
     if (isKudoPurchaseActive) return "Achete un kudo";
     if (isShopActive) return "Achete un item";
@@ -821,7 +821,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     if (gameState.currentQuestion?.status === "open") return "Repond a la carte";
     if (isMinigameActive) return "Mini-jeu en cours";
     if (gameState.turnPhase === "pre_roll") {
-      return "Lance le de";
+      return "Lance le dé";
     }
     if (gameState.turnPhase === "moving" && gameState.diceValue != null) {
       return `Avance de ${gameState.diceValue}`;
