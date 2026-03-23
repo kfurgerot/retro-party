@@ -66,6 +66,7 @@ const TILE_ICON: Record<string, string> = {
 
 const TILE_ELEVATION = 16;
 const PAWN_LIFT = 14;
+const KUDOBOX_LIFT = 26;
 const TILE_VISUAL_INSET_X = 7;
 const TILE_VISUAL_INSET_Y = 4;
 
@@ -86,6 +87,11 @@ function shadeColor(hex: number, amount: number) {
 function seededUnit(seed: number) {
   const x = Math.sin(seed * 12.9898) * 43758.5453;
   return x - Math.floor(x);
+}
+
+function isKudoboxTile(type: string) {
+  const normalized = String(type ?? "").toLowerCase();
+  return normalized === "bonus" || normalized === "yellow" || normalized === "star";
 }
 
 export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
@@ -138,6 +144,11 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
         fontFamily: "Press Start 2P, monospace",
         fill: 0x0f172a,
         fontSize: 10,
+      }),
+      kudobox: new TextStyle({
+        fontFamily: "Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif",
+        fill: 0x0f172a,
+        fontSize: 18,
       }),
       floatingDeltaPositive: new TextStyle({
         fontFamily: "Press Start 2P, monospace",
@@ -365,11 +376,13 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
         tileTopTexture.endFill();
       }
 
-      const icon = new Text(TILE_ICON[tile.type] ?? "?", sharedStyles.tileIcon);
-      icon.anchor.set(0.5);
-      icon.x = centerX;
-      icon.y = centerY - TILE_ELEVATION * 0.24 + 1;
-      tilesLayer.addChild(icon);
+      if (!isKudoboxTile(tile.type)) {
+        const icon = new Text(TILE_ICON[tile.type] ?? "?", sharedStyles.tileIcon);
+        icon.anchor.set(0.5);
+        icon.x = centerX;
+        icon.y = centerY - TILE_ELEVATION * 0.24 + 1;
+        tilesLayer.addChild(icon);
+      }
 
       if (showIndex) {
         const badge = new Graphics();
@@ -390,6 +403,59 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
     tilesLayer.addChildAt(tileSides, 1);
     tilesLayer.addChild(tileTopTexture);
     world.addChild(tilesLayer);
+
+    const kudoboxLayer = new Container();
+    const kudoboxNodes: Array<{
+      marker: Graphics;
+      icon: Text;
+      shadow: Graphics;
+      baseMarkerY: number;
+      baseIconY: number;
+      baseShadowAlpha: number;
+    }> = [];
+    tilesInDepthOrder.forEach(({ tile, p }) => {
+      if (!isKudoboxTile(tile.type)) return;
+      const px = p.x + tileHalfWidth;
+      const groundY = p.y + tileHalfHeight + 2;
+      const py = groundY - KUDOBOX_LIFT;
+
+      const shadow = new Graphics();
+      shadow.beginFill(0x020617, 0.24);
+      shadow.drawEllipse(px + 1.2, groundY + 10, 8.4, 3.8);
+      shadow.endFill();
+      kudoboxLayer.addChild(shadow);
+
+      const stem = new Graphics();
+      stem.beginFill(0x7c2d12, 0.45);
+      stem.drawRoundedRect(px - 1.5, py + 12, 3, KUDOBOX_LIFT - 2, 2);
+      stem.endFill();
+      kudoboxLayer.addChild(stem);
+
+      const marker = new Graphics();
+      marker.lineStyle(2, 0xf59e0b, 1, 0.5, true);
+      marker.beginFill(0xfef3c7, 0.98);
+      marker.drawCircle(px, py, 12);
+      marker.endFill();
+      marker.lineStyle(1, 0xffffff, 0.45, 0.5, true);
+      marker.drawCircle(px - 3, py - 4, 3.5);
+      kudoboxLayer.addChild(marker);
+
+      const icon = new Text("🎁", sharedStyles.kudobox);
+      icon.anchor.set(0.5);
+      icon.x = px;
+      icon.y = py + 0.4;
+      kudoboxLayer.addChild(icon);
+
+      kudoboxNodes.push({
+        marker,
+        icon,
+        shadow,
+        baseMarkerY: 0,
+        baseIconY: py + 0.4,
+        baseShadowAlpha: 0.24,
+      });
+    });
+    world.addChild(kudoboxLayer);
 
     const playersLayer = new Container();
     const activeAvatarNodes: Array<{
@@ -497,7 +563,7 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
     world.addChild(floatLayer);
 
     let tickerFn: ((delta: number) => void) | null = null;
-    if (activeAvatarNodes.length > 0 && app?.ticker) {
+    if ((activeAvatarNodes.length > 0 || kudoboxNodes.length > 0) && app?.ticker) {
       let elapsed = 0;
       tickerFn = (delta) => {
         elapsed += delta;
@@ -507,6 +573,12 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
           node.avatar.y = node.baseAvatarY + bob;
           const pulse = 0.88 + Math.max(0, Math.sin(elapsed * 0.08)) * 0.12;
           node.chip.alpha = pulse;
+        });
+        kudoboxNodes.forEach((node, index) => {
+          const localBob = Math.sin(elapsed * 0.09 + index * 0.55) * 1.8;
+          node.marker.y = node.baseMarkerY + localBob;
+          node.icon.y = node.baseIconY + localBob;
+          node.shadow.alpha = node.baseShadowAlpha + Math.max(0, -localBob) * 0.01;
         });
       };
       app.ticker.add(tickerFn);
@@ -531,6 +603,7 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
     sharedStyles.avatar,
     sharedStyles.floatingDeltaNegative,
     sharedStyles.floatingDeltaPositive,
+    sharedStyles.kudobox,
     sharedStyles.overflow,
     sharedStyles.tileIcon,
     sharedStyles.tileIndex,
