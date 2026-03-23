@@ -68,7 +68,6 @@ export const TurnBanner: React.FC<TurnBannerProps> = ({
             <div className="text-lg font-black leading-none text-amber-100">{myStars}</div>
           </div>
         </div>
-
         <div className="mt-2 h-1.5 w-full overflow-hidden rounded bg-slate-900/60">
           <div className="h-full rounded bg-cyan-400/90" style={{ width: `${roundProgressPct}%` }} />
         </div>

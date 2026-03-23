@@ -48,6 +48,7 @@ import { perfLog, perfMark, perfMeasure } from "@/lib/perf";
 const TURN_ANNOUNCE_MS = 2000;
 const MOVE_STEP_MS = 320;
 const ROLL_RESULT_READ_MS = 1000;
+const ROLL_ANNOUNCE_MS = 2000;
 
 type ActivityKind = "move" | "decision" | "question" | "shop" | "minigame" | "system";
 
@@ -164,6 +165,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
   const [whoSaidItIntroAt, setWhoSaidItIntroAt] = useState<number | null>(null);
   const [turnIntroEndsAt, setTurnIntroEndsAt] = useState<number | null>(null);
+  const [rollIntroEndsAt, setRollIntroEndsAt] = useState<number | null>(null);
+  const [rollAnnouncementValue, setRollAnnouncementValue] = useState<number | null>(null);
   const [bugIntroEndsAt, setBugIntroEndsAt] = useState<number | null>(null);
   const [selectedPreRollType, setSelectedPreRollType] = useState<ShopItemType | null>(null);
   const [isQuestionActionUnlocked, setIsQuestionActionUnlocked] = useState(true);
@@ -179,7 +182,9 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const questionActionUnlockKeyRef = useRef<string | null>(null);
   const lastWhoSaidItIdleRef = useRef<string | null>(null);
   const turnIntroTimerRef = useRef<number | null>(null);
+  const lastRollAnnouncementKeyRef = useRef<string | null>(null);
   const bugIntroTimerRef = useRef<number | null>(null);
+  const hasMovedThisTurnRef = useRef(hasMovedThisTurn);
 
   const currentPlayer = gameState.players[gameState.currentPlayerIndex];
   const bugSmashState = gameState.currentMinigame?.minigameId === "BUG_SMASH" ? gameState.currentMinigame : null;
@@ -358,12 +363,15 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     gameState.diceValue == null &&
     !gameState.isRolling;
 
+  const isRollAnnouncementActive = rollIntroEndsAt != null && rollAnnouncementValue != null;
+
   const canMove =
     gameState.phase === "playing" &&
     !isMinigameActive &&
     !isPathChoiceActive &&
     !isKudoPurchaseActive &&
     !isShopActive &&
+    !isRollAnnouncementActive &&
     isMyTurn &&
     gameState.turnPhase === "moving" &&
     !gameState.currentQuestion &&
@@ -394,21 +402,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   );
 
   useEffect(() => {
-    if (!canMove || hasMovedThisTurn || gameState.diceValue == null) return;
-    const autoMoveKey = `${currentPlayer?.id ?? "unknown"}-${gameState.currentRound}-${gameState.currentPlayerIndex}-${gameState.diceValue}`;
-    if (autoMoveKeyRef.current === autoMoveKey) return;
-
-    autoMoveKeyRef.current = autoMoveKey;
-    handleMove(gameState.diceValue);
-  }, [
-    canMove,
-    hasMovedThisTurn,
-    currentPlayer?.id,
-    gameState.currentRound,
-    gameState.currentPlayerIndex,
-    gameState.diceValue,
-    handleMove,
-  ]);
+    hasMovedThisTurnRef.current = hasMovedThisTurn;
+  }, [hasMovedThisTurn]);
 
   useEffect(() => {
     if (!isMoveAnimating || !gameState.currentQuestion) return;
@@ -523,6 +518,53 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     buzzwordState,
     whoSaidItState,
     gameState.turnPhase,
+  ]);
+
+  useEffect(() => {
+    if (
+      !isMyTurn ||
+      gameState.isRolling ||
+      gameState.turnPhase !== "moving" ||
+      hasMovedThisTurn ||
+      gameState.diceValue == null
+    ) {
+      return;
+    }
+
+    const total = gameState.lastRollResult?.total;
+    if (typeof total !== "number") return;
+    const diceKey = (gameState.lastRollResult?.dice ?? []).join("-");
+    const key = `${gameState.currentRound}-${gameState.currentPlayerIndex}-${total}-${diceKey}`;
+    if (lastRollAnnouncementKeyRef.current === key) return;
+    lastRollAnnouncementKeyRef.current = key;
+    autoMoveKeyRef.current = key;
+
+    setRollAnnouncementValue(total);
+    const endAt = Date.now() + ROLL_ANNOUNCE_MS;
+    setRollIntroEndsAt(endAt);
+
+    const timeoutId = window.setTimeout(() => {
+      setRollIntroEndsAt(null);
+      setRollAnnouncementValue(null);
+      if (!hasMovedThisTurnRef.current) {
+        handleMove(total);
+      }
+    }, ROLL_ANNOUNCE_MS);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [
+    gameState.currentPlayerIndex,
+    gameState.currentRound,
+    gameState.isRolling,
+    gameState.lastRollResult?.total,
+    (gameState.lastRollResult?.dice ?? []).join("-"),
+    gameState.turnPhase,
+    gameState.diceValue,
+    hasMovedThisTurn,
+    isMyTurn,
+    handleMove,
   ]);
 
   useEffect(() => {
@@ -1445,6 +1487,14 @@ export const GameScreen: React.FC<GameScreenProps> = ({
           title={fr.gameScreen.infoYourTurn}
           subtitle={fr.game.yourTurnLaunch}
           startAt={turnIntroEndsAt ?? undefined}
+        />
+      )}
+
+      {rollIntroEndsAt != null && rollAnnouncementValue != null && (
+        <LaunchAnnouncement
+          title={fr.gameScreen.rollResult}
+          subtitle={fr.gameScreen.rollResultSubtitle.replace("{value}", String(rollAnnouncementValue))}
+          startAt={rollIntroEndsAt}
         />
       )}
 
