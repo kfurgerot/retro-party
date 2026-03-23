@@ -56,11 +56,16 @@ export function createGameButton({ label, onPress, labelFontSize }: GameButtonOp
     text: new Text(
       label,
       new TextStyle({
-        fontFamily: "Press Start 2P, monospace",
+        // Smoother typeface for action labels to improve readability.
+        fontFamily: "Segoe UI, Arial, sans-serif",
+        fontWeight: "800",
         fill: PIXI_GAME_THEME.colors.ink,
+        stroke: 0xe2e8f0,
+        strokeThickness: 1,
+        lineJoin: "round",
         fontSize: resolvedFontSize,
         align: "center",
-        padding: 2,
+        padding: 1,
       })
     ),
     anchor: 0.5,

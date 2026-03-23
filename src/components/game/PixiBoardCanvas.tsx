@@ -926,7 +926,7 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
 
     const actionButton = createGameButton({
       label: modeText,
-      labelFontSize: actionOverlay.canOpenQuestionCard || actionOverlay.canRoll ? 9 : undefined,
+      labelFontSize: actionOverlay.canOpenQuestionCard || actionOverlay.canRoll ? 11 : 10,
       onPress: () => {
         if (actionOverlay.canRoll) {
           actionOverlay.onRoll?.();
