@@ -220,6 +220,9 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     !!myPlayerId &&
     pendingKudoPurchase.playerId === myPlayerId &&
     !!onResolveKudoPurchase;
+  const shouldShowKudoPurchaseModal = canResolveKudoPurchase && !isMoveAnimating;
+  const canInteractWithShop = !!myPlayerId && pendingShop?.playerId === myPlayerId && !!onBuyShopItem;
+  const shouldShowShopModal = canInteractWithShop && !isMoveAnimating;
   const isTurnIntroActive = turnIntroEndsAt != null;
   const isBugIntroActive = bugIntroEndsAt != null;
   const catalogByType = SHOP_CATALOG;
@@ -1327,7 +1330,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         )}
       </Suspense>
 
-      <AlertDialog open={isKudoPurchaseActive && !isMoveAnimating} onOpenChange={() => {}}>
+      <AlertDialog open={shouldShowKudoPurchaseModal} onOpenChange={() => {}}>
         <AlertDialogContent className={cn(GAME_DIALOG_CONTENT, "max-w-md")}>
           <AlertDialogHeader>
             <div className="mx-auto mb-2 inline-flex items-center gap-2 rounded-full border border-amber-300/45 bg-amber-500/15 px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-amber-100">
@@ -1352,35 +1355,27 @@ export const GameScreen: React.FC<GameScreenProps> = ({
             </div>
           </div>
           <AlertDialogFooter className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:space-x-0">
-            {canResolveKudoPurchase ? (
-              <>
-                <AlertDialogCancel
-                  className={cn(neutralSecondaryBtn, "h-11 w-full rounded-xl text-cyan-100")}
-                  onClick={() => onResolveKudoPurchase?.(false)}
-                >
-                  {fr.gameScreen.continue}
-                </AlertDialogCancel>
-                <AlertDialogAction
-                  className={cn(activeCyanBtn, "h-11 w-full rounded-xl")}
-                  disabled={!pendingKudoPurchase?.canAfford}
-                  onClick={() => onResolveKudoPurchase?.(true)}
-                >
-                  {fr.gameScreen.buyKudo}
-                </AlertDialogAction>
-              </>
-            ) : (
-              <AlertDialogCancel className={cn(neutralSecondaryBtn, "h-11 rounded-xl text-cyan-100")}>
-                {fr.gameScreen.waiting}
-              </AlertDialogCancel>
-            )}
+            <AlertDialogCancel
+              className={cn(neutralSecondaryBtn, "h-11 w-full rounded-xl text-cyan-100")}
+              onClick={() => onResolveKudoPurchase?.(false)}
+            >
+              {fr.gameScreen.continue}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className={cn(activeCyanBtn, "h-11 w-full rounded-xl")}
+              disabled={!pendingKudoPurchase?.canAfford}
+              onClick={() => onResolveKudoPurchase?.(true)}
+            >
+              {fr.gameScreen.buyKudo}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
       <Suspense fallback={null}>
         <ShopModal
-          open={isShopActive && !isMoveAnimating}
-          canInteract={!!myPlayerId && pendingShop?.playerId === myPlayerId && !!onBuyShopItem}
+          open={shouldShowShopModal}
+          canInteract={canInteractWithShop}
           points={myPlayer?.points ?? 0}
           items={Object.values(catalogByType)}
           onBuy={(itemType) => onBuyShopItem?.(itemType)}
