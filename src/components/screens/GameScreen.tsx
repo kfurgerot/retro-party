@@ -49,6 +49,7 @@ const TURN_ANNOUNCE_MS = 2000;
 const MOVE_STEP_MS = 320;
 const ROLL_RESULT_READ_MS = 1000;
 const ROLL_ANNOUNCE_MS = 2000;
+const ROOM_ONBOARDING_STORAGE_PREFIX = "retro-party:guide-seen:";
 
 type ActivityKind = "move" | "decision" | "question" | "shop" | "minigame" | "system";
 
@@ -113,6 +114,8 @@ const PointDuelMinigame = lazy(() =>
 
 interface GameScreenProps {
   gameState: GameState;
+  roomCode?: string | null;
+  roomNotice?: { id: number; message: string } | null;
   myPlayerId?: string | null;
   onLeave?: () => void;
   onRollDice: () => void;
@@ -135,6 +138,8 @@ interface GameScreenProps {
 
 export const GameScreen: React.FC<GameScreenProps> = ({
   gameState,
+  roomCode,
+  roomNotice,
   myPlayerId,
   onLeave,
   onRollDice,
@@ -167,6 +172,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const [rollIntroEndsAt, setRollIntroEndsAt] = useState<number | null>(null);
   const [rollAnnouncementValue, setRollAnnouncementValue] = useState<number | null>(null);
   const [bugIntroEndsAt, setBugIntroEndsAt] = useState<number | null>(null);
+  const [presenceNotice, setPresenceNotice] = useState<{ id: number; message: string } | null>(null);
+  const [onboardingStepIndex, setOnboardingStepIndex] = useState<number | null>(null);
   const [selectedPreRollType, setSelectedPreRollType] = useState<ShopItemType | null>(null);
   const [isQuestionActionUnlocked, setIsQuestionActionUnlocked] = useState(true);
   const [isMoveActionUnlocked, setIsMoveActionUnlocked] = useState(true);
@@ -183,12 +190,62 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const turnIntroTimerRef = useRef<number | null>(null);
   const lastRollAnnouncementKeyRef = useRef<string | null>(null);
   const bugIntroTimerRef = useRef<number | null>(null);
+  const presenceNoticeTimerRef = useRef<number | null>(null);
+  const onboardingShownKeyRef = useRef<string | null>(null);
   const hasMovedThisTurnRef = useRef(hasMovedThisTurn);
 
   const currentPlayer = gameState.players[gameState.currentPlayerIndex];
   const bugSmashState = gameState.currentMinigame?.minigameId === "BUG_SMASH" ? gameState.currentMinigame : null;
   const buzzwordState = gameState.currentMinigame?.minigameId === "BUZZWORD_DUEL" ? gameState.currentMinigame : null;
   const pointDuelState = gameState.currentMinigame?.minigameId === "POINT_DUEL" ? gameState.currentMinigame : null;
+  const onboardingScreens = useMemo(
+    () => [
+      {
+        icon: "🎮",
+        title: "Bienvenue dans Retro Party",
+        body: [
+          "Ici, on apprend tout en s'amusant.",
+          "Le jeu transforme la retrospective en une experience ludique pour aider l'equipe a echanger, reflechir et faire emerger des pistes d'amelioration.",
+        ],
+      },
+      {
+        icon: "🎲",
+        title: "Avance sur le plateau",
+        body: [
+          "A ton tour, lance le de pour deplacer ton pion.",
+          "Chaque case peut te faire gagner des points, t'en faire perdre, ou declencher une interaction avec le reste de l'equipe.",
+        ],
+      },
+      {
+        icon: "💬",
+        title: "Reponds aux questions",
+        body: [
+          "En tombant sur certaines cases, tu devras repondre a des questions a theme.",
+          "Le but n'est pas de 'bien repondre', mais de faire emerger des constats, des idees, et des actions concretes pour aider l'equipe a progresser.",
+        ],
+      },
+      {
+        icon: "⭐",
+        title: "Gagne des points et utilise la boutique",
+        body: [
+          "Certaines cases te font gagner +2 points. Les cases rouges t'en font perdre -2.",
+          "Tu peux aussi tomber sur des boutiques pour acheter des actions speciales, et des cases Kudobox pour recuperer des bonus precieux.",
+        ],
+      },
+      {
+        icon: "🏆",
+        title: "Vise la victoire",
+        body: [
+          "A la fin de la partie, le vainqueur est le joueur qui possede le plus de Kudobox et/ou le plus de points.",
+          "Joue, participe, partage tes idees... et amuse-toi avec l'equipe.",
+        ],
+      },
+    ],
+    []
+  );
+  const isOnboardingOpen = onboardingStepIndex != null;
+  const activeOnboardingStep =
+    onboardingStepIndex != null ? onboardingScreens[onboardingStepIndex] : null;
   const isBuzzwordIntroActive =
     !!buzzwordState &&
     buzzwordState.phase === "between" &&
@@ -466,6 +523,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       !bugSmashState &&
       !buzzwordState &&
       !whoSaidItState &&
+      !isOnboardingOpen &&
       gameState.turnPhase === "pre_roll" &&
       !gameState.pendingPreRollEffect &&
       !gameState.pendingDoubleRoll &&
@@ -504,6 +562,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     bugSmashState,
     buzzwordState,
     whoSaidItState,
+    isOnboardingOpen,
     gameState.turnPhase,
   ]);
 
@@ -761,6 +820,10 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         window.clearTimeout(moveActionUnlockTimerRef.current);
         moveActionUnlockTimerRef.current = null;
       }
+      if (presenceNoticeTimerRef.current) {
+        window.clearTimeout(presenceNoticeTimerRef.current);
+        presenceNoticeTimerRef.current = null;
+      }
     },
     []
   );
@@ -803,7 +866,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   };
   const activePlayerHint = useMemo(() => {
     if (gameState.phase !== "playing") return null;
-    if (gameState.isRolling || gameState.turnPhase === "rolling") return "Lance le de";
+    if (gameState.isRolling || gameState.turnPhase === "rolling") return "Lance le dé";
     if (isPathChoiceActive) return "Choisit une route";
     if (isKudoPurchaseActive) return "Achete un kudo";
     if (isShopActive) return "Achete un item";
@@ -811,7 +874,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     if (gameState.currentQuestion?.status === "open") return "Repond a la carte";
     if (isMinigameActive) return "Mini-jeu en cours";
     if (gameState.turnPhase === "pre_roll") {
-      return "Lance le de";
+      return "Lance le dé";
     }
     if (gameState.turnPhase === "moving" && gameState.diceValue != null) {
       return `Avance de ${gameState.diceValue}`;
@@ -831,6 +894,62 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     isMinigameActive,
   ]);
 
+  useEffect(() => {
+    if (!roomNotice) return;
+    setPresenceNotice(roomNotice);
+    if (presenceNoticeTimerRef.current) {
+      window.clearTimeout(presenceNoticeTimerRef.current);
+    }
+    presenceNoticeTimerRef.current = window.setTimeout(() => {
+      setPresenceNotice((current) => (current?.id === roomNotice.id ? null : current));
+      presenceNoticeTimerRef.current = null;
+    }, 2800);
+  }, [roomNotice]);
+
+  useEffect(() => {
+    if (!roomCode || gameState.phase !== "playing") {
+      setOnboardingStepIndex(null);
+      onboardingShownKeyRef.current = null;
+      return;
+    }
+    if (onboardingStepIndex != null) return;
+    if (typeof window === "undefined") return;
+
+    const onboardingKey = `${ROOM_ONBOARDING_STORAGE_PREFIX}${roomCode}`;
+    if (window.localStorage.getItem(onboardingKey) === "1") {
+      onboardingShownKeyRef.current = roomCode;
+      return;
+    }
+    if (onboardingShownKeyRef.current === roomCode) return;
+    onboardingShownKeyRef.current = roomCode;
+    setOnboardingStepIndex(0);
+  }, [roomCode, gameState.phase, onboardingStepIndex, myPlayerId]);
+
+  const closeOnboarding = useCallback(() => {
+    if (roomCode && typeof window !== "undefined") {
+      window.localStorage.setItem(`${ROOM_ONBOARDING_STORAGE_PREFIX}${roomCode}`, "1");
+    }
+    setOnboardingStepIndex(null);
+  }, [roomCode]);
+
+  const goToNextOnboardingStep = useCallback(() => {
+    setOnboardingStepIndex((current) => {
+      if (current == null) return current;
+      if (current >= onboardingScreens.length - 1) {
+        closeOnboarding();
+        return null;
+      }
+      return current + 1;
+    });
+  }, [closeOnboarding, onboardingScreens.length]);
+
+  const goToPreviousOnboardingStep = useCallback(() => {
+    setOnboardingStepIndex((current) => {
+      if (current == null) return current;
+      return Math.max(0, current - 1);
+    });
+  }, []);
+
   const handleConfirmPreRollChoice = (itemType: ShopItemType) => {
     const item = beforeRollInventory.find((entry) => entry.type === itemType);
     if (!item) return;
@@ -843,12 +962,67 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       <RetroScreenBackground />
 
       <div className="relative z-10 flex h-svh w-full flex-col overflow-hidden p-2 sm:p-3">
+        {isOnboardingOpen && activeOnboardingStep ? (
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/86 p-3 backdrop-blur-[2px] sm:p-5">
+            <Card className={cn(GAME_HUD_SURFACE, "w-full max-w-2xl rounded-2xl border-cyan-300/45 bg-slate-950/95 p-4 sm:p-6")}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/35 bg-cyan-500/10 px-3 py-1 text-xs font-semibold text-cyan-100">
+                  <span>{activeOnboardingStep.icon}</span>
+                  <span>Guide de partie</span>
+                </div>
+                <div className="text-xs text-slate-300">
+                  {(onboardingStepIndex ?? 0) + 1}/{onboardingScreens.length}
+                </div>
+              </div>
+
+              <h2 className="mt-4 text-xl font-black text-cyan-50 sm:text-2xl">{activeOnboardingStep.title}</h2>
+              <div className="mt-3 space-y-3 text-sm leading-relaxed text-slate-100 sm:text-base">
+                {activeOnboardingStep.body.map((paragraph, idx) => (
+                  <p key={`${onboardingStepIndex}-${idx}`}>{paragraph}</p>
+                ))}
+              </div>
+
+              <div className="mt-6 grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className={cn(CTA_NEON_SECONDARY_SUBTLE, "h-11")}
+                  disabled={onboardingStepIndex === 0}
+                  onClick={goToPreviousOnboardingStep}
+                >
+                  Retour
+                </Button>
+                <Button
+                  type="button"
+                  className={cn(CTA_NEON_PRIMARY, "h-11")}
+                  onClick={goToNextOnboardingStep}
+                >
+                  {onboardingStepIndex === onboardingScreens.length - 1 ? "J'ai compris" : "Suivant"}
+                </Button>
+              </div>
+            </Card>
+          </div>
+        ) : null}
+        {presenceNotice ? (
+          <div className="pointer-events-none absolute left-1/2 top-16 z-30 w-[min(92vw,560px)] -translate-x-1/2 sm:top-20">
+            <div
+              className={cn(
+                "flex items-center gap-2 rounded-xl border border-amber-300/70 bg-slate-950/96 px-3 py-2 text-sm text-slate-50 shadow-[0_0_0_1px_rgba(251,191,36,0.45),0_12px_44px_rgba(0,0,0,0.6),0_0_28px_rgba(251,191,36,0.22)] backdrop-blur"
+              )}
+            >
+              <ActionBadge label="Info" tone="decision" />
+              <span className="truncate font-bold tracking-[0.01em]">{presenceNotice.message}</span>
+            </div>
+          </div>
+        ) : null}
         <div className={cn(GAME_HUD_SURFACE, "p-1.5 sm:p-2")}>
           <div className="xl:hidden">
             <TurnBanner
               mode="mobile"
               currentTurnLabel={fr.gameScreen.currentTurn}
               currentPlayerName={currentPlayer?.name ?? "-"}
+              roomCode={roomCode}
+              roomCodeLabel={fr.onlineLobby.codeLabel}
               primaryAction={primaryAction}
               pointsLabel={fr.gameScreen.points}
               starsLabel={fr.gameScreen.kudobox}
@@ -876,6 +1050,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
             mode="desktop"
             currentTurnLabel={fr.gameScreen.currentTurn}
             currentPlayerName={currentPlayer?.name ?? "-"}
+            roomCode={roomCode}
+            roomCodeLabel={fr.onlineLobby.codeLabel}
             primaryAction={primaryAction}
             pointsLabel={fr.gameScreen.points}
             starsLabel={fr.gameScreen.kudobox}

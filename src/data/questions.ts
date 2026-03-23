@@ -87,11 +87,40 @@ export const QUESTIONS = {
 
 export type QuestionType = keyof typeof QUESTIONS | "purple" | "star" | "yellow";
 
+function normalizeQuestionType(type: QuestionType) {
+  return type === "purple" ? "violet" : type === "star" || type === "yellow" ? "bonus" : type;
+}
+
+function getPoolForType(type: QuestionType) {
+  const normalized = normalizeQuestionType(type);
+  return QUESTIONS[normalized as keyof typeof QUESTIONS];
+}
+
 export function pickQuestion(type: QuestionType): string {
-  const normalized =
-    type === "purple" ? "violet" : type === "star" || type === "yellow" ? "bonus" : type;
-  const list = QUESTIONS[normalized as keyof typeof QUESTIONS];
+  const list = getPoolForType(type);
   if (!list?.length) return "";
   const idx = Math.floor(Math.random() * list.length);
   return list[idx];
+}
+
+export function pickUniqueQuestion(type: QuestionType, usedQuestionTexts: string[] = []): string {
+  const usedSet = new Set(
+    usedQuestionTexts.filter((entry) => typeof entry === "string" && entry.length > 0)
+  );
+  const sameTypePool = getPoolForType(type);
+  const sameTypeAvailable = (sameTypePool ?? []).filter((text) => !usedSet.has(text));
+  if (sameTypeAvailable.length > 0) {
+    const idx = Math.floor(Math.random() * sameTypeAvailable.length);
+    return sameTypeAvailable[idx];
+  }
+
+  const allAvailable = Object.values(QUESTIONS)
+    .flat()
+    .filter((text) => !usedSet.has(text));
+  if (allAvailable.length > 0) {
+    const idx = Math.floor(Math.random() * allAvailable.length);
+    return allAvailable[idx];
+  }
+
+  return "";
 }

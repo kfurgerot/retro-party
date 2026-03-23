@@ -651,10 +651,6 @@ const GameBoardLegacyComponent: React.FC<GameBoardProps> = ({
   const focusedPosition = focusedPlayer
     ? (displayPositions[focusedPlayer.id] ?? focusedPlayer.position)
     : null;
-  const optionSet = useMemo(
-    () => new Set(pendingPathChoice?.options ?? []),
-    [pendingPathChoice?.options]
-  );
   const highlightedPathEdges = useMemo(() => {
     const edges = new Set<string>();
     const path = lastMoveTrace?.path ?? [];
@@ -775,9 +771,6 @@ const GameBoardLegacyComponent: React.FC<GameBoardProps> = ({
             const py = tile.y - bounds.minY;
 
             const playersHere = playersByTile.get(tile.id) ?? [];
-            const isPathOrigin = pendingPathChoice?.atTileId === tile.id;
-            const isPathOption = optionSet.has(tile.id);
-            const showTileIndex = isPathOrigin || isPathOption;
 
             return (
               <div
@@ -791,12 +784,6 @@ const GameBoardLegacyComponent: React.FC<GameBoardProps> = ({
                 title={`${idx + 1} - ${tile.type}`}
               >
                 <span>{TileIcon[tile.type] ?? "?"}</span>
-                {showTileIndex && (
-                  <span className="absolute -top-2 -right-2 hidden rounded border border-slate-300/35 bg-slate-900/85 px-1 py-0 text-[10px] font-semibold text-slate-100 shadow-[0_1px_0_rgba(0,0,0,0.6)] lg:inline-flex">
-                    {tile.id + 1}
-                  </span>
-                )}
-
                 {/* Players on tile */}
                 {playersHere.length > 0 && (
                   <div className="absolute -top-6 left-1/2 z-10 flex -translate-x-1/2 gap-1">

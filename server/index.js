@@ -52,6 +52,7 @@ const RECONNECT_GRACE_MS = Number(process.env.RECONNECT_GRACE_MS) > 0
   ? Number(process.env.RECONNECT_GRACE_MS)
   : 20 * 60 * 1000;
 const MAX_PLAYERS = 20;
+const PLAYER_COLORS = ["#3b82f6", "#ef4444", "#22c55e", "#a855f7", "#f97316", "#14b8a6", "#eab308", "#ec4899", "#0ea5e9", "#84cc16"];
 const WHO_SAID_IT_ANNOUNCE_MS = 4000;
 const ENABLE_WHO_SAID_IT_MINIGAME = process.env.ENABLE_WHO_SAID_IT_MINIGAME === "1";
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
@@ -155,6 +156,13 @@ function makeCode() {
 
 function makeSessionId() {
   return `session-${Date.now()}-${crypto.randomBytes(8).toString("hex")}`;
+}
+
+function pickNextPlayerColor(players = []) {
+  const blocked = new Set((players ?? []).map((p) => p?.color).filter(Boolean));
+  const firstAvailable = PLAYER_COLORS.find((color) => !blocked.has(color));
+  if (firstAvailable) return firstAvailable;
+  return PLAYER_COLORS[(players?.length ?? 0) % PLAYER_COLORS.length];
 }
 
 const rooms = new Map(); // code -> { state, hostSocketId, clients, lobby, disconnectTimers }
@@ -937,8 +945,8 @@ io.on("connection", (socket) => {
       }
     }
 
-    if (room.state.phase !== "lobby") {
-      return socket.emit("error_msg", { message: "Partie deja demarree" });
+    if (room.state.phase === "results") {
+      return socket.emit("error_msg", { message: "Partie terminee" });
     }
     if (room.lobby.length >= MAX_PLAYERS) {
       return socket.emit("error_msg", { message: "Room pleine (20 joueurs max)" });
@@ -959,6 +967,33 @@ io.on("connection", (socket) => {
     socketToRoom.set(socket.id, code);
     socket.join(code);
     syncHostFlags(room);
+
+    if (room.state.phase === "playing") {
+      const alreadyInState = room.state.players.some((player) => player.id === socket.id);
+      if (!alreadyInState) {
+        const color = pickNextPlayerColor(room.state.players);
+        room.state = {
+          ...room.state,
+          players: [
+            ...room.state.players,
+            {
+              id: socket.id,
+              name: name || "Player",
+              avatar: avatar ?? 0,
+              position: 0,
+              positionNodeId: "0",
+              lastPosition: -1,
+              points: 0,
+              stars: 0,
+              inventory: [],
+              skipNextTurn: false,
+              color,
+              isHost: becomesHost,
+            },
+          ],
+        };
+      }
+    }
 
     socket.emit("room_joined", { code });
     broadcastLobby(code);

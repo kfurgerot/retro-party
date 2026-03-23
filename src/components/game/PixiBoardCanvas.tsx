@@ -139,11 +139,6 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
         fill: 0x0f172a,
         fontSize: 14,
       }),
-      tileIndex: new TextStyle({
-        fontFamily: "Press Start 2P, monospace",
-        fill: 0xe2e8f0,
-        fontSize: 9,
-      }),
       avatar: new TextStyle({
         fontFamily: "Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif",
         fill: 0x0f172a,
@@ -323,9 +318,6 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
       const tileColorLeft = shadeColor(tileColor, -0.3);
       const tileColorRight = shadeColor(tileColor, -0.42);
       const isFocused = focusedPosition === tile.id;
-      const isPathOrigin = pendingPathChoiceAtTileId === tile.id;
-      const isPathOption = pendingPathChoiceOptions.includes(tile.id);
-      const showIndex = isPathOrigin || isPathOption;
 
       const topY = centerY - drawHalfHeight;
       const rightX = centerX + drawHalfWidth;
@@ -398,20 +390,6 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
         tilesLayer.addChild(icon);
       }
 
-      if (showIndex) {
-        const badge = new Graphics();
-        badge.lineStyle(1, 0xcbd5e1, 0.35, 0.5, true);
-        badge.beginFill(0x0f172a, 0.85);
-        badge.drawRoundedRect(centerX + drawHalfWidth * 0.52 - 8, topY + drawHalfHeight * 0.5 - 6, 16, 12, 3);
-        badge.endFill();
-        tilesLayer.addChild(badge);
-
-        const indexText = new Text(String(tile.id + 1), sharedStyles.tileIndex);
-        indexText.anchor.set(0.5);
-        indexText.x = centerX + drawHalfWidth * 0.52;
-        indexText.y = topY + drawHalfHeight * 0.5;
-        tilesLayer.addChild(indexText);
-      }
     });
     tilesLayer.addChildAt(tileShadows, 0);
     tilesLayer.addChildAt(tileSides, 1);
@@ -680,7 +658,6 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
     sharedStyles.overflow,
     sharedStyles.shop,
     sharedStyles.tileIcon,
-    sharedStyles.tileIndex,
     tileHalfHeight,
     tileHalfWidth,
     drawHalfHeight,
@@ -994,7 +971,7 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
       : actionOverlay.canMove
         ? `Avancer ${actionOverlay.diceValue ?? ""}`.trim()
         : actionOverlay.canRoll
-          ? "Lancer de"
+          ? "Lancer dé"
           : "Action";
     const resolvedRollValue =
       actionOverlay.rollResult?.total ??

@@ -14,6 +14,8 @@ interface TurnBannerProps {
   mode: "mobile" | "desktop";
   currentTurnLabel: string;
   currentPlayerName: string;
+  roomCode?: string | null;
+  roomCodeLabel?: string;
   primaryAction: string;
   pointsLabel: string;
   starsLabel: string;
@@ -38,6 +40,8 @@ export const TurnBanner: React.FC<TurnBannerProps> = ({
   mode,
   currentTurnLabel,
   currentPlayerName,
+  roomCode,
+  roomCodeLabel,
   pointsLabel,
   starsLabel,
   myPoints,
@@ -54,9 +58,17 @@ export const TurnBanner: React.FC<TurnBannerProps> = ({
   if (mode === "mobile") {
     return (
       <Card className={cn(neonCardClass, "rounded-xl px-3 py-2.5")}>
-        <div className="flex items-center gap-2 text-sm font-bold text-cyan-50">
-          <span className="mr-1 text-[10px] uppercase tracking-[0.1em] text-cyan-100/80">{currentTurnLabel}</span>
-          <span className="truncate">{currentPlayerName}</span>
+        <div className="flex items-center justify-between gap-2 text-sm font-bold text-cyan-50">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="mr-1 text-[10px] uppercase tracking-[0.1em] text-cyan-100/80">{currentTurnLabel}</span>
+            <span className="truncate">{currentPlayerName}</span>
+          </div>
+          {roomCode ? (
+            <div className="inline-flex shrink-0 items-center gap-1 rounded-full border border-cyan-300/40 bg-cyan-500/12 px-2 py-0.5 text-[10px] font-semibold tracking-[0.06em] text-cyan-50">
+              <span className="uppercase text-cyan-100/85">{roomCodeLabel ?? "Code"}</span>
+              <span>{roomCode}</span>
+            </div>
+          ) : null}
         </div>
         <div className="mt-2 grid grid-cols-2 gap-2">
           <div className="rounded-lg border border-cyan-300/40 bg-cyan-500/14 px-2 py-1.5">
@@ -107,10 +119,20 @@ export const TurnBanner: React.FC<TurnBannerProps> = ({
         <div className="text-2xl font-black leading-none text-amber-100">{myStars}</div>
       </Card>
 
-      {onLeave && leaveLabel ? (
-        <Button className={cn("hidden xl:inline-flex", leaveBtnClass)} variant="secondary" onClick={onLeave}>
-          {leaveLabel}
-        </Button>
+      {(roomCode || (onLeave && leaveLabel)) ? (
+        <div className="hidden xl:flex xl:flex-col xl:items-end xl:gap-2">
+          {roomCode ? (
+            <div className="inline-flex max-w-full items-center gap-1 rounded-full border border-cyan-300/40 bg-cyan-500/12 px-2.5 py-1 text-[11px] font-semibold tracking-[0.08em] text-cyan-50">
+              <span className="uppercase text-cyan-100/85">{roomCodeLabel ?? "Code"}</span>
+              <span className="truncate">{roomCode}</span>
+            </div>
+          ) : null}
+          {onLeave && leaveLabel ? (
+            <Button className={cn("hidden xl:inline-flex", leaveBtnClass)} variant="secondary" onClick={onLeave}>
+              {leaveLabel}
+            </Button>
+          ) : null}
+        </div>
       ) : null}
     </div>
   );

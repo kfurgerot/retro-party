@@ -160,6 +160,8 @@ const Index: React.FC = () => {
     return (
       <GameScreen
         gameState={online.gameState}
+        roomCode={online.code}
+        roomNotice={online.roomNotice}
         myPlayerId={online.myPlayerId}
         onLeave={leaveOnlineSession}
         onRollDice={online.rollDice}
