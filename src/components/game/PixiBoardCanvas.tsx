@@ -29,6 +29,7 @@ interface PixiBoardCanvasProps {
   playersByTile: Map<number, Player[]>;
   playerDisplayPositions: Record<string, number>;
   focusPlayerId?: string | null;
+  activePlayerHint?: string | null;
   movingPlayerId: string | null;
   focusedPosition: number | null;
   highlightedPathEdges: Set<string>;
@@ -110,6 +111,7 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
   playersByTile,
   playerDisplayPositions,
   focusPlayerId = null,
+  activePlayerHint = null,
   movingPlayerId,
   focusedPosition,
   highlightedPathEdges,
@@ -866,6 +868,106 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
       legendPanel.off("pointerdown", toggleLegend);
     };
 
+    let avatarScreenX: number | null = null;
+    let avatarScreenY: number | null = null;
+    if (focusPlayerId) {
+      let tileId = playerDisplayPositions[focusPlayerId];
+      if (tileId == null) {
+        for (const [candidateTileId, tilePlayers] of playersByTile.entries()) {
+          if (tilePlayers.some((player) => player.id === focusPlayerId)) {
+            tileId = candidateTileId;
+            break;
+          }
+        }
+      }
+
+      if (tileId != null) {
+        const p = points[tileId];
+        if (p) {
+          const tilePlayers = playersByTile.get(tileId) ?? [];
+          const playerIndex = tilePlayers.findIndex((player) => player.id === focusPlayerId);
+          const shownCount = Math.min(tilePlayers.length, 3);
+
+          let avatarX = p.x + tileHalfWidth;
+          if (playerIndex >= 0 && playerIndex < 3) {
+            avatarX = p.x + tileHalfWidth - ((shownCount - 1) * 10) + playerIndex * 20;
+          } else if (playerIndex >= 3) {
+            avatarX = p.x + tileHalfWidth + 22;
+          }
+          const avatarY = p.y + tileHalfHeight + 1 - PAWN_LIFT;
+          avatarScreenX = avatarX * scale + offset.x;
+          avatarScreenY = avatarY * scale + offset.y;
+        }
+      }
+    }
+
+    const isAvatarInViewport =
+      avatarScreenX != null &&
+      avatarScreenY != null &&
+      avatarScreenX >= -20 &&
+      avatarScreenX <= viewWidth + 20 &&
+      avatarScreenY >= -20 &&
+      avatarScreenY <= viewHeight + 20;
+
+    if (activePlayerHint && !movingPlayerId && isAvatarInViewport && avatarScreenX != null && avatarScreenY != null) {
+      const bubbleMaxWidth = Math.min(220, Math.max(140, viewWidth * 0.34));
+      const bubbleTextStyle = new TextStyle({
+        fontFamily: "Nunito, Poppins, Arial, sans-serif",
+        fill: 0x0f172a,
+        fontSize: viewWidth < 540 ? 12 : 13,
+        fontWeight: "700",
+        wordWrap: true,
+        wordWrapWidth: bubbleMaxWidth - 20,
+        align: "left",
+        lineHeight: 16,
+      });
+      const bubbleText = new Text(activePlayerHint, bubbleTextStyle);
+      const bubblePaddingX = 10;
+      const bubblePaddingY = 8;
+      const bubbleWidth = Math.max(110, Math.min(bubbleMaxWidth, bubbleText.width + bubblePaddingX * 2));
+      const bubbleHeight = Math.max(32, bubbleText.height + bubblePaddingY * 2);
+
+      const horizontalGap = 14 + Math.min(12, Math.max(0, scale * 6));
+      const verticalGap = 18 + Math.min(16, Math.max(4, scale * 10));
+      const desiredX = avatarScreenX + horizontalGap;
+      const minX = 8;
+      const maxX = Math.max(minX, viewWidth - bubbleWidth - 8);
+      const bubbleX = Math.max(minX, Math.min(desiredX, maxX));
+      const bubbleY = Math.max(10, avatarScreenY - bubbleHeight - verticalGap);
+
+      const bubbleContainer = new Container();
+      bubbleContainer.x = bubbleX;
+      bubbleContainer.y = bubbleY;
+      bubbleContainer.zIndex = 12;
+
+      const bubble = new Graphics();
+      bubble.lineStyle(2, 0x0f172a, 0.86, 0.5, true);
+      bubble.beginFill(0xf8fafc, 0.96);
+      bubble.drawRoundedRect(0, 0, bubbleWidth, bubbleHeight, 12);
+      bubble.endFill();
+
+      const tailTargetX = avatarScreenX - bubbleX;
+      const tailBaseX = Math.max(20, Math.min(bubbleWidth - 20, tailTargetX));
+      const tailBaseY = bubbleHeight;
+      bubble.beginFill(0xf8fafc, 0.96);
+      bubble.drawPolygon([
+        tailBaseX - 10, tailBaseY - 1,
+        tailBaseX + 4, tailBaseY - 1,
+        tailBaseX - 6, tailBaseY + 12,
+      ]);
+      bubble.endFill();
+      bubble.lineStyle(2, 0x0f172a, 0.86, 0.5, true);
+      bubble.moveTo(tailBaseX - 10, tailBaseY - 1);
+      bubble.lineTo(tailBaseX - 6, tailBaseY + 12);
+      bubble.lineTo(tailBaseX + 4, tailBaseY - 1);
+
+      bubbleContainer.addChild(bubble);
+      bubbleText.x = bubblePaddingX;
+      bubbleText.y = bubblePaddingY;
+      bubbleContainer.addChild(bubbleText);
+      uiLayer.addChild(bubbleContainer);
+    }
+
     const shouldShowActionPanel =
       !!focusPlayerId &&
       !!actionOverlay &&
@@ -873,31 +975,6 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
     if (!shouldShowActionPanel) {
       return cleanupLegend;
     }
-
-    let tileId = playerDisplayPositions[focusPlayerId];
-    if (tileId == null) {
-      for (const [candidateTileId, tilePlayers] of playersByTile.entries()) {
-        if (tilePlayers.some((player) => player.id === focusPlayerId)) {
-          tileId = candidateTileId;
-          break;
-        }
-      }
-    }
-    if (tileId == null) return cleanupLegend;
-    const p = points[tileId];
-    if (!p) return cleanupLegend;
-
-    const tilePlayers = playersByTile.get(tileId) ?? [];
-    const playerIndex = tilePlayers.findIndex((player) => player.id === focusPlayerId);
-    const shownCount = Math.min(tilePlayers.length, 3);
-
-    let avatarX = p.x + tileHalfWidth;
-    if (playerIndex >= 0 && playerIndex < 3) {
-      avatarX = p.x + tileHalfWidth - ((shownCount - 1) * 10) + playerIndex * 20;
-    } else if (playerIndex >= 3) {
-      avatarX = p.x + tileHalfWidth + 22;
-    }
-    const avatarY = p.y + tileHalfHeight + 1;
 
     const anchorX = viewWidth * 0.5;
     const bottomInset = Math.max(72, Math.min(112, viewHeight * 0.16));
@@ -1004,8 +1081,10 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
       }
     };
   }, [
+    activePlayerHint,
     actionOverlay,
     focusPlayerId,
+    movingPlayerId,
     offset.x,
     offset.y,
     playerDisplayPositions,

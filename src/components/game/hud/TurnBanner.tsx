@@ -54,9 +54,9 @@ export const TurnBanner: React.FC<TurnBannerProps> = ({
   if (mode === "mobile") {
     return (
       <Card className={cn(neonCardClass, "rounded-xl px-3 py-2.5")}>
-        <div className="truncate text-sm font-bold text-cyan-50">
+        <div className="flex items-center gap-2 text-sm font-bold text-cyan-50">
           <span className="mr-1 text-[10px] uppercase tracking-[0.1em] text-cyan-100/80">{currentTurnLabel}</span>
-          <span>{currentPlayerName}</span>
+          <span className="truncate">{currentPlayerName}</span>
         </div>
         <div className="mt-2 grid grid-cols-2 gap-2">
           <div className="rounded-lg border border-cyan-300/40 bg-cyan-500/14 px-2 py-1.5">
@@ -81,9 +81,9 @@ export const TurnBanner: React.FC<TurnBannerProps> = ({
   return (
     <div className="hidden xl:flex xl:flex-wrap xl:items-center xl:justify-between xl:gap-2">
       <Card className={cn(neonCardClass, "min-w-[240px] rounded-xl px-4 py-3")}>
-        <div className="truncate text-lg font-bold text-cyan-50 sm:text-xl">
+        <div className="flex items-center gap-2 text-lg font-bold text-cyan-50 sm:text-xl">
           <span className="mr-1 text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">{currentTurnLabel}</span>
-          <span>{currentPlayerName}</span>
+          <span className="truncate">{currentPlayerName}</span>
         </div>
       </Card>
 

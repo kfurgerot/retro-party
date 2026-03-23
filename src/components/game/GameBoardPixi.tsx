@@ -40,6 +40,7 @@ const GameBoardPixiComponent: React.FC<GameBoardProps> = ({
   tiles,
   players,
   focusPlayerId = null,
+  activePlayerHint = null,
   onMoveAnimationEnd,
   pendingPathChoice,
   lastMoveTrace,
@@ -750,6 +751,7 @@ const GameBoardPixiComponent: React.FC<GameBoardProps> = ({
         playersByTile={playersByTile}
         playerDisplayPositions={displayPositions}
         focusPlayerId={focusPlayerId}
+        activePlayerHint={activePlayerHint}
         movingPlayerId={movingPlayerId}
         focusedPosition={focusedPosition}
         highlightedPathEdges={highlightedPathEdges}
@@ -979,6 +981,7 @@ function areGameBoardPropsEqual(prev: GameBoardProps, next: GameBoardProps) {
     areTilesEqual(prev.tiles, next.tiles) &&
     arePlayersEqualForBoard(prev.players, next.players) &&
     prev.focusPlayerId === next.focusPlayerId &&
+    prev.activePlayerHint === next.activePlayerHint &&
     arePendingChoicesEqual(prev.pendingPathChoice, next.pendingPathChoice) &&
     areMoveTracesEqual(prev.lastMoveTrace, next.lastMoveTrace) &&
     prev.canChoosePath === next.canChoosePath &&
