@@ -7,6 +7,7 @@ interface LaunchAnnouncementProps {
   startAt?: number;
   variant?: "turn" | "roll" | "default";
   highlightValue?: string | number | null;
+  emphasisText?: string | null;
 }
 
 export const LaunchAnnouncement: React.FC<LaunchAnnouncementProps> = ({
@@ -15,6 +16,7 @@ export const LaunchAnnouncement: React.FC<LaunchAnnouncementProps> = ({
   startAt,
   variant = "default",
   highlightValue = null,
+  emphasisText = null,
 }) => {
   const [initialDurationMs, setInitialDurationMs] = useState(() =>
     startAt ? Math.max(1, startAt - Date.now()) : 1
@@ -83,6 +85,19 @@ export const LaunchAnnouncement: React.FC<LaunchAnnouncementProps> = ({
         </div>
 
         <h2 className="mt-3 text-2xl font-bold tracking-wide sm:text-[2rem]">{title}</h2>
+        {emphasisText ? (
+          <div className="mt-3 flex items-center justify-center">
+            <div
+              className={
+                variant === "roll"
+                  ? "inline-flex items-center rounded-xl border border-orange-200/70 bg-orange-500/22 px-4 py-2 text-xl font-black tracking-wide text-orange-50 shadow-[0_0_24px_rgba(251,146,60,0.35)] sm:text-2xl"
+                  : "inline-flex items-center rounded-xl border border-cyan-200/70 bg-cyan-500/20 px-4 py-2 text-xl font-black tracking-wide text-cyan-50 shadow-[0_0_24px_rgba(34,211,238,0.3)] sm:text-2xl"
+              }
+            >
+              {emphasisText}
+            </div>
+          </div>
+        ) : null}
         {variant === "roll" && highlightValue != null ? (
           <div className="mt-3 flex items-center justify-center">
             <div className="inline-flex h-20 min-w-20 items-center justify-center rounded-2xl border-2 border-orange-200/70 bg-orange-500/25 px-5 text-5xl font-black leading-none text-orange-100 shadow-[0_0_24px_rgba(251,146,60,0.35)]">

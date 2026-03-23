@@ -456,7 +456,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     }
     const shouldShowTurnIntro =
       gameState.phase === "playing" &&
-      isMyTurn &&
       !isPathChoiceActive &&
       !isKudoPurchaseActive &&
       !isShopActive &&
@@ -496,7 +495,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     gameState.isRolling,
     gameState.pendingPreRollEffect,
     gameState.pendingDoubleRoll,
-    isMyTurn,
     isPathChoiceActive,
     isKudoPurchaseActive,
     isShopActive,
@@ -508,10 +506,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 
   useEffect(() => {
     if (
-      !isMyTurn ||
       gameState.isRolling ||
       gameState.turnPhase !== "moving" ||
-      hasMovedThisTurn ||
       gameState.diceValue == null
     ) {
       return;
@@ -534,7 +530,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     const timeoutId = window.setTimeout(() => {
       setRollIntroEndsAt(null);
       setRollAnnouncementValue(null);
-      if (!hasMovedThisTurnRef.current) {
+      if (isMyTurn && !hasMovedThisTurnRef.current) {
         handleMove(stepsToMove);
       }
     }, ROLL_ANNOUNCE_MS);
@@ -1414,8 +1410,9 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 
       {isTurnIntroActive && !isPathChoiceActive && !isKudoPurchaseActive && !isShopActive && !gameState.currentQuestion && !isMinigameActive && (
         <LaunchAnnouncement
-          title={fr.gameScreen.infoYourTurn}
-          subtitle={fr.game.yourTurnLaunch}
+          title={isMyTurn ? "A ton tour" : "Au tour de"}
+          subtitle={isMyTurn ? fr.game.yourTurnLaunch : "Preparez-vous, un joueur va agir."}
+          emphasisText={!isMyTurn ? (currentPlayer?.name ?? fr.terms.player) : null}
           startAt={turnIntroEndsAt ?? undefined}
           variant="turn"
         />
@@ -1424,7 +1421,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       {rollIntroEndsAt != null && rollAnnouncementValue != null && (
         <LaunchAnnouncement
           title={fr.gameScreen.rollResult}
-          subtitle={fr.gameScreen.rollResultSubtitle.replace("{value}", String(rollAnnouncementValue))}
+          subtitle={`obtient ${String(rollAnnouncementValue)}`}
+          emphasisText={currentPlayer?.name ?? fr.terms.player}
           startAt={rollIntroEndsAt}
           variant="roll"
           highlightValue={rollAnnouncementValue}
