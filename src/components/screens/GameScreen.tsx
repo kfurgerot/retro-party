@@ -113,6 +113,7 @@ const PointDuelMinigame = lazy(() =>
 
 interface GameScreenProps {
   gameState: GameState;
+  roomCode?: string | null;
   myPlayerId?: string | null;
   onLeave?: () => void;
   onRollDice: () => void;
@@ -135,6 +136,7 @@ interface GameScreenProps {
 
 export const GameScreen: React.FC<GameScreenProps> = ({
   gameState,
+  roomCode,
   myPlayerId,
   onLeave,
   onRollDice,
@@ -849,6 +851,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               mode="mobile"
               currentTurnLabel={fr.gameScreen.currentTurn}
               currentPlayerName={currentPlayer?.name ?? "-"}
+              roomCode={roomCode}
+              roomCodeLabel={fr.onlineLobby.codeLabel}
               primaryAction={primaryAction}
               pointsLabel={fr.gameScreen.points}
               starsLabel={fr.gameScreen.kudobox}
@@ -876,6 +880,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
             mode="desktop"
             currentTurnLabel={fr.gameScreen.currentTurn}
             currentPlayerName={currentPlayer?.name ?? "-"}
+            roomCode={roomCode}
+            roomCodeLabel={fr.onlineLobby.codeLabel}
             primaryAction={primaryAction}
             pointsLabel={fr.gameScreen.points}
             starsLabel={fr.gameScreen.kudobox}
