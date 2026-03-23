@@ -36,7 +36,7 @@ export const fr = {
     minName: "Min. 2 caracteres",
     avatarLabel: "Choisis ton avatar",
     connecting: "Connexion au serveur...",
-    continue: "Continuer",
+    continue: "Suivant",
     back: "Retour",
     previous: "Precedent",
     next: "Suivant",

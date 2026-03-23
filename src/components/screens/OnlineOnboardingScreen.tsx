@@ -190,7 +190,7 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
                 type="button"
                 disabled={!canSubmit}
                 onClick={() => onSubmit({ name: cleanName(name), avatar })}
-                className="h-11 px-6 text-sm font-semibold uppercase tracking-wide"
+                className="h-11 px-6 text-sm font-semibold tracking-wide"
               >
                 {fr.onlineOnboarding.continue}
               </PrimaryButton>
@@ -224,7 +224,7 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
                 type="button"
                 disabled={!canSubmit}
                 onClick={() => onSubmit({ name: cleanName(name), avatar })}
-                className="h-12 min-h-0 font-semibold uppercase tracking-wide"
+                className="h-12 min-h-0 font-semibold tracking-wide"
               >
                 {fr.onlineOnboarding.continue}
               </PrimaryButton>
