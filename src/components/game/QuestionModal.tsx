@@ -87,10 +87,10 @@ export function QuestionModal({ question, players, myPlayerId, onVote, onValidat
           </div>
           <div className="flex items-center gap-2 text-xs">
             <span className="rounded-full border border-emerald-300/60 bg-emerald-500/18 px-2 py-1 text-emerald-100">
-              +1 {upCount}
+              👍 {upCount}
             </span>
             <span className="rounded-full border border-rose-300/60 bg-rose-500/18 px-2 py-1 text-rose-100">
-              -1 {downCount}
+              👎 {downCount}
             </span>
           </div>
         </div>
@@ -106,13 +106,13 @@ export function QuestionModal({ question, players, myPlayerId, onVote, onValidat
                 onClick={() => onVote("up")}
                 className="h-11 rounded-xl border border-emerald-300/65 bg-emerald-500/22 px-4 text-sm font-semibold text-emerald-50 hover:bg-emerald-500/34"
               >
-                + {fr.questionModal.useful}
+                👍 A creuser
               </Button>
               <Button
                 onClick={() => onVote("down")}
                 className="h-11 rounded-xl border border-rose-300/65 bg-rose-500/22 px-4 text-sm font-semibold text-rose-50 hover:bg-rose-500/34"
               >
-                - {fr.questionModal.toExplore}
+                👎 Passer
               </Button>
             </div>
           ) : (
