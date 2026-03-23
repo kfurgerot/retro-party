@@ -85,11 +85,41 @@ export const QUESTIONS = {
   ]
 };
 
-export function pickQuestion(type, rng=Math.random) {
-  const normalized =
-    type === "purple" ? "violet" : type === "star" || type === "yellow" ? "bonus" : type;
-  const list = QUESTIONS[normalized] || [];
+function normalizeQuestionType(type) {
+  return type === "purple" ? "violet" : type === "star" || type === "yellow" ? "bonus" : type;
+}
+
+function getPoolForType(type) {
+  const normalized = normalizeQuestionType(type);
+  return QUESTIONS[normalized] || [];
+}
+
+export function pickQuestion(type, rng = Math.random) {
+  const list = getPoolForType(type);
   if (!list.length) return "";
   const idx = Math.floor(rng() * list.length);
   return list[idx];
+}
+
+export function pickUniqueQuestion(type, usedQuestionTexts = [], rng = Math.random) {
+  const usedSet = new Set(
+    Array.isArray(usedQuestionTexts)
+      ? usedQuestionTexts.filter((entry) => typeof entry === "string" && entry.length > 0)
+      : []
+  );
+
+  const sameTypePool = getPoolForType(type);
+  const sameTypeAvailable = sameTypePool.filter((text) => !usedSet.has(text));
+  if (sameTypeAvailable.length > 0) {
+    return sameTypeAvailable[Math.floor(rng() * sameTypeAvailable.length)];
+  }
+
+  const globalAvailable = Object.values(QUESTIONS)
+    .flat()
+    .filter((text) => !usedSet.has(text));
+  if (globalAvailable.length > 0) {
+    return globalAvailable[Math.floor(rng() * globalAvailable.length)];
+  }
+
+  return "";
 }

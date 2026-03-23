@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { GameState, Player, QuestionState } from "@/types/game";
 import { generateRandomBoard } from "@/data/boardGenerator";
-import { pickQuestion } from "@/data/questions";
+import { pickUniqueQuestion } from "@/data/questions";
 
 const BUG_SMASH_DURATION_MS = 20000;
 const BUG_SMASH_ANNOUNCE_MS = 4000;
@@ -234,7 +234,10 @@ const buildLandingState = (prev: GameState, players: Player[]): GameState => {
   }
 
   const type = toQuestionType(tile.type);
-  const text = pickQuestion(type);
+  const usedQuestionTexts = (prev.questionHistory ?? [])
+    .map((entry) => entry?.text)
+    .filter((entry): entry is string => typeof entry === "string" && entry.length > 0);
+  const text = pickUniqueQuestion(type, usedQuestionTexts) || "(Question manquante)";
 
   return {
     ...prev,

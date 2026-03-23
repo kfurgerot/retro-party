@@ -3,7 +3,7 @@
 // Server authoritative: generates board + questions and advances turns.
 
 import { generateRandomBoard } from "./boardGenerator.js";
-import { pickQuestion } from "./questions.js";
+import { pickUniqueQuestion } from "./questions.js";
 import { BUZZWORD_DUEL_BANK } from "./buzzwordBank.js";
 import { SHOP_CATALOG } from "./shopCatalog.js";
 import {
@@ -833,9 +833,15 @@ function buildQuestionStateForCurrentPlayer(state, players) {
   const type = tile.type === "bonus" ? "bonus" : tile.type;
   const normalizedType =
     type === "purple" ? "violet" : type === "star" || type === "yellow" ? "bonus" : type;
+  const usedQuestionTexts = [
+    ...(Array.isArray(state.questionHistory) ? state.questionHistory.map((entry) => entry?.text) : []),
+    state.currentQuestion?.text ?? null,
+  ].filter((entry) => typeof entry === "string" && entry.length > 0);
+  const usedQuestionSet = new Set(usedQuestionTexts);
   const customPool = Array.isArray(state.templateCustomQuestions)
     ? state.templateCustomQuestions.filter((q) => {
         if (!q || q.isActive === false || typeof q.text !== "string") return false;
+        if (usedQuestionSet.has(q.text)) return false;
         if (!q.category) return true;
         const normalizedCategory =
           q.category === "purple"
@@ -849,7 +855,7 @@ function buildQuestionStateForCurrentPlayer(state, players) {
   const customText = customPool.length
     ? customPool[Math.floor(rng() * customPool.length)]?.text ?? ""
     : "";
-  const text = customText || pickQuestion(type, rng) || "(Question manquante)";
+  const text = customText || pickUniqueQuestion(type, usedQuestionTexts, rng) || "(Plus de questions disponibles)";
   const qId = `${Date.now()}-${Math.floor(Math.random() * 100000)}`;
 
   return {
