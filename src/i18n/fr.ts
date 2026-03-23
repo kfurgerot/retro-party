@@ -135,6 +135,7 @@ export const fr = {
     readyBadge: "Partie prete",
     readyTitle: "Partie prete",
     myConfigTitle: "Configuration joueur",
+    storyLabel: "Story en cours",
     rolePlayer: "Player",
     roleSpectator: "Spectator",
     voteSystem: "Type de vote",

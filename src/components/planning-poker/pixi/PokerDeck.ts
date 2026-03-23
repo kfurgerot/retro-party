@@ -57,9 +57,17 @@ export class PokerDeck {
     this.cards.forEach((card) => card.setInteractive(interactive));
   }
 
-  resize({ width }: { width: number }) {
-    const colCount = width < 520 ? 4 : width < 760 ? 6 : 8;
-    const gap = width < 520 ? 10 : 12;
+  resize({
+    width,
+    columnsOverride,
+    gapOverride,
+  }: {
+    width: number;
+    columnsOverride?: number;
+    gapOverride?: number;
+  }) {
+    const colCount = Math.max(1, columnsOverride ?? (width < 520 ? 4 : width < 760 ? 6 : 8));
+    const gap = gapOverride ?? (width < 520 ? 10 : 12);
 
     this.values.forEach((value, index) => {
       const card = this.cards.get(value);

@@ -1,9 +1,11 @@
-import React, { useEffect, useMemo, useRef } from "react";
-import { Application, Container, Graphics, Text, TextStyle } from "pixi.js";
-import { AVATARS } from "@/types/game";
-import { PlanningPokerPlayer, PlanningPokerRole } from "@/types/planningPoker";
-import { PokerCard } from "./PokerCard";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Application, Container, Text, TextStyle } from "pixi.js";
+import { PlanningPokerPlayer, PlanningPokerRole, PlanningPokerVoteSystem } from "@/types/planningPoker";
+import { CenterInfo } from "./CenterInfo";
+import { PlayerSeat } from "./PlayerSeat";
 import { PokerDeck } from "./PokerDeck";
+import { POKER_WORLD, clamp } from "./sceneTheme";
+import { TableBackground } from "./TableBackground";
 
 type PokerSceneProps = {
   players: PlanningPokerPlayer[];
@@ -12,6 +14,9 @@ type PokerSceneProps = {
   myPlayerId: string | null;
   myRole: PlanningPokerRole;
   myVote: string | null;
+  voteSystem: PlanningPokerVoteSystem;
+  round: number;
+  storyTitle: string;
   onVoteCard: (value: string) => void;
 };
 
@@ -20,17 +25,23 @@ type PlayerSnapshot = {
   vote: string | null;
 };
 
-const tableTextStyle = new TextStyle({
-  fontFamily: "'Press Start 2P', monospace",
-  fill: 0xcffafe,
-  fontSize: 11,
-});
+function getSessionStatus({ revealed, voted, active }: { revealed: boolean; voted: number; active: number }) {
+  if (revealed) return "REVELE";
+  if (active > 0 && voted >= active) return "EN ATTENTE DE REVEAL";
+  return "VOTE EN COURS";
+}
 
-const labelTextStyle = new TextStyle({
-  fontFamily: "'Press Start 2P', monospace",
-  fill: 0xe2e8f0,
-  fontSize: 10,
-});
+function getSeatAngle(index: number, count: number, isMobile: boolean) {
+  if (count <= 1) return -Math.PI / 2;
+  if (!isMobile) {
+    return -Math.PI / 2 + (Math.PI * 2 * index) / count;
+  }
+
+  // Mobile: spread players across upper and side arcs to keep center/deck readable.
+  const spread = Math.PI * 1.55;
+  const start = -Math.PI / 2 - spread / 2;
+  return start + (spread * index) / Math.max(1, count - 1);
+}
 
 export const PokerScene: React.FC<PokerSceneProps> = ({
   players,
@@ -39,20 +50,31 @@ export const PokerScene: React.FC<PokerSceneProps> = ({
   myPlayerId,
   myRole,
   myVote,
+  voteSystem,
+  round,
+  storyTitle,
   onVoteCard,
 }) => {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const appRef = useRef<Application | null>(null);
-  const rootRef = useRef<Container | null>(null);
-  const boardLayerRef = useRef<Container | null>(null);
-  const boardTextLayerRef = useRef<Container | null>(null);
-  const boardCardsRef = useRef<Map<string, PokerCard>>(new Map());
-  const boardLabelsRef = useRef<Map<string, Text>>(new Map());
-  const tableRef = useRef<Graphics | null>(null);
+  const worldRef = useRef<Container | null>(null);
+  const overlayRef = useRef<Container | null>(null);
+
+  const tableRef = useRef<TableBackground | null>(null);
+  const centerRef = useRef<CenterInfo | null>(null);
+  const seatsLayerRef = useRef<Container | null>(null);
+
+  const seatMapRef = useRef<Map<string, PlayerSeat>>(new Map());
   const deckRef = useRef<PokerDeck | null>(null);
   const deckContainerRef = useRef<Container | null>(null);
+  const deckTitleRef = useRef<Text | null>(null);
+
   const prevPlayersRef = useRef<Map<string, PlayerSnapshot>>(new Map());
   const prevRevealedRef = useRef(false);
+  const viewportRef = useRef({ width: 1, height: 1 });
+  const deckModeRef = useRef<"mobile" | "desktop" | null>(null);
+
+  const [viewportTick, setViewportTick] = useState(0);
 
   const sortedPlayers = useMemo(
     () =>
@@ -78,198 +100,277 @@ export const PokerScene: React.FC<PokerSceneProps> = ({
     });
     appRef.current = app;
 
-    const root = new Container();
-    const boardLayer = new Container();
-    const boardTextLayer = new Container();
-    const deckContainer = new Container();
-    const table = new Graphics();
+    const world = new Container();
+    const overlay = new Container();
+    const seatsLayer = new Container();
 
-    root.addChild(table, boardLayer, boardTextLayer, deckContainer);
-    app.stage.addChild(root);
+    const table = new TableBackground();
+    const centerInfo = new CenterInfo();
 
-    rootRef.current = root;
-    boardLayerRef.current = boardLayer;
-    boardTextLayerRef.current = boardTextLayer;
-    deckContainerRef.current = deckContainer;
+    world.addChild(table.view, seatsLayer, centerInfo.view);
+    app.stage.addChild(world, overlay);
+
+    worldRef.current = world;
+    overlayRef.current = overlay;
+    seatsLayerRef.current = seatsLayer;
     tableRef.current = table;
+    centerRef.current = centerInfo;
+
+    const deckContainer = new Container();
+    overlay.addChild(deckContainer);
+    deckContainerRef.current = deckContainer;
 
     host.appendChild(app.view as HTMLCanvasElement);
 
-    const ro = new ResizeObserver(() => {
-      app.renderer.resize(Math.max(1, host.clientWidth), Math.max(1, host.clientHeight));
-    });
+    const updateViewport = () => {
+      const nextWidth = Math.max(1, host.clientWidth);
+      const nextHeight = Math.max(1, host.clientHeight);
+      app.renderer.resize(nextWidth, nextHeight);
+      viewportRef.current = { width: nextWidth, height: nextHeight };
+      setViewportTick((v) => v + 1);
+    };
+
+    updateViewport();
+    const ro = new ResizeObserver(() => updateViewport());
     ro.observe(host);
 
     return () => {
       ro.disconnect();
-      boardCardsRef.current.forEach((card) => card.destroy());
-      boardCardsRef.current.clear();
-      boardLabelsRef.current.clear();
+      seatMapRef.current.forEach((seat) => seat.destroy());
+      seatMapRef.current.clear();
+
+      table.destroy();
+      centerInfo.destroy();
+
       deckRef.current?.destroy();
       deckRef.current = null;
+      deckModeRef.current = null;
+
+      if (deckTitleRef.current) {
+        deckTitleRef.current.destroy();
+        deckTitleRef.current = null;
+      }
+
       app.destroy(true, true);
       appRef.current = null;
-      rootRef.current = null;
-      boardLayerRef.current = null;
-      boardTextLayerRef.current = null;
-      deckContainerRef.current = null;
+      worldRef.current = null;
+      overlayRef.current = null;
+      seatsLayerRef.current = null;
       tableRef.current = null;
+      centerRef.current = null;
+      deckContainerRef.current = null;
     };
   }, []);
 
   useEffect(() => {
     const app = appRef.current;
-    const boardLayer = boardLayerRef.current;
-    const boardTextLayer = boardTextLayerRef.current;
-    const deckContainer = deckContainerRef.current;
+    const world = worldRef.current;
+    const overlay = overlayRef.current;
+    const seatsLayer = seatsLayerRef.current;
     const table = tableRef.current;
+    const center = centerRef.current;
+    const deckContainer = deckContainerRef.current;
+    if (!app || !world || !overlay || !seatsLayer || !table || !center || !deckContainer) return;
 
-    if (!app || !boardLayer || !boardTextLayer || !deckContainer || !table) return;
-
-    const width = app.renderer.width;
-    const height = app.renderer.height;
+    const width = viewportRef.current.width;
+    const height = viewportRef.current.height;
+    const isMobile = width < 760;
+    const seats = sortedPlayers.slice(0, 10);
 
     const deckVisibleForMe = myRole === "player";
+    const deckSpace = deckVisibleForMe ? (isMobile ? 148 : 190) : isMobile ? 20 : 12;
 
-    table.clear();
-    table.beginFill(0x020617, 0.6);
-    table.drawRoundedRect(8, 8, width - 16, height - 16, 20);
-    table.endFill();
+    const worldPaddingX = isMobile ? 6 : 10;
+    const worldPaddingTop = isMobile ? 6 : 10;
+    const worldAreaW = Math.max(1, width - worldPaddingX * 2);
+    const worldAreaH = Math.max(1, height - deckSpace - worldPaddingTop - (isMobile ? 8 : 12));
 
-    table.lineStyle(2, 0x22d3ee, 0.3);
-    table.drawRoundedRect(8, 8, width - 16, height - 16, 20);
+    const fitScale = Math.min(worldAreaW / POKER_WORLD.width, worldAreaH / POKER_WORLD.height);
+    const worldScale = clamp(fitScale, isMobile ? 0.44 : 0.52, 1.3);
 
-    table.beginFill(0x0f766e, 0.24);
-    table.drawRoundedRect(22, 22, width - 44, Math.max(160, height * 0.6), 18);
-    table.endFill();
+    const worldW = POKER_WORLD.width * worldScale;
+    const worldH = POKER_WORLD.height * worldScale;
+    const worldX = Math.round((width - worldW) / 2);
+    const worldY = Math.round(worldPaddingTop + (worldAreaH - worldH) / 2);
 
-    const boardTop = 46;
-    const boardBottom = Math.max(boardTop + 150, height * 0.62);
-    const boardHeight = boardBottom - boardTop;
+    world.scale.set(worldScale);
+    world.position.set(worldX, worldY);
 
-    const maxPerRow = width < 640 ? 3 : 5;
-    const rows = Math.max(1, Math.ceil(sortedPlayers.length / maxPerRow));
-    const rowGap = rows > 1 ? Math.max(24, boardHeight / (rows + 1)) : 0;
-    const cardWidth = Math.max(66, Math.min(96, Math.floor((width - 80) / Math.max(3, maxPerRow + 0.4))));
-    const cardHeight = Math.round(cardWidth * 1.36);
+    const tableCenterX = POKER_WORLD.width * 0.5;
+    const tableCenterY = isMobile ? POKER_WORLD.height * 0.42 : POKER_WORLD.height * 0.46;
+    const tableRadiusX = isMobile ? 262 : 304;
+    const tableRadiusY = isMobile ? 154 : 176;
 
-    const activeIds = new Set(sortedPlayers.map((player) => player.socketId));
+    table.render({
+      viewportWidth: POKER_WORLD.width,
+      viewportHeight: POKER_WORLD.height,
+      centerX: tableCenterX,
+      centerY: tableCenterY,
+      radiusX: tableRadiusX,
+      radiusY: tableRadiusY,
+    });
 
-    for (const [socketId, card] of boardCardsRef.current) {
-      if (activeIds.has(socketId)) continue;
-      boardLayer.removeChild(card.view);
-      card.destroy();
-      boardCardsRef.current.delete(socketId);
-
-      const oldLabel = boardLabelsRef.current.get(socketId);
-      if (oldLabel) {
-        boardTextLayer.removeChild(oldLabel);
-        oldLabel.destroy();
-        boardLabelsRef.current.delete(socketId);
-      }
+    const activeSeatIds = new Set(seats.map((player) => player.socketId));
+    for (const [socketId, seat] of seatMapRef.current) {
+      if (activeSeatIds.has(socketId)) continue;
+      seatsLayer.removeChild(seat.view);
+      seat.destroy();
+      seatMapRef.current.delete(socketId);
     }
 
     const shouldAnimateReveal = revealed && !prevRevealedRef.current;
 
-    sortedPlayers.forEach((player, index) => {
-      let card = boardCardsRef.current.get(player.socketId);
-      if (!card) {
-        card = new PokerCard({
-          width: cardWidth,
-          height: cardHeight,
-          value: "",
-          interactive: false,
-          hidden: !revealed,
+    const seatRadiusX = tableRadiusX + (isMobile ? 114 : 136);
+    const seatRadiusY = tableRadiusY + (isMobile ? 82 : 92);
+
+    seats.forEach((player, index) => {
+      let seat = seatMapRef.current.get(player.socketId);
+      if (!seat) {
+        seat = new PlayerSeat({
+          cardWidth: isMobile ? 52 : 74,
+          cardHeight: isMobile ? 70 : 98,
         });
-        boardCardsRef.current.set(player.socketId, card);
-        boardLayer.addChild(card.view);
+        seatMapRef.current.set(player.socketId, seat);
+        seatsLayer.addChild(seat.view);
       }
 
-      const row = Math.floor(index / maxPerRow);
-      const rowItems = sortedPlayers.slice(row * maxPerRow, row * maxPerRow + maxPerRow);
-      const col = index % maxPerRow;
-      const rowWidth = rowItems.length * cardWidth + Math.max(0, rowItems.length - 1) * 20;
-      const startX = width / 2 - rowWidth / 2 + cardWidth / 2;
-      const y = boardTop + cardHeight / 2 + row * (cardHeight + (rows > 1 ? rowGap - cardHeight : 0));
+      const angle = getSeatAngle(index, seats.length, isMobile);
+      const avatarX = tableCenterX + Math.cos(angle) * seatRadiusX;
+      const avatarY = tableCenterY + Math.sin(angle) * seatRadiusY;
 
-      card.view.position.set(startX + col * (cardWidth + 20), y);
+      const toCenterX = tableCenterX - avatarX;
+      const toCenterY = tableCenterY - avatarY;
+      const len = Math.hypot(toCenterX, toCenterY) || 1;
+      const dirX = toCenterX / len;
+      const dirY = toCenterY / len;
+      const outwardX = -dirX;
+      const outwardY = -dirY;
+
+      const cardX = avatarX + dirX * (isMobile ? 38 : 46);
+      const cardY = avatarY + dirY * (isMobile ? 38 : 46);
+
+      seat.setLayout({
+        avatarX,
+        avatarY,
+        cardX,
+        cardY,
+        nameX: avatarX + outwardX * (isMobile ? 28 : 34),
+        nameY: avatarY + outwardY * (isMobile ? 28 : 34),
+        badgeX: avatarX + outwardX * (isMobile ? 54 : 64),
+        badgeY: avatarY + outwardY * (isMobile ? 52 : 60),
+      });
+
+      seat.renderPlayer(player, {
+        isMe: player.socketId === myPlayerId,
+        revealed,
+      });
 
       const valueToShow = revealed ? player.vote ?? "-" : player.hasVoted ? "" : "...";
-      card.setValue(valueToShow);
-      card.setSelected(player.socketId === myPlayerId && !!player.hasVoted && !revealed);
+      const selected = player.socketId === myPlayerId && !!player.hasVoted && !revealed;
+      const hidden = !revealed && player.hasVoted;
 
+      const previous = prevPlayersRef.current.get(player.socketId);
       if (shouldAnimateReveal) {
-        card.setHidden(true);
-        card.animateFlip(false, index * 90);
+        seat.setCardState({
+          value: valueToShow,
+          selected,
+          hidden: false,
+          animateFlip: true,
+          flipDelay: index * 95,
+        });
+      } else if (!revealed && previous && !previous.hasVoted && player.hasVoted) {
+        seat.pulseVoteFeedback();
+        seat.setCardState({
+          value: valueToShow,
+          selected,
+          hidden: true,
+          animateFlip: true,
+        });
       } else {
-        const isHidden = !revealed && player.hasVoted;
-        const previous = prevPlayersRef.current.get(player.socketId);
-        if (!revealed && previous && !previous.hasVoted && player.hasVoted) {
-          card.animateFlip(true);
-        } else {
-          card.setHidden(isHidden);
-        }
+        seat.setCardState({
+          value: valueToShow,
+          selected,
+          hidden,
+        });
       }
-
-      let label = boardLabelsRef.current.get(player.socketId);
-      if (!label) {
-        label = new Text("", labelTextStyle);
-        label.anchor.set(0.5, 0);
-        boardLabelsRef.current.set(player.socketId, label);
-        boardTextLayer.addChild(label);
-      }
-
-      const avatar = AVATARS[player.avatar] ?? "??";
-      const roleBadge = player.role === "spectator" ? "[Spec]" : "[Player]";
-      const hostBadge = player.isHost ? "[Host]" : "";
-      const status = player.connected ? "" : "[OFF]";
-      const voteBadge = !revealed && player.hasVoted ? "• vote" : "";
-      label.text = `${avatar} ${player.name} ${roleBadge} ${hostBadge} ${status} ${voteBadge}`.replace(/\s+/g, " ").trim();
-      label.x = card.view.x;
-      label.y = card.view.y + cardHeight / 2 + 8;
     });
 
-    let deck = deckRef.current;
-    if (!deck) {
-      deck = new PokerDeck({
+    const playerCount = players.filter((player) => player.role === "player").length;
+    const votedCount = players.filter((player) => player.role === "player" && player.hasVoted).length;
+    const status = getSessionStatus({ revealed, voted: votedCount, active: playerCount });
+
+    center.render({
+      centerX: tableCenterX,
+      centerY: tableCenterY,
+      width: isMobile ? 272 : 330,
+      height: isMobile ? 108 : 128,
+      storyTitle: storyTitle || `Story #${round}`,
+      voteSystem,
+      status,
+      voted: votedCount,
+      total: playerCount,
+    });
+
+    const nextDeckMode = isMobile ? "mobile" : "desktop";
+    if (!deckRef.current || deckModeRef.current !== nextDeckMode) {
+      deckRef.current?.destroy();
+      deckRef.current = new PokerDeck({
         values: cardValues,
-        cardWidth: Math.max(58, Math.floor(cardWidth * 0.82)),
-        cardHeight: Math.max(82, Math.floor(cardHeight * 0.82)),
+        cardWidth: isMobile ? 42 : 56,
+        cardHeight: isMobile ? 58 : 80,
         onSelect: onVoteCard,
       });
-      deckRef.current = deck;
-      deckContainer.addChild(deck.view);
+      deckModeRef.current = nextDeckMode;
+
+      deckContainer.removeChildren().forEach((node) => node.destroy({ children: true }));
+      deckContainer.addChild(deckRef.current.view);
+
+      if (deckTitleRef.current) {
+        deckTitleRef.current.destroy();
+        deckTitleRef.current = null;
+      }
+
+      const title = new Text("", new TextStyle({
+        fontFamily: "'Press Start 2P', monospace",
+        fill: 0xcffafe,
+        fontSize: isMobile ? 9 : 10,
+        align: "center",
+      }));
+      title.anchor.set(0.5);
+      deckTitleRef.current = title;
+      overlay.addChild(title);
     }
+
+    const deck = deckRef.current;
+    if (!deck) return;
 
     deck.setValues(cardValues);
     deck.setSelectedValue(myVote);
     deck.setInteractive(deckVisibleForMe && !revealed);
-    deck.resize({ width: width - 40 });
-
     deck.view.visible = deckVisibleForMe;
-    if (deckVisibleForMe) {
-      deck.view.position.set(width / 2, height - Math.max(96, (height - boardBottom) * 0.44));
-      const titleText = new Text(revealed ? "Votes reveles" : "Choisis ta carte", tableTextStyle);
-      titleText.anchor.set(0.5);
-      titleText.position.set(width / 2, deck.view.y - 86);
-      titleText.name = "deck-title";
 
-      const previousTitle = boardTextLayer.getChildByName("deck-title");
-      if (previousTitle) {
-        boardTextLayer.removeChild(previousTitle);
-        previousTitle.destroy();
+    if (deckVisibleForMe) {
+      const maxDeckWidth = Math.max(220, width - (isMobile ? 16 : 36));
+      deck.resize({
+        width: maxDeckWidth,
+        columnsOverride: isMobile ? Math.min(5, cardValues.length) : undefined,
+        gapOverride: isMobile ? 7 : 10,
+      });
+
+      const title = deckTitleRef.current;
+      if (title) {
+        title.text = revealed ? "Votes reveles" : "Choisis ta carte";
+        title.position.set(width / 2, height - (isMobile ? 118 : 154));
+        title.visible = true;
       }
-      boardTextLayer.addChild(titleText);
-    } else {
-      const previousTitle = boardTextLayer.getChildByName("deck-title");
-      if (previousTitle) {
-        boardTextLayer.removeChild(previousTitle);
-        previousTitle.destroy();
-      }
+
+      deck.view.position.set(width / 2, height - (isMobile ? 60 : 86));
+    } else if (deckTitleRef.current) {
+      deckTitleRef.current.visible = false;
     }
 
     prevPlayersRef.current = new Map(
-      sortedPlayers.map((player) => [
+      seats.map((player) => [
         player.socketId,
         {
           hasVoted: player.hasVoted,
@@ -278,7 +379,20 @@ export const PokerScene: React.FC<PokerSceneProps> = ({
       ])
     );
     prevRevealedRef.current = revealed;
-  }, [cardValues, myPlayerId, myRole, myVote, onVoteCard, revealed, sortedPlayers]);
+  }, [
+    cardValues,
+    myPlayerId,
+    myRole,
+    myVote,
+    onVoteCard,
+    players,
+    revealed,
+    round,
+    sortedPlayers,
+    storyTitle,
+    voteSystem,
+    viewportTick,
+  ]);
 
   return <div ref={hostRef} className="h-full w-full" />;
 };

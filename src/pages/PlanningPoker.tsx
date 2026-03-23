@@ -129,6 +129,7 @@ const PlanningPokerPage: React.FC = () => {
       onLeave={leaveSession}
       onRoleChange={online.setRole}
       onVoteSystemChange={online.setVoteSystem}
+      onStoryTitleChange={online.setStoryTitle}
     />
   );
 };

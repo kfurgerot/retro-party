@@ -203,6 +203,7 @@ function createPokerRoom({
   const room = {
     code,
     phase: "lobby",
+    storyTitle: "Story #1",
     voteSystem: normalizePokerVoteSystem(voteSystem),
     round: 1,
     revealed: false,
@@ -246,6 +247,7 @@ function sanitizePokerState(room) {
   return {
     phase: room.phase,
     roomCode: room.code,
+    storyTitle: room.storyTitle || `Story #${room.round ?? 1}`,
     voteSystem: room.voteSystem,
     revealed: room.revealed,
     round: room.round,
@@ -1210,6 +1212,7 @@ io.on("connection", (socket) => {
 
     room.phase = "playing";
     room.revealed = false;
+    if (!room.storyTitle) room.storyTitle = `Story #${room.round}`;
     room.lobby = room.lobby.map((player) => ({
       ...player,
       hasVoted: false,
@@ -1228,6 +1231,9 @@ io.on("connection", (socket) => {
     room.voteSystem = normalizePokerVoteSystem(voteSystem);
     room.revealed = false;
     room.round += 1;
+    if (!room.storyTitle || room.storyTitle.startsWith("Story #")) {
+      room.storyTitle = `Story #${room.round}`;
+    }
     room.lobby = room.lobby.map((player) => ({
       ...player,
       hasVoted: false,
@@ -1289,11 +1295,26 @@ io.on("connection", (socket) => {
 
     room.revealed = false;
     room.round += 1;
+    if (!room.storyTitle || room.storyTitle.startsWith("Story #")) {
+      room.storyTitle = `Story #${room.round}`;
+    }
     room.lobby = room.lobby.map((player) => ({
       ...player,
       hasVoted: false,
       vote: null,
     }));
+    broadcastPokerState(code);
+  });
+
+  socket.on("set_story_title", ({ storyTitle }) => {
+    const code = socketToPokerRoom.get(socket.id);
+    if (!code) return;
+    const room = pokerRooms.get(code);
+    if (!room) return;
+    if (room.hostSocketId !== socket.id) return;
+
+    const nextTitle = typeof storyTitle === "string" ? storyTitle.trim().slice(0, 64) : "";
+    room.storyTitle = nextTitle || `Story #${room.round}`;
     broadcastPokerState(code);
   });
 

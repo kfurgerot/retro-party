@@ -12,6 +12,7 @@ type PlanningPokerSession = {
 const EMPTY_STATE: PlanningPokerState = {
   phase: "lobby",
   roomCode: null,
+  storyTitle: "Story #1",
   voteSystem: "fibonacci",
   players: [],
   revealed: false,
@@ -262,6 +263,10 @@ export function usePlanningPokerOnlineState() {
     socket.emit("set_poker_role", { role });
   }, []);
 
+  const setStoryTitle = useCallback((storyTitle: string) => {
+    socket.emit("set_story_title", { storyTitle });
+  }, []);
+
   const isHost = useMemo(() => {
     if (!myPlayerId) return false;
     return state.players.some((player) => player.socketId === myPlayerId && player.isHost);
@@ -295,5 +300,6 @@ export function usePlanningPokerOnlineState() {
     resetVotes,
     setVoteSystem,
     setRole,
+    setStoryTitle,
   };
 }
