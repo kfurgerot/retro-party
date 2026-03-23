@@ -167,13 +167,218 @@ function pickNextPlayerColor(players = []) {
 
 const rooms = new Map(); // code -> { state, hostSocketId, clients, lobby, disconnectTimers }
 const socketToRoom = new Map(); // socketId -> code
+const pokerRooms = new Map(); // code -> { code, phase, voteSystem, round, revealed, hostSocketId, clients, lobby, disconnectTimers }
+const socketToPokerRoom = new Map(); // socketId -> code
+const POKER_VOTE_SYSTEMS = new Set(["fibonacci", "man-day", "tshirt"]);
+const POKER_MAX_PLAYERS = 20;
 
 function makeUniqueRoomCode() {
   for (let i = 0; i < 30; i += 1) {
     const code = makeCode();
-    if (!rooms.has(code)) return code;
+    if (!rooms.has(code) && !pokerRooms.has(code)) return code;
   }
   throw new Error("Unable to generate room code");
+}
+
+function normalizePokerRole(role) {
+  return role === "spectator" ? "spectator" : "player";
+}
+
+function normalizePokerVoteSystem(value) {
+  return POKER_VOTE_SYSTEMS.has(value) ? value : "fibonacci";
+}
+
+function createPokerRoom({
+  code,
+  hostSocketId = null,
+  sessionId = null,
+  name = "Host",
+  avatar = 0,
+  role = "player",
+  voteSystem = "fibonacci",
+} = {}) {
+  if (pokerRooms.has(code)) return pokerRooms.get(code);
+
+  const hasHost = Boolean(hostSocketId);
+  const room = {
+    code,
+    phase: "lobby",
+    voteSystem: normalizePokerVoteSystem(voteSystem),
+    round: 1,
+    revealed: false,
+    hostSocketId,
+    clients: hasHost ? new Set([hostSocketId]) : new Set(),
+    disconnectTimers: new Map(),
+    lobby: hasHost
+      ? [
+          {
+            socketId: hostSocketId,
+            sessionId,
+            name,
+            avatar,
+            isHost: true,
+            connected: true,
+            role: normalizePokerRole(role),
+            hasVoted: false,
+            vote: null,
+          },
+        ]
+      : [],
+  };
+
+  pokerRooms.set(code, room);
+  return room;
+}
+
+function syncPokerHostFlags(room) {
+  if (!room) return;
+  if (room.hostSocketId && !room.lobby.some((player) => player.socketId === room.hostSocketId && player.connected !== false)) {
+    const nextHost = room.lobby.find((player) => player.connected !== false) ?? room.lobby[0] ?? null;
+    room.hostSocketId = nextHost?.socketId ?? null;
+  }
+  room.lobby = room.lobby.map((player) => ({
+    ...player,
+    isHost: !!room.hostSocketId && player.socketId === room.hostSocketId,
+  }));
+}
+
+function sanitizePokerState(room) {
+  return {
+    phase: room.phase,
+    roomCode: room.code,
+    voteSystem: room.voteSystem,
+    revealed: room.revealed,
+    round: room.round,
+    updatedAt: Date.now(),
+    players: room.lobby.map((player) => ({
+      socketId: player.socketId,
+      name: player.name,
+      avatar: player.avatar,
+      isHost: player.isHost,
+      connected: player.connected !== false,
+      role: normalizePokerRole(player.role),
+      hasVoted: !!player.hasVoted,
+      vote: player.vote ?? null,
+    })),
+  };
+}
+
+function broadcastPokerState(code) {
+  const room = pokerRooms.get(code);
+  if (!room) return;
+  io.to(code).emit("poker_state_update", sanitizePokerState(room));
+}
+
+function broadcastPokerLobby(code) {
+  const room = pokerRooms.get(code);
+  if (!room) return;
+  io.to(code).emit("poker_lobby_update", {
+    players: room.lobby.map((player) => ({
+      socketId: player.socketId,
+      name: player.name,
+      avatar: player.avatar,
+      isHost: player.isHost,
+      connected: player.connected !== false,
+      role: normalizePokerRole(player.role),
+      hasVoted: !!player.hasVoted,
+      vote: player.vote ?? null,
+    })),
+  });
+}
+
+function clearPokerDisconnectTimer(room, sessionId) {
+  if (!room || !sessionId) return;
+  const timer = room.disconnectTimers.get(sessionId);
+  if (!timer) return;
+  clearTimeout(timer);
+  room.disconnectTimers.delete(sessionId);
+}
+
+function closePokerRoomForAll(code, reason = "Session Planning Poker fermee") {
+  const room = pokerRooms.get(code);
+  if (!room) return;
+
+  io.to(code).emit("poker_room_closed", { message: reason });
+  room.disconnectTimers.forEach((timer) => clearTimeout(timer));
+  room.disconnectTimers.clear();
+
+  room.clients.forEach((clientId) => {
+    socketToPokerRoom.delete(clientId);
+    const clientSocket = io.sockets.sockets.get(clientId);
+    if (clientSocket) clientSocket.leave(code);
+  });
+
+  pokerRooms.delete(code);
+}
+
+function removePokerPlayerNow(code, socketId) {
+  const room = pokerRooms.get(code);
+  if (!room) return;
+
+  if (room.hostSocketId === socketId) {
+    closePokerRoomForAll(code);
+    return;
+  }
+
+  room.clients.delete(socketId);
+  socketToPokerRoom.delete(socketId);
+
+  const index = room.lobby.findIndex((player) => player.socketId === socketId);
+  if (index >= 0) {
+    const player = room.lobby[index];
+    clearPokerDisconnectTimer(room, player.sessionId);
+    room.lobby.splice(index, 1);
+  }
+
+  syncPokerHostFlags(room);
+
+  if (room.lobby.length === 0 && room.clients.size === 0) {
+    pokerRooms.delete(code);
+    return;
+  }
+
+  broadcastPokerLobby(code);
+  broadcastPokerState(code);
+}
+
+function schedulePokerDisconnectCleanup(code, socketId, sessionId) {
+  const room = pokerRooms.get(code);
+  if (!room || !sessionId) return;
+
+  clearPokerDisconnectTimer(room, sessionId);
+  const timer = setTimeout(() => {
+    const activeRoom = pokerRooms.get(code);
+    if (!activeRoom) return;
+
+    const stillDisconnected = activeRoom.lobby.find(
+      (player) => player.sessionId === sessionId && player.socketId === socketId && player.connected === false
+    );
+    if (!stillDisconnected) return;
+    removePokerPlayerNow(code, socketId);
+  }, RECONNECT_GRACE_MS);
+
+  room.disconnectTimers.set(sessionId, timer);
+}
+
+function attachSocketToExistingPokerPlayer(code, room, player, socket) {
+  const oldSocketId = player.socketId;
+  if (oldSocketId && oldSocketId !== socket.id) {
+    room.clients.delete(oldSocketId);
+    socketToPokerRoom.delete(oldSocketId);
+    if (room.hostSocketId === oldSocketId) {
+      room.hostSocketId = socket.id;
+    }
+  }
+
+  player.socketId = socket.id;
+  player.connected = true;
+  delete player.disconnectedAt;
+
+  room.clients.add(socket.id);
+  socketToPokerRoom.set(socket.id, code);
+  socket.join(code);
+  clearPokerDisconnectTimer(room, player.sessionId);
+  syncPokerHostFlags(room);
 }
 
 function createRuntimeRoom({
@@ -240,6 +445,7 @@ registerApiRoutes({
   rooms,
   createRuntimeRoom,
   makeCode,
+  isCodeReserved: (code) => pokerRooms.has(code),
 });
 
 function setWhoSaidItTimer(room, callback, delayMs) {
@@ -911,6 +1117,186 @@ function attachSocketToExistingPlayer(code, room, player, socket) {
 io.on("connection", (socket) => {
   socket.emit("server_hello", { ok: true });
 
+  socket.on("create_poker_room", ({ name, avatar, role, voteSystem, sessionId }) => {
+    const code = makeUniqueRoomCode();
+    const resolvedSessionId = typeof sessionId === "string" ? sessionId : makeSessionId();
+    createPokerRoom({
+      code,
+      hostSocketId: socket.id,
+      sessionId: resolvedSessionId,
+      name: name || "Host",
+      avatar: avatar ?? 0,
+      role: normalizePokerRole(role),
+      voteSystem: normalizePokerVoteSystem(voteSystem),
+    });
+    socketToPokerRoom.set(socket.id, code);
+    socket.join(code);
+    socket.emit("poker_room_created", { code });
+    broadcastPokerLobby(code);
+    broadcastPokerState(code);
+  });
+
+  socket.on("join_poker_room", ({ code, name, avatar, role, sessionId }) => {
+    const room = pokerRooms.get(code);
+    if (!room) return socket.emit("poker_error_msg", { message: "Room introuvable" });
+
+    const requestedSessionId = typeof sessionId === "string" ? sessionId : null;
+    if (requestedSessionId) {
+      const existing = room.lobby.find((player) => player.sessionId === requestedSessionId);
+      if (existing) {
+        attachSocketToExistingPokerPlayer(code, room, existing, socket);
+        socket.emit("poker_room_reconnected", { code });
+        broadcastPokerLobby(code);
+        broadcastPokerState(code);
+        return;
+      }
+    }
+
+    if (room.lobby.length >= POKER_MAX_PLAYERS) {
+      return socket.emit("poker_error_msg", { message: "Room pleine (20 joueurs max)" });
+    }
+
+    const resolvedSessionId = requestedSessionId ?? makeSessionId();
+    const becomesHost = !room.hostSocketId;
+    if (becomesHost) room.hostSocketId = socket.id;
+    room.clients.add(socket.id);
+    room.lobby.push({
+      socketId: socket.id,
+      sessionId: resolvedSessionId,
+      name: name || "Player",
+      avatar: avatar ?? 0,
+      isHost: becomesHost,
+      connected: true,
+      role: normalizePokerRole(role),
+      hasVoted: false,
+      vote: null,
+    });
+    socketToPokerRoom.set(socket.id, code);
+    socket.join(code);
+    syncPokerHostFlags(room);
+
+    socket.emit("poker_room_joined", { code });
+    broadcastPokerLobby(code);
+    broadcastPokerState(code);
+  });
+
+  socket.on("reconnect_poker_room", ({ code, sessionId }) => {
+    if (!code || typeof sessionId !== "string") return;
+    const room = pokerRooms.get(code);
+    if (!room) return socket.emit("poker_error_msg", { message: "Room introuvable" });
+
+    const existing = room.lobby.find((player) => player.sessionId === sessionId);
+    if (!existing) return socket.emit("poker_error_msg", { message: "Session introuvable" });
+
+    attachSocketToExistingPokerPlayer(code, room, existing, socket);
+    socket.emit("poker_room_reconnected", { code });
+    broadcastPokerLobby(code);
+    broadcastPokerState(code);
+  });
+
+  socket.on("leave_poker_room", () => {
+    const code = socketToPokerRoom.get(socket.id);
+    if (!code) return;
+    socket.leave(code);
+    removePokerPlayerNow(code, socket.id);
+  });
+
+  socket.on("start_poker_session", () => {
+    const code = socketToPokerRoom.get(socket.id);
+    if (!code) return;
+    const room = pokerRooms.get(code);
+    if (!room) return;
+    if (room.hostSocketId !== socket.id) return;
+
+    room.phase = "playing";
+    room.revealed = false;
+    room.lobby = room.lobby.map((player) => ({
+      ...player,
+      hasVoted: false,
+      vote: null,
+    }));
+    broadcastPokerState(code);
+  });
+
+  socket.on("set_vote_system", ({ voteSystem }) => {
+    const code = socketToPokerRoom.get(socket.id);
+    if (!code) return;
+    const room = pokerRooms.get(code);
+    if (!room) return;
+    if (room.hostSocketId !== socket.id) return;
+
+    room.voteSystem = normalizePokerVoteSystem(voteSystem);
+    room.revealed = false;
+    room.round += 1;
+    room.lobby = room.lobby.map((player) => ({
+      ...player,
+      hasVoted: false,
+      vote: null,
+    }));
+    broadcastPokerState(code);
+  });
+
+  socket.on("set_poker_role", ({ role }) => {
+    const code = socketToPokerRoom.get(socket.id);
+    if (!code) return;
+    const room = pokerRooms.get(code);
+    if (!room) return;
+
+    const player = room.lobby.find((entry) => entry.socketId === socket.id);
+    if (!player) return;
+    player.role = normalizePokerRole(role);
+    if (player.role === "spectator") {
+      player.hasVoted = false;
+      player.vote = null;
+    }
+    broadcastPokerLobby(code);
+    broadcastPokerState(code);
+  });
+
+  socket.on("vote_card", ({ value }) => {
+    const code = socketToPokerRoom.get(socket.id);
+    if (!code) return;
+    const room = pokerRooms.get(code);
+    if (!room) return;
+    if (room.phase !== "playing") return;
+    if (room.revealed) return;
+
+    const player = room.lobby.find((entry) => entry.socketId === socket.id);
+    if (!player || player.role !== "player") return;
+
+    player.hasVoted = true;
+    player.vote = typeof value === "string" ? value.slice(0, 12) : null;
+    broadcastPokerState(code);
+  });
+
+  socket.on("reveal_votes", () => {
+    const code = socketToPokerRoom.get(socket.id);
+    if (!code) return;
+    const room = pokerRooms.get(code);
+    if (!room) return;
+    if (room.hostSocketId !== socket.id) return;
+
+    room.revealed = true;
+    broadcastPokerState(code);
+  });
+
+  socket.on("reset_votes", () => {
+    const code = socketToPokerRoom.get(socket.id);
+    if (!code) return;
+    const room = pokerRooms.get(code);
+    if (!room) return;
+    if (room.hostSocketId !== socket.id) return;
+
+    room.revealed = false;
+    room.round += 1;
+    room.lobby = room.lobby.map((player) => ({
+      ...player,
+      hasVoted: false,
+      vote: null,
+    }));
+    broadcastPokerState(code);
+  });
+
   socket.on("create_room", ({ name, avatar, sessionId }) => {
     const code = makeUniqueRoomCode();
     const resolvedSessionId = typeof sessionId === "string" ? sessionId : makeSessionId();
@@ -1364,6 +1750,32 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
+    const pokerCode = socketToPokerRoom.get(socket.id);
+    if (pokerCode) {
+      const pokerRoom = pokerRooms.get(pokerCode);
+      socketToPokerRoom.delete(socket.id);
+
+      if (pokerRoom) {
+        pokerRoom.clients.delete(socket.id);
+
+        const pokerPlayer = pokerRoom.lobby.find((player) => player.socketId === socket.id);
+        if (pokerPlayer) {
+          pokerPlayer.connected = false;
+          pokerPlayer.disconnectedAt = Date.now();
+
+          if (!pokerPlayer.sessionId) {
+            removePokerPlayerNow(pokerCode, socket.id);
+          } else {
+            schedulePokerDisconnectCleanup(pokerCode, socket.id, pokerPlayer.sessionId);
+            broadcastPokerLobby(pokerCode);
+            broadcastPokerState(pokerCode);
+          }
+        } else if (pokerRoom.lobby.length === 0 && pokerRoom.clients.size === 0) {
+          pokerRooms.delete(pokerCode);
+        }
+      }
+    }
+
     const code = socketToRoom.get(socket.id);
     if (!code) return;
 

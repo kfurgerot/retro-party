@@ -13,6 +13,7 @@ const Home = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [entryChoice, setEntryChoice] = useState<"play" | "prepare">("play");
+  const [selectedExperience, setSelectedExperience] = useState<ExperienceId>("retro-party");
   const [stage, setStage] = useState<"press-start" | "select-experience" | "select-entry">(() => {
     const params = new URLSearchParams(location.search);
     const stageParam = params.get("stage");
@@ -70,8 +71,10 @@ const Home = () => {
         stepTotal={5}
         onBack={() => setStage("press-start")}
         onSelect={(experience: ExperienceId) => {
-          if (experience !== "retro-party") return;
+          if (experience !== "retro-party" && experience !== "planning-poker") return;
+          setSelectedExperience(experience);
           setProgressPct(20);
+          setEntryChoice("play");
           setStage("select-entry");
         }}
       />
@@ -102,11 +105,17 @@ const Home = () => {
         </div>
 
         <Card className="mt-6 rounded-md p-4 sm:p-5">
-          <div className="grid flex-1 content-start grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className={cn("grid flex-1 content-start grid-cols-1 gap-3", selectedExperience === "retro-party" ? "sm:grid-cols-2" : "")}>
             <button
               type="button"
               onClick={() => setEntryChoice("play")}
-              onDoubleClick={() => navigate("/play?from=entry")}
+              onDoubleClick={() =>
+                navigate(
+                  selectedExperience === "planning-poker"
+                    ? "/play?from=entry&experience=planning-poker"
+                    : "/play?from=entry"
+                )
+              }
               onMouseEnter={prefetchPlayRoute}
               onFocus={prefetchPlayRoute}
               title={fr.home.quickPartyTitle}
@@ -120,21 +129,23 @@ const Home = () => {
               <div className="text-sm font-semibold text-cyan-100">{fr.home.playNow}</div>
               <div className="mt-1 text-xs text-slate-300">{fr.home.quickPartyTitle}</div>
             </button>
-            <button
-              type="button"
-              onClick={() => setEntryChoice("prepare")}
-              onDoubleClick={() => navigate("/prepare")}
-              title={fr.home.preparePartyTitle}
-              className={cn(
-                `${APP_SHELL_SURFACE_SOFT} p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900`,
-                entryChoice === "prepare"
-                  ? "border-cyan-300/50 bg-cyan-500/10"
-                  : "hover:border-cyan-300/45 hover:bg-slate-900/70"
-              )}
-            >
-              <div className="text-sm font-semibold text-cyan-100">{fr.home.prepareParty}</div>
-              <div className="mt-1 text-xs text-slate-300">{fr.home.preparePartyTitle}</div>
-            </button>
+            {selectedExperience === "retro-party" ? (
+              <button
+                type="button"
+                onClick={() => setEntryChoice("prepare")}
+                onDoubleClick={() => navigate("/prepare")}
+                title={fr.home.preparePartyTitle}
+                className={cn(
+                  `${APP_SHELL_SURFACE_SOFT} p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900`,
+                  entryChoice === "prepare"
+                    ? "border-cyan-300/50 bg-cyan-500/10"
+                    : "hover:border-cyan-300/45 hover:bg-slate-900/70"
+                )}
+              >
+                <div className="text-sm font-semibold text-cyan-100">{fr.home.prepareParty}</div>
+                <div className="mt-1 text-xs text-slate-300">{fr.home.preparePartyTitle}</div>
+              </button>
+            ) : null}
           </div>
         </Card>
 
@@ -150,7 +161,11 @@ const Home = () => {
               className="h-11"
               onClick={() => {
                 if (entryChoice === "play") {
-                  navigate("/play?from=entry");
+                  navigate(
+                    selectedExperience === "planning-poker"
+                      ? "/play?from=entry&experience=planning-poker"
+                      : "/play?from=entry"
+                  );
                   return;
                 }
                 navigate("/prepare");
@@ -172,7 +187,11 @@ const Home = () => {
               className="h-12 min-h-0"
               onClick={() => {
                 if (entryChoice === "play") {
-                  navigate("/play?from=entry");
+                  navigate(
+                    selectedExperience === "planning-poker"
+                      ? "/play?from=entry&experience=planning-poker"
+                      : "/play?from=entry"
+                  );
                   return;
                 }
                 navigate("/prepare");

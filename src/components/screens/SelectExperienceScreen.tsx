@@ -2,12 +2,12 @@ import React, { useMemo, useState } from "react";
 import { RetroScreenBackground } from "./RetroScreenBackground";
 import { cn } from "@/lib/utils";
 import { fr } from "@/i18n/fr";
-import { Gamepad2, Pencil, Radar, Puzzle, LucideIcon } from "lucide-react";
+import { Gamepad2, Pencil, Radar, Puzzle, Layers, LucideIcon } from "lucide-react";
 import { Card, PrimaryButton, SecondaryButton } from "@/components/app-shell";
 import { APP_SHELL_SURFACE_SOFT } from "@/lib/uiTokens";
 import { useAnimatedProgress } from "@/hooks/useAnimatedProgress";
 
-export type ExperienceId = "retro-party" | "draw-duel" | "agile-radar" | "retro-generator";
+export type ExperienceId = "retro-party" | "planning-poker" | "draw-duel" | "agile-radar" | "retro-generator";
 
 type ToolItem = {
   id: ExperienceId;
@@ -23,6 +23,13 @@ const TOOLS: ToolItem[] = [
     Icon: Gamepad2,
     title: fr.selectExperience.retroPartyTitle,
     description: fr.selectExperience.retroPartyDescription,
+    available: true,
+  },
+  {
+    id: "planning-poker",
+    Icon: Layers,
+    title: fr.selectExperience.planningPokerTitle,
+    description: fr.selectExperience.planningPokerDescription,
     available: true,
   },
   {

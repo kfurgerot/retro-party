@@ -9,6 +9,7 @@ import { GameScreen } from '@/components/screens/GameScreen';
 import { ResultsScreen } from '@/components/screens/ResultsScreen';
 import { perfLog, perfMark, perfMeasure } from "@/lib/perf";
 import { fr } from "@/i18n/fr";
+import PlanningPokerPage from "@/pages/PlanningPoker";
 
 const Index: React.FC = () => {
   const location = useLocation();
@@ -21,6 +22,7 @@ const Index: React.FC = () => {
     const avatar = Number(params.get("avatar"));
     const auto = params.get("auto");
     const from = params.get("from");
+    const experience = params.get("experience");
     return {
       mode: mode === "join" ? "join" : "host",
       code: code ? code.toUpperCase() : "",
@@ -29,8 +31,13 @@ const Index: React.FC = () => {
       autoSubmit: auto === "1",
       direct: auto === "1" || !!code,
       fromEntry: from === "entry",
+      experience: experience === "planning-poker" ? "planning-poker" : "retro-party",
     };
   }, [location.search]);
+
+  if (initialParams.experience === "planning-poker") {
+    return <PlanningPokerPage />;
+  }
 
   const isOnline = useMemo(() => {
     if (typeof window === 'undefined') return false;

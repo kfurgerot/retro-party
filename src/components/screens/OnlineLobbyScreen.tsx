@@ -47,6 +47,7 @@ interface OnlineLobbyScreenProps {
   stepLabel?: string;
   stepCurrent?: number;
   stepTotal?: number;
+  titleWhenNoRoomOverride?: string;
 }
 
 type Pending = "idle" | "hosting" | "joining" | "starting";
@@ -74,6 +75,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
   stepLabel,
   stepCurrent,
   stepTotal,
+  titleWhenNoRoomOverride,
 }) => {
   const [mode, setMode] = useState<"host" | "join">(initialMode ?? "host");
   const [name, setName] = useState(() => cleanName(initialName ?? ""));
@@ -266,7 +268,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
         </div>
 
         <h1 className="mt-4 text-center text-xl text-cyan-200 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)] sm:text-3xl">
-          {roomCode ? fr.onlineLobby.roomReady : fr.onlineLobby.quickConfig}
+          {roomCode ? fr.onlineLobby.roomReady : (titleWhenNoRoomOverride || fr.onlineLobby.quickConfig)}
         </h1>
 
         {roomCode ? (
