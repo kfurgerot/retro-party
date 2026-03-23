@@ -869,12 +869,11 @@ export const GameScreen: React.FC<GameScreenProps> = ({
           <div className="pointer-events-none absolute left-1/2 top-16 z-30 w-[min(92vw,560px)] -translate-x-1/2 sm:top-20">
             <div
               className={cn(
-                GAME_HUD_SURFACE,
-                "flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-cyan-50 shadow-[0_10px_40px_rgba(8,47,73,0.45)]"
+                "flex items-center gap-2 rounded-xl border border-amber-300/70 bg-slate-950/96 px-3 py-2 text-sm text-slate-50 shadow-[0_0_0_1px_rgba(251,191,36,0.45),0_12px_44px_rgba(0,0,0,0.6),0_0_28px_rgba(251,191,36,0.22)] backdrop-blur"
               )}
             >
-              <ActionBadge label="Info" tone="system" />
-              <span className="truncate font-semibold">{presenceNotice.message}</span>
+              <ActionBadge label="Info" tone="decision" />
+              <span className="truncate font-bold tracking-[0.01em]">{presenceNotice.message}</span>
             </div>
           </div>
         ) : null}
