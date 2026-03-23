@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef } from "react";
-import { Application, Container, Graphics, Text, TextStyle } from "pixi.js";
+import { Application, Container, Graphics, Rectangle, Text, TextStyle } from "pixi.js";
 import { AVATARS, Player, Tile } from "@/types/game";
 import { BoardActionOverlay } from "./gameBoardTypes";
 import { createGameButton } from "./pixi-ui/GameButton";
@@ -127,6 +127,7 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
   const appRef = useRef<Application | null>(null);
   const worldRef = useRef<Container | null>(null);
   const uiRef = useRef<Container | null>(null);
+  const legendExpandedRef = useRef<boolean | null>(null);
 
   const sharedStyles = useMemo(
     () => ({
@@ -695,9 +696,145 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
       child.destroy({ children: true });
     });
 
-    if (!focusPlayerId || !actionOverlay) return;
-    if (!actionOverlay.canRoll && !actionOverlay.canMove && !actionOverlay.canOpenQuestionCard && !actionOverlay.isRolling) {
-      return;
+    const host = hostRef.current;
+    const viewWidth = host?.clientWidth ?? app?.screen.width ?? 1;
+    const viewHeight = host?.clientHeight ?? app?.screen.height ?? 1;
+
+    const legendPanel = new Container();
+    legendPanel.x = 12;
+    legendPanel.y = 10;
+    legendPanel.zIndex = 5;
+    legendPanel.eventMode = "static";
+    legendPanel.cursor = "pointer";
+
+    const legendBackground = new Graphics();
+    legendPanel.addChild(legendBackground);
+
+    const legendItems = [
+      { icon: "💬", label: "Question" },
+      { icon: "🔧", label: "Tech" },
+      { icon: "🔥", label: "Fun" },
+      { icon: "🎯", label: "Defi" },
+      { icon: "🎁", label: "Kudobox" },
+      { icon: "🛒", label: "Boutique" },
+    ];
+
+    const isCompactLegend = viewWidth < 920;
+    if (legendExpandedRef.current == null) {
+      legendExpandedRef.current = !isCompactLegend;
+    } else if (!isCompactLegend && legendExpandedRef.current === false) {
+      // Keep mobile collapsed state optional, but default to expanded on large screens.
+      legendExpandedRef.current = true;
+    }
+    let legendExpanded = legendExpandedRef.current;
+
+    const legendTitleStyle = new TextStyle({
+      fontFamily: "Press Start 2P, monospace",
+      fill: 0xe2e8f0,
+      fontSize: 7,
+    });
+    const legendIconStyle = new TextStyle({
+      fontFamily: "Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif",
+      fill: 0xe2e8f0,
+      fontSize: 11,
+    });
+    const legendLabelStyle = new TextStyle({
+      fontFamily: "Press Start 2P, monospace",
+      fill: 0xe2e8f0,
+      fontSize: 6,
+    });
+
+    const legendTitle = new Text("Légende", legendTitleStyle);
+    legendTitle.x = 10;
+    legendTitle.y = 8;
+    legendPanel.addChild(legendTitle);
+
+    const legendRows = new Container();
+    legendRows.x = 10;
+    legendRows.y = 24;
+    legendPanel.addChild(legendRows);
+
+    legendItems.forEach((item, index) => {
+      const row = new Container();
+      row.y = index * 14;
+
+      const icon = new Text(item.icon, legendIconStyle);
+      icon.anchor.set(0.5);
+      icon.x = 7;
+      icon.y = 6;
+      row.addChild(icon);
+
+      const label = new Text(item.label, legendLabelStyle);
+      label.x = 18;
+      label.y = 2;
+      row.addChild(label);
+
+      legendRows.addChild(row);
+    });
+
+    const toggleButton = new Container();
+    toggleButton.eventMode = "static";
+    toggleButton.cursor = "pointer";
+    legendPanel.addChild(toggleButton);
+
+    const toggleBg = new Graphics();
+    toggleButton.addChild(toggleBg);
+    const toggleText = new Text("i", new TextStyle({
+      fontFamily: "Press Start 2P, monospace",
+      fill: 0xe2e8f0,
+      fontSize: 7,
+      align: "center",
+    }));
+    toggleText.anchor.set(0.5);
+    toggleButton.addChild(toggleText);
+
+    const redrawLegend = () => {
+      const panelWidth = legendExpanded ? 168 : 102;
+      const panelHeight = legendExpanded ? 112 : 28;
+      legendBackground.clear();
+      legendBackground.lineStyle(1, 0x38bdf8, 0.45, 0.5, true);
+      legendBackground.beginFill(0x020617, legendExpanded ? 0.48 : 0.38);
+      legendBackground.drawRoundedRect(0, 0, panelWidth, panelHeight, 10);
+      legendBackground.endFill();
+
+      legendRows.visible = legendExpanded;
+      legendTitle.text = "Légende";
+      legendTitle.x = 10;
+      legendTitle.y = 8;
+
+      toggleButton.x = panelWidth - 27;
+      toggleButton.y = 7;
+      toggleBg.clear();
+      toggleBg.beginFill(0x0f172a, 0.55);
+      toggleBg.drawRoundedRect(0, 0, 18, 14, 4);
+      toggleBg.endFill();
+      toggleText.x = 9;
+      toggleText.y = 7;
+      toggleText.text = legendExpanded ? "-" : "+";
+      toggleButton.hitArea = new Rectangle(0, 0, 18, 14);
+    };
+
+    const toggleLegend = () => {
+      legendExpanded = !legendExpanded;
+      legendExpandedRef.current = legendExpanded;
+      redrawLegend();
+    };
+
+    legendPanel.on("pointerdown", toggleLegend);
+
+    redrawLegend();
+    uiLayer.addChild(legendPanel);
+
+    const cleanupLegend = () => {
+      legendPanel.off("pointerdown", toggleLegend);
+    };
+
+    const shouldShowActionPanel =
+      !!focusPlayerId &&
+      !!actionOverlay &&
+      (actionOverlay.canRoll || actionOverlay.canMove || actionOverlay.canOpenQuestionCard || actionOverlay.isRolling);
+    if (!shouldShowActionPanel) {
+      return cleanupLegend;
     }
 
     let tileId = playerDisplayPositions[focusPlayerId];
@@ -709,9 +846,9 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
         }
       }
     }
-    if (tileId == null) return;
+    if (tileId == null) return cleanupLegend;
     const p = points[tileId];
-    if (!p) return;
+    if (!p) return cleanupLegend;
 
     const tilePlayers = playersByTile.get(tileId) ?? [];
     const playerIndex = tilePlayers.findIndex((player) => player.id === focusPlayerId);
@@ -725,9 +862,6 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
     }
     const avatarY = p.y + tileHalfHeight + 1;
 
-    const host = hostRef.current;
-    const viewWidth = host?.clientWidth ?? app?.screen.width ?? 1;
-    const viewHeight = host?.clientHeight ?? app?.screen.height ?? 1;
     const anchorX = viewWidth * 0.5;
     const bottomInset = Math.max(72, Math.min(112, viewHeight * 0.16));
     const anchorY = viewHeight - bottomInset;
@@ -827,6 +961,7 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
     }
 
     return () => {
+      cleanupLegend();
       if (tickerFn && app?.ticker) {
         app.ticker.remove(tickerFn);
       }
