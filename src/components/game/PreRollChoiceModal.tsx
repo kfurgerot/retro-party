@@ -49,27 +49,41 @@ export const PreRollChoiceModal: React.FC<PreRollChoiceModalProps> = ({
     <AlertDialog open={open} onOpenChange={() => {}}>
       <AlertDialogContent className={cn(GAME_DIALOG_CONTENT, "max-w-2xl")}>
         <AlertDialogHeader>
-          <AlertDialogTitle>{fr.preRollChoice.title}</AlertDialogTitle>
-          <AlertDialogDescription className="text-slate-300">
+          <div className="mx-auto mb-2 inline-flex items-center gap-2 rounded-full border border-violet-300/45 bg-violet-500/15 px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-violet-100">
+            <span className="text-base leading-none">🧰</span>
+            <span>Item avant lancer</span>
+          </div>
+          <AlertDialogTitle className="text-center text-2xl">{fr.preRollChoice.title}</AlertDialogTitle>
+          <AlertDialogDescription className="text-center text-slate-300">
             {fr.preRollChoice.description}
           </AlertDialogDescription>
         </AlertDialogHeader>
 
-        <div className="grid gap-2 max-h-[50vh] overflow-auto pr-1">
-          {items.map((item) => {
-            const isSelected = selectedType === item.type;
-            return (
-              <ChoiceCard
-                key={item.type}
-                title={item.label}
-                description={item.description}
-                quantityLabel={`x${item.count}`}
-                selected={isSelected}
-                disabled={!canInteract}
-                onClick={() => onSelectType(item.type)}
-              />
-            );
-          })}
+        <div className="rounded-xl border border-cyan-300/20 bg-slate-950/30 p-2">
+          <div className="mb-2 flex items-center justify-between px-1 text-xs uppercase tracking-[0.12em] text-slate-300">
+            <span>Items disponibles</span>
+            {selectedType ? (
+              <span className="rounded-md border border-violet-300/45 bg-violet-500/15 px-2 py-0.5 text-violet-100">
+                1 selection
+              </span>
+            ) : null}
+          </div>
+          <div className="grid max-h-[50vh] gap-2 overflow-auto pr-1">
+            {items.map((item) => {
+              const isSelected = selectedType === item.type;
+              return (
+                <ChoiceCard
+                  key={item.type}
+                  title={item.label}
+                  description={item.description}
+                  quantityLabel={`x${item.count}`}
+                  selected={isSelected}
+                  disabled={!canInteract}
+                  onClick={() => onSelectType(item.type)}
+                />
+              );
+            })}
+          </div>
         </div>
 
         <AlertDialogFooter className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:space-x-0">

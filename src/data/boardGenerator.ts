@@ -192,6 +192,15 @@ function buildIncomingMap(tiles: Tile[]) {
   return incoming;
 }
 
+function manhattanTileDistance(a: Tile | undefined, b: Tile | undefined) {
+  if (!a || !b) return Number.POSITIVE_INFINITY;
+  const ax = Number(a.gridX ?? 0);
+  const ay = Number(a.gridY ?? 0);
+  const bx = Number(b.gridX ?? 0);
+  const by = Number(b.gridY ?? 0);
+  return Math.abs(ax - bx) + Math.abs(ay - by);
+}
+
 function chooseShopCandidate(
   candidates: number[],
   selected: number[],
@@ -288,9 +297,57 @@ function paintTileTypes(tiles: Tile[], rng: () => number, mainPathIds: Set<numbe
     return null;
   };
 
-  const starA = place('bonus');
-  const starB = place('bonus');
-  const starIds = new Set<number>([starA, starB].filter((id): id is number => typeof id === "number"));
+  const bonusCount = 2;
+  const bonusIdGap = Math.max(8, Math.floor(tiles.length * 0.16));
+  const bonusGridGap = 6;
+  const bonusCandidates = tiles.map((tile) => tile.id).filter((id) => id >= minIdx && !used.has(id));
+  const pickBonusWithGap = (
+    gapById: number,
+    gapByGrid: number,
+    selected: number[]
+  ) => {
+    const shuffled = [...bonusCandidates].sort(() => (rng() < 0.5 ? -1 : 1));
+    for (const candidate of shuffled) {
+      if (used.has(candidate)) continue;
+      const tooClose = selected.some((otherId) => (
+        Math.abs(otherId - candidate) < gapById
+        || manhattanTileDistance(tiles[otherId], tiles[candidate]) < gapByGrid
+      ));
+      if (tooClose) continue;
+      used.add(candidate);
+      tiles[candidate].type = "bonus";
+      selected.push(candidate);
+      return true;
+    }
+    return false;
+  };
+
+  const bonusSelected: number[] = [];
+  while (bonusSelected.length < bonusCount) {
+    if (pickBonusWithGap(bonusIdGap, bonusGridGap, bonusSelected)) continue;
+    if (pickBonusWithGap(Math.max(6, bonusIdGap - 2), Math.max(4, bonusGridGap - 2), bonusSelected)) continue;
+    if (pickBonusWithGap(4, 2, bonusSelected)) continue;
+    if (place("bonus") == null) break;
+    const placed = tiles
+      .filter((tile) => tile.type === "bonus" && !bonusSelected.includes(tile.id))
+      .map((tile) => tile.id)
+      .sort((a, b) => b - a)[0];
+    if (typeof placed === "number") bonusSelected.push(placed);
+  }
+  if (bonusSelected.length < bonusCount) {
+    const fallbackCandidates = tiles.map((tile) => tile.id).filter((id) => id >= minIdx && !bonusSelected.includes(id));
+    for (const candidate of fallbackCandidates) {
+      if (bonusSelected.length >= bonusCount) break;
+      if (used.has(candidate)) continue;
+      used.add(candidate);
+      tiles[candidate].type = "bonus";
+      bonusSelected.push(candidate);
+    }
+  }
+  if (bonusSelected.length !== bonusCount) {
+    throw new Error(`Invalid bonus layout: expected ${bonusCount}, got ${bonusSelected.length}`);
+  }
+  const starIds = new Set<number>(bonusSelected.slice(0, bonusCount));
 
   const count = 3;
   const n = tiles.length;

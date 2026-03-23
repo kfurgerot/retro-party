@@ -242,6 +242,8 @@ export const fr = {
     hintRollDice: "Lance le de",
     hintMoving: "Deplacement en cours...",
     hintAutoAdvance: "Avance auto...",
+    rollResult: "Resultat du de",
+    rollResultSubtitle: "Tu as fait {value}",
     hintOpponentTurn: "Tour adverse",
     round: "Manche",
     currentTurn: "Tour de",

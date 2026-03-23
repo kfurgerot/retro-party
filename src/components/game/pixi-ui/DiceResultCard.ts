@@ -22,17 +22,24 @@ export function createDiceResultCard({ isCardMode, isRolling, resolvedRollValue 
 
   if (!isCardMode) {
     const rollLabel = isRolling ? "?" : String(resolvedRollValue ?? "?");
-    const fontSize = rollLabel.length > 1 ? PIXI_GAME_THEME.text.diceSizeDouble : PIXI_GAME_THEME.text.diceSizeSingle;
+    const baseFontSize = rollLabel.length > 1 ? PIXI_GAME_THEME.text.diceSizeDouble : PIXI_GAME_THEME.text.diceSizeSingle;
+    const fontSize = baseFontSize + 2;
     const valueText = new Text(
       rollLabel,
       new TextStyle({
-        fontFamily: "Press Start 2P, monospace",
+        // Use a smoother bold sans-serif for dice values to improve readability.
+        fontFamily: "Segoe UI, Arial, sans-serif",
+        fontWeight: "900",
         fill: PIXI_GAME_THEME.colors.ink,
+        stroke: 0xe2e8f0,
+        strokeThickness: 1.4,
+        lineJoin: "round",
         fontSize,
         align: "center",
-        padding: 4,
+        padding: 2,
       })
     );
+    valueText.resolution = 2;
     valueText.anchor.set(0.5);
     valueText.x = 0;
     valueText.y = -64;

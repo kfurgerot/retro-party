@@ -1056,6 +1056,7 @@ function areGameBoardPropsEqual(prev: GameBoardProps, next: GameBoardProps) {
     areTilesEqual(prev.tiles, next.tiles) &&
     arePlayersEqualForBoard(prev.players, next.players) &&
     prev.focusPlayerId === next.focusPlayerId &&
+    prev.activePlayerHint === next.activePlayerHint &&
     arePendingChoicesEqual(prev.pendingPathChoice, next.pendingPathChoice) &&
     areMoveTracesEqual(prev.lastMoveTrace, next.lastMoveTrace) &&
     prev.canChoosePath === next.canChoosePath &&

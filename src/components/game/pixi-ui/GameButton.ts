@@ -5,10 +5,14 @@ import { PIXI_GAME_THEME } from "./theme";
 interface GameButtonOptions {
   label: string;
   onPress: () => void;
+  labelFontSize?: number;
 }
 
-export function createGameButton({ label, onPress }: GameButtonOptions) {
+export function createGameButton({ label, onPress, labelFontSize }: GameButtonOptions) {
   const compactLabel = label.length > 11;
+  const resolvedFontSize =
+    labelFontSize ??
+    (compactLabel ? Math.max(6, PIXI_GAME_THEME.text.actionSize - 1) : PIXI_GAME_THEME.text.actionSize);
   const defaultView = new Graphics();
   defaultView.lineStyle(2, PIXI_GAME_THEME.panel.border, 0.55, 0.5, true);
   defaultView.beginFill(PIXI_GAME_THEME.colors.cyan, 0.92);
@@ -52,11 +56,16 @@ export function createGameButton({ label, onPress }: GameButtonOptions) {
     text: new Text(
       label,
       new TextStyle({
-        fontFamily: "Press Start 2P, monospace",
+        // Smoother typeface for action labels to improve readability.
+        fontFamily: "Segoe UI, Arial, sans-serif",
+        fontWeight: "800",
         fill: PIXI_GAME_THEME.colors.ink,
-        fontSize: compactLabel ? Math.max(6, PIXI_GAME_THEME.text.actionSize - 1) : PIXI_GAME_THEME.text.actionSize,
+        stroke: 0xe2e8f0,
+        strokeThickness: 1,
+        lineJoin: "round",
+        fontSize: resolvedFontSize,
         align: "center",
-        padding: 2,
+        padding: 1,
       })
     ),
     anchor: 0.5,

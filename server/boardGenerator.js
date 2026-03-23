@@ -188,6 +188,15 @@ function buildIncomingMap(tiles) {
   return incoming;
 }
 
+function manhattanTileDistance(a, b) {
+  if (!a || !b) return Number.POSITIVE_INFINITY;
+  const ax = Number(a.gridX ?? 0);
+  const ay = Number(a.gridY ?? 0);
+  const bx = Number(b.gridX ?? 0);
+  const by = Number(b.gridY ?? 0);
+  return Math.abs(ax - bx) + Math.abs(ay - by);
+}
+
 function chooseShopCandidate(candidates, selected, starIds, tiles, minGap, rng) {
   const shuffled = [...candidates].sort(() => (rng() < 0.5 ? -1 : 1));
   for (const tileId of shuffled) {
@@ -273,10 +282,53 @@ function paintTileTypes(tiles, rng, mainPathIds = new Set()) {
     return null;
   };
 
-  // Keep 2 bonus/star tiles on the board.
-  const starA = place("bonus");
-  const starB = place("bonus");
-  const starIds = new Set([starA, starB].filter((id) => Number.isInteger(id)));
+  // Keep exactly 2 bonus/star tiles and spread them out.
+  const bonusCount = 2;
+  const bonusIdGap = Math.max(8, Math.floor(tiles.length * 0.16));
+  const bonusGridGap = 6;
+  const bonusCandidates = tiles.map((tile) => tile.id).filter((id) => id >= minIdx && !used.has(id));
+  const pickBonusWithGap = (gapById, gapByGrid, selected) => {
+    const shuffled = [...bonusCandidates].sort(() => (rng() < 0.5 ? -1 : 1));
+    for (const candidate of shuffled) {
+      if (used.has(candidate)) continue;
+      const tooClose = selected.some((otherId) =>
+        Math.abs(otherId - candidate) < gapById
+        || manhattanTileDistance(tiles[otherId], tiles[candidate]) < gapByGrid
+      );
+      if (tooClose) continue;
+      used.add(candidate);
+      tiles[candidate].type = "bonus";
+      selected.push(candidate);
+      return true;
+    }
+    return false;
+  };
+  const bonusSelected = [];
+  while (bonusSelected.length < bonusCount) {
+    if (pickBonusWithGap(bonusIdGap, bonusGridGap, bonusSelected)) continue;
+    if (pickBonusWithGap(Math.max(6, bonusIdGap - 2), Math.max(4, bonusGridGap - 2), bonusSelected)) continue;
+    if (pickBonusWithGap(4, 2, bonusSelected)) continue;
+    if (place("bonus") == null) break;
+    const placed = tiles
+      .filter((tile) => String(tile.type).toLowerCase() === "bonus" && !bonusSelected.includes(tile.id))
+      .map((tile) => tile.id)
+      .sort((a, b) => b - a)[0];
+    if (Number.isInteger(placed)) bonusSelected.push(placed);
+  }
+  if (bonusSelected.length < bonusCount) {
+    const fallbackCandidates = tiles.map((tile) => tile.id).filter((id) => id >= minIdx && !bonusSelected.includes(id));
+    for (const candidate of fallbackCandidates) {
+      if (bonusSelected.length >= bonusCount) break;
+      if (used.has(candidate)) continue;
+      used.add(candidate);
+      tiles[candidate].type = "bonus";
+      bonusSelected.push(candidate);
+    }
+  }
+  if (bonusSelected.length !== bonusCount) {
+    throw new Error(`Invalid bonus layout: expected ${bonusCount}, got ${bonusSelected.length}`);
+  }
+  const starIds = new Set(bonusSelected.slice(0, bonusCount));
 
   // Place 3 shops with spacing and zone constraints.
   const count = 3;

@@ -16,17 +16,31 @@ function isCoarsePointer() {
   return window.matchMedia?.("(pointer: coarse)")?.matches ?? false;
 }
 
-const TILE_SIZE = 64;
-const TILE_CENTER = TILE_SIZE / 2;
+const ISO_TILE_WIDTH = 88;
+const ISO_TILE_HEIGHT = 50;
+const TILE_CENTER_X = ISO_TILE_WIDTH / 2;
+const TILE_CENTER_Y = ISO_TILE_HEIGHT / 2;
 const BOARD_MARGIN = 96;
 const FOLLOW_MOBILE_SCALE = 1.2;
 const FOLLOW_DESKTOP_SCALE = 1.05;
 const MOVE_STEP_MS = 320;
+const GRID_INFER_CELL_SIZE = 72;
+
+function getTileGridCoords(tile: Tile) {
+  if (typeof tile.gridX === "number" && typeof tile.gridY === "number") {
+    return { gridX: tile.gridX, gridY: tile.gridY };
+  }
+  return {
+    gridX: Math.round(tile.x / GRID_INFER_CELL_SIZE),
+    gridY: Math.round(tile.y / GRID_INFER_CELL_SIZE),
+  };
+}
 
 const GameBoardPixiComponent: React.FC<GameBoardProps> = ({
   tiles,
   players,
   focusPlayerId = null,
+  activePlayerHint = null,
   onMoveAnimationEnd,
   pendingPathChoice,
   lastMoveTrace,
@@ -35,24 +49,40 @@ const GameBoardPixiComponent: React.FC<GameBoardProps> = ({
   eventOverlayActive = false,
   actionOverlay = null,
 }) => {
-  const bounds = useMemo(() => {
-    if (!tiles.length) return { minX: 0, minY: 0, maxX: 800, maxY: 500 };
-    const xs = tiles.map((t) => t.x);
-    const ys = tiles.map((t) => t.y);
-    const minX = Math.min(...xs) - BOARD_MARGIN;
-    const minY = Math.min(...ys) - BOARD_MARGIN;
-    const maxX = Math.max(...xs) + BOARD_MARGIN + TILE_SIZE;
-    const maxY = Math.max(...ys) + BOARD_MARGIN + TILE_SIZE;
-    return { minX, minY, maxX, maxY };
+  const projected = useMemo(() => {
+    if (!tiles.length) {
+      return {
+        width: 800,
+        height: 500,
+        points: [] as Point[],
+      };
+    }
+
+    const rawPoints = tiles.map((tile) => {
+      const { gridX, gridY } = getTileGridCoords(tile);
+      const centerX = (gridX - gridY) * (ISO_TILE_WIDTH / 2);
+      const centerY = (gridX + gridY) * (ISO_TILE_HEIGHT / 2);
+      return {
+        x: centerX - TILE_CENTER_X,
+        y: centerY - TILE_CENTER_Y,
+      };
+    });
+
+    const minX = Math.min(...rawPoints.map((point) => point.x)) - BOARD_MARGIN;
+    const minY = Math.min(...rawPoints.map((point) => point.y)) - BOARD_MARGIN;
+    const maxX = Math.max(...rawPoints.map((point) => point.x + ISO_TILE_WIDTH)) + BOARD_MARGIN;
+    const maxY = Math.max(...rawPoints.map((point) => point.y + ISO_TILE_HEIGHT)) + BOARD_MARGIN;
+
+    return {
+      width: Math.max(0, maxX - minX),
+      height: Math.max(0, maxY - minY),
+      points: rawPoints.map((point) => ({ x: point.x - minX, y: point.y - minY })),
+    };
   }, [tiles]);
 
-  const width = Math.max(0, bounds.maxX - bounds.minX);
-  const height = Math.max(0, bounds.maxY - bounds.minY);
-
-  const points = useMemo(
-    () => tiles.map((t) => ({ x: t.x - bounds.minX, y: t.y - bounds.minY })),
-    [tiles, bounds.minX, bounds.minY]
-  );
+  const width = projected.width;
+  const height = projected.height;
+  const points = projected.points;
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const previousPositionsRef = useRef<Record<string, number>>({});
@@ -120,9 +150,9 @@ const GameBoardPixiComponent: React.FC<GameBoardProps> = ({
 
   const focusOnPosition = useCallback(
     (position: number, boostScale: boolean) => {
-      const tile = tiles[position];
+      const point = points[position];
       const el = containerRef.current;
-      if (!tile || !el) return;
+      if (!point || !el) return;
 
       const rect = el.getBoundingClientRect();
       if (rect.width <= 0 || rect.height <= 0) return;
@@ -135,8 +165,8 @@ const GameBoardPixiComponent: React.FC<GameBoardProps> = ({
         ? clamp(Math.max(scaleRef.current, followFloor), minScale, 2.75)
         : scaleRef.current;
 
-      const centerX = tile.x - bounds.minX + TILE_CENTER;
-      const centerY = tile.y - bounds.minY + TILE_CENTER;
+      const centerX = point.x + TILE_CENTER_X;
+      const centerY = point.y + TILE_CENTER_Y;
       const nextOffset = {
         x: rect.width * 0.5 - centerX * nextScale,
         y: rect.height * 0.48 - centerY * nextScale,
@@ -145,7 +175,7 @@ const GameBoardPixiComponent: React.FC<GameBoardProps> = ({
       setScale(nextScale);
       setOffset(clampOffset(nextScale, nextOffset, rect.width, rect.height));
     },
-    [bounds.minX, bounds.minY, clampOffset, computeFitScale, tiles]
+    [clampOffset, computeFitScale, points]
   );
 
   const resetView = useCallback((animate = false) => {
@@ -187,8 +217,8 @@ const GameBoardPixiComponent: React.FC<GameBoardProps> = ({
   const zoomOutKeepingPosition = useCallback(
     (position: number, animate = false) => {
       const el = containerRef.current;
-      const tile = tiles[position];
-      if (!el || !tile) {
+      const point = points[position];
+      if (!el || !point) {
         resetView(animate);
         return;
       }
@@ -206,8 +236,8 @@ const GameBoardPixiComponent: React.FC<GameBoardProps> = ({
         2.75
       );
 
-      const centerX = tile.x - bounds.minX + TILE_CENTER;
-      const centerY = tile.y - bounds.minY + TILE_CENTER;
+      const centerX = point.x + TILE_CENTER_X;
+      const centerY = point.y + TILE_CENTER_Y;
       const wanted = {
         x: rect.width * 0.5 - centerX * nextScale,
         y: rect.height * 0.5 - centerY * nextScale,
@@ -227,7 +257,7 @@ const GameBoardPixiComponent: React.FC<GameBoardProps> = ({
       setScale(nextScale);
       setOffset(clampOffset(nextScale, wanted, rect.width, rect.height));
     },
-    [bounds.minX, bounds.minY, clampOffset, computeFitScale, resetView, tiles]
+    [clampOffset, computeFitScale, points, resetView]
   );
 
   const tryAutoZoomOut = useCallback(() => {
@@ -461,8 +491,8 @@ const GameBoardPixiComponent: React.FC<GameBoardProps> = ({
     const text = delta > 0 ? `+${delta}` : `${delta}`;
     const next: PixiFloatingDelta = {
       id,
-      x: pt.x + TILE_CENTER,
-      y: pt.y + TILE_CENTER - 12,
+      x: pt.x + TILE_CENTER_X,
+      y: pt.y + TILE_CENTER_Y - 10,
       text,
       positive: delta > 0,
     };
@@ -679,7 +709,7 @@ const GameBoardPixiComponent: React.FC<GameBoardProps> = ({
   return (
     <div
       ref={containerRef}
-      className="relative h-full w-full overflow-hidden rounded-lg border-4 border-black bg-slate-900"
+      className="relative h-full w-full overflow-hidden rounded-lg border-4 border-black bg-slate-950"
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
@@ -687,6 +717,28 @@ const GameBoardPixiComponent: React.FC<GameBoardProps> = ({
       onWheel={onWheel}
       style={{ touchAction: "none" }}
     >
+      <div
+        className="pointer-events-none absolute inset-0 z-0"
+        style={{
+          backgroundImage: [
+            "radial-gradient(120% 90% at 50% 8%, rgba(34,211,238,0.24) 0%, rgba(15,23,42,0.06) 48%, rgba(2,6,23,0.72) 100%)",
+            "radial-gradient(55% 38% at 12% 78%, rgba(16,185,129,0.2) 0%, rgba(16,185,129,0) 100%)",
+            "radial-gradient(48% 32% at 88% 22%, rgba(250,204,21,0.14) 0%, rgba(250,204,21,0) 100%)",
+          ].join(","),
+        }}
+      />
+      <div
+        className="pointer-events-none absolute inset-0 z-0 opacity-35"
+        style={{
+          backgroundImage: [
+            "linear-gradient(0deg, rgba(56,189,248,0.12) 1px, transparent 1px)",
+            "linear-gradient(90deg, rgba(56,189,248,0.1) 1px, transparent 1px)",
+          ].join(","),
+          backgroundSize: "24px 24px, 24px 24px",
+          maskImage: "radial-gradient(120% 90% at 50% 52%, black 42%, transparent 100%)",
+        }}
+      />
+
       <PixiBoardCanvas
         width={width}
         height={height}
@@ -694,11 +746,12 @@ const GameBoardPixiComponent: React.FC<GameBoardProps> = ({
         offset={offset}
         tiles={tiles}
         points={points}
-        tileCenter={TILE_CENTER}
-        tileSize={TILE_SIZE}
+        tileWidth={ISO_TILE_WIDTH}
+        tileHeight={ISO_TILE_HEIGHT}
         playersByTile={playersByTile}
         playerDisplayPositions={displayPositions}
         focusPlayerId={focusPlayerId}
+        activePlayerHint={activePlayerHint}
         movingPlayerId={movingPlayerId}
         focusedPosition={focusedPosition}
         highlightedPathEdges={highlightedPathEdges}
@@ -717,10 +770,10 @@ const GameBoardPixiComponent: React.FC<GameBoardProps> = ({
           .map((nextId) => {
             const to = points[nextId];
             if (!to) return null;
-            const fromX = from.x + TILE_CENTER;
-            const fromY = from.y + TILE_CENTER;
-            const toX = to.x + TILE_CENTER;
-            const toY = to.y + TILE_CENTER;
+            const fromX = from.x + TILE_CENTER_X;
+            const fromY = from.y + TILE_CENTER_Y;
+            const toX = to.x + TILE_CENTER_X;
+            const toY = to.y + TILE_CENTER_Y;
             const x = fromX + (toX - fromX) * 0.52;
             const y = fromY + (toY - fromY) * 0.52;
             const angleDeg = (Math.atan2(toY - fromY, toX - fromX) * 180) / Math.PI;
@@ -928,6 +981,7 @@ function areGameBoardPropsEqual(prev: GameBoardProps, next: GameBoardProps) {
     areTilesEqual(prev.tiles, next.tiles) &&
     arePlayersEqualForBoard(prev.players, next.players) &&
     prev.focusPlayerId === next.focusPlayerId &&
+    prev.activePlayerHint === next.activePlayerHint &&
     arePendingChoicesEqual(prev.pendingPathChoice, next.pendingPathChoice) &&
     areMoveTracesEqual(prev.lastMoveTrace, next.lastMoveTrace) &&
     prev.canChoosePath === next.canChoosePath &&

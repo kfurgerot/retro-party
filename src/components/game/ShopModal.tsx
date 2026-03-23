@@ -40,12 +40,23 @@ export const ShopModal: React.FC<ShopModalProps> = ({
     <AlertDialog open={open} onOpenChange={() => {}}>
       <AlertDialogContent className={cn(GAME_DIALOG_CONTENT, "max-w-2xl")}>
         <AlertDialogHeader>
-          <AlertDialogTitle>{fr.shopModal.title}</AlertDialogTitle>
-          <AlertDialogDescription className="text-slate-300">
-            {fr.shopModal.availablePoints}: <span className="font-semibold text-cyan-200">{points}</span>
+          <div className="mx-auto mb-2 inline-flex items-center gap-2 rounded-full border border-orange-300/40 bg-orange-500/15 px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-orange-100">
+            <span className="text-base leading-none">🛒</span>
+            <span>Boutique</span>
+          </div>
+          <AlertDialogTitle className="text-center text-2xl">{fr.shopModal.title}</AlertDialogTitle>
+          <AlertDialogDescription className="text-center text-slate-300">
+            {fr.shopModal.availablePoints}
+            <span className="ml-2 inline-flex items-center rounded-lg border border-cyan-300/40 bg-cyan-500/15 px-2 py-0.5 font-semibold text-cyan-100">
+              {points} {fr.shopModal.pointsUnit}
+            </span>
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <div className="grid gap-2 max-h-[55vh] overflow-auto pr-1">
+        <div className="rounded-xl border border-cyan-300/20 bg-slate-950/30 p-2">
+          <div className="mb-2 px-1 text-xs uppercase tracking-[0.12em] text-slate-300">
+            Articles disponibles
+          </div>
+          <div className="grid max-h-[52vh] gap-2 overflow-auto pr-1">
           {items.map((item) => {
             const canAfford = points >= item.cost;
             return (
@@ -62,6 +73,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
               />
             );
           })}
+          </div>
         </div>
         <AlertDialogFooter className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:space-x-0">
           <AlertDialogCancel className={cn(neutralBtnClass, "h-11 w-full rounded-xl text-cyan-100")} onClick={onClose}>

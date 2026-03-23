@@ -113,6 +113,19 @@ export function useOnlineGameState() {
   const minigameCleanupRef = useRef<number | null>(null);
 
   useEffect(() => {
+    const tryResumeSession = () => {
+      const activeSession = sessionRef.current;
+      if (!activeSession?.code) return;
+      if (!socket.connected) {
+        socket.connect();
+        return;
+      }
+      socket.emit("reconnect_room", {
+        code: activeSession.code,
+        sessionId: activeSession.sessionId,
+      });
+    };
+
     const onState = (state: GameState) => setGameState(state);
     const onLobby = ({ players }: { players: LobbyPlayer[] }) => setLobby(players);
     const onRoomKnown = ({ code: roomCode }: { code: string }) => {
@@ -131,13 +144,7 @@ export function useOnlineGameState() {
     const onConnect = () => {
       setMyPlayerId(socket.id ?? null);
       setConnected(true);
-      const activeSession = sessionRef.current;
-      if (activeSession?.code) {
-        socket.emit("reconnect_room", {
-          code: activeSession.code,
-          sessionId: activeSession.sessionId,
-        });
-      }
+      tryResumeSession();
     };
     const onDisconnect = () => setConnected(false);
     const onRoomClosed = () => {
@@ -275,6 +282,20 @@ export function useOnlineGameState() {
     socket.on("WSI_ROUND_REVEAL", onWhoSaidItRoundReveal);
     socket.on("MINIGAME_END", onWhoSaidItEnd);
 
+    const onVisibilityChange = () => {
+      if (document.visibilityState !== "visible") return;
+      tryResumeSession();
+    };
+    const onWindowFocus = () => {
+      tryResumeSession();
+    };
+    const onNetworkBack = () => {
+      tryResumeSession();
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("focus", onWindowFocus);
+    window.addEventListener("online", onNetworkBack);
+
     if (socket.connected) onConnect();
 
     return () => {
@@ -291,6 +312,9 @@ export function useOnlineGameState() {
       socket.off("WSI_ROUND_START", onWhoSaidItRoundStart);
       socket.off("WSI_ROUND_REVEAL", onWhoSaidItRoundReveal);
       socket.off("MINIGAME_END", onWhoSaidItEnd);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("focus", onWindowFocus);
+      window.removeEventListener("online", onNetworkBack);
       if (minigameCleanupRef.current) {
         window.clearTimeout(minigameCleanupRef.current);
         minigameCleanupRef.current = null;

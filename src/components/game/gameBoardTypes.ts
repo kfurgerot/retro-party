@@ -18,6 +18,7 @@ export interface GameBoardProps {
   tiles: Tile[];
   players: Player[];
   focusPlayerId?: string | null;
+  activePlayerHint?: string | null;
   onMoveAnimationEnd?: (playerId: string) => void;
   pendingPathChoice?: PendingPathChoice | null;
   lastMoveTrace?: MoveTrace | null;

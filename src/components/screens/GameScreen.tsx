@@ -48,6 +48,7 @@ import { perfLog, perfMark, perfMeasure } from "@/lib/perf";
 const TURN_ANNOUNCE_MS = 2000;
 const MOVE_STEP_MS = 320;
 const ROLL_RESULT_READ_MS = 1000;
+const ROLL_ANNOUNCE_MS = 2000;
 
 type ActivityKind = "move" | "decision" | "question" | "shop" | "minigame" | "system";
 
@@ -155,15 +156,16 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 }) => {
   const [hasMovedThisTurn, setHasMovedThisTurn] = useState(false);
   const [isMoveAnimating, setIsMoveAnimating] = useState(false);
-  const [sidebarTab, setSidebarTab] = useState<"players" | "legend" | "activity">("players");
+  const [sidebarTab, setSidebarTab] = useState<"players" | "activity">("players");
   const [playersOpen, setPlayersOpen] = useState(false);
-  const [legendOpen, setLegendOpen] = useState(false);
   const [mobileInfoOpen, setMobileInfoOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileActivityOpen, setMobileActivityOpen] = useState(false);
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
   const [whoSaidItIntroAt, setWhoSaidItIntroAt] = useState<number | null>(null);
   const [turnIntroEndsAt, setTurnIntroEndsAt] = useState<number | null>(null);
+  const [rollIntroEndsAt, setRollIntroEndsAt] = useState<number | null>(null);
+  const [rollAnnouncementValue, setRollAnnouncementValue] = useState<number | null>(null);
   const [bugIntroEndsAt, setBugIntroEndsAt] = useState<number | null>(null);
   const [selectedPreRollType, setSelectedPreRollType] = useState<ShopItemType | null>(null);
   const [isQuestionActionUnlocked, setIsQuestionActionUnlocked] = useState(true);
@@ -179,7 +181,9 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const questionActionUnlockKeyRef = useRef<string | null>(null);
   const lastWhoSaidItIdleRef = useRef<string | null>(null);
   const turnIntroTimerRef = useRef<number | null>(null);
+  const lastRollAnnouncementKeyRef = useRef<string | null>(null);
   const bugIntroTimerRef = useRef<number | null>(null);
+  const hasMovedThisTurnRef = useRef(hasMovedThisTurn);
 
   const currentPlayer = gameState.players[gameState.currentPlayerIndex];
   const bugSmashState = gameState.currentMinigame?.minigameId === "BUG_SMASH" ? gameState.currentMinigame : null;
@@ -216,6 +220,9 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     !!myPlayerId &&
     pendingKudoPurchase.playerId === myPlayerId &&
     !!onResolveKudoPurchase;
+  const shouldShowKudoPurchaseModal = canResolveKudoPurchase && !isMoveAnimating;
+  const canInteractWithShop = !!myPlayerId && pendingShop?.playerId === myPlayerId && !!onBuyShopItem;
+  const shouldShowShopModal = canInteractWithShop && !isMoveAnimating;
   const isTurnIntroActive = turnIntroEndsAt != null;
   const isBugIntroActive = bugIntroEndsAt != null;
   const catalogByType = SHOP_CATALOG;
@@ -256,8 +263,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     beforeRollInventory.length > 0 &&
     !gameState.preRollChoiceResolved &&
     !gameState.pendingPreRollEffect &&
-    !gameState.pendingDoubleRoll &&
-    !isTurnIntroActive;
+    !gameState.pendingDoubleRoll;
 
   useEffect(() => {
     if (!shouldShowPreRollChoiceModal) setSelectedPreRollType(null);
@@ -358,12 +364,15 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     gameState.diceValue == null &&
     !gameState.isRolling;
 
+  const isRollAnnouncementActive = rollIntroEndsAt != null && rollAnnouncementValue != null;
+
   const canMove =
     gameState.phase === "playing" &&
     !isMinigameActive &&
     !isPathChoiceActive &&
     !isKudoPurchaseActive &&
     !isShopActive &&
+    !isRollAnnouncementActive &&
     isMyTurn &&
     gameState.turnPhase === "moving" &&
     !gameState.currentQuestion &&
@@ -371,18 +380,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     isMoveActionUnlocked &&
     gameState.diceValue != null &&
     !hasMovedThisTurn;
-
-  const legend = useMemo(
-    () => [
-      { k: "blue", label: fr.gameScreen.legendBlue, icon: "💬" },
-      { k: "green", label: fr.gameScreen.legendGreen, icon: "🔧" },
-      { k: "red", label: fr.gameScreen.legendRed, icon: "🔥" },
-      { k: "violet", label: fr.gameScreen.legendViolet, icon: "🎯" },
-      { k: "bonus", label: fr.gameScreen.legendBonus, icon: "🎁" },
-      { k: "shop", label: fr.game.shopLegend, icon: "🛒" },
-    ],
-    []
-  );
 
   const handleMove = useCallback(
     (steps: number) => {
@@ -394,21 +391,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   );
 
   useEffect(() => {
-    if (!canMove || hasMovedThisTurn || gameState.diceValue == null) return;
-    const autoMoveKey = `${currentPlayer?.id ?? "unknown"}-${gameState.currentRound}-${gameState.currentPlayerIndex}-${gameState.diceValue}`;
-    if (autoMoveKeyRef.current === autoMoveKey) return;
-
-    autoMoveKeyRef.current = autoMoveKey;
-    handleMove(gameState.diceValue);
-  }, [
-    canMove,
-    hasMovedThisTurn,
-    currentPlayer?.id,
-    gameState.currentRound,
-    gameState.currentPlayerIndex,
-    gameState.diceValue,
-    handleMove,
-  ]);
+    hasMovedThisTurnRef.current = hasMovedThisTurn;
+  }, [hasMovedThisTurn]);
 
   useEffect(() => {
     if (!isMoveAnimating || !gameState.currentQuestion) return;
@@ -475,7 +459,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     }
     const shouldShowTurnIntro =
       gameState.phase === "playing" &&
-      isMyTurn &&
       !isPathChoiceActive &&
       !isKudoPurchaseActive &&
       !isShopActive &&
@@ -515,7 +498,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     gameState.isRolling,
     gameState.pendingPreRollEffect,
     gameState.pendingDoubleRoll,
-    isMyTurn,
     isPathChoiceActive,
     isKudoPurchaseActive,
     isShopActive,
@@ -523,6 +505,53 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     buzzwordState,
     whoSaidItState,
     gameState.turnPhase,
+  ]);
+
+  useEffect(() => {
+    if (
+      gameState.isRolling ||
+      gameState.turnPhase !== "moving" ||
+      gameState.diceValue == null
+    ) {
+      return;
+    }
+
+    const total = gameState.lastRollResult?.total;
+    const stepsToMove = Number(gameState.diceValue);
+    if (!Number.isFinite(stepsToMove) || stepsToMove <= 0) return;
+    const announcedTotal = typeof total === "number" ? total : stepsToMove;
+    const diceKey = (gameState.lastRollResult?.dice ?? []).join("-");
+    const key = `${gameState.currentRound}-${gameState.currentPlayerIndex}-${announcedTotal}-${stepsToMove}-${diceKey}`;
+    if (lastRollAnnouncementKeyRef.current === key) return;
+    lastRollAnnouncementKeyRef.current = key;
+    autoMoveKeyRef.current = key;
+
+    setRollAnnouncementValue(announcedTotal);
+    const endAt = Date.now() + ROLL_ANNOUNCE_MS;
+    setRollIntroEndsAt(endAt);
+
+    const timeoutId = window.setTimeout(() => {
+      setRollIntroEndsAt(null);
+      setRollAnnouncementValue(null);
+      if (isMyTurn && !hasMovedThisTurnRef.current) {
+        handleMove(stepsToMove);
+      }
+    }, ROLL_ANNOUNCE_MS);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [
+    gameState.currentPlayerIndex,
+    gameState.currentRound,
+    gameState.isRolling,
+    gameState.lastRollResult?.total,
+    (gameState.lastRollResult?.dice ?? []).join("-"),
+    gameState.turnPhase,
+    gameState.diceValue,
+    hasMovedThisTurn,
+    isMyTurn,
+    handleMove,
   ]);
 
   useEffect(() => {
@@ -559,11 +588,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const openPlayers = () => {
     if (isMobile()) setPlayersOpen(true);
     else setSidebarTab("players");
-  };
-
-  const openLegend = () => {
-    if (isMobile()) setLegendOpen(true);
-    else setSidebarTab("legend");
   };
 
   const openMobileInfo = () => {
@@ -752,6 +776,10 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const neutralSecondaryBtn = CTA_NEON_SECONDARY_SUBTLE;
   const activeCyanBtn = CTA_NEON_PRIMARY;
   const dangerLeaveBtn = CTA_NEON_DANGER;
+  const desktopLeaveBtn = cn(
+    GAME_TAB_BUTTON,
+    "border-rose-300/45 bg-rose-500/14 text-rose-100 hover:bg-rose-500/22 hover:text-rose-50"
+  );
   const roundProgressPct = Math.max(
     0,
     Math.min(100, Math.round((gameState.currentRound / Math.max(1, gameState.maxRounds)) * 100))
@@ -773,6 +801,35 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     minigame: "minigame",
     system: "system",
   };
+  const activePlayerHint = useMemo(() => {
+    if (gameState.phase !== "playing") return null;
+    if (gameState.isRolling || gameState.turnPhase === "rolling") return "Lance le de";
+    if (isPathChoiceActive) return "Choisit une route";
+    if (isKudoPurchaseActive) return "Achete un kudo";
+    if (isShopActive) return "Achete un item";
+    if (gameState.currentQuestion?.status === "pending") return "Ouvre la carte";
+    if (gameState.currentQuestion?.status === "open") return "Repond a la carte";
+    if (isMinigameActive) return "Mini-jeu en cours";
+    if (gameState.turnPhase === "pre_roll") {
+      return "Lance le de";
+    }
+    if (gameState.turnPhase === "moving" && gameState.diceValue != null) {
+      return `Avance de ${gameState.diceValue}`;
+    }
+    return "Joue son tour";
+  }, [
+    gameState.phase,
+    gameState.isRolling,
+    gameState.turnPhase,
+    gameState.currentQuestion?.status,
+    gameState.preRollChoiceResolved,
+    gameState.preRollActionUsed,
+    gameState.diceValue,
+    isPathChoiceActive,
+    isKudoPurchaseActive,
+    isShopActive,
+    isMinigameActive,
+  ]);
 
   const handleConfirmPreRollChoice = (itemType: ShopItemType) => {
     const item = beforeRollInventory.find((entry) => entry.type === itemType);
@@ -841,7 +898,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
             neonCardClass={neonCard}
             onLeave={onLeave ? requestLeave : undefined}
             leaveLabel={fr.gameScreen.leaveGame}
-            leaveBtnClass={dangerLeaveBtn}
+            leaveBtnClass={desktopLeaveBtn}
           />
         </div>
 
@@ -863,6 +920,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                   tiles={gameState.tiles}
                   players={gameState.players}
                   focusPlayerId={currentPlayer?.id ?? null}
+                  activePlayerHint={!isMyTurn ? activePlayerHint : null}
                   pendingPathChoice={pendingPathChoice}
                   lastMoveTrace={gameState.lastMoveTrace}
                   eventOverlayActive={isArrivalEventActive}
@@ -895,8 +953,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 <div className="text-base font-bold">
                   {sidebarTab === "players"
                     ? fr.gameScreen.players
-                    : sidebarTab === "legend"
-                    ? fr.gameScreen.legend
                     : fr.gameScreen.activityFeed}
                 </div>
                 <div className="flex gap-2">
@@ -910,17 +966,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                     onClick={() => setSidebarTab("players")}
                   >
                     {fr.gameScreen.players}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className={cn(
-                      GAME_TAB_BUTTON,
-                      sidebarTab === "legend" ? GAME_TAB_BUTTON_ACTIVE : "opacity-95"
-                    )}
-                    onClick={() => setSidebarTab("legend")}
-                  >
-                    {fr.gameScreen.legend}
                   </Button>
                   <Button
                     variant="secondary"
@@ -998,17 +1043,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                     </div>
                   ))}
                 </div>
-              ) : sidebarTab === "legend" ? (
-                <div className="mt-3 grid min-h-0 flex-1 gap-2 overflow-auto pr-1 text-sm text-cyan-50">
-                  {legend.map((l) => (
-                    <div key={l.k} className={cn("flex items-center gap-2 px-2 py-1.5", GAME_SUBPANEL_SURFACE)}>
-                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-sm border border-cyan-300/35 bg-slate-900/60 text-[11px] font-semibold text-cyan-200">
-                        {l.icon}
-                      </span>
-                      <span className="leading-tight">{l.label}</span>
-                    </div>
-                  ))}
-                </div>
               ) : (
                 <div className="mt-3 grid min-h-0 flex-1 gap-1.5 overflow-auto pr-1 text-xs text-cyan-50/90">
                   {activityFeed.length > 0 ? (
@@ -1049,20 +1083,10 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 className={cn(GAME_MOBILE_ACTION_BUTTON, neutralSecondaryBtn)}
                 size="sm"
                 variant="secondary"
-                onClick={openMobileInfo}
-                aria-label={fr.gameScreen.mobileInfoAria}
+                onClick={openPlayers}
+                aria-label={fr.gameScreen.players}
               >
-                {fr.gameScreen.mobileInfo}
-              </Button>
-
-              <Button
-                className={cn(GAME_MOBILE_ACTION_BUTTON, neutralSecondaryBtn)}
-                size="sm"
-                variant="secondary"
-                onClick={openMobileActivity}
-                aria-label={fr.gameScreen.activityFeed}
-              >
-                {fr.gameScreen.mobileFeed}
+                {fr.gameScreen.players}
               </Button>
 
               <Button
@@ -1073,6 +1097,21 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 aria-label={fr.gameScreen.mobileMenuAria}
               >
                 {fr.gameScreen.mobileMenu}
+              </Button>
+
+              <Button
+                className={cn(
+                  GAME_MOBILE_ACTION_BUTTON,
+                  onLeave ? dangerLeaveBtn : neutralSecondaryBtn,
+                  !onLeave && "opacity-60"
+                )}
+                size="sm"
+                variant="secondary"
+                onClick={requestLeave}
+                aria-label={fr.gameScreen.leave}
+                disabled={!onLeave}
+              >
+                {fr.gameScreen.leave}
               </Button>
             </div>
           </Card>
@@ -1160,37 +1199,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         </DrawerContent>
       </Drawer>
 
-      <Drawer open={legendOpen} onOpenChange={setLegendOpen}>
-        <DrawerContent className={GAME_DRAWER_CONTENT}>
-          <DrawerHeader className="pb-2">
-            <div className="flex items-center justify-between gap-2">
-              <DrawerTitle>{fr.gameScreen.legend}</DrawerTitle>
-              <DrawerClose asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  aria-label={fr.gameScreen.closeLegendPanelAria}
-                  className={GAME_DRAWER_CLOSE_BUTTON}
-                >
-                  {fr.gameScreen.close}
-                </Button>
-              </DrawerClose>
-            </div>
-          </DrawerHeader>
-
-          <div className="grid gap-2 px-4 pb-4 text-sm text-cyan-50">
-            {legend.map((l) => (
-              <div key={l.k} className="flex items-center gap-2">
-                <span className="inline-flex h-5 w-5 items-center justify-center rounded-sm border border-cyan-300/35 bg-slate-900/60 text-[11px] font-semibold text-cyan-200">
-                  {l.icon}
-                </span>
-                <span className="leading-tight">{l.label}</span>
-              </div>
-            ))}
-          </div>
-        </DrawerContent>
-      </Drawer>
-
       <Drawer open={mobileInfoOpen} onOpenChange={setMobileInfoOpen}>
         <DrawerContent className={GAME_DRAWER_CONTENT}>
           <DrawerHeader className="pb-2">
@@ -1250,46 +1258,22 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 variant="secondary"
               onClick={() => {
                 setMobileMenuOpen(false);
+                openMobileInfo();
+              }}
+            >
+              {fr.gameScreen.mobileInfo}
+            </Button>
+            <Button
+                className={cn(GAME_MOBILE_ACTION_BUTTON, neutralSecondaryBtn)}
+                size="sm"
+                variant="secondary"
+              onClick={() => {
+                setMobileMenuOpen(false);
                 openMobileActivity();
               }}
             >
-              {fr.gameScreen.activityFeed}
+              {fr.gameScreen.mobileFeed}
             </Button>
-            <Button
-                className={cn(GAME_MOBILE_ACTION_BUTTON, neutralSecondaryBtn)}
-                size="sm"
-                variant="secondary"
-              onClick={() => {
-                setMobileMenuOpen(false);
-                openPlayers();
-              }}
-            >
-              {fr.gameScreen.players}
-            </Button>
-            <Button
-                className={cn(GAME_MOBILE_ACTION_BUTTON, neutralSecondaryBtn)}
-                size="sm"
-                variant="secondary"
-              onClick={() => {
-                setMobileMenuOpen(false);
-                openLegend();
-              }}
-            >
-              {fr.gameScreen.legend}
-            </Button>
-            {onLeave && (
-              <Button
-                className={cn(GAME_MOBILE_ACTION_BUTTON, dangerLeaveBtn)}
-                size="sm"
-                variant="secondary"
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  requestLeave();
-                }}
-              >
-                {fr.gameScreen.leave}
-              </Button>
-            )}
           </div>
         </DrawerContent>
       </Drawer>
@@ -1345,8 +1329,11 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       <AlertDialog open={leaveDialogOpen} onOpenChange={setLeaveDialogOpen}>
         <AlertDialogContent className={cn(GAME_DIALOG_CONTENT, "max-w-md")}>
           <AlertDialogHeader>
-            <AlertDialogTitle>{fr.gameScreen.leaveQuestionTitle}</AlertDialogTitle>
-            <AlertDialogDescription className="text-slate-300">
+            <div className="mx-auto mb-2 inline-flex items-center gap-2 rounded-full border border-rose-300/45 bg-rose-500/15 px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-rose-100">
+              <span>Quitter</span>
+            </div>
+            <AlertDialogTitle className="text-center text-2xl">{fr.gameScreen.leaveQuestionTitle}</AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-slate-300">
               {fr.game.backToOnlineLobby}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -1373,46 +1360,52 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         )}
       </Suspense>
 
-      <AlertDialog open={isKudoPurchaseActive && !isMoveAnimating} onOpenChange={() => {}}>
+      <AlertDialog open={shouldShowKudoPurchaseModal} onOpenChange={() => {}}>
         <AlertDialogContent className={cn(GAME_DIALOG_CONTENT, "max-w-md")}>
           <AlertDialogHeader>
-            <AlertDialogTitle>{fr.gameScreen.buyKudoTitle}</AlertDialogTitle>
-            <AlertDialogDescription className="text-slate-300">
+            <div className="mx-auto mb-2 inline-flex items-center gap-2 rounded-full border border-amber-300/45 bg-amber-500/15 px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-amber-100">
+              <span className="text-base leading-none">🎁</span>
+              <span>Kudobox</span>
+            </div>
+            <AlertDialogTitle className="text-center text-2xl">{fr.gameScreen.buyKudoTitle}</AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-slate-300">
               {pendingKudoPurchase?.canAfford
                 ? fr.gameScreen.canConvertKudo
                 : fr.gameScreen.cannotAffordKudo}
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <div className="grid grid-cols-2 gap-2 rounded-xl border border-cyan-300/20 bg-slate-950/30 p-2 text-center">
+            <div className="rounded-lg border border-cyan-300/20 bg-cyan-500/10 px-2 py-1.5">
+              <div className="text-[10px] uppercase tracking-[0.12em] text-cyan-200/80">Cout</div>
+              <div className="text-lg font-bold text-cyan-100">10 pts</div>
+            </div>
+            <div className="rounded-lg border border-cyan-300/20 bg-cyan-500/10 px-2 py-1.5">
+              <div className="text-[10px] uppercase tracking-[0.12em] text-cyan-200/80">Mes points</div>
+              <div className="text-lg font-bold text-cyan-100">{myPoints}</div>
+            </div>
+          </div>
           <AlertDialogFooter className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:space-x-0">
-            {canResolveKudoPurchase ? (
-              <>
-                <AlertDialogCancel
-                  className={cn(neutralSecondaryBtn, "h-11 w-full rounded-xl text-cyan-100")}
-                  onClick={() => onResolveKudoPurchase?.(false)}
-                >
-                  {fr.gameScreen.continue}
-                </AlertDialogCancel>
-                <AlertDialogAction
-                  className={cn(activeCyanBtn, "h-11 w-full rounded-xl")}
-                  disabled={!pendingKudoPurchase?.canAfford}
-                  onClick={() => onResolveKudoPurchase?.(true)}
-                >
-                  {fr.gameScreen.buyKudo}
-                </AlertDialogAction>
-              </>
-            ) : (
-              <AlertDialogCancel className={cn(neutralSecondaryBtn, "h-11 rounded-xl text-cyan-100")}>
-                {fr.gameScreen.waiting}
-              </AlertDialogCancel>
-            )}
+            <AlertDialogCancel
+              className={cn(neutralSecondaryBtn, "h-11 w-full rounded-xl text-cyan-100")}
+              onClick={() => onResolveKudoPurchase?.(false)}
+            >
+              {fr.gameScreen.continue}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className={cn(activeCyanBtn, "h-11 w-full rounded-xl")}
+              disabled={!pendingKudoPurchase?.canAfford}
+              onClick={() => onResolveKudoPurchase?.(true)}
+            >
+              {fr.gameScreen.buyKudo}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
       <Suspense fallback={null}>
         <ShopModal
-          open={isShopActive && !isMoveAnimating}
-          canInteract={!!myPlayerId && pendingShop?.playerId === myPlayerId && !!onBuyShopItem}
+          open={shouldShowShopModal}
+          canInteract={canInteractWithShop}
           points={myPlayer?.points ?? 0}
           items={Object.values(catalogByType)}
           onBuy={(itemType) => onBuyShopItem?.(itemType)}
@@ -1442,9 +1435,22 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 
       {isTurnIntroActive && !isPathChoiceActive && !isKudoPurchaseActive && !isShopActive && !gameState.currentQuestion && !isMinigameActive && (
         <LaunchAnnouncement
-          title={fr.gameScreen.infoYourTurn}
-          subtitle={fr.game.yourTurnLaunch}
+          title={isMyTurn ? "A ton tour" : "Au tour de"}
+          subtitle={isMyTurn ? fr.game.yourTurnLaunch : "Preparez-vous, un joueur va agir."}
+          emphasisText={!isMyTurn ? (currentPlayer?.name ?? fr.terms.player) : null}
           startAt={turnIntroEndsAt ?? undefined}
+          variant="turn"
+        />
+      )}
+
+      {rollIntroEndsAt != null && rollAnnouncementValue != null && (
+        <LaunchAnnouncement
+          title={fr.gameScreen.rollResult}
+          subtitle={`obtient ${String(rollAnnouncementValue)}`}
+          emphasisText={currentPlayer?.name ?? fr.terms.player}
+          startAt={rollIntroEndsAt}
+          variant="roll"
+          highlightValue={rollAnnouncementValue}
         />
       )}
 
