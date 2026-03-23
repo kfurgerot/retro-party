@@ -48,7 +48,9 @@ import {
 } from "./whoSaidItEngine.js";
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3001;
-const RECONNECT_GRACE_MS = 30000;
+const RECONNECT_GRACE_MS = Number(process.env.RECONNECT_GRACE_MS) > 0
+  ? Number(process.env.RECONNECT_GRACE_MS)
+  : 20 * 60 * 1000;
 const MAX_PLAYERS = 20;
 const WHO_SAID_IT_ANNOUNCE_MS = 4000;
 const ENABLE_WHO_SAID_IT_MINIGAME = process.env.ENABLE_WHO_SAID_IT_MINIGAME === "1";
