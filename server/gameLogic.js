@@ -1051,9 +1051,9 @@ export function movePlayer(state, socketId, steps) {
   if (state.pendingPathChoice) return state;
   if (state.pendingKudoPurchase) return state;
   if (state.pendingShop) return state;
-  if (typeof steps !== "number" || steps <= 0) return state;
   if (state.diceValue == null) return state;
-  const numericSteps = Math.max(0, Math.floor(Number(steps) || 0));
+  // Use authoritative server roll value to guarantee pre-roll bonuses are applied.
+  const numericSteps = Math.max(0, Math.floor(Number(state.diceValue) || 0));
   if (numericSteps <= 0) return state;
   console.debug(`[retro-party] moving player with total roll: ${numericSteps}`);
   const activePlayerName = currentPlayerName(state);

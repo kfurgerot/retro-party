@@ -261,8 +261,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     beforeRollInventory.length > 0 &&
     !gameState.preRollChoiceResolved &&
     !gameState.pendingPreRollEffect &&
-    !gameState.pendingDoubleRoll &&
-    !isTurnIntroActive;
+    !gameState.pendingDoubleRoll;
 
   useEffect(() => {
     if (!shouldShowPreRollChoiceModal) setSelectedPreRollType(null);
@@ -532,14 +531,16 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     }
 
     const total = gameState.lastRollResult?.total;
-    if (typeof total !== "number") return;
+    const stepsToMove = Number(gameState.diceValue);
+    if (!Number.isFinite(stepsToMove) || stepsToMove <= 0) return;
+    const announcedTotal = typeof total === "number" ? total : stepsToMove;
     const diceKey = (gameState.lastRollResult?.dice ?? []).join("-");
-    const key = `${gameState.currentRound}-${gameState.currentPlayerIndex}-${total}-${diceKey}`;
+    const key = `${gameState.currentRound}-${gameState.currentPlayerIndex}-${announcedTotal}-${stepsToMove}-${diceKey}`;
     if (lastRollAnnouncementKeyRef.current === key) return;
     lastRollAnnouncementKeyRef.current = key;
     autoMoveKeyRef.current = key;
 
-    setRollAnnouncementValue(total);
+    setRollAnnouncementValue(announcedTotal);
     const endAt = Date.now() + ROLL_ANNOUNCE_MS;
     setRollIntroEndsAt(endAt);
 
@@ -547,7 +548,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       setRollIntroEndsAt(null);
       setRollAnnouncementValue(null);
       if (!hasMovedThisTurnRef.current) {
-        handleMove(total);
+        handleMove(stepsToMove);
       }
     }, ROLL_ANNOUNCE_MS);
 
