@@ -1419,13 +1419,27 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       <AlertDialog open={isKudoPurchaseActive && !isMoveAnimating} onOpenChange={() => {}}>
         <AlertDialogContent className={cn(GAME_DIALOG_CONTENT, "max-w-md")}>
           <AlertDialogHeader>
-            <AlertDialogTitle>{fr.gameScreen.buyKudoTitle}</AlertDialogTitle>
-            <AlertDialogDescription className="text-slate-300">
+            <div className="mx-auto mb-2 inline-flex items-center gap-2 rounded-full border border-amber-300/45 bg-amber-500/15 px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-amber-100">
+              <span className="text-base leading-none">🎁</span>
+              <span>Kudobox</span>
+            </div>
+            <AlertDialogTitle className="text-center text-2xl">{fr.gameScreen.buyKudoTitle}</AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-slate-300">
               {pendingKudoPurchase?.canAfford
                 ? fr.gameScreen.canConvertKudo
                 : fr.gameScreen.cannotAffordKudo}
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <div className="grid grid-cols-2 gap-2 rounded-xl border border-cyan-300/20 bg-slate-950/30 p-2 text-center">
+            <div className="rounded-lg border border-cyan-300/20 bg-cyan-500/10 px-2 py-1.5">
+              <div className="text-[10px] uppercase tracking-[0.12em] text-cyan-200/80">Cout</div>
+              <div className="text-lg font-bold text-cyan-100">10 pts</div>
+            </div>
+            <div className="rounded-lg border border-cyan-300/20 bg-cyan-500/10 px-2 py-1.5">
+              <div className="text-[10px] uppercase tracking-[0.12em] text-cyan-200/80">Mes points</div>
+              <div className="text-lg font-bold text-cyan-100">{myPoints}</div>
+            </div>
+          </div>
           <AlertDialogFooter className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:space-x-0">
             {canResolveKudoPurchase ? (
               <>
