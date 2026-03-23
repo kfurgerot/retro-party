@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef } from "react";
 import { Application, Container, Graphics, Rectangle, Text, TextStyle } from "pixi.js";
 import { AVATARS, Player, Tile } from "@/types/game";
+import { fr } from "@/i18n/fr";
 import { BoardActionOverlay } from "./gameBoardTypes";
 import { createGameButton } from "./pixi-ui/GameButton";
 import { createGamePanel } from "./pixi-ui/GamePanel";
@@ -710,13 +711,42 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
     const legendBackground = new Graphics();
     legendPanel.addChild(legendBackground);
 
+    const compactLegendLabel = (label: string) => {
+      const dashIndex = label.indexOf("-");
+      return (dashIndex >= 0 ? label.slice(dashIndex + 1) : label).trim();
+    };
+
     const legendItems = [
-      { icon: "💬", label: "Question" },
-      { icon: "🔧", label: "Tech" },
-      { icon: "🔥", label: "Fun" },
-      { icon: "🎯", label: "Defi" },
-      { icon: "🎁", label: "Kudobox" },
-      { icon: "🛒", label: "Boutique" },
+      {
+        icon: "💬",
+        label: compactLegendLabel(fr.gameScreen.legendBlue),
+        color: TILE_HEX_COLORS.blue,
+      },
+      {
+        icon: "🔧",
+        label: compactLegendLabel(fr.gameScreen.legendGreen),
+        color: TILE_HEX_COLORS.green,
+      },
+      {
+        icon: "🔥",
+        label: compactLegendLabel(fr.gameScreen.legendRed),
+        color: TILE_HEX_COLORS.red,
+      },
+      {
+        icon: "🎯",
+        label: compactLegendLabel(fr.gameScreen.legendViolet),
+        color: TILE_HEX_COLORS.violet,
+      },
+      {
+        icon: "🎁",
+        label: compactLegendLabel(fr.gameScreen.legendBonus),
+        color: TILE_HEX_COLORS.bonus,
+      },
+      {
+        icon: "🛒",
+        label: compactLegendLabel(fr.game.shopLegend),
+        color: TILE_HEX_COLORS.shop,
+      },
     ];
 
     const isCompactLegend = viewWidth < 920;
@@ -758,14 +788,21 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
       const row = new Container();
       row.y = index * 14;
 
+      const iconBadge = new Graphics();
+      iconBadge.lineStyle(1.4, item.color, 0.95, 0.5, true);
+      iconBadge.beginFill(0x0f172a, 0.42);
+      iconBadge.drawRoundedRect(0, 0, 15, 12, 4);
+      iconBadge.endFill();
+      row.addChild(iconBadge);
+
       const icon = new Text(item.icon, legendIconStyle);
       icon.anchor.set(0.5);
-      icon.x = 7;
+      icon.x = 7.5;
       icon.y = 6;
       row.addChild(icon);
 
       const label = new Text(item.label, legendLabelStyle);
-      label.x = 18;
+      label.x = 20;
       label.y = 2;
       row.addChild(label);
 
