@@ -32,7 +32,8 @@ function buildSeats(players: PlanningPokerPlayer[]): Seat[] {
 
 const SeatVoteCard: React.FC<{ player: PlanningPokerPlayer; revealed: boolean }> = ({ player, revealed }) => {
   const [flipped, setFlipped] = useState(false);
-  const valueLabel = player.vote === "☕" ? "Cafe" : player.vote ?? "-";
+  const valueLabel =
+    player.vote === "?" || player.vote === "☕" ? "?" : player.vote ?? "-";
 
   useEffect(() => {
     if (!player.hasVoted || !revealed) {

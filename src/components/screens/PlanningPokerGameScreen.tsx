@@ -54,7 +54,7 @@ const VOTE_SYSTEM_OPTIONS: Array<{ value: PlanningPokerState["voteSystem"]; labe
   { value: "man-day", label: "Jour.homme" },
   { value: "tshirt", label: "T-Shirt" },
 ];
-const displayVoteValue = (value: string) => (value === "☕" ? "Cafe" : value);
+const displayVoteValue = (value: string) => (value === "☕" ? "☕" : value);
 const DECK_SHORTCUT_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", "="];
 
 const isInteractiveElement = (target: EventTarget | null) => {
@@ -74,6 +74,23 @@ const buildNextStoryTitle = (currentTitle: string, round: number) => {
     }
   }
   return `Story #${Math.max(1, round + 1)}`;
+};
+
+const getDeckCardStyle = (
+  index: number,
+  total: number,
+  selected: boolean
+): React.CSSProperties => {
+  const ratio = total <= 1 ? 0 : index / (total - 1);
+  const hue = 198 - ratio * 190;
+  const border = `hsl(${hue} 92% 64%)`;
+  const glow = `hsla(${hue} 95% 60% / ${selected ? 0.52 : 0.26})`;
+  return {
+    borderColor: border,
+    boxShadow: selected
+      ? `0 0 0 2px hsla(${hue} 95% 70% / 0.5), 0 10px 24px ${glow}`
+      : `0 2px 8px rgba(2,6,23,0.35), 0 0 0 1px ${glow}`,
+  };
 };
 
 export const PlanningPokerGameScreen: React.FC<Props> = ({
@@ -302,22 +319,23 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                       <div
                         className="flex min-w-0 w-full snap-x snap-mandatory gap-2 overflow-x-auto overflow-y-visible scroll-smooth py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                       >
-                        {activeDeck.map((value) => {
+                        {activeDeck.map((value, index) => {
                           const selected = myVote === value;
+                          const cardStyle = getDeckCardStyle(index, activeDeck.length, selected);
                           return (
                             <button
                               key={`mini-${value}`}
                               type="button"
                               onClick={() => onVoteCard(value)}
                               disabled={state.revealed}
+                              style={cardStyle}
                               className={cn(
                                 "mt-2 h-[58px] w-[38px] shrink-0 snap-start rounded-xl border text-sm font-semibold transition-all duration-150",
                                 "bg-gradient-to-b from-slate-900/82 to-slate-950/82",
-                                "shadow-[0_2px_8px_rgba(2,6,23,0.35)]",
                                 "disabled:cursor-not-allowed disabled:opacity-50",
                                 selected
-                                  ? "mt-0 border-cyan-200 bg-cyan-500/24 text-cyan-50 ring-2 ring-cyan-300/60"
-                                  : "border-cyan-300/28 text-cyan-100"
+                                  ? "mt-0 bg-cyan-500/24 text-cyan-50"
+                                  : "text-cyan-100"
                               )}
                             >
                               {displayVoteValue(value)}
@@ -329,22 +347,23 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                   </div>
 
                   <div className="hidden sm:flex sm:flex-nowrap sm:justify-center sm:gap-2">
-                    {activeDeck.map((value) => {
+                    {activeDeck.map((value, index) => {
                       const selected = myVote === value;
+                      const cardStyle = getDeckCardStyle(index, activeDeck.length, selected);
                       return (
                         <button
                           key={value}
                           type="button"
                           onClick={() => onVoteCard(value)}
                           disabled={state.revealed}
+                          style={cardStyle}
                           className={cn(
                             "h-[94px] w-[62px] rounded-xl border text-xl font-semibold transition-all duration-150",
                             "bg-gradient-to-b from-slate-900/82 to-slate-950/82",
-                            "shadow-[0_2px_8px_rgba(2,6,23,0.35)]",
                             "disabled:cursor-not-allowed disabled:opacity-50",
                             selected
-                              ? "-translate-y-2 border-cyan-200 bg-cyan-500/24 text-cyan-50 ring-2 ring-cyan-300/60 shadow-[0_10px_24px_rgba(34,211,238,0.35)]"
-                              : "border-cyan-300/28 text-cyan-100 hover:-translate-y-0.5 hover:border-cyan-300/50 hover:bg-slate-900/92"
+                              ? "-translate-y-2 bg-cyan-500/24 text-cyan-50"
+                              : "text-cyan-100 hover:-translate-y-0.5 hover:bg-slate-900/92"
                           )}
                         >
                           {displayVoteValue(value)}
