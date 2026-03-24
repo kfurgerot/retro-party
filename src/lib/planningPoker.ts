@@ -1,7 +1,7 @@
 import { PlanningPokerPlayer, PlanningPokerVoteSystem } from "@/types/planningPoker";
 
 export const PLANNING_POKER_DECKS: Record<PlanningPokerVoteSystem, string[]> = {
-  fibonacci: ["0", "0.5", "1", "2", "3", "5", "8", "13", "21", "34", "55", "?", "?"],
+  fibonacci: ["0", "1", "2", "3", "5", "8", "13", "21", "?", "☕"],
   "man-day": ["0.5", "1", "2", "3", "5", "8", "13", "20", "40", "100", "?", "?"],
   tshirt: ["XS", "S", "M", "L", "XL", "XXL", "?", "?"],
 };

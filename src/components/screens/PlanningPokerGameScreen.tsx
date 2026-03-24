@@ -33,7 +33,7 @@ type Props = {
   onStoryTitleChange: (storyTitle: string) => void;
 };
 
-const SIMPLE_DECK = ["0", "1", "2", "3", "5", "8", "13", "21", "34", "55", "89", "?"];
+const SIMPLE_DECK = ["0", "1", "2", "3", "5", "8", "13", "21", "?", "☕"];
 
 export const PlanningPokerGameScreen: React.FC<Props> = ({
   state,
@@ -66,10 +66,10 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
   };
 
   return (
-    <div className="scanlines relative min-h-svh w-full overflow-hidden px-2 pb-24 pt-2 sm:px-4 sm:pb-24 sm:pt-4">
+    <div className="scanlines relative min-h-svh w-full overflow-x-hidden overflow-y-auto px-2 pb-24 pt-2 sm:overflow-hidden sm:px-4 sm:pb-24 sm:pt-4">
       <RetroScreenBackground />
 
-      <div className="relative z-10 mx-auto flex h-[calc(100svh-8rem)] w-full max-w-7xl flex-col gap-3 sm:gap-4">
+      <div className="relative z-10 mx-auto flex min-h-[calc(100svh-8rem)] w-full max-w-7xl flex-col gap-3 sm:h-[calc(100svh-8rem)] sm:gap-4">
         <header className={cn(GAME_HUD_SURFACE, "flex items-center justify-between px-3 py-2 sm:px-4 sm:py-3")}>
           <div className="min-w-0">
             <div className="truncate text-base font-semibold text-cyan-50">{roomName}</div>
@@ -78,13 +78,14 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 items-center gap-2">
             <Button
               variant="outline"
-              className="h-8 border-cyan-300/35 bg-slate-900/40 px-3 text-xs text-cyan-100 hover:bg-slate-900/70"
+              className="h-8 border-cyan-300/35 bg-slate-900/40 px-2 text-xs text-cyan-100 hover:bg-slate-900/70 sm:px-3"
               onClick={copyInvite}
             >
-              {copied ? "Copie" : "Inviter des joueurs"}
+              <span className="sm:hidden">{copied ? "Copie" : "Inviter"}</span>
+              <span className="hidden sm:inline">{copied ? "Copie" : "Inviter des joueurs"}</span>
             </Button>
             <div className="flex h-9 w-9 items-center justify-center rounded-full border border-cyan-300/35 bg-slate-900/75 text-lg">
               {myPlayer ? AVATARS[myPlayer.avatar] ?? ":)" : ":)"}
@@ -93,12 +94,12 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
         </header>
 
         <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_260px]">
-          <Card className={cn(GAME_PANEL_SURFACE, "grid min-h-0 grid-rows-[minmax(0,1fr)_auto_auto] gap-3 p-3 sm:p-4")}>
+          <Card className={cn(GAME_PANEL_SURFACE, "grid min-h-0 grid-rows-[minmax(220px,1fr)_auto_auto] gap-3 p-3 sm:grid-rows-[minmax(0,1fr)_auto_auto] sm:p-4")}>
             <PlanningPokerRoundBoard players={votingPlayers} revealed={state.revealed} />
 
             <div className="rounded-lg border border-cyan-300/22 bg-slate-950/38 p-2 sm:p-3">
               {myRole === "player" ? (
-                <div className="grid grid-cols-6 gap-2 sm:grid-cols-12">
+                <div className="grid grid-cols-5 gap-1.5 sm:grid-cols-10 sm:gap-2">
                   {SIMPLE_DECK.map((value) => {
                     const selected = myVote === value;
                     return (
@@ -108,11 +109,13 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                         onClick={() => onVoteCard(value)}
                         disabled={state.revealed}
                         className={cn(
-                          "h-10 rounded-md border text-sm font-semibold transition",
+                          "h-12 rounded-lg border text-sm font-semibold transition-all duration-150 sm:h-14 sm:text-base",
+                          "bg-gradient-to-b from-slate-900/82 to-slate-950/82",
+                          "shadow-[0_2px_8px_rgba(2,6,23,0.35)]",
                           "disabled:cursor-not-allowed disabled:opacity-50",
                           selected
-                            ? "border-cyan-300 bg-cyan-500/24 text-cyan-50"
-                            : "border-cyan-300/28 bg-slate-900/55 text-cyan-100 hover:bg-slate-900/75"
+                            ? "-translate-y-2 border-cyan-200 bg-cyan-500/24 text-cyan-50 ring-2 ring-cyan-300/60 shadow-[0_10px_24px_rgba(34,211,238,0.35)]"
+                            : "border-cyan-300/28 text-cyan-100 hover:-translate-y-0.5 hover:border-cyan-300/50 hover:bg-slate-900/92"
                         )}
                       >
                         {value}
@@ -126,7 +129,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
             </div>
 
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="w-full sm:w-auto flex flex-wrap items-center gap-2">
                 <SecondaryButton className={cn("h-9 text-xs", CTA_NEON_SECONDARY_SUBTLE)} onClick={() => onRoleChange(myRole === "player" ? "spectator" : "player")}> 
                   {myRole === "player" ? fr.planningPoker.switchSpectator : fr.planningPoker.switchPlayer}
                 </SecondaryButton>
@@ -152,11 +155,16 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                 ) : null}
               </div>
 
-              <div className="flex items-center gap-2">
-                <SecondaryButton className={cn("h-9 text-xs", CTA_NEON_DANGER)} onClick={onLeave}>{fr.onlineLobby.leaveParty}</SecondaryButton>
-                <SecondaryButton className={cn("h-9 text-xs", CTA_NEON_SECONDARY_SUBTLE)} disabled={!isHost} onClick={onResetVotes}>{fr.planningPoker.resetVotes}</SecondaryButton>
-                <PrimaryButton className={cn("h-9 text-xs", CTA_NEON_PRIMARY)} disabled={!isHost} onClick={onRevealVotes}>
-                  {state.revealed ? fr.planningPoker.revealDone : fr.planningPoker.revealVotes}
+              <div className="grid w-full grid-cols-3 gap-2 sm:w-auto sm:flex sm:items-center">
+                <SecondaryButton className={cn("h-9 w-full text-[11px] sm:w-auto sm:text-xs", CTA_NEON_DANGER)} onClick={onLeave}>
+                  {fr.onlineLobby.leaveParty}
+                </SecondaryButton>
+                <SecondaryButton className={cn("h-9 w-full text-[11px] sm:w-auto sm:text-xs", CTA_NEON_SECONDARY_SUBTLE)} disabled={!isHost} onClick={onResetVotes}>
+                  {fr.planningPoker.resetVotes}
+                </SecondaryButton>
+                <PrimaryButton className={cn("h-9 w-full text-[11px] sm:w-auto sm:text-xs", CTA_NEON_PRIMARY)} disabled={!isHost} onClick={onRevealVotes}>
+                  <span className="sm:hidden">{state.revealed ? "Revele" : "Reveal"}</span>
+                  <span className="hidden sm:inline">{state.revealed ? fr.planningPoker.revealDone : fr.planningPoker.revealVotes}</span>
                 </PrimaryButton>
               </div>
             </div>
