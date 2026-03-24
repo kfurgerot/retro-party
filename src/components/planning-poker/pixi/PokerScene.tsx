@@ -1,12 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+﻿import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Application, Container, Text, TextStyle } from "pixi.js";
 import { PlanningPokerPlayer, PlanningPokerRole, PlanningPokerVoteSystem } from "@/types/planningPoker";
-import { CameraContainer } from "./CameraContainer";
-import { CenterInfo } from "./CenterInfo";
-import { PlayerSeat } from "./PlayerSeat";
 import { PokerDeck } from "./PokerDeck";
+import { PokerTableScene } from "./PokerTableScene";
 import { POKER_WORLD, clamp } from "./sceneTheme";
-import { TableBackground } from "./TableBackground";
+import { TableCameraController } from "./TableCameraController";
 
 type PokerSceneProps = {
   players: PlanningPokerPlayer[];
@@ -46,15 +44,9 @@ export const PokerScene: React.FC<PokerSceneProps> = ({
 }) => {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const appRef = useRef<Application | null>(null);
-  const cameraRef = useRef<CameraContainer | null>(null);
+  const cameraRef = useRef<TableCameraController | null>(null);
+  const tableSceneRef = useRef<PokerTableScene | null>(null);
   const overlayRef = useRef<Container | null>(null);
-
-  const tableRef = useRef<TableBackground | null>(null);
-  const centerRef = useRef<CenterInfo | null>(null);
-  const seatsLayerRef = useRef<Container | null>(null);
-
-  const seatMapRef = useRef<Map<string, PlayerSeat>>(new Map());
-  const seatModeRef = useRef<"mobile" | "desktop" | null>(null);
 
   const deckRef = useRef<PokerDeck | null>(null);
   const deckContainerRef = useRef<Container | null>(null);
@@ -66,8 +58,6 @@ export const PokerScene: React.FC<PokerSceneProps> = ({
 
   const viewportRef = useRef({ width: 1, height: 1 });
   const deckModeRef = useRef<"mobile" | "desktop" | null>(null);
-  const cameraResetTimeoutRef = useRef<number | null>(null);
-
   const [viewportTick, setViewportTick] = useState(0);
 
   const sortedPlayers = useMemo(
@@ -94,22 +84,16 @@ export const PokerScene: React.FC<PokerSceneProps> = ({
     });
     appRef.current = app;
 
-    const camera = new CameraContainer();
+    const camera = new TableCameraController();
+    const tableScene = new PokerTableScene();
     const overlay = new Container();
-    const seatsLayer = new Container();
-    seatsLayer.sortableChildren = true;
 
-    const table = new TableBackground();
-    const centerInfo = new CenterInfo();
-
-    camera.world.addChild(table.view, seatsLayer, centerInfo.view);
+    camera.world.addChild(tableScene.view);
     app.stage.addChild(camera.view, overlay);
 
     cameraRef.current = camera;
+    tableSceneRef.current = tableScene;
     overlayRef.current = overlay;
-    seatsLayerRef.current = seatsLayer;
-    tableRef.current = table;
-    centerRef.current = centerInfo;
 
     const deckContainer = new Container();
     overlay.addChild(deckContainer);
@@ -131,64 +115,43 @@ export const PokerScene: React.FC<PokerSceneProps> = ({
 
     return () => {
       ro.disconnect();
-
-      if (cameraResetTimeoutRef.current) {
-        window.clearTimeout(cameraResetTimeoutRef.current);
-        cameraResetTimeoutRef.current = null;
-      }
-
-      seatMapRef.current.forEach((seat) => seat.destroy());
-      seatMapRef.current.clear();
-
-      table.destroy();
-      centerInfo.destroy();
-
       deckRef.current?.destroy();
       deckRef.current = null;
-      deckModeRef.current = null;
-
       if (deckTitleRef.current) {
         deckTitleRef.current.destroy();
         deckTitleRef.current = null;
       }
-
+      tableScene.destroy();
       camera.destroy();
-
       app.destroy(true, true);
+
       appRef.current = null;
       cameraRef.current = null;
+      tableSceneRef.current = null;
       overlayRef.current = null;
-      seatsLayerRef.current = null;
-      tableRef.current = null;
-      centerRef.current = null;
       deckContainerRef.current = null;
     };
   }, []);
 
   useEffect(() => {
-    const app = appRef.current;
     const camera = cameraRef.current;
+    const tableScene = tableSceneRef.current;
     const overlay = overlayRef.current;
-    const seatsLayer = seatsLayerRef.current;
-    const table = tableRef.current;
-    const center = centerRef.current;
     const deckContainer = deckContainerRef.current;
-    if (!app || !camera || !overlay || !seatsLayer || !table || !center || !deckContainer) return;
+    if (!camera || !tableScene || !overlay || !deckContainer) return;
 
     const width = viewportRef.current.width;
     const height = viewportRef.current.height;
     const isMobile = width < 760;
-    const seats = sortedPlayers.slice(0, 10);
 
-    const seatMode = isMobile ? "mobile" : "desktop";
-    if (seatModeRef.current !== seatMode) {
-      seatMapRef.current.forEach((seat) => seat.destroy());
-      seatMapRef.current.clear();
-      seatModeRef.current = seatMode;
-    }
+    const votingPlayers = sortedPlayers.filter((player) => player.role === "player").slice(0, 8);
+    const localPlayer = myPlayerId ? votingPlayers.find((player) => player.socketId === myPlayerId) ?? null : null;
+    const aroundPlayers = localPlayer
+      ? votingPlayers.filter((player) => player.socketId !== localPlayer.socketId)
+      : votingPlayers;
 
     const deckVisibleForMe = myRole === "player";
-    const deckSpace = deckVisibleForMe ? (isMobile ? 214 : 194) : isMobile ? 18 : 12;
+    const deckSpace = deckVisibleForMe ? (isMobile ? 186 : 196) : isMobile ? 22 : 14;
 
     camera.setBase({
       viewportWidth: width,
@@ -201,28 +164,24 @@ export const PokerScene: React.FC<PokerSceneProps> = ({
       maxScale: 1.32,
     });
 
-    // Desktop rules requested: center and radii directly derived from viewport/world dimensions.
-    const centerX = POKER_WORLD.width / 2;
-    const centerY = POKER_WORLD.height / 2;
-    const radiusX = POKER_WORLD.width * 0.35;
-    const radiusY = POKER_WORLD.height * 0.22;
+    tableScene.setLayoutMode(isMobile);
 
-    table.render({
-      viewportWidth: POKER_WORLD.width,
-      viewportHeight: POKER_WORLD.height,
+    const centerX = POKER_WORLD.width / 2;
+    const centerY = isMobile ? POKER_WORLD.height * 0.44 : POKER_WORLD.height * 0.47;
+    const radiusX = isMobile ? POKER_WORLD.width * 0.36 : POKER_WORLD.width * 0.39;
+    const radiusY = isMobile ? POKER_WORLD.height * 0.2 : POKER_WORLD.height * 0.27;
+
+    tableScene.renderTable({
+      worldWidth: POKER_WORLD.width,
+      worldHeight: POKER_WORLD.height,
       centerX,
       centerY,
       radiusX,
       radiusY,
     });
 
-    const activeSeatIds = new Set(seats.map((player) => player.socketId));
-    for (const [socketId, seat] of seatMapRef.current) {
-      if (activeSeatIds.has(socketId)) continue;
-      seatsLayer.removeChild(seat.view);
-      seat.destroy();
-      seatMapRef.current.delete(socketId);
-    }
+    const activeIds = new Set(votingPlayers.map((player) => player.socketId));
+    tableScene.cleanupSeats(activeIds);
 
     const playerCount = players.filter((player) => player.role === "player").length;
     const votedCount = players.filter((player) => player.role === "player" && player.hasVoted).length;
@@ -231,26 +190,41 @@ export const PokerScene: React.FC<PokerSceneProps> = ({
 
     const seatAnchors = new Map<string, { x: number; y: number }>();
 
-    if (!isMobile) {
-      const angleStep = (Math.PI * 2) / Math.max(1, seats.length);
+    if (aroundPlayers.length > 0) {
+      const start = isMobile ? -Math.PI * 0.94 : -Math.PI * 0.9;
+      const end = isMobile ? -Math.PI * 0.06 : -Math.PI * 0.1;
+      const span = end - start;
 
-      seats.forEach((player, index) => {
-        let seat = seatMapRef.current.get(player.socketId);
-        if (!seat) {
-          seat = new PlayerSeat({ cardWidth: 76, cardHeight: 102 });
-          seatMapRef.current.set(player.socketId, seat);
-          seatsLayer.addChild(seat.view);
-        }
+      aroundPlayers.forEach((player, index) => {
+        const seat = tableScene.ensureSeat(player, isMobile, false);
+        const angle = aroundPlayers.length <= 1 ? -Math.PI / 2 : start + (span * index) / (aroundPlayers.length - 1);
 
-        const angle = -Math.PI / 2 + angleStep * index;
         const seatX = centerX + Math.cos(angle) * radiusX;
         const seatY = centerY + Math.sin(angle) * radiusY;
+        const depth = (seatY - centerY) / Math.max(1, radiusY);
+        const seatScale = isMobile ? 0.9 + depth * 0.07 : 0.92 + depth * 0.11;
+        const yOffset = depth * (isMobile ? 8 : 12);
+        const cardRotation = clamp(Math.cos(angle) * 0.16, -0.16, 0.16);
 
-        const seatScale = 0.85 + Math.sin(angle) * 0.15;
-        const yOffset = Math.sin(angle) * 20;
-        const cardRotation = clamp(Math.sin(angle) * 0.28, -0.28, 0.28);
+        if (isMobile) {
+          seat.setMobileLayout({
+            seatX,
+            seatY,
+            yOffset,
+            seatScale,
+            cardRotation,
+            isLocal: false,
+          });
+        } else {
+          seat.setIsometricLayout({
+            seatX,
+            seatY,
+            yOffset,
+            seatScale,
+            cardRotation,
+          });
+        }
 
-        seat.setIsometricLayout({ seatX, seatY, yOffset, seatScale, cardRotation });
         seat.renderPlayer(player, { isMe: player.socketId === myPlayerId, revealed });
 
         const valueToShow = revealed ? player.vote ?? "-" : player.hasVoted ? "" : "...";
@@ -269,105 +243,74 @@ export const PokerScene: React.FC<PokerSceneProps> = ({
 
         seatAnchors.set(player.socketId, { x: seatX, y: seatY });
       });
-    } else {
-      const localIndex = seats.findIndex((player) => player.socketId === myPlayerId);
-      const localPlayer = localIndex >= 0 ? seats[localIndex] : null;
-      const others = seats.filter((player) => player.socketId !== myPlayerId);
+    }
 
-      const mobileCenterY = centerY - 56;
-      const mobileRadiusX = POKER_WORLD.width * 0.36;
-      const mobileRadiusY = POKER_WORLD.height * 0.2;
+    if (localPlayer) {
+      const seat = tableScene.ensureSeat(localPlayer, isMobile, true);
+      const localX = centerX;
+      const localY = isMobile ? POKER_WORLD.height * 0.82 : POKER_WORLD.height * 0.83;
 
-      others.forEach((player, index) => {
-        let seat = seatMapRef.current.get(player.socketId);
-        if (!seat) {
-          seat = new PlayerSeat({ cardWidth: 60, cardHeight: 84 });
-          seatMapRef.current.set(player.socketId, seat);
-          seatsLayer.addChild(seat.view);
-        }
-
-        const spread = Math.PI * 1.1;
-        const start = -Math.PI - spread / 2;
-        const angle = start + (spread * index) / Math.max(1, others.length - 1);
-
-        const seatX = centerX + Math.cos(angle) * mobileRadiusX;
-        const seatY = mobileCenterY + Math.sin(angle) * mobileRadiusY;
-        const seatScale = 0.82 + Math.sin(angle) * 0.08;
-        const yOffset = Math.sin(angle) * 12;
-
+      if (isMobile) {
         seat.setMobileLayout({
-          seatX,
-          seatY,
-          yOffset,
-          seatScale,
-          cardRotation: clamp(Math.sin(angle) * 0.2, -0.2, 0.2),
-          isLocal: false,
-        });
-        seat.renderPlayer(player, { isMe: false, revealed });
-
-        const valueToShow = revealed ? player.vote ?? "-" : player.hasVoted ? "" : "...";
-        const hidden = !revealed && player.hasVoted;
-        const previous = prevPlayersRef.current.get(player.socketId);
-
-        if (shouldAnimateReveal) {
-          seat.setCardState({ value: valueToShow, selected: false, hidden: false, animateFlip: true, flipDelay: index * 80 });
-        } else if (!revealed && previous && !previous.hasVoted && player.hasVoted) {
-          seat.pulseVoteFeedback();
-          seat.setCardState({ value: valueToShow, selected: false, hidden: true, animateFlip: true });
-        } else {
-          seat.setCardState({ value: valueToShow, selected: false, hidden });
-        }
-
-        seatAnchors.set(player.socketId, { x: seatX, y: seatY });
-      });
-
-      if (localPlayer) {
-        let seat = seatMapRef.current.get(localPlayer.socketId);
-        if (!seat) {
-          seat = new PlayerSeat({ cardWidth: 68, cardHeight: 94 });
-          seatMapRef.current.set(localPlayer.socketId, seat);
-          seatsLayer.addChild(seat.view);
-        }
-
-        const seatX = centerX;
-        const seatY = POKER_WORLD.height * 0.82;
-        seat.setMobileLayout({
-          seatX,
-          seatY,
+          seatX: localX,
+          seatY: localY,
           yOffset: 10,
           seatScale: 1.03,
           cardRotation: 0,
           isLocal: true,
         });
-        seat.renderPlayer(localPlayer, { isMe: true, revealed });
-
-        const valueToShow = revealed ? localPlayer.vote ?? "-" : localPlayer.hasVoted ? "" : "...";
-        const hidden = !revealed && localPlayer.hasVoted;
-        const previous = prevPlayersRef.current.get(localPlayer.socketId);
-
-        if (shouldAnimateReveal) {
-          seat.setCardState({ value: valueToShow, selected: !!localPlayer.hasVoted && !revealed, hidden: false, animateFlip: true, flipDelay: others.length * 80 });
-        } else if (!revealed && previous && !previous.hasVoted && localPlayer.hasVoted) {
-          seat.pulseVoteFeedback();
-          seat.setCardState({ value: valueToShow, selected: true, hidden: true, animateFlip: true });
-        } else {
-          seat.setCardState({ value: valueToShow, selected: !!localPlayer.hasVoted && !revealed, hidden });
-        }
-
-        seatAnchors.set(localPlayer.socketId, { x: seatX, y: seatY });
+      } else {
+        seat.setIsometricLayout({
+          seatX: localX,
+          seatY: localY,
+          yOffset: 8,
+          seatScale: 1.06,
+          cardRotation: 0,
+        });
       }
+      seat.renderPlayer(localPlayer, { isMe: true, revealed });
+
+      const valueToShow = revealed ? localPlayer.vote ?? "-" : localPlayer.hasVoted ? "" : "...";
+      const hidden = !revealed && localPlayer.hasVoted;
+      const previous = prevPlayersRef.current.get(localPlayer.socketId);
+
+      if (shouldAnimateReveal) {
+        seat.setCardState({
+          value: valueToShow,
+          selected: !!localPlayer.hasVoted && !revealed,
+          hidden: false,
+          animateFlip: true,
+          flipDelay: aroundPlayers.length * 80,
+        });
+      } else if (!revealed && previous && !previous.hasVoted && localPlayer.hasVoted) {
+        seat.pulseVoteFeedback();
+        seat.setCardState({ value: valueToShow, selected: true, hidden: true, animateFlip: true });
+      } else {
+        seat.setCardState({ value: valueToShow, selected: !!localPlayer.hasVoted && !revealed, hidden });
+      }
+
+      seatAnchors.set(localPlayer.socketId, { x: localX, y: localY });
     }
 
-    center.render({
+    tableScene.renderCenter({
       centerX,
-      centerY: isMobile ? centerY - 44 : centerY,
-      width: isMobile ? 292 : 340,
-      height: isMobile ? 116 : 128,
-      storyTitle: storyTitle || `Story #${round}`,
+      centerY,
+      isMobile,
+      storyTitle,
+      round,
       voteSystem,
       status,
       voted: votedCount,
       total: playerCount,
+    });
+
+    tableScene.localArea.render({
+      worldWidth: POKER_WORLD.width,
+      worldHeight: POKER_WORLD.height,
+      isMobile,
+      player: localPlayer,
+      myVote,
+      revealed,
     });
 
     const nextDeckMode = isMobile ? "mobile" : "desktop";
@@ -375,8 +318,8 @@ export const PokerScene: React.FC<PokerSceneProps> = ({
       deckRef.current?.destroy();
       deckRef.current = new PokerDeck({
         values: cardValues,
-        cardWidth: isMobile ? 38 : 58,
-        cardHeight: isMobile ? 54 : 82,
+        cardWidth: isMobile ? 34 : 58,
+        cardHeight: isMobile ? 48 : 82,
         onSelect: onVoteCard,
       });
       deckModeRef.current = nextDeckMode;
@@ -409,48 +352,36 @@ export const PokerScene: React.FC<PokerSceneProps> = ({
     deck.view.visible = deckVisibleForMe;
 
     if (deckVisibleForMe) {
+      const mobileColumns = Math.max(1, Math.ceil(cardValues.length / 2));
       deck.resize({
         width: Math.max(220, width - (isMobile ? 12 : 36)),
-        columnsOverride: isMobile ? Math.min(5, cardValues.length) : cardValues.length,
-        gapOverride: isMobile ? 6 : 10,
+        columnsOverride: isMobile ? mobileColumns : cardValues.length,
+        gapOverride: isMobile ? 5 : 10,
         forceSingleRow: !isMobile,
       });
 
       if (deckTitleRef.current) {
         deckTitleRef.current.text = revealed ? "Votes reveles" : "Choisis ta carte";
-        deckTitleRef.current.position.set(width / 2, height - (isMobile ? 118 : 152));
+        deckTitleRef.current.position.set(width / 2, height - (isMobile ? 108 : 152));
         deckTitleRef.current.visible = true;
       }
-      deck.view.position.set(width / 2, height - (isMobile ? 52 : 88));
+      deck.view.position.set(width / 2, height - (isMobile ? 44 : 88));
     } else if (deckTitleRef.current) {
       deckTitleRef.current.visible = false;
     }
 
     const myAnchor = myPlayerId ? seatAnchors.get(myPlayerId) : null;
 
-    if (cameraResetTimeoutRef.current) {
-      window.clearTimeout(cameraResetTimeoutRef.current);
-      cameraResetTimeoutRef.current = null;
-    }
-
     if (shouldAnimateReveal) {
-      camera.focus(centerX, centerY, isMobile ? 1.2 : 1.12, 320);
-      cameraResetTimeoutRef.current = window.setTimeout(() => {
-        camera.reset(560);
-        cameraResetTimeoutRef.current = null;
-      }, 420);
+      camera.focusReveal(centerX, centerY, isMobile);
     } else if (!revealed && myVote && prevMyVoteRef.current !== myVote && myAnchor) {
-      camera.focus(myAnchor.x, myAnchor.y, isMobile ? 1.22 : 1.1, 260);
-      cameraResetTimeoutRef.current = window.setTimeout(() => {
-        camera.reset(420);
-        cameraResetTimeoutRef.current = null;
-      }, 300);
+      camera.focusPlayerVote(myAnchor.x, myAnchor.y, isMobile);
     } else {
       camera.reset(220);
     }
 
     prevPlayersRef.current = new Map(
-      seats.map((player) => [
+      votingPlayers.map((player) => [
         player.socketId,
         {
           hasVoted: player.hasVoted,
@@ -477,3 +408,4 @@ export const PokerScene: React.FC<PokerSceneProps> = ({
 
   return <div ref={hostRef} className="h-full w-full" />;
 };
+

@@ -1,4 +1,4 @@
-import { Container, Graphics, Sprite, Text, TextStyle, Texture } from "pixi.js";
+﻿import { Container, Graphics, Sprite, Text, TextStyle, Texture } from "pixi.js";
 import { PlanningPokerPlayer } from "@/types/planningPoker";
 import { AVATARS } from "@/types/game";
 import { PokerCard } from "./PokerCard";
@@ -57,7 +57,7 @@ export class PlayerSeat {
     this.namePlate.width = 112;
     this.namePlate.height = 18;
 
-    this.avatarText = new Text("??", new TextStyle({
+    this.avatarText = new Text(":)", new TextStyle({
       fontFamily: "Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif",
       fontSize: 20,
     }));
@@ -152,7 +152,7 @@ export class PlayerSeat {
   }
 
   renderPlayer(player: PlanningPokerPlayer, opts: { isMe: boolean; revealed: boolean }) {
-    this.avatarText.text = AVATARS[player.avatar] ?? "??";
+    this.avatarText.text = AVATARS[player.avatar] ?? ":)";
 
     this.avatarShadow.clear();
     this.avatarShadow.beginFill(0x020617, 0.34);
@@ -172,7 +172,7 @@ export class PlayerSeat {
     if (player.role === "spectator") badges.push("SPEC");
     if (!player.connected) badges.push("OFF");
     if (!opts.revealed && player.hasVoted) badges.push("A VOTE");
-    this.badgeText.text = badges.join(" � ");
+    this.badgeText.text = badges.join(" · ");
     this.badgeText.visible = badges.length > 0;
   }
 
@@ -228,3 +228,5 @@ export class PlayerSeat {
     }, duration + 32);
   }
 }
+
+

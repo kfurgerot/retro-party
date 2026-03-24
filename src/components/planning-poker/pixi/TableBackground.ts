@@ -10,7 +10,11 @@ export class TableBackground {
 
   private readonly tableRim = new Graphics();
 
+  private readonly tableGlow = new Graphics();
+
   private readonly felt = new Graphics();
+
+  private readonly centerGlow = new Graphics();
 
   private readonly feltPattern = new Graphics();
 
@@ -31,7 +35,9 @@ export class TableBackground {
       this.frame,
       this.tableShadow,
       this.tableRim,
+      this.tableGlow,
       this.felt,
+      this.centerGlow,
       this.topVignette,
       this.bottomVignette,
       this.feltPattern
@@ -73,6 +79,12 @@ export class TableBackground {
     this.tableRim.drawEllipse(centerX, centerY, radiusX + 18, radiusY + 14);
     this.tableRim.endFill();
 
+    this.tableGlow.clear();
+    this.tableGlow.lineStyle(10, 0x67e8f9, 0.09);
+    this.tableGlow.drawEllipse(centerX, centerY, radiusX + 14, radiusY + 10);
+    this.tableGlow.lineStyle(4, 0xa5f3fc, 0.12);
+    this.tableGlow.drawEllipse(centerX, centerY, radiusX + 4, radiusY + 2);
+
     this.felt.clear();
     this.felt.beginFill(POKER_THEME.table.felt, 0.95);
     this.felt.drawEllipse(centerX, centerY, radiusX, radiusY);
@@ -80,6 +92,11 @@ export class TableBackground {
 
     this.felt.lineStyle(2, POKER_THEME.table.line, 0.24);
     this.felt.drawEllipse(centerX, centerY, radiusX * 0.78, radiusY * 0.78);
+
+    this.centerGlow.clear();
+    this.centerGlow.beginFill(0x99f6e4, 0.05);
+    this.centerGlow.drawEllipse(centerX, centerY, radiusX * 0.42, radiusY * 0.32);
+    this.centerGlow.endFill();
 
     this.topVignette.position.set(centerX, centerY - radiusY * 0.28);
     this.topVignette.width = radiusX * 1.6;
