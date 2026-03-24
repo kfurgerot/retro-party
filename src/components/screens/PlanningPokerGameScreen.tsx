@@ -16,7 +16,11 @@ import {
   GAME_HUD_SURFACE,
   GAME_MOBILE_ACTION_BUTTON,
   GAME_PANEL_SURFACE,
+  GAME_SUBPANEL_SURFACE,
+  GAME_TAB_BUTTON,
+  GAME_TAB_BUTTON_ACTIVE,
 } from "@/lib/uiTokens";
+import { computePlanningPokerStats, formatPlanningValue } from "@/lib/planningPoker";
 
 type Props = {
   state: PlanningPokerState;
@@ -50,26 +54,26 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
   onStoryTitleChange,
 }) => {
   const [mobileActionsOpen, setMobileActionsOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [sidebarTab, setSidebarTab] = useState<"spectators" | "session">("spectators");
 
   const roomName = state.roomCode ? `Room ${state.roomCode}` : "Death Star Team";
   const votingPlayers = useMemo(() => state.players.filter((player) => player.role === "player"), [state.players]);
   const spectators = useMemo(() => state.players.filter((player) => player.role === "spectator"), [state.players]);
   const myPlayer = useMemo(() => state.players.find((player) => player.socketId === myPlayerId) ?? null, [state.players, myPlayerId]);
   const votedCount = votingPlayers.filter((player) => player.hasVoted).length;
-
-  const copyInvite = async () => {
-    if (!state.roomCode) return;
-    await navigator.clipboard.writeText(state.roomCode);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1000);
-  };
+  const stats = useMemo(() => computePlanningPokerStats(state.players, state.voteSystem), [state.players, state.voteSystem]);
+  const averageLabel = state.revealed ? formatPlanningValue(stats.average) : "-";
+  const medianLabel = state.revealed ? formatPlanningValue(stats.median) : "-";
+  const desktopLeaveBtn = cn(
+    GAME_TAB_BUTTON,
+    "h-8 border-rose-300/45 bg-rose-500/14 px-3 text-xs text-rose-100 hover:bg-rose-500/22 hover:text-rose-50"
+  );
 
   return (
-    <div className="scanlines relative h-svh w-full overflow-hidden px-2 pb-2 pt-2 sm:px-4 sm:pb-10 sm:pt-3">
+    <div className="scanlines relative h-svh w-full overflow-hidden px-2 pb-2 pt-2 sm:px-4 sm:pb-3 sm:pt-3">
       <RetroScreenBackground />
 
-      <div className="relative z-10 mx-auto flex h-full w-full flex-col gap-2 sm:h-[calc(100svh-5.5rem)] sm:gap-4">
+      <div className="relative z-10 mx-auto flex h-full w-full flex-col gap-2 sm:gap-3">
         <header className={cn(GAME_HUD_SURFACE, "flex items-center justify-between px-3 py-2 sm:px-4 sm:py-3")}>
           <div className="min-w-0">
             <div className="truncate text-base font-semibold text-cyan-50">{roomName}</div>
@@ -78,15 +82,27 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
             </div>
           </div>
 
+          <div className="mx-2 grid grid-cols-2 gap-2">
+            <div className="rounded-xl border border-cyan-300/45 bg-cyan-500/14 px-2.5 py-1.5 sm:px-4 sm:py-2.5">
+              <div className="text-[10px] uppercase tracking-[0.12em] text-cyan-100/85 sm:text-[11px]">Moyenne</div>
+              <div className="text-lg font-black leading-none text-cyan-50 sm:text-2xl">{averageLabel}</div>
+            </div>
+            <div className="rounded-xl border border-amber-300/45 bg-amber-500/14 px-2.5 py-1.5 sm:px-4 sm:py-2.5">
+              <div className="text-[10px] uppercase tracking-[0.12em] text-amber-100/90 sm:text-[11px]">Mediane</div>
+              <div className="text-lg font-black leading-none text-amber-100 sm:text-2xl">{medianLabel}</div>
+            </div>
+          </div>
+
           <div className="flex min-w-0 items-center gap-2">
-            <Button
-              variant="outline"
-              className="h-8 border-cyan-300/35 bg-slate-900/40 px-2 text-xs text-cyan-100 hover:bg-slate-900/70 sm:px-3"
-              onClick={copyInvite}
-            >
-              <span className="sm:hidden">{copied ? "Copie" : "Inviter"}</span>
-              <span className="hidden sm:inline">{copied ? "Copie" : "Inviter des joueurs"}</span>
-            </Button>
+            {state.roomCode ? (
+              <div className="hidden items-center gap-1 rounded-full border border-cyan-300/40 bg-cyan-500/12 px-2 py-0.5 text-[10px] font-semibold tracking-[0.06em] text-cyan-50 sm:inline-flex">
+                <span className="uppercase text-cyan-100/85">Code</span>
+                <span>{state.roomCode}</span>
+              </div>
+            ) : null}
+            <SecondaryButton className={cn("hidden sm:inline-flex", desktopLeaveBtn)} onClick={onLeave}>
+              {fr.onlineLobby.leaveParty}
+            </SecondaryButton>
             <div className="flex h-9 w-9 items-center justify-center rounded-full border border-cyan-300/35 bg-slate-900/75 text-lg">
               {myPlayer ? AVATARS[myPlayer.avatar] ?? ":)" : ":)"}
             </div>
@@ -94,7 +110,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
         </header>
 
         <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(280px,22vw)]">
-          <Card className={cn(GAME_PANEL_SURFACE, "grid min-h-0 grid-rows-[minmax(150px,1fr)_auto] gap-2 p-2.5 sm:grid-rows-[minmax(280px,1fr)_auto_auto] sm:gap-3 sm:p-4 lg:gap-4 lg:p-5")}>
+          <Card className={cn(GAME_PANEL_SURFACE, "grid min-h-0 grid-rows-[minmax(150px,1fr)_auto] gap-2 p-2.5 sm:grid-rows-[minmax(340px,1fr)_auto_auto] sm:gap-3 sm:p-4 lg:gap-4 lg:p-5")}>
             <PlanningPokerRoundBoard players={votingPlayers} revealed={state.revealed} />
 
             <div className="rounded-lg border border-cyan-300/22 bg-slate-950/38 p-2 sm:p-3">
@@ -156,9 +172,6 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
               </div>
 
               <div className="grid w-full grid-cols-3 gap-2 sm:w-auto sm:flex sm:items-center">
-                <SecondaryButton className={cn("h-9 w-full text-[11px] sm:w-auto sm:text-xs", CTA_NEON_DANGER)} onClick={onLeave}>
-                  {fr.onlineLobby.leaveParty}
-                </SecondaryButton>
                 <SecondaryButton className={cn("h-9 w-full text-[11px] sm:w-auto sm:text-xs", CTA_NEON_SECONDARY_SUBTLE)} disabled={!isHost} onClick={onResetVotes}>
                   {fr.planningPoker.resetVotes}
                 </SecondaryButton>
@@ -170,20 +183,74 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
             </div>
           </Card>
 
-          <Card className={cn(GAME_PANEL_SURFACE, "hidden p-3 lg:block")}>
-            <div className="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-cyan-100">Spectateurs</div>
-            <div className="grid gap-2">
-              {spectators.length > 0 ? (
-                spectators.map((player) => (
-                  <div key={player.socketId} className="flex items-center gap-2 rounded-md border border-cyan-300/20 bg-slate-950/42 px-2 py-1.5">
-                    <span className="text-base">{AVATARS[player.avatar] ?? ":)"}</span>
-                    <span className="truncate text-xs text-cyan-50">{player.name}</span>
-                  </div>
-                ))
-              ) : (
-                <div className="text-xs text-slate-300">Aucun spectateur.</div>
-              )}
+          <Card className={cn(GAME_PANEL_SURFACE, "hidden min-h-0 p-3 lg:flex lg:flex-col")}>
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <div className="text-xs font-semibold uppercase tracking-[0.08em] text-cyan-100">Panneau</div>
+              <div className="flex gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className={cn(GAME_TAB_BUTTON, sidebarTab === "spectators" ? GAME_TAB_BUTTON_ACTIVE : "opacity-95")}
+                  onClick={() => setSidebarTab("spectators")}
+                >
+                  Spectateurs
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className={cn(GAME_TAB_BUTTON, sidebarTab === "session" ? GAME_TAB_BUTTON_ACTIVE : "opacity-95")}
+                  onClick={() => setSidebarTab("session")}
+                >
+                  Session
+                </Button>
+              </div>
             </div>
+
+            {sidebarTab === "spectators" ? (
+              <div className="grid min-h-0 gap-2 overflow-auto pr-1">
+                {spectators.length > 0 ? (
+                  spectators.map((player) => (
+                    <div key={player.socketId} className="flex items-center gap-2 rounded-md border border-cyan-300/20 bg-slate-950/42 px-2 py-1.5">
+                      <span className="text-base">{AVATARS[player.avatar] ?? ":)"}</span>
+                      <span className="truncate text-xs text-cyan-50">{player.name}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-xs text-slate-300">Aucun spectateur.</div>
+                )}
+              </div>
+            ) : (
+              <div className="grid gap-2 text-xs">
+                <div className={cn("p-2", GAME_SUBPANEL_SURFACE)}>
+                  <div className="text-slate-300">Story</div>
+                  <div className="truncate text-cyan-50">{state.storyTitle || "-"}</div>
+                </div>
+                <div className={cn("p-2", GAME_SUBPANEL_SURFACE)}>
+                  <div className="text-slate-300">Statut</div>
+                  <div className="text-cyan-50">{state.revealed ? "Revele" : "Vote en cours"}</div>
+                </div>
+                <div className={cn("grid grid-cols-2 gap-2 p-2", GAME_SUBPANEL_SURFACE)}>
+                  <div>
+                    <div className="text-slate-300">Moyenne</div>
+                    <div className="font-semibold text-cyan-50">{averageLabel}</div>
+                  </div>
+                  <div>
+                    <div className="text-slate-300">Mediane</div>
+                    <div className="font-semibold text-cyan-50">{medianLabel}</div>
+                  </div>
+                </div>
+                <div className={cn("grid grid-cols-2 gap-2 p-2", GAME_SUBPANEL_SURFACE)}>
+                  <div>
+                    <div className="text-slate-300">Min</div>
+                    <div className="font-semibold text-cyan-50">{formatPlanningValue(stats.min)}</div>
+                  </div>
+                  <div>
+                    <div className="text-slate-300">Max</div>
+                    <div className="font-semibold text-cyan-50">{formatPlanningValue(stats.max)}</div>
+                  </div>
+                </div>
+              </div>
+            )}
           </Card>
         </div>
 
