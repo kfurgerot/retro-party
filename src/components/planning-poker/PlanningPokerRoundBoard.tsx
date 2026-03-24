@@ -141,12 +141,12 @@ export const PlanningPokerRoundBoard: React.FC<Props> = ({
             style={{ left: `${x}%`, top: `${y}%` }}
           >
             <div className="flex flex-col items-center gap-1">
+              <SeatVoteCard player={player} revealed={revealed} voteSystem={voteSystem} />
               <div className="flex h-8 w-8 items-center justify-center rounded-full border border-cyan-300/35 bg-slate-900/85 text-base shadow-[0_0_0_1px_rgba(34,211,238,0.12)] sm:h-10 sm:w-10 sm:text-lg">
                 {AVATARS[player.avatar] ?? ":)"}
               </div>
               <div className="max-w-[78px] truncate text-center text-[10px] text-cyan-50 sm:max-w-[90px] sm:text-[11px]">{player.name}</div>
               {player.isHost ? <div className="text-[10px] text-cyan-200">Host</div> : null}
-              <SeatVoteCard player={player} revealed={revealed} voteSystem={voteSystem} />
             </div>
           </div>
         ))}
