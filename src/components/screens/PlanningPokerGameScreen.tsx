@@ -234,7 +234,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
               ) : (
                 <span />
               )}
-              <div className="rounded-md border border-amber-300/30 bg-amber-500/10 px-2 py-1 text-[10px] text-amber-100">
+              <div className="rounded-xl border border-amber-300/30 bg-amber-500/10 px-2 py-1 text-[10px] text-amber-100">
                 {consensusLabel}
               </div>
             </div>
@@ -242,10 +242,10 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
               <div className="mb-1 flex items-center justify-between gap-2 text-[10px] uppercase tracking-[0.1em]">
                 <span className="text-cyan-100/85">Votes {voteProgressLabel}</span>
                 <div className="inline-flex items-center gap-1">
-                  <div className="rounded-md border border-cyan-300/45 bg-cyan-500/14 px-1.5 py-0.5 text-[10px] text-cyan-100">
+                  <div className="rounded-xl border border-cyan-300/45 bg-cyan-500/14 px-1.5 py-0.5 text-[10px] text-cyan-100">
                     Moy {averageLabel}
                   </div>
-                  <div className="rounded-md border border-amber-300/45 bg-amber-500/14 px-1.5 py-0.5 text-[10px] text-amber-100">
+                  <div className="rounded-xl border border-amber-300/45 bg-amber-500/14 px-1.5 py-0.5 text-[10px] text-amber-100">
                     Med {medianLabel}
                   </div>
                   <button
@@ -254,7 +254,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                       setMobileMenuTab("actions");
                       setMobileActionsOpen(true);
                     }}
-                    className="h-5 rounded-md border border-cyan-300/28 bg-slate-900/60 px-1.5 text-[10px] text-cyan-100"
+                    className="h-5 rounded-xl border border-cyan-300/28 bg-slate-900/60 px-1.5 text-[10px] text-cyan-100"
                   >
                     Menu
                   </button>

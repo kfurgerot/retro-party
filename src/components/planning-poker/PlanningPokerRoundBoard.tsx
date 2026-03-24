@@ -87,7 +87,7 @@ const SeatVoteCard: React.FC<{
 
   if (!player.hasVoted) {
     return (
-      <div className="flex h-[44px] w-[30px] items-center justify-center rounded-md border border-slate-300/70 bg-white text-[11px] font-semibold text-slate-400 shadow-[0_6px_14px_rgba(2,6,23,0.35)] sm:h-[56px] sm:w-[38px] sm:text-xs">
+      <div className="flex h-[44px] w-[30px] items-center justify-center rounded-xl border border-slate-300/70 bg-white text-[11px] font-semibold text-slate-400 shadow-[0_6px_14px_rgba(2,6,23,0.35)] sm:h-[56px] sm:w-[38px] sm:text-xs">
         -
       </div>
     );
@@ -100,10 +100,10 @@ const SeatVoteCard: React.FC<{
           flipped ? "[transform:rotateY(180deg)]" : ""
         }`}
       >
-        <div className="absolute inset-0 rounded-md border border-slate-300/70 bg-white shadow-[0_6px_14px_rgba(2,6,23,0.35)] [backface-visibility:hidden]" />
+        <div className="absolute inset-0 rounded-xl border border-slate-300/70 bg-white shadow-[0_6px_14px_rgba(2,6,23,0.35)] [backface-visibility:hidden]" />
         <div
           style={revealedCardStyle}
-          className="absolute inset-0 flex items-center justify-center rounded-md border border-slate-300/70 bg-white text-[11px] font-bold text-slate-900 shadow-[0_6px_14px_rgba(2,6,23,0.35)] [backface-visibility:hidden] [transform:rotateY(180deg)] sm:text-xs"
+          className="absolute inset-0 flex items-center justify-center rounded-xl border border-slate-300/70 bg-white text-[11px] font-bold text-slate-900 shadow-[0_6px_14px_rgba(2,6,23,0.35)] [backface-visibility:hidden] [transform:rotateY(180deg)] sm:text-xs"
         >
           {revealed ? valueLabel : ""}
         </div>
