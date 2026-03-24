@@ -55,6 +55,26 @@ const VOTE_SYSTEM_OPTIONS: Array<{ value: PlanningPokerState["voteSystem"]; labe
   { value: "tshirt", label: "T-Shirt" },
 ];
 const displayVoteValue = (value: string) => (value === "☕" ? "Cafe" : value);
+const DECK_SHORTCUT_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", "="];
+
+const isInteractiveElement = (target: EventTarget | null) => {
+  if (!(target instanceof HTMLElement)) return false;
+  const tag = target.tagName.toLowerCase();
+  return tag === "input" || tag === "textarea" || tag === "select" || target.isContentEditable;
+};
+
+const buildNextStoryTitle = (currentTitle: string, round: number) => {
+  const title = currentTitle.trim();
+  const match = title.match(/^(.*?)(\d+)\s*$/);
+  if (match) {
+    const prefix = match[1];
+    const number = Number(match[2]);
+    if (Number.isFinite(number)) {
+      return `${prefix}${number + 1}`;
+    }
+  }
+  return `Story #${Math.max(1, round + 1)}`;
+};
 
 export const PlanningPokerGameScreen: React.FC<Props> = ({
   state,
@@ -75,11 +95,34 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
   const [mobileMenuTab, setMobileMenuTab] = useState<"spectators" | "actions">("actions");
   const [sidebarTab, setSidebarTab] = useState<"spectators" | "session" | "history">("spectators");
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
+  const [storyDraft, setStoryDraft] = useState(state.storyTitle);
 
   const votingPlayers = useMemo(() => state.players.filter((player) => player.role === "player"), [state.players]);
   const spectators = useMemo(() => state.players.filter((player) => player.role === "spectator"), [state.players]);
   const activeDeck = PLANNING_POKER_DECKS[state.voteSystem] ?? PLANNING_POKER_DECKS.fibonacci;
   const stats = useMemo(() => computePlanningPokerStats(state.players, state.voteSystem), [state.players, state.voteSystem]);
+  const votedCount = useMemo(
+    () => votingPlayers.filter((player) => player.hasVoted).length,
+    [votingPlayers]
+  );
+  const totalVoters = votingPlayers.length;
+  const voteProgressLabel = `${votedCount}/${totalVoters}`;
+  const voteProgressPct = totalVoters > 0 ? Math.round((votedCount / totalVoters) * 100) : 0;
+  const voteEntries = useMemo(
+    () => Object.entries(stats.distribution).sort(([, a], [, b]) => b - a),
+    [stats.distribution]
+  );
+  const leadVote = voteEntries[0] ?? null;
+  const consensusPct = leadVote && stats.totalVotes > 0 ? Math.round((leadVote[1] / stats.totalVotes) * 100) : 0;
+  const consensusLabel = !state.revealed
+    ? "En attente de reveal"
+    : !leadVote
+    ? "Pas de vote"
+    : consensusPct >= 80
+    ? "Consensus fort"
+    : consensusPct >= 60
+    ? "Consensus modere"
+    : "Consensus faible";
   const averageLabel = state.revealed ? formatPlanningValue(stats.average) : "-";
   const medianLabel = state.revealed ? formatPlanningValue(stats.median) : "-";
   const desktopLeaveBtn = cn(GAME_TAB_BUTTON, "border-rose-300/45 bg-rose-500/14 text-rose-100 hover:bg-rose-500/22 hover:text-rose-50");
@@ -94,35 +137,134 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
     onLeave();
   };
 
+  const submitStoryTitle = React.useCallback(() => {
+    if (!isHost) return;
+    const normalized = storyDraft.trim();
+    if (!normalized || normalized === state.storyTitle) return;
+    onStoryTitleChange(normalized);
+  }, [isHost, onStoryTitleChange, state.storyTitle, storyDraft]);
+
+  const goToNextStory = React.useCallback(() => {
+    if (!isHost) return;
+    const next = buildNextStoryTitle(state.storyTitle, state.round);
+    setStoryDraft(next);
+    onStoryTitleChange(next);
+    onResetVotes();
+  }, [isHost, onResetVotes, onStoryTitleChange, state.round, state.storyTitle]);
+
+  React.useEffect(() => {
+    setStoryDraft(state.storyTitle);
+  }, [state.storyTitle]);
+
+  React.useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (isInteractiveElement(event.target)) return;
+      if (event.repeat) return;
+
+      if (myRole === "player" && !state.revealed) {
+        const voteIndex = DECK_SHORTCUT_KEYS.indexOf(event.key);
+        if (voteIndex >= 0 && voteIndex < activeDeck.length) {
+          event.preventDefault();
+          onVoteCard(activeDeck[voteIndex]);
+          return;
+        }
+      }
+
+      if (!isHost) return;
+      if (event.key.toLowerCase() === "r") {
+        event.preventDefault();
+        onRevealVotes();
+        return;
+      }
+      if (event.key.toLowerCase() === "x") {
+        event.preventDefault();
+        onResetVotes();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [activeDeck, isHost, myRole, onResetVotes, onRevealVotes, onVoteCard, state.revealed]);
+
   return (
     <div className="scanlines relative h-svh w-full overflow-hidden px-2 pb-2 pt-2 sm:px-4 sm:pb-3 sm:pt-3">
       <RetroScreenBackground />
 
       <div className="relative z-10 mx-auto flex h-full w-full flex-col gap-2 sm:gap-3">
-        <header className={cn(GAME_HUD_SURFACE, "flex items-center justify-between gap-2 px-3 py-2.5 sm:px-4 sm:py-3")}>
-          <div className="min-w-0" />
-
-          <div className="mx-2 grid grid-cols-2 gap-2">
-            <div className="rounded-xl border border-cyan-300/45 bg-cyan-500/14 px-2.5 py-1.5 sm:px-4 sm:py-2.5">
-              <div className="text-[10px] uppercase tracking-[0.12em] text-cyan-100/85 sm:text-[11px]">Moyenne</div>
-              <div className="text-lg font-black leading-none text-cyan-50 sm:text-2xl">{averageLabel}</div>
+        <header className={cn(GAME_HUD_SURFACE, "px-2.5 py-2 sm:px-4 sm:py-3")}>
+          <div className="grid gap-2 sm:hidden">
+            <div className="flex items-center justify-between gap-2">
+              {state.roomCode ? (
+                <div className="inline-flex max-w-full items-center gap-1 rounded-full border border-cyan-300/40 bg-cyan-500/12 px-2.5 py-1 text-[10px] font-semibold tracking-[0.08em] text-cyan-50">
+                  <span className="uppercase text-cyan-100/85">Code</span>
+                  <span className="truncate">{state.roomCode}</span>
+                </div>
+              ) : (
+                <span />
+              )}
+              <div className="rounded-md border border-amber-300/30 bg-amber-500/10 px-2 py-1 text-[10px] text-amber-100">
+                {consensusLabel}
+              </div>
             </div>
-            <div className="rounded-xl border border-amber-300/45 bg-amber-500/14 px-2.5 py-1.5 sm:px-4 sm:py-2.5">
-              <div className="text-[10px] uppercase tracking-[0.12em] text-amber-100/90 sm:text-[11px]">Mediane</div>
-              <div className="text-lg font-black leading-none text-amber-100 sm:text-2xl">{medianLabel}</div>
+            <div className="rounded-xl border border-cyan-300/35 bg-cyan-500/10 px-2 py-1.5">
+              <div className="mb-1 flex items-center justify-between text-[10px] uppercase tracking-[0.1em]">
+                <span className="text-cyan-100/85">Votes {voteProgressLabel}</span>
+                <span className="text-slate-300">{voteProgressPct}%</span>
+              </div>
+              <div className="h-1.5 overflow-hidden rounded bg-slate-900/60">
+                <div className="h-full rounded bg-cyan-400/90 transition-all duration-300" style={{ width: `${voteProgressPct}%` }} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="rounded-xl border border-cyan-300/45 bg-cyan-500/14 px-2 py-1.5">
+                <div className="text-[10px] uppercase tracking-[0.12em] text-cyan-100/85">Moyenne</div>
+                <div className="text-base font-black leading-none text-cyan-50">{averageLabel}</div>
+              </div>
+              <div className="rounded-xl border border-amber-300/45 bg-amber-500/14 px-2 py-1.5">
+                <div className="text-[10px] uppercase tracking-[0.12em] text-amber-100/90">Mediane</div>
+                <div className="text-base font-black leading-none text-amber-100">{medianLabel}</div>
+              </div>
             </div>
           </div>
 
-          <div className="flex min-w-0 flex-col items-end gap-2">
-            {state.roomCode ? (
-              <div className="-mt-0.5 inline-flex max-w-full items-center gap-1 rounded-full border border-cyan-300/40 bg-cyan-500/12 px-2.5 py-1 text-[11px] font-semibold tracking-[0.08em] text-cyan-50">
-                <span className="uppercase text-cyan-100/85">Code</span>
-                <span className="truncate">{state.roomCode}</span>
+          <div className="hidden items-center justify-between gap-2 sm:flex">
+            <div className="min-w-0 flex-1">
+              <div className="rounded-xl border border-cyan-300/35 bg-cyan-500/10 px-3 py-2">
+                <div className="mb-1 flex items-center justify-between gap-2 text-[11px] uppercase tracking-[0.1em]">
+                  <span className="text-cyan-100/85">Votes {voteProgressLabel}</span>
+                  <span className="text-amber-100/90">{consensusLabel}</span>
+                </div>
+                <div className="h-2 overflow-hidden rounded bg-slate-900/60">
+                  <div
+                    className="h-full rounded bg-cyan-400/90 transition-all duration-300"
+                    style={{ width: `${voteProgressPct}%` }}
+                  />
+                </div>
               </div>
-            ) : null}
-            <Button className={cn("hidden xl:inline-flex", desktopLeaveBtn)} variant="secondary" onClick={requestLeave}>
-              {fr.gameScreen.leaveGame}
-            </Button>
+            </div>
+
+            <div className="ml-2 grid grid-cols-2 gap-2">
+              <div className="rounded-xl border border-cyan-300/45 bg-cyan-500/14 px-4 py-2.5">
+                <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/85">Moyenne</div>
+                <div className="text-2xl font-black leading-none text-cyan-50">{averageLabel}</div>
+              </div>
+              <div className="rounded-xl border border-amber-300/45 bg-amber-500/14 px-4 py-2.5">
+                <div className="text-[11px] uppercase tracking-[0.12em] text-amber-100/90">Mediane</div>
+                <div className="text-2xl font-black leading-none text-amber-100">{medianLabel}</div>
+              </div>
+            </div>
+
+            <div className="flex min-w-0 flex-col items-end gap-2">
+              {state.roomCode ? (
+                <div className="-mt-0.5 inline-flex max-w-full items-center gap-1 rounded-full border border-cyan-300/40 bg-cyan-500/12 px-2.5 py-1 text-[11px] font-semibold tracking-[0.08em] text-cyan-50">
+                  <span className="uppercase text-cyan-100/85">Code</span>
+                  <span className="truncate">{state.roomCode}</span>
+                </div>
+              ) : null}
+              <Button className={cn("hidden xl:inline-flex", desktopLeaveBtn)} variant="secondary" onClick={requestLeave}>
+                {fr.gameScreen.leaveGame}
+              </Button>
+            </div>
           </div>
         </header>
 
@@ -250,9 +392,41 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                   <div className="text-slate-300">Story</div>
                   <div className="truncate text-cyan-50">{state.storyTitle || "-"}</div>
                 </div>
+                {isHost ? (
+                  <div className={cn("grid gap-2 p-2", GAME_SUBPANEL_SURFACE)}>
+                    <input
+                      type="text"
+                      value={storyDraft}
+                      onChange={(event) => setStoryDraft(event.target.value)}
+                      onBlur={submitStoryTitle}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") submitStoryTitle();
+                      }}
+                      className="h-8 w-full rounded-md border border-cyan-300/28 bg-slate-950/55 px-2 text-xs text-cyan-50 outline-none focus:border-cyan-300/65"
+                      placeholder="Story en cours"
+                    />
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className={cn(CTA_NEON_SECONDARY_SUBTLE, "h-8 text-xs")}
+                      onClick={goToNextStory}
+                    >
+                      Story suivante + reset
+                    </Button>
+                  </div>
+                ) : null}
                 <div className={cn("p-2", GAME_SUBPANEL_SURFACE)}>
                   <div className="text-slate-300">Statut</div>
                   <div className="text-cyan-50">{state.revealed ? "Revele" : "Vote en cours"}</div>
+                </div>
+                <div className={cn("grid gap-1.5 p-2", GAME_SUBPANEL_SURFACE)}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-300">Progression</span>
+                    <span className="font-semibold text-cyan-50">{voteProgressLabel}</span>
+                  </div>
+                  <div className="h-1.5 overflow-hidden rounded bg-slate-900/55">
+                    <div className="h-full rounded bg-cyan-400/90" style={{ width: `${voteProgressPct}%` }} />
+                  </div>
                 </div>
                 <div className={cn("grid grid-cols-2 gap-2 p-2", GAME_SUBPANEL_SURFACE)}>
                   <div>
@@ -274,6 +448,30 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                     <div className="font-semibold text-cyan-50">{formatPlanningValue(stats.max)}</div>
                   </div>
                 </div>
+                {state.revealed ? (
+                  <div className={cn("grid gap-1.5 p-2", GAME_SUBPANEL_SURFACE)}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-300">Consensus</span>
+                      <span className="font-semibold text-cyan-50">
+                        {leadVote ? `${displayVoteValue(leadVote[0])} (${consensusPct}%)` : "-"}
+                      </span>
+                    </div>
+                    {voteEntries.map(([value, count]) => {
+                      const barPct = stats.totalVotes > 0 ? Math.round((count / stats.totalVotes) * 100) : 0;
+                      return (
+                        <div key={value} className="grid gap-1">
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="text-cyan-100">{displayVoteValue(value)}</span>
+                            <span className="text-slate-300">{count}</span>
+                          </div>
+                          <div className="h-1.5 overflow-hidden rounded bg-slate-900/55">
+                            <div className="h-full rounded bg-cyan-300/85" style={{ width: `${barPct}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : null}
               </div>
             ) : (
               <div className="grid min-h-0 gap-2 overflow-auto pr-1 text-xs">
@@ -425,6 +623,24 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                       </button>
                     ))}
                   </div>
+                ) : null}
+                {isHost ? (
+                  <>
+                    <input
+                      type="text"
+                      value={storyDraft}
+                      onChange={(event) => setStoryDraft(event.target.value)}
+                      onBlur={submitStoryTitle}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") submitStoryTitle();
+                      }}
+                      className="h-10 w-full rounded-md border border-cyan-300/28 bg-slate-900/55 px-2 text-xs text-cyan-50 outline-none focus:border-cyan-300/65"
+                      placeholder="Story en cours"
+                    />
+                    <SecondaryButton className={cn("h-10 w-full text-xs", CTA_NEON_SECONDARY_SUBTLE)} onClick={goToNextStory}>
+                      Story suivante + reset
+                    </SecondaryButton>
+                  </>
                 ) : null}
                 <SecondaryButton className={cn("h-10 w-full text-xs", CTA_NEON_DANGER)} onClick={requestLeave}>
                   {fr.onlineLobby.leaveParty}
