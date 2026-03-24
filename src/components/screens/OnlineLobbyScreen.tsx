@@ -209,6 +209,10 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
   const submitLeave = () => {
     if (pending !== "idle") return;
     if (!roomCode) {
+      if (onEditProfile) {
+        onEditProfile();
+        return;
+      }
       onLeave();
       return;
     }
@@ -250,10 +254,11 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
     }
   }, [autoSubmitKey, roomCode, pending, mode, canCreate, canJoin, submitHost, submitJoin]);
 
-  const shellClass =
-    shellStyle === "transparent"
-      ? "relative z-10 flex min-h-[82svh] w-full max-w-4xl flex-col rounded border border-cyan-300/40 bg-slate-950/60 p-5 shadow-[0_0_0_1px_rgba(34,211,238,0.18),0_10px_28px_rgba(2,6,23,0.46)] backdrop-blur sm:p-8"
-      : "relative z-10 flex min-h-[82svh] w-full max-w-4xl flex-col rounded border border-cyan-300/60 bg-[linear-gradient(180deg,rgba(8,18,38,0.88)_0%,rgba(8,12,24,0.9)_100%)] p-5 shadow-[0_0_0_2px_rgba(34,211,238,0.3),0_0_34px_rgba(34,211,238,0.32)] backdrop-blur sm:p-8";
+  const transparentShellClass = "relative z-10 flex min-h-[82svh] w-full max-w-4xl flex-col p-5 sm:p-8";
+  const defaultShellClass =
+    "relative z-10 flex min-h-[82svh] w-full max-w-4xl flex-col rounded border border-cyan-300/60 bg-[linear-gradient(180deg,rgba(8,18,38,0.88)_0%,rgba(8,12,24,0.9)_100%)] p-5 shadow-[0_0_0_2px_rgba(34,211,238,0.3),0_0_34px_rgba(34,211,238,0.32)] backdrop-blur sm:p-8";
+  const ShellContainer: React.ElementType = shellStyle === "transparent" ? Card : "div";
+  const shellClassName = shellStyle === "transparent" ? transparentShellClass : defaultShellClass;
 
   return (
     <div
@@ -264,7 +269,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
     >
       <RetroScreenBackground />
 
-      <div className={shellClass}>
+      <ShellContainer className={shellClassName}>
         <div className="flex flex-wrap items-start justify-between gap-2 text-[10px] uppercase tracking-[0.2em] text-cyan-200/80">
           <span>{fr.onlineLobby.brand}</span>
           {!roomCode && stepLabel ? (
@@ -516,7 +521,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
           </div>
         </Card>
         )}
-      </div>
+      </ShellContainer>
 
       {roomCode && (
         <>
@@ -598,14 +603,14 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
         <>
           <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 hidden px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:block">
             <Card className="pointer-events-auto mx-auto flex w-full max-w-4xl items-center justify-between gap-2 border-cyan-300/40 bg-slate-950/92 p-3 shadow-[0_0_0_1px_rgba(34,211,238,0.2),0_8px_28px_rgba(2,6,23,0.55)]">
-              <SecondaryButton
-                type="button"
-                onClick={submitLeave}
-                disabled={pending !== "idle"}
-                className="h-11"
-              >
-                {fr.onlineOnboarding.back}
-              </SecondaryButton>
+                <SecondaryButton
+                  type="button"
+                  onClick={submitLeave}
+                  disabled={pending !== "idle"}
+                  className="h-11"
+                >
+                  {fr.onlineOnboarding.back}
+                </SecondaryButton>
               <PrimaryButton
                 type="button"
                 onClick={mode === "host" ? submitHost : submitJoin}

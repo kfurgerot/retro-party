@@ -67,6 +67,9 @@ const Index: React.FC = () => {
   const [showOnlineOnboarding, setShowOnlineOnboarding] = useState<boolean>(
     () => !initialParams.name && !initialParams.direct
   );
+  const [onboardingInitialStep, setOnboardingInitialStep] = useState<1 | 2>(() =>
+    initialParams.name ? 2 : 1
+  );
 
   React.useEffect(() => {
     perfMark(screenTransitionStartMark);
@@ -94,18 +97,20 @@ const Index: React.FC = () => {
             connected={online.connected}
             initialName={onboardingProfile.name || undefined}
             initialAvatar={onboardingProfile.avatar}
+            initialStep={onboardingInitialStep}
             overallStepStart={3}
             overallStepTotal={5}
             onSubmit={({ name, avatar }) => {
               setOnboardingProfile({ name, avatar });
+              setOnboardingInitialStep(1);
               setShowOnlineOnboarding(false);
             }}
             onBack={() => {
-              if (onboardingProfile.name) {
-                setShowOnlineOnboarding(false);
+              if (initialParams.fromEntry) {
+                navigate("/?stage=entry&experience=retro-party");
                 return;
               }
-              navigate(initialParams.fromEntry ? "/?stage=entry" : "/");
+              navigate("/?stage=select-experience");
             }}
           />
         );
@@ -122,7 +127,10 @@ const Index: React.FC = () => {
             onLeave={() => {
               leaveOnlineSession();
             }}
-            onEditProfile={() => setShowOnlineOnboarding(true)}
+            onEditProfile={() => {
+              setOnboardingInitialStep(2);
+              setShowOnlineOnboarding(true);
+            }}
             onStartGame={online.startGame}
             canStart={online.isHost}
             initialName={onboardingProfile.name || initialParams.name || undefined}
@@ -133,6 +141,8 @@ const Index: React.FC = () => {
             stepLabel={`${fr.onlineOnboarding.step} 5/5`}
             stepCurrent={5}
             stepTotal={5}
+            shellStyle="transparent"
+            titleWhenNoRoomOverride={"Creer ou rejoindre un plateau"}
           />
         </div>
       );

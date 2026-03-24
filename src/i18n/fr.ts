@@ -38,7 +38,7 @@ export const fr = {
     connecting: "Connexion au serveur...",
     continue: "Suivant",
     back: "Retour",
-    previous: "Precedent",
+    previous: "Retour",
     next: "Suivant",
     avatarAria: "Avatar {index}",
   },

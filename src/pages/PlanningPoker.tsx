@@ -42,6 +42,9 @@ const PlanningPokerPage: React.FC = () => {
 
   const [autoSubmitKey] = useState<number>(() => (initialParams.autoSubmit ? Date.now() : 0));
   const [showOnboarding, setShowOnboarding] = useState<boolean>(() => !initialParams.name && !initialParams.direct);
+  const [onboardingInitialStep, setOnboardingInitialStep] = useState<1 | 2>(() =>
+    initialParams.name ? 2 : 1
+  );
   const [profile, setProfile] = useState(() => ({
     name: initialParams.name,
     avatar: initialParams.avatar,
@@ -61,19 +64,17 @@ const PlanningPokerPage: React.FC = () => {
           connected={online.connected}
           initialName={profile.name || undefined}
           initialAvatar={profile.avatar}
+          initialStep={onboardingInitialStep}
           overallStepStart={3}
           overallStepTotal={5}
           onSubmit={({ name, avatar }) => {
             setProfile({ name, avatar });
+            setOnboardingInitialStep(1);
             setShowOnboarding(false);
           }}
-            onBack={() => {
-              if (profile.name) {
-                setShowOnboarding(false);
-                return;
-              }
-              navigate("/?stage=select-experience");
-            }}
+          onBack={() => {
+            navigate("/?stage=entry&experience=planning-poker");
+          }}
           />
       );
     }
@@ -88,7 +89,10 @@ const PlanningPokerPage: React.FC = () => {
             onHost={(name, avatar) => online.createRoom(name, avatar, "player", voteSystem)}
             onJoin={(code, name, avatar) => online.joinRoom(code, name, avatar, "player")}
             onLeave={leaveSession}
-            onEditProfile={() => setShowOnboarding(true)}
+            onEditProfile={() => {
+              setOnboardingInitialStep(2);
+              setShowOnboarding(true);
+            }}
             onStartGame={() => {}}
             canStart={false}
             initialName={profile.name || initialParams.name || undefined}

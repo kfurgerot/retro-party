@@ -11,6 +11,7 @@ interface OnlineOnboardingScreenProps {
   connected: boolean;
   initialName?: string;
   initialAvatar?: number;
+  initialStep?: 1 | 2;
   onSubmit: (payload: { name: string; avatar: number }) => void;
   onBack: () => void;
   overallStepStart?: number;
@@ -23,12 +24,13 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
   connected,
   initialName,
   initialAvatar,
+  initialStep = 1,
   onSubmit,
   onBack,
   overallStepStart,
   overallStepTotal,
 }) => {
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<1 | 2>(initialStep);
   const [name, setName] = useState(() => cleanName(initialName ?? ""));
   const [avatar, setAvatar] = useState(() => {
     const next = Number.isFinite(initialAvatar) ? Number(initialAvatar) : 0;
@@ -173,7 +175,7 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
               className="h-11"
               onClick={goBack}
             >
-              {step === 1 ? fr.onlineOnboarding.back : fr.onlineOnboarding.previous}
+              {fr.onlineOnboarding.back}
             </SecondaryButton>
 
             {step === 1 ? (
@@ -207,7 +209,7 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
               className="h-12 min-h-0"
               onClick={goBack}
             >
-              {step === 1 ? fr.onlineOnboarding.back : fr.onlineOnboarding.previous}
+              {fr.onlineOnboarding.back}
             </SecondaryButton>
 
             {step === 1 ? (

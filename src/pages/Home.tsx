@@ -13,7 +13,11 @@ const Home = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [entryChoice, setEntryChoice] = useState<"play" | "prepare">("play");
-  const [selectedExperience, setSelectedExperience] = useState<ExperienceId>("retro-party");
+  const [selectedExperience, setSelectedExperience] = useState<ExperienceId>(() => {
+    const params = new URLSearchParams(location.search);
+    const experienceParam = params.get("experience");
+    return experienceParam === "planning-poker" ? "planning-poker" : "retro-party";
+  });
   const [stage, setStage] = useState<"press-start" | "select-experience" | "select-entry">(() => {
     const params = new URLSearchParams(location.search);
     const stageParam = params.get("stage");

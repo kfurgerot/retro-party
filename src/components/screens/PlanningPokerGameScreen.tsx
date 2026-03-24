@@ -113,9 +113,9 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
             </div>
           </div>
 
-          <div className="flex min-w-0 flex-col items-end gap-1">
+          <div className="flex min-w-0 flex-col items-end gap-2">
             {state.roomCode ? (
-              <div className="inline-flex max-w-full items-center gap-1 rounded-full border border-cyan-300/40 bg-cyan-500/12 px-2.5 py-1 text-[11px] font-semibold tracking-[0.08em] text-cyan-50">
+              <div className="-mt-0.5 inline-flex max-w-full items-center gap-1 rounded-full border border-cyan-300/40 bg-cyan-500/12 px-2.5 py-1 text-[11px] font-semibold tracking-[0.08em] text-cyan-50">
                 <span className="uppercase text-cyan-100/85">Code</span>
                 <span className="truncate">{state.roomCode}</span>
               </div>
@@ -438,9 +438,12 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
       <AlertDialog open={leaveDialogOpen} onOpenChange={setLeaveDialogOpen}>
         <AlertDialogContent className={cn(GAME_DIALOG_CONTENT, "max-w-md")}>
           <AlertDialogHeader>
+            <div className="mx-auto mb-2 inline-flex items-center gap-2 rounded-full border border-rose-300/45 bg-rose-500/15 px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-rose-100">
+              <span>Quitter</span>
+            </div>
             <AlertDialogTitle className="text-center text-2xl">{fr.gameScreen.leaveQuestionTitle}</AlertDialogTitle>
             <AlertDialogDescription className="text-center text-slate-300">
-              {fr.gameScreen.leaveQuestionDescription}
+              {fr.game.backToOnlineLobby}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-1 grid grid-cols-1 gap-2 sm:grid-cols-2 sm:space-x-0">
