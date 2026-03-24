@@ -264,16 +264,16 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
     <div
       className={cn(
         "scanlines relative flex min-h-svh w-full items-start justify-center overflow-hidden px-4 pt-4 sm:pt-6",
-        roomCode ? "pb-28 sm:pb-32" : "pb-28 sm:pb-8"
+        roomCode ? "pb-28 sm:pb-32" : "pb-28 sm:pb-28"
       )}
     >
       <RetroScreenBackground />
 
       <ShellContainer className={shellClassName}>
-        <div className="flex flex-wrap items-start justify-between gap-2 text-[10px] uppercase tracking-[0.2em] text-cyan-200/80">
+        <div className="flex items-center justify-between gap-2 text-[10px] uppercase tracking-[0.16em] text-cyan-200/80">
           <span>{fr.onlineLobby.brand}</span>
           {!roomCode && stepLabel ? (
-            <span className="rounded-full border border-cyan-300/40 px-2 py-1">
+            <span className="rounded-full border border-cyan-300/40 px-2 py-0.5">
               {stepLabel}
             </span>
           ) : null}
