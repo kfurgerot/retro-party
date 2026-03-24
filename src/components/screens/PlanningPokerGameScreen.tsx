@@ -95,6 +95,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
   const [mobileMenuTab, setMobileMenuTab] = useState<"spectators" | "actions">("actions");
   const [sidebarTab, setSidebarTab] = useState<"spectators" | "session" | "history">("spectators");
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [storyDraft, setStoryDraft] = useState(state.storyTitle);
 
   const votingPlayers = useMemo(() => state.players.filter((player) => player.role === "player"), [state.players]);
@@ -135,6 +136,20 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
   const confirmLeave = () => {
     setLeaveDialogOpen(false);
     onLeave();
+  };
+
+  const requestResetVotes = () => {
+    if (!isHost) return;
+    if (!state.revealed && votedCount > 0) {
+      setResetDialogOpen(true);
+      return;
+    }
+    onResetVotes();
+  };
+
+  const confirmResetVotes = () => {
+    setResetDialogOpen(false);
+    onResetVotes();
   };
 
   const submitStoryTitle = React.useCallback(() => {
@@ -207,22 +222,29 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
               </div>
             </div>
             <div className="rounded-xl border border-cyan-300/35 bg-cyan-500/10 px-2 py-1.5">
-              <div className="mb-1 flex items-center justify-between text-[10px] uppercase tracking-[0.1em]">
+              <div className="mb-1 flex items-center justify-between gap-2 text-[10px] uppercase tracking-[0.1em]">
                 <span className="text-cyan-100/85">Votes {voteProgressLabel}</span>
-                <span className="text-slate-300">{voteProgressPct}%</span>
+                <div className="inline-flex items-center gap-1">
+                  <div className="rounded-md border border-cyan-300/45 bg-cyan-500/14 px-1.5 py-0.5 text-[10px] text-cyan-100">
+                    Moy {averageLabel}
+                  </div>
+                  <div className="rounded-md border border-amber-300/45 bg-amber-500/14 px-1.5 py-0.5 text-[10px] text-amber-100">
+                    Med {medianLabel}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileMenuTab("actions");
+                      setMobileActionsOpen(true);
+                    }}
+                    className="h-5 rounded-md border border-cyan-300/28 bg-slate-900/60 px-1.5 text-[10px] text-cyan-100"
+                  >
+                    Menu
+                  </button>
+                </div>
               </div>
               <div className="h-1.5 overflow-hidden rounded bg-slate-900/60">
                 <div className="h-full rounded bg-cyan-400/90 transition-all duration-300" style={{ width: `${voteProgressPct}%` }} />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="rounded-xl border border-cyan-300/45 bg-cyan-500/14 px-2 py-1.5">
-                <div className="text-[10px] uppercase tracking-[0.12em] text-cyan-100/85">Moyenne</div>
-                <div className="text-base font-black leading-none text-cyan-50">{averageLabel}</div>
-              </div>
-              <div className="rounded-xl border border-amber-300/45 bg-amber-500/14 px-2 py-1.5">
-                <div className="text-[10px] uppercase tracking-[0.12em] text-amber-100/90">Mediane</div>
-                <div className="text-base font-black leading-none text-amber-100">{medianLabel}</div>
               </div>
             </div>
           </div>
@@ -289,7 +311,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                               onClick={() => onVoteCard(value)}
                               disabled={state.revealed}
                               className={cn(
-                                "mt-2 h-[64px] w-[42px] shrink-0 snap-start rounded-xl border text-sm font-semibold transition-all duration-150",
+                                "mt-2 h-[58px] w-[38px] shrink-0 snap-start rounded-xl border text-sm font-semibold transition-all duration-150",
                                 "bg-gradient-to-b from-slate-900/82 to-slate-950/82",
                                 "shadow-[0_2px_8px_rgba(2,6,23,0.35)]",
                                 "disabled:cursor-not-allowed disabled:opacity-50",
@@ -365,7 +387,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
               </div>
 
               <div className="grid w-full min-w-0 grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:justify-end">
-                <SecondaryButton className={cn("h-9 min-w-0 w-full text-[11px] sm:w-auto sm:text-xs", CTA_NEON_SECONDARY_SUBTLE)} disabled={!isHost} onClick={onResetVotes}>
+                <SecondaryButton className={cn("h-9 min-w-0 w-full text-[11px] sm:w-auto sm:text-xs", CTA_NEON_SECONDARY_SUBTLE)} disabled={!isHost} onClick={requestResetVotes}>
                   {fr.planningPoker.resetVotes}
                 </SecondaryButton>
                 <PrimaryButton className={cn("h-9 min-w-0 w-full text-[11px] sm:w-auto sm:text-xs", CTA_NEON_PRIMARY)} disabled={!isHost} onClick={onRevealVotes}>
@@ -538,13 +560,13 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
 
         <div className="sticky bottom-0 z-30 pb-[calc(env(safe-area-inset-bottom)+4px)] sm:hidden">
           <Card className={cn(GAME_HUD_SURFACE, "px-2 py-2 shadow-[0_-8px_24px_rgba(2,6,23,0.35)]")}>
-            <div className="grid grid-cols-3 gap-2">
+            <div className={cn("grid gap-2", isHost ? "grid-cols-2" : "grid-cols-3")}>
               {isHost ? (
                 <>
                   <Button
                     variant="secondary"
                     className={cn(GAME_MOBILE_ACTION_BUTTON, CTA_NEON_SECONDARY_SUBTLE, "text-xs")}
-                    onClick={onResetVotes}
+                    onClick={requestResetVotes}
                   >
                     {fr.planningPoker.resetVotes}
                   </Button>
@@ -554,16 +576,6 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                     onClick={onRevealVotes}
                   >
                     {state.revealed ? "Revele" : "Reveal"}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    className={cn(GAME_MOBILE_ACTION_BUTTON, CTA_NEON_SECONDARY_SUBTLE, "text-xs")}
-                    onClick={() => {
-                      setMobileMenuTab("actions");
-                      setMobileActionsOpen(true);
-                    }}
-                  >
-                    Menu
                   </Button>
                 </>
               ) : (
@@ -701,6 +713,25 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
             </AlertDialogCancel>
             <AlertDialogAction className={cn(CTA_NEON_DANGER, "h-11 w-full rounded-xl")} onClick={confirmLeave}>
               {fr.gameScreen.leave}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
+        <AlertDialogContent className={cn(GAME_DIALOG_CONTENT, "max-w-md")}>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-center text-xl">Reset des votes ?</AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-slate-300">
+              Des joueurs ont deja vote. Cette action effacera les votes en cours.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-1 grid grid-cols-1 gap-2 sm:grid-cols-2 sm:space-x-0">
+            <AlertDialogCancel className={cn(CTA_NEON_SECONDARY_SUBTLE, "h-11 w-full rounded-xl text-cyan-100")}>
+              {fr.gameScreen.cancel}
+            </AlertDialogCancel>
+            <AlertDialogAction className={cn(CTA_NEON_DANGER, "h-11 w-full rounded-xl")} onClick={confirmResetVotes}>
+              {fr.planningPoker.resetVotes}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
