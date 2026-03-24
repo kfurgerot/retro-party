@@ -86,7 +86,7 @@ const Index: React.FC = () => {
 
   const leaveOnlineSession = () => {
     online.leaveRoom();
-    navigate(initialParams.fromEntry ? "/?stage=entry" : "/");
+    navigate("/?stage=select-experience");
   };
 
   if (isOnline) {
