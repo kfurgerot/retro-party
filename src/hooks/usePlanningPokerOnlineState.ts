@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { socket } from "@/net/socket";
-import { PlanningPokerRole, PlanningPokerState, PlanningPokerVoteSystem } from "@/types/planningPoker";
+import { PlanningPokerRole, PlanningPokerRoundSummary, PlanningPokerState, PlanningPokerVoteSystem } from "@/types/planningPoker";
+import { computePlanningPokerStats } from "@/lib/planningPoker";
 
 type PlanningPokerSession = {
   code: string;
@@ -81,9 +82,11 @@ export function usePlanningPokerOnlineState() {
   const [state, setState] = useState<PlanningPokerState>(
     initialSession?.code ? { ...EMPTY_STATE, roomCode: initialSession.code } : EMPTY_STATE
   );
+  const [history, setHistory] = useState<PlanningPokerRoundSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const sessionRef = useRef<PlanningPokerSession | null>(initialSession);
+  const recordedSummariesRef = useRef<Set<string>>(new Set());
   const pendingProfileRef = useRef<{ name: string; avatar: number; sessionId: string } | null>(
     initialSession
       ? { name: initialSession.name, avatar: initialSession.avatar, sessionId: initialSession.sessionId }
@@ -119,9 +122,41 @@ export function usePlanningPokerOnlineState() {
       if (nextState.roomCode) {
         setCode(nextState.roomCode);
       }
+
+      if (nextState.phase !== "playing" || !nextState.roomCode || !nextState.revealed) return;
+      const summaryId = `${nextState.roomCode}:${nextState.round}`;
+      if (recordedSummariesRef.current.has(summaryId)) return;
+
+      const votedPlayers = nextState.players.filter((player) => player.role === "player" && player.vote != null);
+      const stats = computePlanningPokerStats(nextState.players, nextState.voteSystem);
+      const summary: PlanningPokerRoundSummary = {
+        id: summaryId,
+        round: nextState.round,
+        storyTitle: nextState.storyTitle,
+        voteSystem: nextState.voteSystem,
+        totalVotes: stats.totalVotes,
+        average: stats.average,
+        median: stats.median,
+        min: stats.min,
+        max: stats.max,
+        distribution: stats.distribution,
+        votes: votedPlayers.map((player) => ({
+          playerName: player.name,
+          avatar: player.avatar,
+          value: player.vote ?? "-",
+        })),
+        revealedAt: nextState.updatedAt || Date.now(),
+      };
+
+      recordedSummariesRef.current.add(summaryId);
+      setHistory((previous) => [...previous, summary]);
     };
 
     const onRoomKnown = ({ code: roomCode }: { code: string }) => {
+      if (sessionRef.current?.code && sessionRef.current.code !== roomCode) {
+        recordedSummariesRef.current.clear();
+        setHistory([]);
+      }
       setCode(roomCode);
       setError(null);
       if (!pendingProfileRef.current) return;
@@ -144,6 +179,8 @@ export function usePlanningPokerOnlineState() {
 
       sessionRef.current = null;
       pendingProfileRef.current = null;
+      recordedSummariesRef.current.clear();
+      setHistory([]);
       storeSession(null);
       setCode(null);
       setState(EMPTY_STATE);
@@ -234,6 +271,8 @@ export function usePlanningPokerOnlineState() {
     }
     sessionRef.current = null;
     pendingProfileRef.current = null;
+    recordedSummariesRef.current.clear();
+    setHistory([]);
     storeSession(null);
     setCode(null);
     setState(EMPTY_STATE);
@@ -287,6 +326,7 @@ export function usePlanningPokerOnlineState() {
     code,
     error,
     state,
+    history,
     myPlayerId,
     myRole,
     myVote,

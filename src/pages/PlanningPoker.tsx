@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { OnlineOnboardingScreen } from "@/components/screens/OnlineOnboardingScreen";
 import { OnlineLobbyScreen } from "@/components/screens/OnlineLobbyScreen";
@@ -6,6 +6,7 @@ import { PlanningPokerReadyScreen } from "@/components/screens/PlanningPokerRead
 import { PlanningPokerGameScreen } from "@/components/screens/PlanningPokerGameScreen";
 import { usePlanningPokerOnlineState } from "@/hooks/usePlanningPokerOnlineState";
 import { PlanningPokerRole, PlanningPokerVoteSystem } from "@/types/planningPoker";
+import { fr } from "@/i18n/fr";
 
 const PlanningPokerPage: React.FC = () => {
   const location = useLocation();
@@ -32,6 +33,13 @@ const PlanningPokerPage: React.FC = () => {
 
   const online = usePlanningPokerOnlineState();
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (location.key !== "default") return;
+    online.leaveRoom();
+    navigate("/?stage=select-experience", { replace: true });
+  }, [location.key, navigate, online.leaveRoom]);
+
   const [autoSubmitKey] = useState<number>(() => (initialParams.autoSubmit ? Date.now() : 0));
   const [showOnboarding, setShowOnboarding] = useState<boolean>(() => !initialParams.name && !initialParams.direct);
   const [profile, setProfile] = useState(() => ({
@@ -43,7 +51,7 @@ const PlanningPokerPage: React.FC = () => {
 
   const leaveSession = () => {
     online.leaveRoom();
-    navigate(initialParams.fromEntry ? "/?stage=entry" : "/");
+    navigate("/?stage=select-experience");
   };
 
   if (online.state.phase === "lobby") {
@@ -59,14 +67,14 @@ const PlanningPokerPage: React.FC = () => {
             setProfile({ name, avatar });
             setShowOnboarding(false);
           }}
-          onBack={() => {
-            if (profile.name) {
-              setShowOnboarding(false);
-              return;
-            }
-            navigate(initialParams.fromEntry ? "/?stage=entry" : "/");
-          }}
-        />
+            onBack={() => {
+              if (profile.name) {
+                setShowOnboarding(false);
+                return;
+              }
+              navigate("/?stage=select-experience");
+            }}
+          />
       );
     }
 
@@ -88,6 +96,10 @@ const PlanningPokerPage: React.FC = () => {
             initialMode={initialParams.mode}
             initialCode={initialParams.code}
             autoSubmitKey={autoSubmitKey}
+            stepLabel={`${fr.onlineOnboarding.step} 5/5`}
+            stepCurrent={5}
+            stepTotal={5}
+            shellStyle="transparent"
             titleWhenNoRoomOverride={online.state.phase === "lobby" ? "Creer ou rejoindre une table" : undefined}
           />
         </div>
@@ -119,6 +131,7 @@ const PlanningPokerPage: React.FC = () => {
   return (
     <PlanningPokerGameScreen
       state={online.state}
+      history={online.history}
       myPlayerId={online.myPlayerId}
       myRole={online.myRole}
       myVote={online.myVote}

@@ -48,6 +48,7 @@ interface OnlineLobbyScreenProps {
   stepCurrent?: number;
   stepTotal?: number;
   titleWhenNoRoomOverride?: string;
+  shellStyle?: "default" | "transparent";
 }
 
 type Pending = "idle" | "hosting" | "joining" | "starting";
@@ -76,6 +77,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
   stepCurrent,
   stepTotal,
   titleWhenNoRoomOverride,
+  shellStyle = "default",
 }) => {
   const [mode, setMode] = useState<"host" | "join">(initialMode ?? "host");
   const [name, setName] = useState(() => cleanName(initialName ?? ""));
@@ -248,6 +250,11 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
     }
   }, [autoSubmitKey, roomCode, pending, mode, canCreate, canJoin, submitHost, submitJoin]);
 
+  const shellClass =
+    shellStyle === "transparent"
+      ? "relative z-10 flex min-h-[82svh] w-full max-w-4xl flex-col rounded border border-cyan-300/40 bg-slate-950/60 p-5 shadow-[0_0_0_1px_rgba(34,211,238,0.18),0_10px_28px_rgba(2,6,23,0.46)] backdrop-blur sm:p-8"
+      : "relative z-10 flex min-h-[82svh] w-full max-w-4xl flex-col rounded border border-cyan-300/60 bg-[linear-gradient(180deg,rgba(8,18,38,0.88)_0%,rgba(8,12,24,0.9)_100%)] p-5 shadow-[0_0_0_2px_rgba(34,211,238,0.3),0_0_34px_rgba(34,211,238,0.32)] backdrop-blur sm:p-8";
+
   return (
     <div
       className={cn(
@@ -257,7 +264,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
     >
       <RetroScreenBackground />
 
-      <div className="relative z-10 flex min-h-[82svh] w-full max-w-4xl flex-col rounded border border-cyan-300/60 bg-[linear-gradient(180deg,rgba(8,18,38,0.88)_0%,rgba(8,12,24,0.9)_100%)] p-5 shadow-[0_0_0_2px_rgba(34,211,238,0.3),0_0_34px_rgba(34,211,238,0.32)] backdrop-blur sm:p-8">
+      <div className={shellClass}>
         <div className="flex flex-wrap items-start justify-between gap-2 text-[10px] uppercase tracking-[0.2em] text-cyan-200/80">
           <span>{fr.onlineLobby.brand}</span>
           {!roomCode && stepLabel ? (

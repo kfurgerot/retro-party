@@ -23,3 +23,24 @@ export type PlanningPokerState = {
   round: number;
   updatedAt: number;
 };
+
+export type PlanningPokerRoundVote = {
+  playerName: string;
+  avatar: number;
+  value: string;
+};
+
+export type PlanningPokerRoundSummary = {
+  id: string;
+  round: number;
+  storyTitle: string;
+  voteSystem: PlanningPokerVoteSystem;
+  totalVotes: number;
+  average: number | null;
+  median: number | null;
+  min: number | null;
+  max: number | null;
+  distribution: Record<string, number>;
+  votes: PlanningPokerRoundVote[];
+  revealedAt: number;
+};

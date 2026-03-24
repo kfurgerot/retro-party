@@ -2,8 +2,18 @@
 import { Card, PrimaryButton, SecondaryButton } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { AVATARS } from "@/types/game";
-import { PlanningPokerRole, PlanningPokerState } from "@/types/planningPoker";
+import { PlanningPokerRole, PlanningPokerRoundSummary, PlanningPokerState } from "@/types/planningPoker";
 import { fr } from "@/i18n/fr";
 import { cn } from "@/lib/utils";
 import { PlanningPokerRoundBoard } from "@/components/planning-poker/PlanningPokerRoundBoard";
@@ -12,6 +22,7 @@ import {
   CTA_NEON_DANGER,
   CTA_NEON_PRIMARY,
   CTA_NEON_SECONDARY_SUBTLE,
+  GAME_DIALOG_CONTENT,
   GAME_DRAWER_CONTENT,
   GAME_HUD_SURFACE,
   GAME_MOBILE_ACTION_BUTTON,
@@ -20,10 +31,11 @@ import {
   GAME_TAB_BUTTON,
   GAME_TAB_BUTTON_ACTIVE,
 } from "@/lib/uiTokens";
-import { computePlanningPokerStats, formatPlanningValue } from "@/lib/planningPoker";
+import { computePlanningPokerStats, formatPlanningValue, PLANNING_POKER_DECKS } from "@/lib/planningPoker";
 
 type Props = {
   state: PlanningPokerState;
+  history: PlanningPokerRoundSummary[];
   myPlayerId: string | null;
   myRole: PlanningPokerRole;
   myVote: string | null;
@@ -37,10 +49,16 @@ type Props = {
   onStoryTitleChange: (storyTitle: string) => void;
 };
 
-const SIMPLE_DECK = ["0", "1", "2", "3", "5", "8", "13", "21", "?", "☕"];
+const VOTE_SYSTEM_OPTIONS: Array<{ value: PlanningPokerState["voteSystem"]; label: string }> = [
+  { value: "fibonacci", label: "Fibonacci" },
+  { value: "man-day", label: "Jour.homme" },
+  { value: "tshirt", label: "T-Shirt" },
+];
+const displayVoteValue = (value: string) => (value === "☕" ? "Cafe" : value);
 
 export const PlanningPokerGameScreen: React.FC<Props> = ({
   state,
+  history,
   myPlayerId,
   myRole,
   myVote,
@@ -54,33 +72,35 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
   onStoryTitleChange,
 }) => {
   const [mobileActionsOpen, setMobileActionsOpen] = useState(false);
-  const [sidebarTab, setSidebarTab] = useState<"spectators" | "session">("spectators");
+  const [mobileMenuTab, setMobileMenuTab] = useState<"spectators" | "actions">("actions");
+  const [sidebarTab, setSidebarTab] = useState<"spectators" | "session" | "history">("spectators");
+  const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
 
-  const roomName = state.roomCode ? `Room ${state.roomCode}` : "Death Star Team";
   const votingPlayers = useMemo(() => state.players.filter((player) => player.role === "player"), [state.players]);
   const spectators = useMemo(() => state.players.filter((player) => player.role === "spectator"), [state.players]);
-  const myPlayer = useMemo(() => state.players.find((player) => player.socketId === myPlayerId) ?? null, [state.players, myPlayerId]);
-  const votedCount = votingPlayers.filter((player) => player.hasVoted).length;
+  const activeDeck = PLANNING_POKER_DECKS[state.voteSystem] ?? PLANNING_POKER_DECKS.fibonacci;
   const stats = useMemo(() => computePlanningPokerStats(state.players, state.voteSystem), [state.players, state.voteSystem]);
   const averageLabel = state.revealed ? formatPlanningValue(stats.average) : "-";
   const medianLabel = state.revealed ? formatPlanningValue(stats.median) : "-";
-  const desktopLeaveBtn = cn(
-    GAME_TAB_BUTTON,
-    "h-8 border-rose-300/45 bg-rose-500/14 px-3 text-xs text-rose-100 hover:bg-rose-500/22 hover:text-rose-50"
-  );
+  const desktopLeaveBtn = cn(GAME_TAB_BUTTON, "border-rose-300/45 bg-rose-500/14 text-rose-100 hover:bg-rose-500/22 hover:text-rose-50");
+
+  const requestLeave = () => {
+    setMobileActionsOpen(false);
+    setLeaveDialogOpen(true);
+  };
+
+  const confirmLeave = () => {
+    setLeaveDialogOpen(false);
+    onLeave();
+  };
 
   return (
     <div className="scanlines relative h-svh w-full overflow-hidden px-2 pb-2 pt-2 sm:px-4 sm:pb-3 sm:pt-3">
       <RetroScreenBackground />
 
       <div className="relative z-10 mx-auto flex h-full w-full flex-col gap-2 sm:gap-3">
-        <header className={cn(GAME_HUD_SURFACE, "flex items-center justify-between px-3 py-2 sm:px-4 sm:py-3")}>
-          <div className="min-w-0">
-            <div className="truncate text-base font-semibold text-cyan-50">{roomName}</div>
-            <div className="text-xs text-slate-300">
-              {state.voteSystem} · {votedCount}/{votingPlayers.length}
-            </div>
-          </div>
+        <header className={cn(GAME_HUD_SURFACE, "flex items-center justify-between gap-2 px-3 py-2.5 sm:px-4 sm:py-3")}>
+          <div className="min-w-0" />
 
           <div className="mx-2 grid grid-cols-2 gap-2">
             <div className="rounded-xl border border-cyan-300/45 bg-cyan-500/14 px-2.5 py-1.5 sm:px-4 sm:py-2.5">
@@ -93,30 +113,27 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
             </div>
           </div>
 
-          <div className="flex min-w-0 items-center gap-2">
+          <div className="flex min-w-0 flex-col items-end gap-1">
             {state.roomCode ? (
-              <div className="hidden items-center gap-1 rounded-full border border-cyan-300/40 bg-cyan-500/12 px-2 py-0.5 text-[10px] font-semibold tracking-[0.06em] text-cyan-50 sm:inline-flex">
+              <div className="inline-flex max-w-full items-center gap-1 rounded-full border border-cyan-300/40 bg-cyan-500/12 px-2.5 py-1 text-[11px] font-semibold tracking-[0.08em] text-cyan-50">
                 <span className="uppercase text-cyan-100/85">Code</span>
-                <span>{state.roomCode}</span>
+                <span className="truncate">{state.roomCode}</span>
               </div>
             ) : null}
-            <SecondaryButton className={cn("hidden sm:inline-flex", desktopLeaveBtn)} onClick={onLeave}>
-              {fr.onlineLobby.leaveParty}
-            </SecondaryButton>
-            <div className="flex h-9 w-9 items-center justify-center rounded-full border border-cyan-300/35 bg-slate-900/75 text-lg">
-              {myPlayer ? AVATARS[myPlayer.avatar] ?? ":)" : ":)"}
-            </div>
+            <Button className={cn("hidden xl:inline-flex", desktopLeaveBtn)} variant="secondary" onClick={requestLeave}>
+              {fr.gameScreen.leaveGame}
+            </Button>
           </div>
         </header>
 
         <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(280px,22vw)]">
           <Card className={cn(GAME_PANEL_SURFACE, "grid min-h-0 grid-rows-[minmax(150px,1fr)_auto] gap-2 p-2.5 sm:grid-rows-[minmax(340px,1fr)_auto_auto] sm:gap-3 sm:p-4 lg:gap-4 lg:p-5")}>
-            <PlanningPokerRoundBoard players={votingPlayers} revealed={state.revealed} />
+            <PlanningPokerRoundBoard players={votingPlayers} revealed={state.revealed} storyTitle={state.storyTitle} round={state.round} />
 
             <div className="rounded-lg border border-cyan-300/22 bg-slate-950/38 p-2 sm:p-3">
               {myRole === "player" ? (
                 <div className="grid grid-cols-5 justify-items-center gap-1.5 sm:flex sm:flex-nowrap sm:justify-center sm:gap-2">
-                  {SIMPLE_DECK.map((value) => {
+                  {activeDeck.map((value) => {
                     const selected = myVote === value;
                     return (
                       <button
@@ -134,7 +151,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                             : "border-cyan-300/28 text-cyan-100 hover:-translate-y-0.5 hover:border-cyan-300/50 hover:bg-slate-900/92"
                         )}
                       >
-                        {value}
+                        {displayVoteValue(value)}
                       </button>
                     );
                   })}
@@ -144,38 +161,39 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
               )}
             </div>
 
-            <div className="hidden flex-wrap items-center justify-between gap-2 sm:flex">
-              <div className="w-full sm:w-auto flex flex-wrap items-center gap-2">
-                <SecondaryButton className={cn("h-9 text-xs", CTA_NEON_SECONDARY_SUBTLE)} onClick={() => onRoleChange(myRole === "player" ? "spectator" : "player")}> 
+            <div className="hidden min-w-0 flex-wrap items-center justify-between gap-2 sm:flex">
+              <div className="flex min-w-0 w-full flex-wrap items-center gap-2 sm:w-auto">
+                <SecondaryButton className={cn("h-9 min-w-0 text-xs", CTA_NEON_SECONDARY_SUBTLE)} onClick={() => onRoleChange(myRole === "player" ? "spectator" : "player")}> 
                   {myRole === "player" ? fr.planningPoker.switchSpectator : fr.planningPoker.switchPlayer}
                 </SecondaryButton>
                 {isHost ? (
                   <>
-                    <input
-                      value={state.storyTitle}
-                      onChange={(event) => onStoryTitleChange(event.target.value)}
-                      className="h-9 rounded-md border border-cyan-300/28 bg-slate-900/55 px-2 text-xs text-cyan-50"
-                      placeholder={fr.planningPoker.storyLabel}
-                      maxLength={64}
-                    />
-                    <select
-                      value={state.voteSystem}
-                      onChange={(event) => onVoteSystemChange(event.target.value as PlanningPokerState["voteSystem"])}
-                      className="h-9 rounded-md border border-cyan-300/28 bg-slate-900/55 px-2 text-xs text-cyan-50"
-                    >
-                      <option value="fibonacci">Fibonacci</option>
-                      <option value="man-day">Jour.homme</option>
-                      <option value="tshirt">T-Shirt</option>
-                    </select>
+                    <div className="flex min-w-0 items-center gap-1 rounded-md border border-cyan-300/28 bg-slate-900/55 p-1">
+                      {VOTE_SYSTEM_OPTIONS.map((option) => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => onVoteSystemChange(option.value)}
+                          className={cn(
+                            "h-7 min-w-0 rounded px-2 text-[11px] transition-colors",
+                            state.voteSystem === option.value
+                              ? "bg-cyan-500 text-slate-950"
+                              : "bg-transparent text-cyan-50 hover:bg-slate-800/70"
+                          )}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
                   </>
                 ) : null}
               </div>
 
-              <div className="grid w-full grid-cols-3 gap-2 sm:w-auto sm:flex sm:items-center">
-                <SecondaryButton className={cn("h-9 w-full text-[11px] sm:w-auto sm:text-xs", CTA_NEON_SECONDARY_SUBTLE)} disabled={!isHost} onClick={onResetVotes}>
+              <div className="grid w-full min-w-0 grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:justify-end">
+                <SecondaryButton className={cn("h-9 min-w-0 w-full text-[11px] sm:w-auto sm:text-xs", CTA_NEON_SECONDARY_SUBTLE)} disabled={!isHost} onClick={onResetVotes}>
                   {fr.planningPoker.resetVotes}
                 </SecondaryButton>
-                <PrimaryButton className={cn("h-9 w-full text-[11px] sm:w-auto sm:text-xs", CTA_NEON_PRIMARY)} disabled={!isHost} onClick={onRevealVotes}>
+                <PrimaryButton className={cn("h-9 min-w-0 w-full text-[11px] sm:w-auto sm:text-xs", CTA_NEON_PRIMARY)} disabled={!isHost} onClick={onRevealVotes}>
                   <span className="sm:hidden">{state.revealed ? "Revele" : "Reveal"}</span>
                   <span className="hidden sm:inline">{state.revealed ? fr.planningPoker.revealDone : fr.planningPoker.revealVotes}</span>
                 </PrimaryButton>
@@ -184,13 +202,12 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
           </Card>
 
           <Card className={cn(GAME_PANEL_SURFACE, "hidden min-h-0 p-3 lg:flex lg:flex-col")}>
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <div className="text-xs font-semibold uppercase tracking-[0.08em] text-cyan-100">Panneau</div>
-              <div className="flex gap-2">
+            <div className="mb-2 flex items-center justify-start gap-2">
+              <div className="grid w-full grid-cols-3 gap-2">
                 <Button
                   variant="secondary"
                   size="sm"
-                  className={cn(GAME_TAB_BUTTON, sidebarTab === "spectators" ? GAME_TAB_BUTTON_ACTIVE : "opacity-95")}
+                  className={cn(GAME_TAB_BUTTON, "w-full justify-center", sidebarTab === "spectators" ? GAME_TAB_BUTTON_ACTIVE : "opacity-95")}
                   onClick={() => setSidebarTab("spectators")}
                 >
                   Spectateurs
@@ -198,10 +215,18 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                 <Button
                   variant="secondary"
                   size="sm"
-                  className={cn(GAME_TAB_BUTTON, sidebarTab === "session" ? GAME_TAB_BUTTON_ACTIVE : "opacity-95")}
+                  className={cn(GAME_TAB_BUTTON, "w-full justify-center", sidebarTab === "session" ? GAME_TAB_BUTTON_ACTIVE : "opacity-95")}
                   onClick={() => setSidebarTab("session")}
                 >
                   Session
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className={cn(GAME_TAB_BUTTON, "w-full justify-center", sidebarTab === "history" ? GAME_TAB_BUTTON_ACTIVE : "opacity-95")}
+                  onClick={() => setSidebarTab("history")}
+                >
+                  Historique
                 </Button>
               </div>
             </div>
@@ -219,7 +244,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                   <div className="text-xs text-slate-300">Aucun spectateur.</div>
                 )}
               </div>
-            ) : (
+            ) : sidebarTab === "session" ? (
               <div className="grid gap-2 text-xs">
                 <div className={cn("p-2", GAME_SUBPANEL_SURFACE)}>
                   <div className="text-slate-300">Story</div>
@@ -250,6 +275,32 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                   </div>
                 </div>
               </div>
+            ) : (
+              <div className="grid min-h-0 gap-2 overflow-auto pr-1 text-xs">
+                {history.length > 0 ? (
+                  [...history].reverse().map((entry) => (
+                    <div key={entry.id} className={cn("grid gap-1.5 p-2", GAME_SUBPANEL_SURFACE)}>
+                      <div className="flex items-center justify-between text-cyan-100">
+                        <span className="font-semibold">Vote #{entry.round}</span>
+                        <span className="text-[11px] text-slate-300">{entry.storyTitle || "-"}</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-[11px]">
+                        <div>Moy: <span className="font-semibold text-cyan-50">{formatPlanningValue(entry.average)}</span></div>
+                        <div>Med: <span className="font-semibold text-cyan-50">{formatPlanningValue(entry.median)}</span></div>
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {entry.votes.map((vote, index) => (
+                          <span key={`${entry.id}-${vote.playerName}-${index}`} className="rounded-md border border-cyan-300/20 bg-slate-950/40 px-1.5 py-0.5 text-[11px] text-cyan-100">
+                            {vote.playerName}: {displayVoteValue(vote.value)}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-xs text-slate-300">Aucun vote revele pour le moment.</div>
+                )}
+              </div>
             )}
           </Card>
         </div>
@@ -276,7 +327,10 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                   <Button
                     variant="secondary"
                     className={cn(GAME_MOBILE_ACTION_BUTTON, CTA_NEON_SECONDARY_SUBTLE, "text-xs")}
-                    onClick={() => setMobileActionsOpen(true)}
+                    onClick={() => {
+                      setMobileMenuTab("actions");
+                      setMobileActionsOpen(true);
+                    }}
                   >
                     Menu
                   </Button>
@@ -286,21 +340,27 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                   <Button
                     variant="secondary"
                     className={cn(GAME_MOBILE_ACTION_BUTTON, CTA_NEON_SECONDARY_SUBTLE, "text-xs")}
-                    onClick={() => setMobileActionsOpen(true)}
+                    onClick={() => {
+                      setMobileMenuTab("spectators");
+                      setMobileActionsOpen(true);
+                    }}
                   >
                     Spectateurs
                   </Button>
                   <Button
                     variant="secondary"
                     className={cn(GAME_MOBILE_ACTION_BUTTON, CTA_NEON_SECONDARY_SUBTLE, "text-xs")}
-                    onClick={() => setMobileActionsOpen(true)}
+                    onClick={() => {
+                      setMobileMenuTab("actions");
+                      setMobileActionsOpen(true);
+                    }}
                   >
                     Actions
                   </Button>
                   <Button
                     variant="secondary"
                     className={cn(GAME_MOBILE_ACTION_BUTTON, CTA_NEON_DANGER, "text-xs")}
-                    onClick={onLeave}
+                    onClick={requestLeave}
                   >
                     {fr.onlineLobby.leaveParty}
                   </Button>
@@ -314,49 +374,85 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
       <Drawer open={mobileActionsOpen} onOpenChange={setMobileActionsOpen}>
         <DrawerContent className={GAME_DRAWER_CONTENT}>
           <DrawerHeader>
-            <DrawerTitle>Menu</DrawerTitle>
+            <DrawerTitle>{mobileMenuTab === "spectators" ? "Spectateurs" : "Actions"}</DrawerTitle>
           </DrawerHeader>
           <div className="grid gap-2 px-4 pb-4">
-            <div className="mb-1 text-xs font-semibold uppercase tracking-[0.08em] text-cyan-100">Spectateurs</div>
-            {spectators.length > 0 ? (
-              spectators.map((player) => (
-                <div key={player.socketId} className="flex items-center gap-2 rounded-md border border-cyan-300/20 bg-slate-950/42 px-2 py-1.5">
-                  <span className="text-base">{AVATARS[player.avatar] ?? ":)"}</span>
-                  <span className="truncate text-xs text-cyan-50">{player.name}</span>
-                </div>
-              ))
-            ) : (
-              <div className="rounded-md border border-cyan-300/20 bg-slate-950/42 px-2 py-1.5 text-xs text-slate-300">Aucun spectateur.</div>
-            )}
-            <SecondaryButton className={cn("h-10 w-full text-xs", CTA_NEON_SECONDARY_SUBTLE)} onClick={() => onRoleChange(myRole === "player" ? "spectator" : "player")}>
-              {myRole === "player" ? fr.planningPoker.switchSpectator : fr.planningPoker.switchPlayer}
-            </SecondaryButton>
-            {isHost ? (
+            {mobileMenuTab === "spectators" ? (
               <>
-                <input
-                  value={state.storyTitle}
-                  onChange={(event) => onStoryTitleChange(event.target.value)}
-                  className="h-10 w-full rounded-md border border-cyan-300/28 bg-slate-900/55 px-2 text-xs text-cyan-50"
-                  placeholder={fr.planningPoker.storyLabel}
-                  maxLength={64}
-                />
-                <select
-                  value={state.voteSystem}
-                  onChange={(event) => onVoteSystemChange(event.target.value as PlanningPokerState["voteSystem"])}
-                  className="h-10 w-full rounded-md border border-cyan-300/28 bg-slate-900/55 px-2 text-xs text-cyan-50"
-                >
-                  <option value="fibonacci">Fibonacci</option>
-                  <option value="man-day">Jour.homme</option>
-                  <option value="tshirt">T-Shirt</option>
-                </select>
+                {spectators.length > 0 ? (
+                  spectators.map((player) => (
+                    <div key={player.socketId} className="flex items-center gap-2 rounded-md border border-cyan-300/20 bg-slate-950/42 px-2 py-1.5">
+                      <span className="text-base">{AVATARS[player.avatar] ?? ":)"}</span>
+                      <span className="truncate text-xs text-cyan-50">{player.name}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-md border border-cyan-300/20 bg-slate-950/42 px-2 py-1.5 text-xs text-slate-300">Aucun spectateur.</div>
+                )}
               </>
-            ) : null}
-            <SecondaryButton className={cn("h-10 w-full text-xs", CTA_NEON_DANGER)} onClick={onLeave}>
-              {fr.onlineLobby.leaveParty}
-            </SecondaryButton>
+            ) : (
+              <>
+                <div className="mb-1 text-xs font-semibold uppercase tracking-[0.08em] text-cyan-100">Historique des votes</div>
+                {history.length > 0 ? (
+                  [...history].reverse().map((entry) => (
+                    <div key={`mobile-${entry.id}`} className="rounded-md border border-cyan-300/20 bg-slate-950/42 px-2 py-1.5 text-xs text-cyan-50">
+                      <div className="font-semibold">Vote #{entry.round} · {entry.storyTitle || "-"}</div>
+                      <div className="text-slate-300">Moy: {formatPlanningValue(entry.average)} · Med: {formatPlanningValue(entry.median)}</div>
+                      <div className="mt-1 text-slate-300">{entry.votes.map((vote) => `${vote.playerName}:${displayVoteValue(vote.value)}`).join(" · ")}</div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-md border border-cyan-300/20 bg-slate-950/42 px-2 py-1.5 text-xs text-slate-300">Aucun vote revele pour le moment.</div>
+                )}
+                <SecondaryButton className={cn("h-10 w-full text-xs", CTA_NEON_SECONDARY_SUBTLE)} onClick={() => onRoleChange(myRole === "player" ? "spectator" : "player")}>
+                  {myRole === "player" ? fr.planningPoker.switchSpectator : fr.planningPoker.switchPlayer}
+                </SecondaryButton>
+                {isHost ? (
+                  <div className="grid grid-cols-3 gap-1 rounded-md border border-cyan-300/28 bg-slate-900/55 p-1">
+                    {VOTE_SYSTEM_OPTIONS.map((option) => (
+                      <button
+                        key={`mobile-${option.value}`}
+                        type="button"
+                        onClick={() => onVoteSystemChange(option.value)}
+                        className={cn(
+                          "h-8 rounded px-2 text-[11px] transition-colors",
+                          state.voteSystem === option.value
+                            ? "bg-cyan-500 text-slate-950"
+                            : "bg-transparent text-cyan-50 hover:bg-slate-800/70"
+                        )}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+                <SecondaryButton className={cn("h-10 w-full text-xs", CTA_NEON_DANGER)} onClick={requestLeave}>
+                  {fr.onlineLobby.leaveParty}
+                </SecondaryButton>
+              </>
+            )}
           </div>
         </DrawerContent>
       </Drawer>
+
+      <AlertDialog open={leaveDialogOpen} onOpenChange={setLeaveDialogOpen}>
+        <AlertDialogContent className={cn(GAME_DIALOG_CONTENT, "max-w-md")}>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-center text-2xl">{fr.gameScreen.leaveQuestionTitle}</AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-slate-300">
+              {fr.gameScreen.leaveQuestionDescription}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-1 grid grid-cols-1 gap-2 sm:grid-cols-2 sm:space-x-0">
+            <AlertDialogCancel className={cn(CTA_NEON_SECONDARY_SUBTLE, "h-11 w-full rounded-xl text-cyan-100")}>
+              {fr.gameScreen.cancel}
+            </AlertDialogCancel>
+            <AlertDialogAction className={cn(CTA_NEON_DANGER, "h-11 w-full rounded-xl")} onClick={confirmLeave}>
+              {fr.gameScreen.leave}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

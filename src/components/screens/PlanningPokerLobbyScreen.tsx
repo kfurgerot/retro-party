@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+﻿import React, { useEffect, useMemo, useRef, useState } from "react";
 import { AVATARS } from "@/types/game";
 import { PlanningPokerRole, PlanningPokerVoteSystem } from "@/types/planningPoker";
 import { fr } from "@/i18n/fr";
@@ -36,6 +36,14 @@ type Props = {
   initialCode?: string;
   autoSubmitKey?: number;
 };
+
+const VOTE_SYSTEM_OPTIONS: Array<{ value: PlanningPokerVoteSystem; label: string }> = [
+  { value: "fibonacci", label: "Fibonacci" },
+  { value: "man-day", label: "Jour.homme" },
+  { value: "tshirt", label: "T-Shirt" },
+];
+
+const displayDeckValue = (value: string) => (value === "☕" ? "Cafe" : value);
 
 const cleanName = (value: string) => value.replace(/\s+/g, " ").trim().slice(0, 16);
 const cleanCode = (value: string) => value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
@@ -199,15 +207,23 @@ export const PlanningPokerLobbyScreen: React.FC<Props> = ({
                 {mode === "host" ? (
                   <div>
                     <p className="mb-1 text-xs text-slate-300">{fr.planningPoker.voteSystem}</p>
-                    <select
-                      value={voteSystem}
-                      onChange={(event) => onVoteSystemChange(event.target.value as PlanningPokerVoteSystem)}
-                      className="h-10 w-full rounded border border-cyan-300/25 bg-slate-900/50 px-2 text-sm text-cyan-50"
-                    >
-                      <option value="fibonacci">Fibonacci</option>
-                      <option value="man-day">Jour.homme</option>
-                      <option value="tshirt">T-Shirt</option>
-                    </select>
+                    <div className="grid grid-cols-3 gap-1 rounded border border-cyan-300/25 bg-slate-900/50 p-1">
+                      {VOTE_SYSTEM_OPTIONS.map((option) => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => onVoteSystemChange(option.value)}
+                          className={cn(
+                            "h-8 rounded px-2 text-xs transition-colors",
+                            voteSystem === option.value
+                              ? "bg-cyan-500 text-slate-950"
+                              : "bg-transparent text-cyan-50 hover:bg-slate-800/70"
+                          )}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 ) : (
                   <div>
@@ -283,17 +299,31 @@ export const PlanningPokerLobbyScreen: React.FC<Props> = ({
 
               <div className="rounded-md border border-cyan-300/25 bg-slate-900/45 p-3">
                 <p className="text-xs text-slate-300">{fr.planningPoker.voteSystem}</p>
-                <select
-                  disabled={!canStart}
-                  value={voteSystem}
-                  onChange={(event) => onVoteSystemChange(event.target.value as PlanningPokerVoteSystem)}
-                  className="mt-2 h-10 w-full rounded border border-cyan-300/25 bg-slate-900/50 px-2 text-sm text-cyan-50 disabled:opacity-50"
-                >
-                  <option value="fibonacci">Fibonacci</option>
-                  <option value="man-day">Jour.homme</option>
-                  <option value="tshirt">T-Shirt</option>
-                </select>
-                <p className="mt-2 text-xs text-slate-400">{PLANNING_POKER_DECKS[voteSystem].join(" � ")}</p>
+                <div className={cn("mt-2 grid grid-cols-3 gap-1 rounded border border-cyan-300/25 bg-slate-900/50 p-1", !canStart && "opacity-50")}>
+                  {VOTE_SYSTEM_OPTIONS.map((option) => (
+                    <button
+                      key={`room-${option.value}`}
+                      type="button"
+                      disabled={!canStart}
+                      onClick={() => onVoteSystemChange(option.value)}
+                      className={cn(
+                        "h-8 rounded px-2 text-xs transition-colors",
+                        voteSystem === option.value
+                          ? "bg-cyan-500 text-slate-950"
+                          : "bg-transparent text-cyan-50 hover:bg-slate-800/70"
+                      )}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {PLANNING_POKER_DECKS[voteSystem].map((value) => (
+                    <span key={`lobby-${value}`} className="rounded border border-cyan-300/20 bg-slate-900/55 px-1.5 py-0.5 text-[10px] text-slate-300">
+                      {displayDeckValue(value)}
+                    </span>
+                  ))}
+                </div>
               </div>
 
               {onEditProfile && (
@@ -338,3 +368,4 @@ export const PlanningPokerLobbyScreen: React.FC<Props> = ({
     </div>
   );
 };
+

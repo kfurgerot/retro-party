@@ -1,9 +1,9 @@
-import { PlanningPokerPlayer, PlanningPokerVoteSystem } from "@/types/planningPoker";
+﻿import { PlanningPokerPlayer, PlanningPokerVoteSystem } from "@/types/planningPoker";
 
 export const PLANNING_POKER_DECKS: Record<PlanningPokerVoteSystem, string[]> = {
   fibonacci: ["0", "1", "2", "3", "5", "8", "13", "21", "?", "☕"],
-  "man-day": ["0.5", "1", "2", "3", "5", "8", "13", "20", "40", "100", "?", "?"],
-  tshirt: ["XS", "S", "M", "L", "XL", "XXL", "?", "?"],
+  "man-day": ["0.5", "1", "2", "3", "5", "8", "13", "20", "40", "100", "?", "☕"],
+  tshirt: ["XS", "S", "M", "L", "XL", "XXL", "?", "☕"],
 };
 
 const TSHIRT_SCALE: Record<string, number> = {

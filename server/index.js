@@ -1230,10 +1230,6 @@ io.on("connection", (socket) => {
 
     room.voteSystem = normalizePokerVoteSystem(voteSystem);
     room.revealed = false;
-    room.round += 1;
-    if (!room.storyTitle || room.storyTitle.startsWith("Story #")) {
-      room.storyTitle = `Story #${room.round}`;
-    }
     room.lobby = room.lobby.map((player) => ({
       ...player,
       hasVoted: false,
