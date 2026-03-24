@@ -89,6 +89,7 @@ export const PlanningPokerReadyScreen: React.FC<Props> = ({
   );
   const hostPlayerName =
     sortedPlayers.find((player) => player.isHost)?.name ?? fr.terms.host;
+  const subtitle = `${fr.onlineLobby.roomActive} : ${roomCode}`;
 
   const copyRoom = async () => {
     try {
@@ -111,21 +112,21 @@ export const PlanningPokerReadyScreen: React.FC<Props> = ({
   };
 
   return (
-    <div className="scanlines relative flex min-h-svh w-full items-start justify-center overflow-hidden px-4 pt-4 sm:pt-6 pb-28 sm:pb-32">
+    <div className="scanlines relative flex min-h-svh w-full items-start justify-center overflow-hidden px-4 pt-4 pb-28 sm:pb-32 sm:pt-6">
       <RetroScreenBackground />
 
-      <div className="relative z-10 flex min-h-[82svh] w-full max-w-4xl flex-col rounded border border-cyan-300/60 bg-[linear-gradient(180deg,rgba(8,18,38,0.88)_0%,rgba(8,12,24,0.9)_100%)] p-5 shadow-[0_0_0_2px_rgba(34,211,238,0.3),0_0_34px_rgba(34,211,238,0.32)] backdrop-blur sm:p-8">
+      <Card className="relative z-10 flex min-h-[82svh] w-full max-w-4xl flex-col p-5 sm:p-8">
         <div className="flex items-center justify-between gap-2 text-[10px] uppercase tracking-[0.16em] text-cyan-200/80">
-          <span>{fr.planningPoker.brand}</span>
-          <span className="rounded-full border border-cyan-300/40 px-2 py-0.5">{fr.planningPoker.readyBadge}</span>
+          <span>{fr.onlineLobby.brand}</span>
         </div>
 
         <h1 className="mt-4 text-center text-xl text-cyan-200 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)] sm:text-3xl">
-          {fr.planningPoker.readyTitle}
+          {fr.onlineLobby.roomReady}
         </h1>
+        <p className="mt-4 text-center text-xs text-slate-300 sm:text-sm">{subtitle}</p>
 
         <section className="mx-auto mt-6 grid w-full max-w-4xl gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)]">
-          <Card className="grid gap-3 p-4 sm:p-5">
+          <Card className="grid gap-2 p-4 sm:p-5">
             {isHost ? (
               <p className="rounded-md border border-cyan-300/25 bg-slate-900/40 px-3 py-3 text-xs text-slate-300">
                 {fr.onlineLobby.hostLaunchHint}
@@ -222,7 +223,7 @@ export const PlanningPokerReadyScreen: React.FC<Props> = ({
             <span className="text-xs text-slate-300">{sortedPlayers.length}</span>
           </div>
 
-          <div className="grid max-h-[32vh] gap-2 overflow-auto pr-1 sm:grid-cols-2">
+          <div className="grid max-h-[38vh] gap-2 overflow-auto pr-1 sm:grid-cols-2">
             {sortedPlayers.map((player) => (
               <div
                 key={player.socketId}
@@ -235,6 +236,15 @@ export const PlanningPokerReadyScreen: React.FC<Props> = ({
                   <span className="text-sm font-medium text-cyan-50">{player.name}</span>
                 </div>
                 <div className="flex items-center gap-2">
+                  {player.connected ? (
+                    <span className="rounded-full border border-emerald-500/35 bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-200">
+                      {fr.onlineLobby.online}
+                    </span>
+                  ) : (
+                    <span className="rounded-full border border-amber-500/35 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-200">
+                      {fr.onlineLobby.offline}
+                    </span>
+                  )}
                   <span className="rounded-full border border-cyan-500/35 bg-cyan-500/10 px-2 py-0.5 text-[10px] text-cyan-200">
                     {player.role === "player" ? fr.planningPoker.rolePlayer : fr.planningPoker.roleSpectator}
                   </span>
@@ -248,7 +258,7 @@ export const PlanningPokerReadyScreen: React.FC<Props> = ({
             ))}
           </div>
         </Card>
-      </div>
+      </Card>
 
       <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 hidden px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:block">
         <Card className="pointer-events-auto mx-auto w-full max-w-4xl border-cyan-300/40 bg-slate-950/92 p-3 shadow-[0_0_0_1px_rgba(34,211,238,0.2),0_8px_28px_rgba(2,6,23,0.55)]">
