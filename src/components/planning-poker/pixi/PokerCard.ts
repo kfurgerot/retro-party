@@ -51,20 +51,28 @@ export class PokerCard {
     this.isInteractive = options.interactive !== false;
 
     this.titleText = new Text(this.value, new TextStyle({
-      fontFamily: "'Press Start 2P', monospace",
+      fontFamily: "'Trebuchet MS', 'Segoe UI', Arial, sans-serif",
       fill: 0x0f172a,
-      fontSize: Math.max(14, Math.round(this.height * 0.27)),
+      fontSize: Math.max(16, Math.round(this.height * 0.32)),
       fontWeight: "700",
+      stroke: 0xffffff,
+      strokeThickness: 1.2,
+      lineJoin: "round",
+      miterLimit: 2,
     }));
+    this.titleText.resolution = 2;
     this.titleText.anchor.set(0.5);
 
     this.backText = new Text("VOTE", new TextStyle({
-      fontFamily: "'Press Start 2P', monospace",
+      fontFamily: "'Trebuchet MS', 'Segoe UI', Arial, sans-serif",
       fill: 0x67e8f9,
-      fontSize: Math.max(10, Math.round(this.height * 0.12)),
-      letterSpacing: 2,
+      fontSize: Math.max(10, Math.round(this.height * 0.15)),
+      letterSpacing: 1.2,
       fontWeight: "700",
+      lineJoin: "round",
+      miterLimit: 2,
     }));
+    this.backText.resolution = 2;
     this.backText.anchor.set(0.5);
 
     this.view.addChild(this.face, this.titleText, this.backText);

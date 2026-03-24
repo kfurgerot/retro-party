@@ -25,6 +25,10 @@ export class PokerDeck {
 
   private cardHeight: number;
 
+  private contentWidth = 0;
+
+  private contentHeight = 0;
+
   constructor(options: PokerDeckOptions) {
     this.values = options.values;
     this.cardWidth = options.cardWidth;
@@ -61,12 +65,17 @@ export class PokerDeck {
     width,
     columnsOverride,
     gapOverride,
+    forceSingleRow,
   }: {
     width: number;
     columnsOverride?: number;
     gapOverride?: number;
+    forceSingleRow?: boolean;
   }) {
-    const colCount = Math.max(1, columnsOverride ?? (width < 520 ? 4 : width < 760 ? 6 : 8));
+    const colCount = Math.max(
+      1,
+      columnsOverride ?? (forceSingleRow ? this.values.length : width < 520 ? 4 : width < 760 ? 6 : 8)
+    );
     const gap = gapOverride ?? (width < 520 ? 10 : 12);
 
     this.values.forEach((value, index) => {
@@ -81,10 +90,19 @@ export class PokerDeck {
     });
 
     const rows = Math.ceil(this.values.length / colCount);
-    const contentWidth = Math.min(this.values.length, colCount) * this.cardWidth + (Math.min(this.values.length, colCount) - 1) * gap;
+    const contentWidth =
+      Math.min(this.values.length, colCount) * this.cardWidth + (Math.min(this.values.length, colCount) - 1) * gap;
     const contentHeight = rows * this.cardHeight + Math.max(0, rows - 1) * gap;
+    this.contentWidth = Math.max(0, contentWidth);
+    this.contentHeight = Math.max(0, contentHeight);
 
     this.view.pivot.set(contentWidth / 2, contentHeight / 2);
+    if (forceSingleRow && this.contentWidth > width) {
+      const scale = Math.max(0.72, width / this.contentWidth);
+      this.view.scale.set(scale);
+    } else {
+      this.view.scale.set(1);
+    }
   }
 
   private syncCards() {

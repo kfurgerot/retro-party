@@ -1,4 +1,4 @@
-﻿import { Container, Graphics, Text, TextStyle } from "pixi.js";
+import { Container, Graphics, Sprite, Text, TextStyle, Texture } from "pixi.js";
 import { PlanningPokerPlayer } from "@/types/planningPoker";
 import { AVATARS } from "@/types/game";
 import { PokerCard } from "./PokerCard";
@@ -14,13 +14,19 @@ export class PlayerSeat {
 
   readonly card: PokerCard;
 
+  private readonly cardAnchor = new Container();
+
   private readonly avatarContainer = new Container();
+
+  private readonly seatBase = new Sprite(Texture.WHITE);
 
   private readonly avatarShadow = new Graphics();
 
   private readonly avatarBadge = new Graphics();
 
   private readonly pulseRing = new Graphics();
+
+  private readonly namePlate = new Sprite(Texture.WHITE);
 
   private readonly avatarText: Text;
 
@@ -39,7 +45,19 @@ export class PlayerSeat {
       hidden: true,
     });
 
-    this.avatarText = new Text("🙂", new TextStyle({
+    this.seatBase.anchor.set(0.5);
+    this.seatBase.tint = 0x0b1220;
+    this.seatBase.alpha = 0.24;
+    this.seatBase.width = 108;
+    this.seatBase.height = 24;
+
+    this.namePlate.anchor.set(0.5);
+    this.namePlate.tint = 0x0f172a;
+    this.namePlate.alpha = 0.66;
+    this.namePlate.width = 112;
+    this.namePlate.height = 18;
+
+    this.avatarText = new Text("??", new TextStyle({
       fontFamily: "Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif",
       fontSize: 20,
     }));
@@ -62,7 +80,10 @@ export class PlayerSeat {
     this.badgeText.anchor.set(0.5);
 
     this.avatarContainer.addChild(this.pulseRing, this.avatarShadow, this.avatarBadge, this.avatarText);
-    this.view.addChild(this.card.view, this.avatarContainer, this.nameText, this.badgeText);
+    this.cardAnchor.addChild(this.card.view);
+
+    this.view.addChild(this.seatBase, this.cardAnchor, this.avatarContainer, this.namePlate, this.nameText, this.badgeText);
+    this.view.sortableChildren = true;
 
     this.avatarContainer.eventMode = "static";
     this.avatarContainer.cursor = "pointer";
@@ -83,24 +104,55 @@ export class PlayerSeat {
     this.view.destroy({ children: true });
   }
 
-  setLayout(opts: {
-    avatarX: number;
-    avatarY: number;
-    cardX: number;
-    cardY: number;
-    nameX: number;
-    nameY: number;
-    badgeX: number;
-    badgeY: number;
+  setIsometricLayout(opts: {
+    seatX: number;
+    seatY: number;
+    yOffset: number;
+    seatScale: number;
+    cardRotation: number;
   }) {
-    this.avatarContainer.position.set(opts.avatarX, opts.avatarY);
-    this.card.view.position.set(opts.cardX, opts.cardY);
-    this.nameText.position.set(opts.nameX, opts.nameY);
-    this.badgeText.position.set(opts.badgeX, opts.badgeY);
+    this.view.position.set(opts.seatX, opts.seatY + opts.yOffset);
+    this.view.scale.set(opts.seatScale);
+    this.view.zIndex = opts.seatY + opts.yOffset;
+
+    this.avatarContainer.position.set(0, -40);
+    this.namePlate.position.set(0, -15);
+    this.nameText.position.set(0, -15);
+    this.badgeText.position.set(0, 2);
+    this.cardAnchor.position.set(0, 20);
+    this.card.view.rotation = opts.cardRotation;
+
+    this.seatBase.y = 30;
+    this.seatBase.width = 108;
+    this.seatBase.height = 20;
+  }
+
+  setMobileLayout(opts: {
+    seatX: number;
+    seatY: number;
+    yOffset: number;
+    seatScale: number;
+    cardRotation: number;
+    isLocal: boolean;
+  }) {
+    this.view.position.set(opts.seatX, opts.seatY + opts.yOffset);
+    this.view.scale.set(opts.seatScale);
+    this.view.zIndex = opts.seatY + opts.yOffset + (opts.isLocal ? 1000 : 0);
+
+    this.avatarContainer.position.set(0, -44);
+    this.namePlate.position.set(0, -18);
+    this.nameText.position.set(0, -18);
+    this.badgeText.position.set(0, 0);
+    this.cardAnchor.position.set(0, opts.isLocal ? 32 : 26);
+    this.card.view.rotation = opts.cardRotation;
+
+    this.seatBase.y = 38;
+    this.seatBase.width = opts.isLocal ? 132 : 110;
+    this.seatBase.height = opts.isLocal ? 22 : 18;
   }
 
   renderPlayer(player: PlanningPokerPlayer, opts: { isMe: boolean; revealed: boolean }) {
-    this.avatarText.text = AVATARS[player.avatar] ?? "🙂";
+    this.avatarText.text = AVATARS[player.avatar] ?? "??";
 
     this.avatarShadow.clear();
     this.avatarShadow.beginFill(0x020617, 0.34);
@@ -120,7 +172,7 @@ export class PlayerSeat {
     if (player.role === "spectator") badges.push("SPEC");
     if (!player.connected) badges.push("OFF");
     if (!opts.revealed && player.hasVoted) badges.push("A VOTE");
-    this.badgeText.text = badges.join(" · ");
+    this.badgeText.text = badges.join(" � ");
     this.badgeText.visible = badges.length > 0;
   }
 
