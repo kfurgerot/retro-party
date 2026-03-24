@@ -69,7 +69,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
     <div className="scanlines relative min-h-svh w-full overflow-x-hidden overflow-y-auto px-2 pb-24 pt-2 sm:overflow-hidden sm:px-4 sm:pb-24 sm:pt-4">
       <RetroScreenBackground />
 
-      <div className="relative z-10 mx-auto flex min-h-[calc(100svh-8rem)] w-full max-w-7xl flex-col gap-3 sm:h-[calc(100svh-8rem)] sm:gap-4">
+      <div className="relative z-10 mx-auto flex min-h-[calc(100svh-8rem)] w-full max-w-[1680px] flex-col gap-3 sm:h-[calc(100svh-8rem)] sm:gap-4">
         <header className={cn(GAME_HUD_SURFACE, "flex items-center justify-between px-3 py-2 sm:px-4 sm:py-3")}>
           <div className="min-w-0">
             <div className="truncate text-base font-semibold text-cyan-50">{roomName}</div>
@@ -93,13 +93,13 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
           </div>
         </header>
 
-        <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_260px]">
-          <Card className={cn(GAME_PANEL_SURFACE, "grid min-h-0 grid-rows-[minmax(220px,1fr)_auto_auto] gap-3 p-3 sm:grid-rows-[minmax(0,1fr)_auto_auto] sm:p-4")}>
+        <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(280px,22vw)]">
+          <Card className={cn(GAME_PANEL_SURFACE, "grid min-h-0 grid-rows-[minmax(260px,1fr)_auto_auto] gap-3 p-3 sm:grid-rows-[minmax(0,1fr)_auto_auto] sm:p-4 lg:gap-4 lg:p-5")}>
             <PlanningPokerRoundBoard players={votingPlayers} revealed={state.revealed} />
 
             <div className="rounded-lg border border-cyan-300/22 bg-slate-950/38 p-2 sm:p-3">
               {myRole === "player" ? (
-                <div className="grid grid-cols-5 gap-1.5 sm:grid-cols-10 sm:gap-2">
+                <div className="grid grid-cols-5 justify-items-center gap-1.5 sm:flex sm:flex-nowrap sm:justify-center sm:gap-2">
                   {SIMPLE_DECK.map((value) => {
                     const selected = myVote === value;
                     return (
@@ -109,7 +109,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                         onClick={() => onVoteCard(value)}
                         disabled={state.revealed}
                         className={cn(
-                          "h-12 rounded-lg border text-sm font-semibold transition-all duration-150 sm:h-14 sm:text-base",
+                          "h-[68px] w-full max-w-[64px] rounded-xl border text-lg font-semibold transition-all duration-150 sm:h-[94px] sm:w-[62px] sm:max-w-none sm:text-xl",
                           "bg-gradient-to-b from-slate-900/82 to-slate-950/82",
                           "shadow-[0_2px_8px_rgba(2,6,23,0.35)]",
                           "disabled:cursor-not-allowed disabled:opacity-50",

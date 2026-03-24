@@ -16,8 +16,8 @@ type Seat = {
 function buildSeats(players: PlanningPokerPlayer[]): Seat[] {
   const count = Math.max(1, players.length);
   const angleStep = (Math.PI * 2) / count;
-  const radiusX = 34;
-  const radiusY = 27;
+  const radiusX = 40;
+  const radiusY = 31;
   return players.map((player, index) => {
     const angle = -Math.PI / 2 + index * angleStep;
     return {
@@ -38,13 +38,13 @@ export const PlanningPokerRoundBoard: React.FC<Props> = ({ players, revealed }) 
   const seats = useMemo(() => buildSeats(players), [players]);
 
   return (
-    <div className="relative h-full w-full overflow-hidden rounded-2xl border border-cyan-300/28 bg-slate-950/40 p-2.5 sm:p-4">
+    <div className="relative h-full w-full overflow-hidden rounded-2xl border border-cyan-300/28 bg-slate-950/40 p-2.5 sm:p-4 lg:p-5">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(34,211,238,0.12),_transparent_64%)]" />
 
       <div className="relative h-full w-full">
-        <div className="absolute left-1/2 top-1/2 h-[38%] w-[62%] -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-300/22 bg-slate-900/55 shadow-[0_0_0_1px_rgba(34,211,238,0.08)] sm:h-[40%] sm:w-[58%]" />
+        <div className="absolute left-1/2 top-1/2 h-[42%] w-[70%] -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-300/22 bg-slate-900/55 shadow-[0_0_0_1px_rgba(34,211,238,0.08)] sm:h-[44%] sm:w-[68%] lg:h-[50%] lg:w-[74%]" />
 
-        <div className="absolute left-1/2 top-1/2 z-10 w-[68%] max-w-[360px] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-cyan-300/30 bg-cyan-500/10 px-3 py-2 text-center sm:w-[62%] sm:px-4 sm:py-3">
+        <div className="absolute left-1/2 top-1/2 z-10 w-[74%] max-w-[460px] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-cyan-300/30 bg-cyan-500/10 px-3 py-2 text-center sm:w-[66%] sm:px-4 sm:py-3">
           <p className="text-xs font-medium text-cyan-50 sm:text-sm">{revealed ? "Revelation des votes" : "En attente des votes..."}</p>
         </div>
 
