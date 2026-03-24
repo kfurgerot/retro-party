@@ -48,7 +48,7 @@ type Props = {
 
 const VOTE_SYSTEM_OPTIONS: Array<{ value: PlanningPokerVoteSystem; label: string }> = [
   { value: "fibonacci", label: "Fibonacci" },
-  { value: "man-day", label: "Jour.homme" },
+  { value: "man-day", label: "JH" },
   { value: "tshirt", label: "T-Shirt" },
 ];
 

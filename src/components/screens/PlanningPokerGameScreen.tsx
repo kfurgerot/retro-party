@@ -51,7 +51,7 @@ type Props = {
 
 const VOTE_SYSTEM_OPTIONS: Array<{ value: PlanningPokerState["voteSystem"]; label: string }> = [
   { value: "fibonacci", label: "Fibonacci" },
-  { value: "man-day", label: "Jour.homme" },
+  { value: "man-day", label: "JH" },
   { value: "tshirt", label: "T-Shirt" },
 ];
 const displayVoteValue = (value: string) => (value === "☕" ? "☕" : value);
@@ -184,6 +184,14 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
     onResetVotes();
   }, [isHost, onResetVotes, onStoryTitleChange, state.round, state.storyTitle]);
 
+  const handleDeckVote = React.useCallback(
+    (value: string) => {
+      if (state.revealed) return;
+      onVoteCard(myVote === value ? "" : value);
+    },
+    [myVote, onVoteCard, state.revealed]
+  );
+
   React.useEffect(() => {
     setStoryDraft(state.storyTitle);
   }, [state.storyTitle]);
@@ -197,7 +205,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
         const voteIndex = DECK_SHORTCUT_KEYS.indexOf(event.key);
         if (voteIndex >= 0 && voteIndex < activeDeck.length) {
           event.preventDefault();
-          onVoteCard(activeDeck[voteIndex]);
+          handleDeckVote(activeDeck[voteIndex]);
           return;
         }
       }
@@ -216,7 +224,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [activeDeck, isHost, myRole, onResetVotes, onRevealVotes, onVoteCard, state.revealed]);
+  }, [activeDeck, handleDeckVote, isHost, myRole, onResetVotes, onRevealVotes, state.revealed]);
 
   return (
     <div className="scanlines relative h-svh w-full overflow-hidden px-2 pb-2 pt-2 sm:px-4 sm:pb-3 sm:pt-3">
@@ -332,7 +340,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                             <button
                               key={`mini-${value}`}
                               type="button"
-                              onClick={() => onVoteCard(value)}
+                              onClick={() => handleDeckVote(value)}
                               disabled={state.revealed}
                               style={cardStyle}
                               className={cn(
@@ -360,7 +368,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                         <button
                           key={value}
                           type="button"
-                          onClick={() => onVoteCard(value)}
+                          onClick={() => handleDeckVote(value)}
                           disabled={state.revealed}
                           style={cardStyle}
                           className={cn(

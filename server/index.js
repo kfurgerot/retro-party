@@ -1266,8 +1266,16 @@ io.on("connection", (socket) => {
     const player = room.lobby.find((entry) => entry.socketId === socket.id);
     if (!player || player.role !== "player") return;
 
-    player.hasVoted = true;
-    player.vote = typeof value === "string" ? value.slice(0, 12) : null;
+    const nextVote =
+      typeof value === "string" ? value.trim().slice(0, 12) : "";
+
+    if (!nextVote) {
+      player.hasVoted = false;
+      player.vote = null;
+    } else {
+      player.hasVoted = true;
+      player.vote = nextVote;
+    }
     broadcastPokerState(code);
   });
 
