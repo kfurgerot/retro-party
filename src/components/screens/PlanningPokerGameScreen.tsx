@@ -49,7 +49,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
   onVoteSystemChange,
   onStoryTitleChange,
 }) => {
-  const [mobileInfoOpen, setMobileInfoOpen] = useState(false);
+  const [mobileActionsOpen, setMobileActionsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const roomName = state.roomCode ? `Room ${state.roomCode}` : "Death Star Team";
@@ -66,10 +66,10 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
   };
 
   return (
-    <div className="scanlines relative min-h-svh w-full overflow-x-hidden overflow-y-auto px-2 pb-24 pt-2 sm:overflow-hidden sm:px-4 sm:pb-24 sm:pt-4">
+    <div className="scanlines relative h-svh w-full overflow-hidden px-2 pb-2 pt-2 sm:px-4 sm:pb-10 sm:pt-3">
       <RetroScreenBackground />
 
-      <div className="relative z-10 mx-auto flex min-h-[calc(100svh-8rem)] w-full max-w-[1680px] flex-col gap-3 sm:h-[calc(100svh-8rem)] sm:gap-4">
+      <div className="relative z-10 mx-auto flex h-full w-full flex-col gap-2 sm:h-[calc(100svh-5.5rem)] sm:gap-4">
         <header className={cn(GAME_HUD_SURFACE, "flex items-center justify-between px-3 py-2 sm:px-4 sm:py-3")}>
           <div className="min-w-0">
             <div className="truncate text-base font-semibold text-cyan-50">{roomName}</div>
@@ -94,7 +94,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
         </header>
 
         <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(280px,22vw)]">
-          <Card className={cn(GAME_PANEL_SURFACE, "grid min-h-0 grid-rows-[minmax(260px,1fr)_auto_auto] gap-3 p-3 sm:grid-rows-[minmax(0,1fr)_auto_auto] sm:p-4 lg:gap-4 lg:p-5")}>
+          <Card className={cn(GAME_PANEL_SURFACE, "grid min-h-0 grid-rows-[minmax(150px,1fr)_auto] gap-2 p-2.5 sm:grid-rows-[minmax(280px,1fr)_auto_auto] sm:gap-3 sm:p-4 lg:gap-4 lg:p-5")}>
             <PlanningPokerRoundBoard players={votingPlayers} revealed={state.revealed} />
 
             <div className="rounded-lg border border-cyan-300/22 bg-slate-950/38 p-2 sm:p-3">
@@ -128,7 +128,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
               )}
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="hidden flex-wrap items-center justify-between gap-2 sm:flex">
               <div className="w-full sm:w-auto flex flex-wrap items-center gap-2">
                 <SecondaryButton className={cn("h-9 text-xs", CTA_NEON_SECONDARY_SUBTLE)} onClick={() => onRoleChange(myRole === "player" ? "spectator" : "player")}> 
                   {myRole === "player" ? fr.planningPoker.switchSpectator : fr.planningPoker.switchPlayer}
@@ -187,23 +187,70 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
           </Card>
         </div>
 
-        <div className="lg:hidden">
-          <Button
-            variant="outline"
-            className={cn(GAME_MOBILE_ACTION_BUTTON, "w-full border-cyan-300/35 bg-slate-900/55 text-xs text-cyan-100 hover:bg-slate-900/75")}
-            onClick={() => setMobileInfoOpen(true)}
-          >
-            Voir les spectateurs
-          </Button>
+        <div className="sticky bottom-0 z-30 pb-[calc(env(safe-area-inset-bottom)+4px)] sm:hidden">
+          <Card className={cn(GAME_HUD_SURFACE, "px-2 py-2 shadow-[0_-8px_24px_rgba(2,6,23,0.35)]")}>
+            <div className="grid grid-cols-3 gap-2">
+              {isHost ? (
+                <>
+                  <Button
+                    variant="secondary"
+                    className={cn(GAME_MOBILE_ACTION_BUTTON, CTA_NEON_SECONDARY_SUBTLE, "text-xs")}
+                    onClick={onResetVotes}
+                  >
+                    {fr.planningPoker.resetVotes}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    className={cn(GAME_MOBILE_ACTION_BUTTON, CTA_NEON_PRIMARY, "text-xs")}
+                    onClick={onRevealVotes}
+                  >
+                    {state.revealed ? "Revele" : "Reveal"}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    className={cn(GAME_MOBILE_ACTION_BUTTON, CTA_NEON_SECONDARY_SUBTLE, "text-xs")}
+                    onClick={() => setMobileActionsOpen(true)}
+                  >
+                    Menu
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    variant="secondary"
+                    className={cn(GAME_MOBILE_ACTION_BUTTON, CTA_NEON_SECONDARY_SUBTLE, "text-xs")}
+                    onClick={() => setMobileActionsOpen(true)}
+                  >
+                    Spectateurs
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    className={cn(GAME_MOBILE_ACTION_BUTTON, CTA_NEON_SECONDARY_SUBTLE, "text-xs")}
+                    onClick={() => setMobileActionsOpen(true)}
+                  >
+                    Actions
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    className={cn(GAME_MOBILE_ACTION_BUTTON, CTA_NEON_DANGER, "text-xs")}
+                    onClick={onLeave}
+                  >
+                    {fr.onlineLobby.leaveParty}
+                  </Button>
+                </>
+              )}
+            </div>
+          </Card>
         </div>
       </div>
 
-      <Drawer open={mobileInfoOpen} onOpenChange={setMobileInfoOpen}>
+      <Drawer open={mobileActionsOpen} onOpenChange={setMobileActionsOpen}>
         <DrawerContent className={GAME_DRAWER_CONTENT}>
           <DrawerHeader>
-            <DrawerTitle>Spectateurs</DrawerTitle>
+            <DrawerTitle>Menu</DrawerTitle>
           </DrawerHeader>
           <div className="grid gap-2 px-4 pb-4">
+            <div className="mb-1 text-xs font-semibold uppercase tracking-[0.08em] text-cyan-100">Spectateurs</div>
             {spectators.length > 0 ? (
               spectators.map((player) => (
                 <div key={player.socketId} className="flex items-center gap-2 rounded-md border border-cyan-300/20 bg-slate-950/42 px-2 py-1.5">
@@ -212,8 +259,34 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                 </div>
               ))
             ) : (
-              <div className="text-xs text-slate-300">Aucun spectateur.</div>
+              <div className="rounded-md border border-cyan-300/20 bg-slate-950/42 px-2 py-1.5 text-xs text-slate-300">Aucun spectateur.</div>
             )}
+            <SecondaryButton className={cn("h-10 w-full text-xs", CTA_NEON_SECONDARY_SUBTLE)} onClick={() => onRoleChange(myRole === "player" ? "spectator" : "player")}>
+              {myRole === "player" ? fr.planningPoker.switchSpectator : fr.planningPoker.switchPlayer}
+            </SecondaryButton>
+            {isHost ? (
+              <>
+                <input
+                  value={state.storyTitle}
+                  onChange={(event) => onStoryTitleChange(event.target.value)}
+                  className="h-10 w-full rounded-md border border-cyan-300/28 bg-slate-900/55 px-2 text-xs text-cyan-50"
+                  placeholder={fr.planningPoker.storyLabel}
+                  maxLength={64}
+                />
+                <select
+                  value={state.voteSystem}
+                  onChange={(event) => onVoteSystemChange(event.target.value as PlanningPokerState["voteSystem"])}
+                  className="h-10 w-full rounded-md border border-cyan-300/28 bg-slate-900/55 px-2 text-xs text-cyan-50"
+                >
+                  <option value="fibonacci">Fibonacci</option>
+                  <option value="man-day">Jour.homme</option>
+                  <option value="tshirt">T-Shirt</option>
+                </select>
+              </>
+            ) : null}
+            <SecondaryButton className={cn("h-10 w-full text-xs", CTA_NEON_DANGER)} onClick={onLeave}>
+              {fr.onlineLobby.leaveParty}
+            </SecondaryButton>
           </div>
         </DrawerContent>
       </Drawer>
