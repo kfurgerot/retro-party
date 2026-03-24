@@ -289,7 +289,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                               onClick={() => onVoteCard(value)}
                               disabled={state.revealed}
                               className={cn(
-                                "mt-2 h-[64px] w-[42px] shrink-0 snap-start rounded-lg border text-sm font-semibold transition-all duration-150",
+                                "mt-2 h-[64px] w-[42px] shrink-0 snap-start rounded-xl border text-sm font-semibold transition-all duration-150",
                                 "bg-gradient-to-b from-slate-900/82 to-slate-950/82",
                                 "shadow-[0_2px_8px_rgba(2,6,23,0.35)]",
                                 "disabled:cursor-not-allowed disabled:opacity-50",
