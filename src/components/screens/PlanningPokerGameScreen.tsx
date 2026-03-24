@@ -274,30 +274,63 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
 
             <div className="rounded-lg border border-cyan-300/22 bg-slate-950/38 p-2 sm:p-3">
               {myRole === "player" ? (
-                <div className="grid grid-cols-5 justify-items-center gap-1.5 sm:flex sm:flex-nowrap sm:justify-center sm:gap-2">
-                  {activeDeck.map((value) => {
-                    const selected = myVote === value;
-                    return (
-                      <button
-                        key={value}
-                        type="button"
-                        onClick={() => onVoteCard(value)}
-                        disabled={state.revealed}
-                        className={cn(
-                          "h-[68px] w-full max-w-[64px] rounded-xl border text-lg font-semibold transition-all duration-150 sm:h-[94px] sm:w-[62px] sm:max-w-none sm:text-xl",
-                          "bg-gradient-to-b from-slate-900/82 to-slate-950/82",
-                          "shadow-[0_2px_8px_rgba(2,6,23,0.35)]",
-                          "disabled:cursor-not-allowed disabled:opacity-50",
-                          selected
-                            ? "-translate-y-2 border-cyan-200 bg-cyan-500/24 text-cyan-50 ring-2 ring-cyan-300/60 shadow-[0_10px_24px_rgba(34,211,238,0.35)]"
-                            : "border-cyan-300/28 text-cyan-100 hover:-translate-y-0.5 hover:border-cyan-300/50 hover:bg-slate-900/92"
-                        )}
+                <>
+                  <div className="grid gap-2 sm:hidden">
+                    <div className="min-w-0 pt-2">
+                      <div
+                        className="flex min-w-0 w-full snap-x snap-mandatory gap-2 overflow-x-auto overflow-y-visible scroll-smooth py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                       >
-                        {displayVoteValue(value)}
-                      </button>
-                    );
-                  })}
-                </div>
+                        {activeDeck.map((value) => {
+                          const selected = myVote === value;
+                          return (
+                            <button
+                              key={`mini-${value}`}
+                              type="button"
+                              onClick={() => onVoteCard(value)}
+                              disabled={state.revealed}
+                              className={cn(
+                                "mt-2 h-[64px] w-[42px] shrink-0 snap-start rounded-lg border text-sm font-semibold transition-all duration-150",
+                                "bg-gradient-to-b from-slate-900/82 to-slate-950/82",
+                                "shadow-[0_2px_8px_rgba(2,6,23,0.35)]",
+                                "disabled:cursor-not-allowed disabled:opacity-50",
+                                selected
+                                  ? "mt-0 border-cyan-200 bg-cyan-500/24 text-cyan-50 ring-2 ring-cyan-300/60"
+                                  : "border-cyan-300/28 text-cyan-100"
+                              )}
+                            >
+                              {displayVoteValue(value)}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="hidden sm:flex sm:flex-nowrap sm:justify-center sm:gap-2">
+                    {activeDeck.map((value) => {
+                      const selected = myVote === value;
+                      return (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => onVoteCard(value)}
+                          disabled={state.revealed}
+                          className={cn(
+                            "h-[94px] w-[62px] rounded-xl border text-xl font-semibold transition-all duration-150",
+                            "bg-gradient-to-b from-slate-900/82 to-slate-950/82",
+                            "shadow-[0_2px_8px_rgba(2,6,23,0.35)]",
+                            "disabled:cursor-not-allowed disabled:opacity-50",
+                            selected
+                              ? "-translate-y-2 border-cyan-200 bg-cyan-500/24 text-cyan-50 ring-2 ring-cyan-300/60 shadow-[0_10px_24px_rgba(34,211,238,0.35)]"
+                              : "border-cyan-300/28 text-cyan-100 hover:-translate-y-0.5 hover:border-cyan-300/50 hover:bg-slate-900/92"
+                          )}
+                        >
+                          {displayVoteValue(value)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
               ) : (
                 <div className="text-sm text-slate-300">Mode spectateur: deck non interactif.</div>
               )}
