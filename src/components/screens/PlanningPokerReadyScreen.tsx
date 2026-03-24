@@ -87,6 +87,8 @@ export const PlanningPokerReadyScreen: React.FC<Props> = ({
       }),
     [lobbyPlayers]
   );
+  const hostPlayerName =
+    sortedPlayers.find((player) => player.isHost)?.name ?? fr.terms.host;
 
   const copyRoom = async () => {
     try {
@@ -113,9 +115,9 @@ export const PlanningPokerReadyScreen: React.FC<Props> = ({
       <RetroScreenBackground />
 
       <div className="relative z-10 flex min-h-[82svh] w-full max-w-4xl flex-col rounded border border-cyan-300/60 bg-[linear-gradient(180deg,rgba(8,18,38,0.88)_0%,rgba(8,12,24,0.9)_100%)] p-5 shadow-[0_0_0_2px_rgba(34,211,238,0.3),0_0_34px_rgba(34,211,238,0.32)] backdrop-blur sm:p-8">
-        <div className="flex flex-wrap items-start justify-between gap-2 text-[10px] uppercase tracking-[0.2em] text-cyan-200/80">
+        <div className="flex items-center justify-between gap-2 text-[10px] uppercase tracking-[0.16em] text-cyan-200/80">
           <span>{fr.planningPoker.brand}</span>
-          <span className="rounded-full border border-cyan-300/40 px-2 py-1">{fr.planningPoker.readyBadge}</span>
+          <span className="rounded-full border border-cyan-300/40 px-2 py-0.5">{fr.planningPoker.readyBadge}</span>
         </div>
 
         <h1 className="mt-4 text-center text-xl text-cyan-200 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)] sm:text-3xl">
@@ -124,6 +126,21 @@ export const PlanningPokerReadyScreen: React.FC<Props> = ({
 
         <section className="mx-auto mt-6 grid w-full max-w-4xl gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)]">
           <Card className="grid gap-3 p-4 sm:p-5">
+            {isHost ? (
+              <p className="rounded-md border border-cyan-300/25 bg-slate-900/40 px-3 py-3 text-xs text-slate-300">
+                {fr.onlineLobby.hostLaunchHint}
+              </p>
+            ) : (
+              <div className="rounded-md border border-cyan-300/20 bg-slate-900/40 px-3 py-3">
+                <p className="text-xs uppercase tracking-[0.1em] text-cyan-100/90">
+                  {fr.onlineLobby.waitingHostTitle}
+                </p>
+                <p className="mt-2 text-xs text-slate-300">
+                  {fr.onlineLobby.waitingHostDescription.replace("{host}", hostPlayerName)}
+                </p>
+              </div>
+            )}
+
             <div className="rounded-md border border-cyan-300/25 bg-slate-900/40 px-3 py-3">
               <p className="text-xs uppercase tracking-[0.1em] text-cyan-100/90">
                 {fr.planningPoker.myConfigTitle}
@@ -194,37 +211,43 @@ export const PlanningPokerReadyScreen: React.FC<Props> = ({
               </div>
               <p className="mt-2 text-xs text-slate-300">{fr.onlineLobby.inviteHint}</p>
             </div>
-
-            <div className="rounded-md border border-cyan-300/25 bg-slate-900/40 px-3 py-3">
-              <p className="text-xs uppercase tracking-[0.1em] text-cyan-100/90">{fr.onlineLobby.playersTitle}</p>
-              <div className="mt-2 grid max-h-[26vh] gap-2 overflow-auto pr-1">
-                {sortedPlayers.map((player) => (
-                  <div
-                    key={player.socketId}
-                    className="flex items-center justify-between rounded-md border border-cyan-300/20 bg-slate-900/55 px-3 py-2"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="inline-flex h-7 w-7 items-center justify-center rounded border border-cyan-300/25 bg-slate-950/50">
-                        {AVATARS[player.avatar] ?? "?"}
-                      </span>
-                      <span className="text-sm font-medium text-cyan-50">{player.name}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="rounded-full border border-cyan-500/35 bg-cyan-500/10 px-2 py-0.5 text-[10px] text-cyan-200">
-                        {player.role === "player" ? fr.planningPoker.rolePlayer : fr.planningPoker.roleSpectator}
-                      </span>
-                      {player.isHost ? (
-                        <span className="rounded-full border border-cyan-500/35 bg-cyan-500/10 px-2 py-0.5 text-[10px] text-cyan-200">
-                          {fr.terms.host.toUpperCase()}
-                        </span>
-                      ) : null}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
           </Card>
         </section>
+
+        <Card className="mt-6 p-4 sm:p-5">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-cyan-100/80">
+              {fr.onlineLobby.playersTitle}
+            </h2>
+            <span className="text-xs text-slate-300">{sortedPlayers.length}</span>
+          </div>
+
+          <div className="grid max-h-[32vh] gap-2 overflow-auto pr-1 sm:grid-cols-2">
+            {sortedPlayers.map((player) => (
+              <div
+                key={player.socketId}
+                className="flex items-center justify-between rounded-md border border-cyan-300/20 bg-slate-900/55 px-3 py-2"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex h-7 w-7 items-center justify-center rounded border border-cyan-300/25 bg-slate-950/50">
+                    {AVATARS[player.avatar] ?? "?"}
+                  </span>
+                  <span className="text-sm font-medium text-cyan-50">{player.name}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="rounded-full border border-cyan-500/35 bg-cyan-500/10 px-2 py-0.5 text-[10px] text-cyan-200">
+                    {player.role === "player" ? fr.planningPoker.rolePlayer : fr.planningPoker.roleSpectator}
+                  </span>
+                  {player.isHost ? (
+                    <span className="rounded-full border border-cyan-500/35 bg-cyan-500/10 px-2 py-0.5 text-[10px] text-cyan-200">
+                      {fr.terms.host.toUpperCase()}
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
       </div>
 
       <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 hidden px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:block">
@@ -234,7 +257,7 @@ export const PlanningPokerReadyScreen: React.FC<Props> = ({
               {fr.onlineLobby.cancelParty}
             </SecondaryButton>
             <PrimaryButton onClick={onStart} disabled={!isHost} className="h-11">
-              {fr.planningPoker.startSession}
+              {fr.onlineLobby.hostPrimaryAction}
             </PrimaryButton>
           </div>
         </Card>
@@ -247,7 +270,7 @@ export const PlanningPokerReadyScreen: React.FC<Props> = ({
               {fr.onlineLobby.cancelParty}
             </SecondaryButton>
             <PrimaryButton onClick={onStart} disabled={!isHost} className="h-12">
-              {fr.planningPoker.startSession}
+              {fr.onlineLobby.hostPrimaryAction}
             </PrimaryButton>
           </div>
         </Card>
