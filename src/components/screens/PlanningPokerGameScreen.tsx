@@ -309,7 +309,13 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
 
         <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(280px,22vw)]">
           <Card className={cn(GAME_PANEL_SURFACE, "grid min-h-0 grid-rows-[minmax(150px,1fr)_auto] gap-2 p-2.5 sm:grid-rows-[minmax(340px,1fr)_auto_auto] sm:gap-3 sm:p-4 lg:gap-4 lg:p-5")}>
-            <PlanningPokerRoundBoard players={votingPlayers} revealed={state.revealed} storyTitle={state.storyTitle} round={state.round} />
+            <PlanningPokerRoundBoard
+              players={votingPlayers}
+              revealed={state.revealed}
+              storyTitle={state.storyTitle}
+              round={state.round}
+              voteSystem={state.voteSystem}
+            />
 
             <div className="rounded-lg border border-cyan-300/22 bg-slate-950/38 p-2 sm:p-3">
               {myRole === "player" ? (

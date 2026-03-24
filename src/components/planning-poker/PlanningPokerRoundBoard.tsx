@@ -1,12 +1,14 @@
-import React, { useEffect, useMemo, useState } from "react";
+﻿import React, { useEffect, useMemo, useState } from "react";
 import { AVATARS } from "@/types/game";
-import { PlanningPokerPlayer } from "@/types/planningPoker";
+import { PLANNING_POKER_DECKS } from "@/lib/planningPoker";
+import { PlanningPokerPlayer, PlanningPokerVoteSystem } from "@/types/planningPoker";
 
 type Props = {
   players: PlanningPokerPlayer[];
   revealed: boolean;
   storyTitle: string;
   round: number;
+  voteSystem: PlanningPokerVoteSystem;
 };
 
 type Seat = {
@@ -30,10 +32,49 @@ function buildSeats(players: PlanningPokerPlayer[]): Seat[] {
   });
 }
 
-const SeatVoteCard: React.FC<{ player: PlanningPokerPlayer; revealed: boolean }> = ({ player, revealed }) => {
+const normalizeVoteValue = (value: string | null) => {
+  if (!value) return null;
+  const normalized = value.trim();
+  if (normalized === "☕" || normalized === "☕️" || normalized === "â˜•" || normalized === "â?•") {
+    return "☕";
+  }
+  return normalized;
+};
+
+const getVoteBorderStyle = (
+  vote: string | null,
+  voteSystem: PlanningPokerVoteSystem
+): React.CSSProperties | undefined => {
+  const normalizedVote = normalizeVoteValue(vote);
+  if (!normalizedVote) return undefined;
+
+  const activeDeck = PLANNING_POKER_DECKS[voteSystem] ?? PLANNING_POKER_DECKS.fibonacci;
+  const index = activeDeck.indexOf(normalizedVote);
+  if (index < 0) return undefined;
+
+  const ratio = activeDeck.length <= 1 ? 0 : index / (activeDeck.length - 1);
+  const hue = 198 - ratio * 190;
+  const borderColor = `hsl(${hue} 92% 64%)`;
+  const glow = `hsla(${hue} 95% 60% / 0.42)`;
+
+  return {
+    borderColor,
+    boxShadow: `0 0 0 1px hsla(${hue} 95% 70% / 0.45), 0 10px 20px ${glow}`,
+  };
+};
+
+const SeatVoteCard: React.FC<{
+  player: PlanningPokerPlayer;
+  revealed: boolean;
+  voteSystem: PlanningPokerVoteSystem;
+}> = ({ player, revealed, voteSystem }) => {
   const [flipped, setFlipped] = useState(false);
-  const valueLabel =
-    player.vote === "?" || player.vote === "☕" ? "?" : player.vote ?? "-";
+  const normalizedVote = normalizeVoteValue(player.vote);
+  const valueLabel = normalizedVote ?? "-";
+  const revealedCardStyle = useMemo(
+    () => (revealed ? getVoteBorderStyle(normalizedVote, voteSystem) : undefined),
+    [normalizedVote, revealed, voteSystem]
+  );
 
   useEffect(() => {
     if (!player.hasVoted || !revealed) {
@@ -60,7 +101,10 @@ const SeatVoteCard: React.FC<{ player: PlanningPokerPlayer; revealed: boolean }>
         }`}
       >
         <div className="absolute inset-0 rounded-md border border-slate-300/70 bg-white shadow-[0_6px_14px_rgba(2,6,23,0.35)] [backface-visibility:hidden]" />
-        <div className="absolute inset-0 flex items-center justify-center rounded-md border border-slate-300/70 bg-white text-[11px] font-bold text-slate-900 shadow-[0_6px_14px_rgba(2,6,23,0.35)] [backface-visibility:hidden] [transform:rotateY(180deg)] sm:text-xs">
+        <div
+          style={revealedCardStyle}
+          className="absolute inset-0 flex items-center justify-center rounded-md border border-slate-300/70 bg-white text-[11px] font-bold text-slate-900 shadow-[0_6px_14px_rgba(2,6,23,0.35)] [backface-visibility:hidden] [transform:rotateY(180deg)] sm:text-xs"
+        >
           {revealed ? valueLabel : ""}
         </div>
       </div>
@@ -68,7 +112,13 @@ const SeatVoteCard: React.FC<{ player: PlanningPokerPlayer; revealed: boolean }>
   );
 };
 
-export const PlanningPokerRoundBoard: React.FC<Props> = ({ players, revealed, storyTitle, round }) => {
+export const PlanningPokerRoundBoard: React.FC<Props> = ({
+  players,
+  revealed,
+  storyTitle,
+  round,
+  voteSystem,
+}) => {
   const seats = useMemo(() => buildSeats(players), [players]);
   const displayedStory = storyTitle.trim() || `Story #${round}`;
 
@@ -96,7 +146,7 @@ export const PlanningPokerRoundBoard: React.FC<Props> = ({ players, revealed, st
               </div>
               <div className="max-w-[78px] truncate text-center text-[10px] text-cyan-50 sm:max-w-[90px] sm:text-[11px]">{player.name}</div>
               {player.isHost ? <div className="text-[10px] text-cyan-200">Host</div> : null}
-              <SeatVoteCard player={player} revealed={revealed} />
+              <SeatVoteCard player={player} revealed={revealed} voteSystem={voteSystem} />
             </div>
           </div>
         ))}
