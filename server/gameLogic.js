@@ -179,6 +179,8 @@ export function createInitialState() {
     preRollSelectedItemId: null,
 
     // question flow
+    questionSourceMode: "default",
+    templateCustomQuestions: [],
     currentQuestion: null,
     currentMinigame: null,
     pendingPathChoice: null,
@@ -842,20 +844,28 @@ function buildQuestionStateForCurrentPlayer(state, players) {
     ? state.templateCustomQuestions.filter((q) => {
         if (!q || q.isActive === false || typeof q.text !== "string") return false;
         if (usedQuestionSet.has(q.text)) return false;
-        if (!q.category) return true;
-        const normalizedCategory =
-          q.category === "purple"
-            ? "violet"
-            : q.category === "star" || q.category === "yellow"
-            ? "bonus"
-            : q.category;
-        return normalizedCategory === normalizedType;
+        return true;
       })
     : [];
-  const customText = customPool.length
-    ? customPool[Math.floor(rng() * customPool.length)]?.text ?? ""
+  const matchingCustomPool = customPool.filter((q) => {
+    if (!q.category) return true;
+    const normalizedCategory =
+      q.category === "purple"
+        ? "violet"
+        : q.category === "star" || q.category === "yellow"
+        ? "bonus"
+        : q.category;
+    return normalizedCategory === normalizedType;
+  });
+  const candidateCustomPool = matchingCustomPool.length > 0 ? matchingCustomPool : customPool;
+  const customText = candidateCustomPool.length
+    ? candidateCustomPool[Math.floor(rng() * candidateCustomPool.length)]?.text ?? ""
     : "";
-  const text = customText || pickUniqueQuestion(type, usedQuestionTexts, rng) || "(Plus de questions disponibles)";
+  const shouldUseDefaultPool = state.questionSourceMode !== "template";
+  const text =
+    customText ||
+    (shouldUseDefaultPool ? pickUniqueQuestion(type, usedQuestionTexts, rng) : "") ||
+    "(Plus de questions disponibles)";
   const qId = `${Date.now()}-${Math.floor(Math.random() * 100000)}`;
 
   return {
@@ -1742,8 +1752,21 @@ export function nextTurn(state) {
   );
 }
 
-export function resetGame() {
-  return createInitialState();
+export function resetGame(previousState = null) {
+  const nextState = createInitialState();
+  if (previousState?.questionSourceMode === "template") {
+    nextState.questionSourceMode = "template";
+  }
+  if (Array.isArray(previousState?.templateCustomQuestions)) {
+    nextState.templateCustomQuestions = previousState.templateCustomQuestions
+      .filter((q) => q && typeof q.text === "string" && q.text.trim().length > 0)
+      .map((q) => ({
+        text: q.text.trim(),
+        category: typeof q.category === "string" ? q.category.trim().toLowerCase() : null,
+        isActive: q.isActive !== false,
+      }));
+  }
+  return nextState;
 }
 
 function getBuzzwordDuelists(minigame) {

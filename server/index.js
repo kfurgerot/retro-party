@@ -201,6 +201,7 @@ function createRuntimeRoom({
     : [];
 
   initialState.templateCustomQuestions = customQuestions;
+  initialState.questionSourceMode = mode === "template" ? "template" : "default";
 
   const hasHost = Boolean(hostSocketId);
   const room = {
