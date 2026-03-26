@@ -850,12 +850,23 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                     Moy: {formatPlanningValueForSystem(selectedSession?.average ?? null, selectedSession?.voteSystem ?? state.voteSystem)} · Med:{" "}
                     {formatPlanningValueForSystem(selectedSession?.median ?? null, selectedSession?.voteSystem ?? state.voteSystem)}
                   </div>
+                  {isHost ? (
+                    <div className="mt-1 flex justify-end">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className={cn(
+                          GAME_TAB_BUTTON,
+                          "h-7 min-w-[92px] border-cyan-300/28 bg-slate-900/62 px-2 text-[11px] text-cyan-100 hover:bg-slate-800/80 disabled:opacity-45"
+                        )}
+                        disabled={selectedSession?.isCurrent}
+                        onClick={reopenPastQuestion}
+                      >
+                        🔓 Réouvrir
+                      </Button>
+                    </div>
+                  ) : null}
                 </div>
-                {!selectedSession?.isCurrent && isHost ? (
-                  <SecondaryButton className={cn("h-10 w-full text-xs", CTA_NEON_SECONDARY_SUBTLE)} onClick={reopenPastQuestion}>
-                    Reouvrir au vote
-                  </SecondaryButton>
-                ) : null}
                 <SecondaryButton className={cn("h-10 w-full text-xs", CTA_NEON_SECONDARY_SUBTLE)} onClick={() => onRoleChange(myRole === "player" ? "spectator" : "player")}>
                   {myRole === "player" ? fr.planningPoker.switchSpectator : fr.planningPoker.switchPlayer}
                 </SecondaryButton>
