@@ -272,16 +272,6 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                   <div className="rounded-xl border border-amber-300/45 bg-amber-500/14 px-1.5 py-0.5 text-[10px] text-amber-100">
                     Med {medianLabel}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMobileMenuTab("actions");
-                      setMobileActionsOpen(true);
-                    }}
-                    className="h-5 rounded-xl border border-cyan-300/28 bg-slate-900/60 px-1.5 text-[10px] text-cyan-100"
-                  >
-                    Menu
-                  </button>
                 </div>
               </div>
               <div className="h-1.5 overflow-hidden rounded bg-slate-900/60">
@@ -607,15 +597,32 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
 
         <div className="sticky bottom-0 z-30 pb-[calc(env(safe-area-inset-bottom)+4px)] sm:hidden">
           <Card className={cn(GAME_HUD_SURFACE, "px-2 py-2 shadow-[0_-8px_24px_rgba(2,6,23,0.35)]")}>
-            <div className={cn("grid gap-2", isHost ? "grid-cols-1" : "grid-cols-3")}>
+            <div className={cn("grid gap-2", "grid-cols-3")}>
               {isHost ? (
                 <>
+                  <Button
+                    variant="secondary"
+                    className={cn(GAME_MOBILE_ACTION_BUTTON, CTA_NEON_SECONDARY_SUBTLE, "text-xs")}
+                    onClick={() => {
+                      setMobileMenuTab("actions");
+                      setMobileActionsOpen(true);
+                    }}
+                  >
+                    Menu
+                  </Button>
                   <Button
                     variant="secondary"
                     className={cn(GAME_MOBILE_ACTION_BUTTON, CTA_NEON_PRIMARY, "text-xs")}
                     onClick={handleHostMainAction}
                   >
                     {hostMainActionLabel}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    className={cn(GAME_MOBILE_ACTION_BUTTON, CTA_NEON_DANGER, "text-xs")}
+                    onClick={requestLeave}
+                  >
+                    {fr.onlineLobby.leaveParty}
                   </Button>
                 </>
               ) : (
@@ -675,21 +682,6 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
               </>
             ) : (
               <>
-                <div className="mb-1 text-xs font-semibold uppercase tracking-[0.08em] text-cyan-100">Historique des votes</div>
-                {history.length > 0 ? (
-                  [...history].reverse().map((entry) => (
-                    <div key={`mobile-${entry.id}`} className="rounded-md border border-cyan-300/20 bg-slate-950/42 px-2 py-1.5 text-xs text-cyan-50">
-                      <div className="font-semibold">Vote #{entry.round} · {entry.storyTitle || "-"}</div>
-                      <div className="text-slate-300">Moy: {formatPlanningValueForSystem(entry.average, entry.voteSystem)} · Med: {formatPlanningValueForSystem(entry.median, entry.voteSystem)}</div>
-                      <div className="mt-1 text-slate-300">{entry.votes.map((vote) => `${vote.playerName}:${displayVoteValue(vote.value)}`).join(" · ")}</div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="rounded-md border border-cyan-300/20 bg-slate-950/42 px-2 py-1.5 text-xs text-slate-300">Aucun vote revele pour le moment.</div>
-                )}
-                <SecondaryButton className={cn("h-10 w-full text-xs", CTA_NEON_SECONDARY_SUBTLE)} onClick={() => onRoleChange(myRole === "player" ? "spectator" : "player")}>
-                  {myRole === "player" ? fr.planningPoker.switchSpectator : fr.planningPoker.switchPlayer}
-                </SecondaryButton>
                 {isHost ? (
                   <div className="grid grid-cols-3 gap-1 rounded-md border border-cyan-300/28 bg-slate-900/55 p-1">
                     {VOTE_SYSTEM_OPTIONS.map((option) => (
@@ -709,24 +701,21 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                     ))}
                   </div>
                 ) : null}
-                {isHost ? (
-                  <>
-                    <input
-                      type="text"
-                      value={storyDraft}
-                      onChange={(event) => setStoryDraft(event.target.value)}
-                      onBlur={submitStoryTitle}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") submitStoryTitle();
-                      }}
-                      className="h-10 w-full rounded-md border border-cyan-300/28 bg-slate-900/55 px-2 text-xs text-cyan-50 outline-none focus:border-cyan-300/65"
-                      placeholder="Story en cours"
-                    />
-                    <SecondaryButton className={cn("h-10 w-full text-xs", CTA_NEON_SECONDARY_SUBTLE)} onClick={goToNextStory}>
-                      Story suivante + reset
-                    </SecondaryButton>
-                  </>
-                ) : null}
+                <div className="mb-1 text-xs font-semibold uppercase tracking-[0.08em] text-cyan-100">Historique des votes</div>
+                {history.length > 0 ? (
+                  [...history].reverse().map((entry) => (
+                    <div key={`mobile-${entry.id}`} className="rounded-md border border-cyan-300/20 bg-slate-950/42 px-2 py-1.5 text-xs text-cyan-50">
+                      <div className="font-semibold">Vote #{entry.round} · {entry.storyTitle || "-"}</div>
+                      <div className="text-slate-300">Moy: {formatPlanningValueForSystem(entry.average, entry.voteSystem)} · Med: {formatPlanningValueForSystem(entry.median, entry.voteSystem)}</div>
+                      <div className="mt-1 text-slate-300">{entry.votes.map((vote) => `${vote.playerName}:${displayVoteValue(vote.value)}`).join(" · ")}</div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-md border border-cyan-300/20 bg-slate-950/42 px-2 py-1.5 text-xs text-slate-300">Aucun vote revele pour le moment.</div>
+                )}
+                <SecondaryButton className={cn("h-10 w-full text-xs", CTA_NEON_SECONDARY_SUBTLE)} onClick={() => onRoleChange(myRole === "player" ? "spectator" : "player")}>
+                  {myRole === "player" ? fr.planningPoker.switchSpectator : fr.planningPoker.switchPlayer}
+                </SecondaryButton>
                 <SecondaryButton className={cn("h-10 w-full text-xs", CTA_NEON_DANGER)} onClick={requestLeave}>
                   {fr.onlineLobby.leaveParty}
                 </SecondaryButton>
