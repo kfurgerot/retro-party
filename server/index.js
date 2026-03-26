@@ -205,6 +205,7 @@ function createPokerRoom({
     phase: "lobby",
     storyTitle: "Story #1",
     voteSystem: normalizePokerVoteSystem(voteSystem),
+    votesOpen: false,
     round: 1,
     revealed: false,
     hostSocketId,
@@ -249,6 +250,7 @@ function sanitizePokerState(room) {
     roomCode: room.code,
     storyTitle: room.storyTitle || `Story #${room.round ?? 1}`,
     voteSystem: room.voteSystem,
+    votesOpen: !!room.votesOpen,
     revealed: room.revealed,
     round: room.round,
     updatedAt: Date.now(),
@@ -1211,6 +1213,7 @@ io.on("connection", (socket) => {
     if (room.hostSocketId !== socket.id) return;
 
     room.phase = "playing";
+    room.votesOpen = false;
     room.revealed = false;
     if (!room.storyTitle) room.storyTitle = `Story #${room.round}`;
     room.lobby = room.lobby.map((player) => ({
@@ -1229,6 +1232,7 @@ io.on("connection", (socket) => {
     if (room.hostSocketId !== socket.id) return;
 
     room.voteSystem = normalizePokerVoteSystem(voteSystem);
+    room.votesOpen = false;
     room.revealed = false;
     room.lobby = room.lobby.map((player) => ({
       ...player,
@@ -1261,6 +1265,7 @@ io.on("connection", (socket) => {
     const room = pokerRooms.get(code);
     if (!room) return;
     if (room.phase !== "playing") return;
+    if (!room.votesOpen) return;
     if (room.revealed) return;
 
     const player = room.lobby.find((entry) => entry.socketId === socket.id);
@@ -1285,8 +1290,27 @@ io.on("connection", (socket) => {
     const room = pokerRooms.get(code);
     if (!room) return;
     if (room.hostSocketId !== socket.id) return;
+    if (!room.votesOpen) return;
 
     room.revealed = true;
+    broadcastPokerState(code);
+  });
+
+  socket.on("open_votes", () => {
+    const code = socketToPokerRoom.get(socket.id);
+    if (!code) return;
+    const room = pokerRooms.get(code);
+    if (!room) return;
+    if (room.hostSocketId !== socket.id) return;
+    if (room.phase !== "playing") return;
+
+    room.votesOpen = true;
+    room.revealed = false;
+    room.lobby = room.lobby.map((player) => ({
+      ...player,
+      hasVoted: false,
+      vote: null,
+    }));
     broadcastPokerState(code);
   });
 
@@ -1297,6 +1321,7 @@ io.on("connection", (socket) => {
     if (!room) return;
     if (room.hostSocketId !== socket.id) return;
 
+    room.votesOpen = false;
     room.revealed = false;
     room.round += 1;
     if (!room.storyTitle || room.storyTitle.startsWith("Story #")) {

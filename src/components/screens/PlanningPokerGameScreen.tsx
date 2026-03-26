@@ -41,6 +41,7 @@ type Props = {
   myVote: string | null;
   isHost: boolean;
   onVoteCard: (value: string) => void;
+  onOpenVotes: () => void;
   onRevealVotes: () => void;
   onResetVotes: () => void;
   onLeave: () => void;
@@ -101,6 +102,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
   myVote,
   isHost,
   onVoteCard,
+  onOpenVotes,
   onRevealVotes,
   onResetVotes,
   onLeave,
@@ -132,8 +134,10 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
   );
   const leadVote = voteEntries[0] ?? null;
   const consensusPct = leadVote && stats.totalVotes > 0 ? Math.round((leadVote[1] / stats.totalVotes) * 100) : 0;
-  const consensusLabel = !state.revealed
-    ? "En attente de reveal"
+  const consensusLabel = !state.votesOpen
+    ? "Votes non lances"
+    : !state.revealed
+    ? "En attente de revelation"
     : !leadVote
     ? "Pas de vote"
     : consensusPct >= 80
@@ -169,6 +173,18 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
     onResetVotes();
   };
 
+  const hostMainActionLabel = state.revealed
+    ? "Vote suivant"
+    : !state.votesOpen
+    ? "Lancer les votes"
+    : fr.planningPoker.revealVotes;
+  const hostMainActionShortLabel = state.revealed
+    ? "Suivant"
+    : !state.votesOpen
+    ? "Lancer"
+    : "Reveler";
+  const handleHostMainAction = state.revealed ? requestResetVotes : state.votesOpen ? onRevealVotes : onOpenVotes;
+
   const submitStoryTitle = React.useCallback(() => {
     if (!isHost) return;
     const normalized = storyDraft.trim();
@@ -186,10 +202,10 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
 
   const handleDeckVote = React.useCallback(
     (value: string) => {
-      if (state.revealed) return;
+      if (state.revealed || !state.votesOpen) return;
       onVoteCard(myVote === value ? "" : value);
     },
-    [myVote, onVoteCard, state.revealed]
+    [myVote, onVoteCard, state.revealed, state.votesOpen]
   );
 
   React.useEffect(() => {
@@ -201,7 +217,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
       if (isInteractiveElement(event.target)) return;
       if (event.repeat) return;
 
-      if (myRole === "player" && !state.revealed) {
+      if (myRole === "player" && !state.revealed && state.votesOpen) {
         const voteIndex = DECK_SHORTCUT_KEYS.indexOf(event.key);
         if (voteIndex >= 0 && voteIndex < activeDeck.length) {
           event.preventDefault();
@@ -224,7 +240,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [activeDeck, handleDeckVote, isHost, myRole, onResetVotes, onRevealVotes, state.revealed]);
+  }, [activeDeck, handleDeckVote, isHost, myRole, onResetVotes, onRevealVotes, state.revealed, state.votesOpen]);
 
   return (
     <div className="scanlines relative h-svh w-full overflow-hidden px-2 pb-2 pt-2 sm:px-4 sm:pb-3 sm:pt-3">
@@ -320,6 +336,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
             <PlanningPokerRoundBoard
               players={votingPlayers}
               revealed={state.revealed}
+              votesOpen={state.votesOpen}
               storyTitle={state.storyTitle}
               round={state.round}
               voteSystem={state.voteSystem}
@@ -341,7 +358,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                               key={`mini-${value}`}
                               type="button"
                               onClick={() => handleDeckVote(value)}
-                              disabled={state.revealed}
+                              disabled={state.revealed || !state.votesOpen}
                               style={cardStyle}
                               className={cn(
                                 "mt-2 h-[58px] w-[38px] shrink-0 snap-start rounded-xl border text-sm font-semibold transition-all duration-150",
@@ -369,7 +386,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                           key={value}
                           type="button"
                           onClick={() => handleDeckVote(value)}
-                          disabled={state.revealed}
+                          disabled={state.revealed || !state.votesOpen}
                           style={cardStyle}
                           className={cn(
                             "h-[94px] w-[62px] rounded-xl border text-xl font-semibold transition-all duration-150",
@@ -420,12 +437,9 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
               </div>
 
               <div className="grid w-full min-w-0 grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:justify-end">
-                <SecondaryButton className={cn("h-9 min-w-0 w-full text-[11px] sm:w-auto sm:text-xs", CTA_NEON_SECONDARY_SUBTLE)} disabled={!isHost} onClick={requestResetVotes}>
-                  {fr.planningPoker.resetVotes}
-                </SecondaryButton>
-                <PrimaryButton className={cn("h-9 min-w-0 w-full text-[11px] sm:w-auto sm:text-xs", CTA_NEON_PRIMARY)} disabled={!isHost} onClick={onRevealVotes}>
-                  <span className="sm:hidden">{state.revealed ? "Revele" : "Reveal"}</span>
-                  <span className="hidden sm:inline">{state.revealed ? fr.planningPoker.revealDone : fr.planningPoker.revealVotes}</span>
+                <PrimaryButton className={cn("h-9 min-w-0 w-full text-[11px] sm:w-auto sm:text-xs", CTA_NEON_PRIMARY)} disabled={!isHost} onClick={handleHostMainAction}>
+                  <span className="sm:hidden">{hostMainActionShortLabel}</span>
+                  <span className="hidden sm:inline">{hostMainActionLabel}</span>
                 </PrimaryButton>
               </div>
             </div>
@@ -505,7 +519,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                 ) : null}
                 <div className={cn("p-2", GAME_SUBPANEL_SURFACE)}>
                   <div className="text-slate-300">Statut</div>
-                  <div className="text-cyan-50">{state.revealed ? "Revele" : "Vote en cours"}</div>
+                  <div className="text-cyan-50">{state.revealed ? "Revele" : state.votesOpen ? "Vote en cours" : "Votes non lances"}</div>
                 </div>
                 <div className={cn("grid gap-1.5 p-2", GAME_SUBPANEL_SURFACE)}>
                   <div className="flex items-center justify-between">
@@ -593,22 +607,15 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
 
         <div className="sticky bottom-0 z-30 pb-[calc(env(safe-area-inset-bottom)+4px)] sm:hidden">
           <Card className={cn(GAME_HUD_SURFACE, "px-2 py-2 shadow-[0_-8px_24px_rgba(2,6,23,0.35)]")}>
-            <div className={cn("grid gap-2", isHost ? "grid-cols-2" : "grid-cols-3")}>
+            <div className={cn("grid gap-2", isHost ? "grid-cols-1" : "grid-cols-3")}>
               {isHost ? (
                 <>
                   <Button
                     variant="secondary"
-                    className={cn(GAME_MOBILE_ACTION_BUTTON, CTA_NEON_SECONDARY_SUBTLE, "text-xs")}
-                    onClick={requestResetVotes}
-                  >
-                    {fr.planningPoker.resetVotes}
-                  </Button>
-                  <Button
-                    variant="secondary"
                     className={cn(GAME_MOBILE_ACTION_BUTTON, CTA_NEON_PRIMARY, "text-xs")}
-                    onClick={onRevealVotes}
+                    onClick={handleHostMainAction}
                   >
-                    {state.revealed ? "Revele" : "Reveal"}
+                    {hostMainActionLabel}
                   </Button>
                 </>
               ) : (

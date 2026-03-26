@@ -141,6 +141,7 @@ const PlanningPokerPage: React.FC = () => {
       myVote={online.myVote}
       isHost={online.isHost}
       onVoteCard={online.voteCard}
+      onOpenVotes={online.openVotes}
       onRevealVotes={online.revealVotes}
       onResetVotes={online.resetVotes}
       onLeave={leaveSession}

@@ -15,6 +15,7 @@ const EMPTY_STATE: PlanningPokerState = {
   roomCode: null,
   storyTitle: "Story #1",
   voteSystem: "fibonacci",
+  votesOpen: false,
   players: [],
   revealed: false,
   round: 1,
@@ -290,6 +291,10 @@ export function usePlanningPokerOnlineState() {
     socket.emit("reveal_votes");
   }, []);
 
+  const openVotes = useCallback(() => {
+    socket.emit("open_votes");
+  }, []);
+
   const resetVotes = useCallback(() => {
     socket.emit("reset_votes");
   }, []);
@@ -336,6 +341,7 @@ export function usePlanningPokerOnlineState() {
     leaveRoom,
     startSession,
     voteCard,
+    openVotes,
     revealVotes,
     resetVotes,
     setVoteSystem,

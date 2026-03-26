@@ -6,6 +6,7 @@ import { PlanningPokerPlayer, PlanningPokerVoteSystem } from "@/types/planningPo
 type Props = {
   players: PlanningPokerPlayer[];
   revealed: boolean;
+  votesOpen: boolean;
   storyTitle: string;
   round: number;
   voteSystem: PlanningPokerVoteSystem;
@@ -115,6 +116,7 @@ const SeatVoteCard: React.FC<{
 export const PlanningPokerRoundBoard: React.FC<Props> = ({
   players,
   revealed,
+  votesOpen,
   storyTitle,
   round,
   voteSystem,
@@ -131,7 +133,9 @@ export const PlanningPokerRoundBoard: React.FC<Props> = ({
 
         <div className="absolute left-1/2 top-1/2 z-10 w-[74%] max-w-[460px] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-cyan-300/30 bg-cyan-500/10 px-3 py-2 text-center sm:w-[66%] sm:px-4 sm:py-3">
           <p className="mb-1 truncate text-[10px] font-semibold uppercase tracking-[0.08em] text-cyan-100/80 sm:text-[11px]">{displayedStory}</p>
-          <p className="text-xs font-medium text-cyan-50 sm:text-sm">{revealed ? "Revelation des votes" : "En attente des votes..."}</p>
+          <p className="text-xs font-medium text-cyan-50 sm:text-sm">
+            {revealed ? "Revelation des votes" : votesOpen ? "En attente des votes..." : "En attente du lancement des votes"}
+          </p>
         </div>
 
         {seats.map(({ player, x, y }) => (

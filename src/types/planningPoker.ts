@@ -18,6 +18,7 @@ export type PlanningPokerState = {
   roomCode: string | null;
   storyTitle: string;
   voteSystem: PlanningPokerVoteSystem;
+  votesOpen: boolean;
   players: PlanningPokerPlayer[];
   revealed: boolean;
   round: number;
