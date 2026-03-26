@@ -497,14 +497,6 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                       className="h-8 w-full rounded-md border border-cyan-300/28 bg-slate-950/55 px-2 text-xs text-cyan-50 outline-none focus:border-cyan-300/65"
                       placeholder="Story en cours"
                     />
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      className={cn(CTA_NEON_SECONDARY_SUBTLE, "h-8 text-xs")}
-                      onClick={goToNextStory}
-                    >
-                      Story suivante + reset
-                    </Button>
                   </div>
                 ) : null}
                 <div className={cn("p-2", GAME_SUBPANEL_SURFACE)}>
