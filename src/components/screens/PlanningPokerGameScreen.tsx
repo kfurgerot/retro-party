@@ -123,6 +123,9 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [storyDraft, setStoryDraft] = useState(state.storyTitle);
+  const [mobileStoryEditorOpen, setMobileStoryEditorOpen] = useState(false);
+  const [mobileStoryEditorDraft, setMobileStoryEditorDraft] = useState(state.storyTitle);
+  const mobileStoryEditorInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const votingPlayers = useMemo(() => state.players.filter((player) => player.role === "player"), [state.players]);
   const spectators = useMemo(() => state.players.filter((player) => player.role === "spectator"), [state.players]);
@@ -298,6 +301,25 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
     onStoryTitleChange(normalized);
   }, [isHost, onStoryTitleChange, state.storyTitle, storyDraft]);
 
+  const openMobileStoryEditor = React.useCallback(() => {
+    setMobileStoryEditorDraft(storyDraft);
+    setMobileStoryEditorOpen(true);
+  }, [storyDraft]);
+
+  const saveMobileStoryEditor = React.useCallback(() => {
+    if (!isHost) return;
+    const normalized = mobileStoryEditorDraft.trim();
+    if (!normalized) {
+      setMobileStoryEditorOpen(false);
+      return;
+    }
+    if (normalized !== state.storyTitle) {
+      onStoryTitleChange(normalized);
+      setStoryDraft(normalized);
+    }
+    setMobileStoryEditorOpen(false);
+  }, [isHost, mobileStoryEditorDraft, onStoryTitleChange, state.storyTitle]);
+
   const handleDeckVote = React.useCallback(
     (value: string) => {
       if (state.revealed || !state.votesOpen) return;
@@ -313,6 +335,14 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
   React.useEffect(() => {
     setSessionCursor(0);
   }, [state.round, state.storyTitle]);
+
+  React.useEffect(() => {
+    if (!mobileStoryEditorOpen) return;
+    window.setTimeout(() => {
+      mobileStoryEditorInputRef.current?.focus();
+      mobileStoryEditorInputRef.current?.select();
+    }, 40);
+  }, [mobileStoryEditorOpen]);
 
   React.useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -802,7 +832,41 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
           <DrawerHeader>
             <DrawerTitle>{mobileMenuTab === "spectators" ? "Spectateurs" : "Session"}</DrawerTitle>
           </DrawerHeader>
-          <div className="grid gap-2 px-4 pb-4">
+          {mobileMenuTab === "session" && isHost ? (
+            <div className="px-4 pb-2">
+              <div className="px-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-cyan-100/90">
+                Configuration du vote en cours
+              </div>
+              <div className={cn("mt-2 rounded-xl p-2 text-xs", GAME_SUBPANEL_SURFACE)}>
+                <div className="grid grid-cols-3 gap-1 rounded-xl border border-cyan-300/28 bg-slate-900/55 p-1">
+                  {VOTE_SYSTEM_OPTIONS.map((option) => (
+                    <button
+                      key={`mobile-${option.value}`}
+                      type="button"
+                      onClick={() => onVoteSystemChange(option.value)}
+                      className={cn(
+                        "h-8 rounded px-2 text-[11px] transition-colors",
+                        state.voteSystem === option.value
+                          ? "bg-cyan-500 text-slate-950"
+                          : "bg-transparent text-cyan-50 hover:bg-slate-800/70"
+                      )}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={openMobileStoryEditor}
+                  className="mt-2 w-full rounded-xl border border-cyan-300/28 bg-slate-950/55 px-2 py-2 text-left transition-colors hover:bg-slate-900/70"
+                >
+                  <div className="text-[10px] uppercase tracking-[0.08em] text-slate-300">Nom de la story</div>
+                  <div className="truncate text-xs text-cyan-50">{state.storyTitle || storyDraft || "Story en cours"}</div>
+                </button>
+              </div>
+            </div>
+          ) : null}
+          <div className="grid max-h-[72vh] gap-2 overflow-y-auto px-4 pb-4">
             {mobileMenuTab === "spectators" ? (
               <>
                 {spectators.length > 0 ? (
@@ -818,43 +882,6 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
               </>
             ) : (
               <>
-                {isHost ? (
-                  <>
-                    <div className="px-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-cyan-100/90">
-                      Configuration du vote en cours
-                    </div>
-                    <div className={cn("rounded-xl p-2 text-xs", GAME_SUBPANEL_SURFACE)}>
-                    <div className="grid grid-cols-3 gap-1 rounded-xl border border-cyan-300/28 bg-slate-900/55 p-1">
-                      {VOTE_SYSTEM_OPTIONS.map((option) => (
-                        <button
-                          key={`mobile-${option.value}`}
-                          type="button"
-                          onClick={() => onVoteSystemChange(option.value)}
-                          className={cn(
-                            "h-8 rounded px-2 text-[11px] transition-colors",
-                            state.voteSystem === option.value
-                              ? "bg-cyan-500 text-slate-950"
-                              : "bg-transparent text-cyan-50 hover:bg-slate-800/70"
-                          )}
-                        >
-                          {option.label}
-                        </button>
-                      ))}
-                    </div>
-                    <input
-                      type="text"
-                      value={storyDraft}
-                      onChange={(event) => setStoryDraft(event.target.value)}
-                      onBlur={submitStoryTitle}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") submitStoryTitle();
-                      }}
-                      className="mt-2 h-9 w-full rounded-xl border border-cyan-300/28 bg-slate-950/55 px-2 text-xs text-cyan-50 outline-none focus:border-cyan-300/65"
-                      placeholder="Story en cours"
-                    />
-                    </div>
-                  </>
-                ) : null}
                 <div className="px-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-cyan-100/90">
                   Historique des votes
                 </div>
@@ -988,6 +1015,53 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
           </div>
         </DrawerContent>
       </Drawer>
+
+      <AlertDialog open={mobileStoryEditorOpen} onOpenChange={setMobileStoryEditorOpen}>
+        <AlertDialogContent
+          className={cn(GAME_DIALOG_CONTENT, "max-w-md border-cyan-300/35 bg-slate-900 p-3 shadow-[0_24px_56px_rgba(2,6,23,0.85)] sm:hidden")}
+          onOpenAutoFocus={(event) => {
+            event.preventDefault();
+            mobileStoryEditorInputRef.current?.focus();
+          }}
+        >
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-cyan-100/90">
+              Configuration du vote en cours
+            </AlertDialogTitle>
+            <AlertDialogDescription className="sr-only">Edition du nom de la story</AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="rounded-xl border border-cyan-300/20 bg-slate-950 p-3">
+            <div className="text-sm font-semibold text-cyan-50">Renommer la story</div>
+            <input
+              ref={mobileStoryEditorInputRef}
+              type="text"
+              value={mobileStoryEditorDraft}
+              onChange={(event) => setMobileStoryEditorDraft(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") saveMobileStoryEditor();
+              }}
+              className="mt-2 h-10 w-full rounded-xl border border-cyan-300/28 bg-slate-950 px-3 text-sm text-cyan-50 outline-none focus:border-cyan-300/65"
+              placeholder="Story en cours"
+            />
+          </div>
+          <AlertDialogFooter className="mt-0 grid grid-cols-2 gap-2 sm:space-x-0">
+            <Button
+              variant="secondary"
+              className={cn(GAME_MOBILE_ACTION_BUTTON, CTA_NEON_SECONDARY_SUBTLE, "h-10 text-xs")}
+              onClick={() => setMobileStoryEditorOpen(false)}
+            >
+              Annuler
+            </Button>
+            <Button
+              variant="secondary"
+              className={cn(GAME_MOBILE_ACTION_BUTTON, CTA_NEON_PRIMARY, "h-10 text-xs")}
+              onClick={saveMobileStoryEditor}
+            >
+              Enregistrer
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={leaveDialogOpen} onOpenChange={setLeaveDialogOpen}>
         <AlertDialogContent className={cn(GAME_DIALOG_CONTENT, "max-w-md")}>
