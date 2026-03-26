@@ -295,6 +295,10 @@ export function usePlanningPokerOnlineState() {
     socket.emit("open_votes");
   }, []);
 
+  const reopenStoryVote = useCallback((storyTitle: string, returnStoryTitle: string) => {
+    socket.emit("reopen_story_vote", { storyTitle, returnStoryTitle });
+  }, []);
+
   const resetVotes = useCallback(() => {
     socket.emit("reset_votes");
   }, []);
@@ -342,6 +346,7 @@ export function usePlanningPokerOnlineState() {
     startSession,
     voteCard,
     openVotes,
+    reopenStoryVote,
     revealVotes,
     resetVotes,
     setVoteSystem,

@@ -188,6 +188,19 @@ function normalizePokerVoteSystem(value) {
   return POKER_VOTE_SYSTEMS.has(value) ? value : "fibonacci";
 }
 
+function buildNextPokerStoryTitle(currentTitle, fallbackRound) {
+  const raw = typeof currentTitle === "string" ? currentTitle.trim() : "";
+  const match = raw.match(/^(.*?)(\d+)\s*$/);
+  if (match) {
+    const prefix = match[1] || "Story #";
+    const value = Number(match[2]);
+    if (Number.isFinite(value)) {
+      return `${prefix}${value + 1}`;
+    }
+  }
+  return `Story #${Math.max(1, fallbackRound)}`;
+}
+
 function createPokerRoom({
   code,
   hostSocketId = null,
@@ -205,6 +218,7 @@ function createPokerRoom({
     phase: "lobby",
     storyTitle: "Story #1",
     voteSystem: normalizePokerVoteSystem(voteSystem),
+    returnStoryTitle: null,
     votesOpen: false,
     round: 1,
     revealed: false,
@@ -1304,6 +1318,31 @@ io.on("connection", (socket) => {
     if (room.hostSocketId !== socket.id) return;
     if (room.phase !== "playing") return;
 
+    room.returnStoryTitle = null;
+    room.votesOpen = true;
+    room.revealed = false;
+    room.lobby = room.lobby.map((player) => ({
+      ...player,
+      hasVoted: false,
+      vote: null,
+    }));
+    broadcastPokerState(code);
+  });
+
+  socket.on("reopen_story_vote", ({ storyTitle, returnStoryTitle }) => {
+    const code = socketToPokerRoom.get(socket.id);
+    if (!code) return;
+    const room = pokerRooms.get(code);
+    if (!room) return;
+    if (room.hostSocketId !== socket.id) return;
+    if (room.phase !== "playing") return;
+
+    const nextStoryTitle = typeof storyTitle === "string" ? storyTitle.trim().slice(0, 64) : "";
+    if (!nextStoryTitle) return;
+
+    const returnTitleRaw = typeof returnStoryTitle === "string" ? returnStoryTitle.trim().slice(0, 64) : "";
+    room.returnStoryTitle = returnTitleRaw || null;
+    room.storyTitle = nextStoryTitle;
     room.votesOpen = true;
     room.revealed = false;
     room.lobby = room.lobby.map((player) => ({
@@ -1324,8 +1363,11 @@ io.on("connection", (socket) => {
     room.votesOpen = false;
     room.revealed = false;
     room.round += 1;
-    if (!room.storyTitle || room.storyTitle.startsWith("Story #")) {
-      room.storyTitle = `Story #${room.round}`;
+    if (room.returnStoryTitle) {
+      room.storyTitle = room.returnStoryTitle;
+      room.returnStoryTitle = null;
+    } else if (!room.storyTitle || room.storyTitle.startsWith("Story #")) {
+      room.storyTitle = buildNextPokerStoryTitle(room.storyTitle, room.round);
     }
     room.lobby = room.lobby.map((player) => ({
       ...player,
