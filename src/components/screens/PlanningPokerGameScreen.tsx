@@ -331,6 +331,9 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
         <header className={cn(GAME_HUD_SURFACE, "px-2.5 py-2 sm:px-4 sm:py-3")}>
           <div className="grid gap-2 sm:hidden">
             <div className="flex items-center justify-between gap-2">
+              <div className="rounded-xl border border-amber-300/30 bg-amber-500/10 px-2 py-1 text-[10px] text-amber-100">
+                {consensusLabel}
+              </div>
               {state.roomCode ? (
                 <div className="inline-flex max-w-full items-center gap-1 rounded-full border border-cyan-300/40 bg-cyan-500/12 px-2.5 py-1 text-[10px] font-semibold tracking-[0.08em] text-cyan-50">
                   <span className="uppercase text-cyan-100/85">Code</span>
@@ -339,9 +342,6 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
               ) : (
                 <span />
               )}
-              <div className="rounded-xl border border-amber-300/30 bg-amber-500/10 px-2 py-1 text-[10px] text-amber-100">
-                {consensusLabel}
-              </div>
             </div>
             <div className="rounded-xl border border-cyan-300/35 bg-cyan-500/10 px-2 py-1.5">
               <div className="mb-1 flex items-center justify-between gap-2 text-[10px] uppercase tracking-[0.1em]">
