@@ -224,6 +224,21 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
     selectedLeadVote && (selectedSession?.totalVotes ?? 0) > 0
       ? Math.round((selectedLeadVote[1] / (selectedSession?.totalVotes ?? 1)) * 100)
       : 0;
+  const selectedProgressPct = selectedSession?.isCurrent
+    ? voteProgressPct
+    : (selectedSession?.totalVotes ?? 0) > 0
+    ? 100
+    : 0;
+  const selectedStatusLabel = selectedSession?.isCurrent
+    ? state.revealed
+      ? "Revele"
+      : state.votesOpen
+      ? "Vote en cours"
+      : "Votes non lances"
+    : "Question archivee";
+  const selectedProgressLabel = selectedSession?.isCurrent ? voteProgressLabel : `${selectedSession?.totalVotes ?? 0} votes`;
+  const mobileSessionActionLabel = selectedSession?.isCurrent ? "🔓 Revoter" : "🔓 Réouvrir";
+  const mobileSessionActionDisabled = !isHost || (selectedSession?.isCurrent ? !state.revealed : false);
   const desktopLeaveBtn = cn(GAME_TAB_BUTTON, "border-rose-300/45 bg-rose-500/14 text-rose-100 hover:bg-rose-500/22 hover:text-rose-50");
 
   const requestLeave = () => {
@@ -259,6 +274,15 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
     setSessionCursor(0);
     setMobileActionsOpen(false);
   }, [isHost, onReopenStoryVote, selectedSession, state.round, state.storyTitle]);
+
+  const handleMobileSessionAction = React.useCallback(() => {
+    if (!isHost || !selectedSession) return;
+    if (selectedSession.isCurrent) {
+      onRevoteCurrentStory();
+      return;
+    }
+    reopenPastQuestion();
+  }, [isHost, onRevoteCurrentStory, reopenPastQuestion, selectedSession]);
 
   const hostMainActionLabel = state.revealed
     ? "Vote suivant"
@@ -594,6 +618,25 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                   </div>
                   <div className="truncate text-cyan-50">{selectedSession?.storyTitle || "-"}</div>
                   <div className="text-[11px] text-slate-300">{selectedSession?.roundLabel ?? "-"}</div>
+                  <div className="mt-1 text-slate-300">Statut</div>
+                  <div className="text-cyan-50">
+                    {selectedSession?.isCurrent
+                      ? state.revealed
+                        ? "Revele"
+                        : state.votesOpen
+                        ? "Vote en cours"
+                        : "Votes non lances"
+                      : "Question archivee"}
+                  </div>
+                  <div className="mt-1 flex items-center justify-between">
+                    <span className="text-slate-300">Progression</span>
+                    <span className="font-semibold text-cyan-50">
+                      {selectedSession?.isCurrent ? voteProgressLabel : `${selectedSession?.totalVotes ?? 0} votes`}
+                    </span>
+                  </div>
+                  <div className="h-1.5 overflow-hidden rounded bg-slate-900/55">
+                    <div className="h-full rounded bg-cyan-400/90" style={{ width: `${selectedProgressPct}%` }} />
+                  </div>
                 </div>
                 {isHost ? (
                   <div className={cn("grid gap-2 p-2", GAME_SUBPANEL_SURFACE)}>
@@ -610,34 +653,6 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                     />
                   </div>
                 ) : null}
-                <div className={cn("p-2", GAME_SUBPANEL_SURFACE)}>
-                  <div className="text-slate-300">Statut</div>
-                  <div className="text-cyan-50">
-                    {selectedSession?.isCurrent
-                      ? state.revealed
-                        ? "Revele"
-                        : state.votesOpen
-                        ? "Vote en cours"
-                        : "Votes non lances"
-                      : "Question archivee"}
-                  </div>
-                </div>
-                <div className={cn("grid gap-1.5 p-2", GAME_SUBPANEL_SURFACE)}>
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-300">Progression</span>
-                    <span className="font-semibold text-cyan-50">
-                      {selectedSession?.isCurrent ? voteProgressLabel : `${selectedSession?.totalVotes ?? 0} votes`}
-                    </span>
-                  </div>
-                  <div className="h-1.5 overflow-hidden rounded bg-slate-900/55">
-                    <div
-                      className="h-full rounded bg-cyan-400/90"
-                      style={{
-                        width: `${selectedSession?.isCurrent ? voteProgressPct : Math.min(100, (selectedSession?.totalVotes ?? 0) * 10)}%`,
-                      }}
-                    />
-                  </div>
-                </div>
                 <div className={cn("grid grid-cols-2 gap-2 p-2", GAME_SUBPANEL_SURFACE)}>
                   <div>
                     <div className="text-slate-300">Moyenne</div>
@@ -778,6 +793,15 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                 </>
               )}
             </div>
+            <div className="mt-2">
+              <Button
+                variant="secondary"
+                className={cn(GAME_MOBILE_ACTION_BUTTON, CTA_NEON_SECONDARY_SUBTLE, "h-9 w-full text-xs")}
+                onClick={() => onRoleChange(myRole === "player" ? "spectator" : "player")}
+              >
+                {myRole === "player" ? fr.planningPoker.switchSpectator : fr.planningPoker.switchPlayer}
+              </Button>
+            </div>
           </Card>
         </div>
       </div>
@@ -804,37 +828,38 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
             ) : (
               <>
                 {isHost ? (
-                  <div className="grid grid-cols-3 gap-1 rounded-xl border border-cyan-300/28 bg-slate-900/55 p-1">
-                    {VOTE_SYSTEM_OPTIONS.map((option) => (
-                      <button
-                        key={`mobile-${option.value}`}
-                        type="button"
-                        onClick={() => onVoteSystemChange(option.value)}
-                        className={cn(
-                          "h-8 rounded px-2 text-[11px] transition-colors",
-                          state.voteSystem === option.value
-                            ? "bg-cyan-500 text-slate-950"
-                            : "bg-transparent text-cyan-50 hover:bg-slate-800/70"
-                        )}
-                      >
-                        {option.label}
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
-                {isHost ? (
-                  <div className="rounded-xl border border-cyan-300/20 bg-slate-950/42 p-2">
-                    <input
-                      type="text"
-                      value={storyDraft}
-                      onChange={(event) => setStoryDraft(event.target.value)}
-                      onBlur={submitStoryTitle}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") submitStoryTitle();
-                      }}
-                      className="h-9 w-full rounded-lg border border-cyan-300/28 bg-slate-950/55 px-2 text-xs text-cyan-50 outline-none focus:border-cyan-300/65"
-                      placeholder="Story en cours"
-                    />
+                  <div className={cn("rounded-xl p-2 text-xs", GAME_SUBPANEL_SURFACE)}>
+                    <div className="mb-1 text-slate-300">Configuration du vote</div>
+                    <div className="grid grid-cols-3 gap-1 rounded-xl border border-cyan-300/28 bg-slate-900/55 p-1">
+                      {VOTE_SYSTEM_OPTIONS.map((option) => (
+                        <button
+                          key={`mobile-${option.value}`}
+                          type="button"
+                          onClick={() => onVoteSystemChange(option.value)}
+                          className={cn(
+                            "h-8 rounded px-2 text-[11px] transition-colors",
+                            state.voteSystem === option.value
+                              ? "bg-cyan-500 text-slate-950"
+                              : "bg-transparent text-cyan-50 hover:bg-slate-800/70"
+                          )}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="mt-2 rounded-xl border border-cyan-300/20 bg-slate-950/42 p-2">
+                      <input
+                        type="text"
+                        value={storyDraft}
+                        onChange={(event) => setStoryDraft(event.target.value)}
+                        onBlur={submitStoryTitle}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") submitStoryTitle();
+                        }}
+                        className="h-9 w-full rounded-lg border border-cyan-300/28 bg-slate-950/55 px-2 text-xs text-cyan-50 outline-none focus:border-cyan-300/65"
+                        placeholder="Story en cours"
+                      />
+                    </div>
                   </div>
                 ) : null}
                 <div className="rounded-xl border border-cyan-300/20 bg-slate-950/42 px-2 py-1.5 text-xs text-cyan-50">
@@ -867,10 +892,25 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                       </Button>
                     </div>
                   </div>
-                  <div className="truncate">{selectedSession?.storyTitle || "-"}</div>
-                  <div className="text-slate-300">
-                    Moy: {formatPlanningValueForSystem(selectedSession?.average ?? null, selectedSession?.voteSystem ?? state.voteSystem)} · Med:{" "}
-                    {formatPlanningValueForSystem(selectedSession?.median ?? null, selectedSession?.voteSystem ?? state.voteSystem)}
+                  <div className="truncate text-sm font-semibold">{selectedSession?.storyTitle || "-"}</div>
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    <div className="rounded-lg border border-cyan-300/18 bg-slate-950/45 px-2 py-1">
+                      <div className="text-[10px] text-slate-300">Statut</div>
+                      <div className="font-semibold text-cyan-50">{selectedStatusLabel}</div>
+                    </div>
+                    <div className="rounded-lg border border-cyan-300/18 bg-slate-950/45 px-2 py-1">
+                      <div className="text-[10px] text-slate-300">Nombre de votes</div>
+                      <div className="font-semibold text-cyan-50">{selectedProgressLabel}</div>
+                    </div>
+                  </div>
+                  <div className="mt-2 grid gap-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-300">Progression</span>
+                      <span className="font-semibold text-cyan-50">{selectedProgressPct}%</span>
+                    </div>
+                    <div className="h-1.5 overflow-hidden rounded bg-slate-900/55">
+                      <div className="h-full rounded bg-cyan-400/90" style={{ width: `${selectedProgressPct}%` }} />
+                    </div>
                   </div>
                   {isHost ? (
                     <div className="mt-1 flex justify-end">
@@ -881,25 +921,81 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                           GAME_TAB_BUTTON,
                           "h-7 min-w-[92px] border-cyan-300/28 bg-slate-900/62 px-2 text-[11px] text-cyan-100 hover:bg-slate-800/80 disabled:opacity-45"
                         )}
-                        disabled={selectedSession?.isCurrent}
-                        onClick={reopenPastQuestion}
+                        disabled={mobileSessionActionDisabled}
+                        onClick={handleMobileSessionAction}
                       >
-                        🔓 Réouvrir
+                        {mobileSessionActionLabel}
                       </Button>
                     </div>
                   ) : null}
                 </div>
-                <SecondaryButton className={cn("h-10 w-full text-xs", CTA_NEON_SECONDARY_SUBTLE)} onClick={() => onRoleChange(myRole === "player" ? "spectator" : "player")}>
-                  {myRole === "player" ? fr.planningPoker.switchSpectator : fr.planningPoker.switchPlayer}
-                </SecondaryButton>
-                {isHost && state.revealed ? (
-                  <SecondaryButton className={cn("h-10 w-full text-xs", CTA_NEON_SECONDARY_SUBTLE)} onClick={onRevoteCurrentStory}>
-                    Revoter cette story
-                  </SecondaryButton>
+                <div className="grid max-h-[44vh] gap-2 overflow-y-auto pr-1">
+                <div className={cn("grid grid-cols-2 gap-2 rounded-xl p-2 text-xs", GAME_SUBPANEL_SURFACE)}>
+                  <div className="col-span-2 text-slate-300">Statistiques</div>
+                  <div>
+                    <div className="text-slate-300">Moyenne</div>
+                    <div className="font-semibold text-cyan-50">
+                      {selectedSession?.isCurrent
+                        ? averageLabel
+                        : formatPlanningValueForSystem(selectedSession?.average ?? null, selectedSession?.voteSystem ?? state.voteSystem)}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-slate-300">Mediane</div>
+                    <div className="font-semibold text-cyan-50">
+                      {selectedSession?.isCurrent
+                        ? medianLabel
+                        : formatPlanningValueForSystem(selectedSession?.median ?? null, selectedSession?.voteSystem ?? state.voteSystem)}
+                    </div>
+                  </div>
+                </div>
+                <div className={cn("grid grid-cols-2 gap-2 rounded-xl p-2 text-xs", GAME_SUBPANEL_SURFACE)}>
+                  <div>
+                    <div className="text-slate-300">Min</div>
+                    <div className="font-semibold text-cyan-50">
+                      {formatPlanningValueForSystem(
+                        selectedSession?.isCurrent ? stats.min : selectedSession?.min ?? null,
+                        selectedSession?.voteSystem ?? state.voteSystem
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-slate-300">Max</div>
+                    <div className="font-semibold text-cyan-50">
+                      {formatPlanningValueForSystem(
+                        selectedSession?.isCurrent ? stats.max : selectedSession?.max ?? null,
+                        selectedSession?.voteSystem ?? state.voteSystem
+                      )}
+                    </div>
+                  </div>
+                </div>
+                {selectedSession?.totalVotes ? (
+                  <div className={cn("grid gap-1.5 rounded-xl p-2 text-xs", GAME_SUBPANEL_SURFACE)}>
+                    <div className="text-slate-300">Repartition</div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-300">Consensus</span>
+                      <span className="font-semibold text-cyan-50">
+                        {selectedLeadVote ? `${displayVoteValue(selectedLeadVote[0])} (${selectedConsensusPct}%)` : "-"}
+                      </span>
+                    </div>
+                    {selectedVoteEntries.map(([value, count]) => {
+                      const totalVotes = selectedSession?.totalVotes ?? 0;
+                      const barPct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
+                      return (
+                        <div key={`mobile-session-distribution-${value}`} className="grid gap-1">
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="text-cyan-100">{displayVoteValue(value)}</span>
+                            <span className="text-slate-300">{count}</span>
+                          </div>
+                          <div className="h-1.5 overflow-hidden rounded bg-slate-900/55">
+                            <div className="h-full rounded bg-cyan-300/85" style={{ width: `${barPct}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 ) : null}
-                <SecondaryButton className={cn("h-10 w-full text-xs", CTA_NEON_DANGER)} onClick={requestLeave}>
-                  {fr.onlineLobby.leaveParty}
-                </SecondaryButton>
+                </div>
               </>
             )}
           </div>
