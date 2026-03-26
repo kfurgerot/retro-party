@@ -413,7 +413,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
               voteSystem={state.voteSystem}
             />
 
-            <div className="rounded-lg border border-cyan-300/22 bg-slate-950/38 p-2 sm:p-3">
+            <div className="rounded-xl border border-cyan-300/22 bg-slate-950/38 p-2 sm:p-3">
               {myRole === "player" ? (
                 <>
                   <div className="grid gap-2 sm:hidden">
@@ -475,7 +475,9 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                   </div>
                 </>
               ) : (
-                <div className="text-sm text-slate-300">Mode spectateur: deck non interactif.</div>
+                <div className="rounded-xl border border-cyan-300/20 bg-slate-950/42 px-3 py-2 text-sm text-slate-300">
+                  Mode spectateur: deck non interactif.
+                </div>
               )}
             </div>
 
@@ -486,7 +488,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                 </SecondaryButton>
                 {isHost ? (
                   <>
-                    <div className="flex min-w-0 items-center gap-1 rounded-md border border-cyan-300/28 bg-slate-900/55 p-1">
+                    <div className="flex min-w-0 items-center gap-1 rounded-xl border border-cyan-300/28 bg-slate-900/55 p-1">
                       {VOTE_SYSTEM_OPTIONS.map((option) => (
                         <button
                           key={option.value}
@@ -560,20 +562,26 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                       <Button
                         variant="secondary"
                         size="sm"
-                        className={cn("h-7 px-2 text-xs", CTA_NEON_SECONDARY_SUBTLE)}
+                        className={cn(
+                          GAME_TAB_BUTTON,
+                          "h-8 w-8 border-cyan-300/30 bg-slate-900/65 px-0 text-base font-semibold text-cyan-100 hover:bg-slate-800/80 disabled:opacity-45"
+                        )}
                         disabled={sessionCursor >= sessionEntries.length - 1}
                         onClick={() => setSessionCursor((value) => Math.min(value + 1, sessionEntries.length - 1))}
                       >
-                        ←
+                        ‹
                       </Button>
                       <Button
                         variant="secondary"
                         size="sm"
-                        className={cn("h-7 px-2 text-xs", CTA_NEON_SECONDARY_SUBTLE)}
+                        className={cn(
+                          GAME_TAB_BUTTON,
+                          "h-8 w-8 border-cyan-300/30 bg-slate-900/65 px-0 text-base font-semibold text-cyan-100 hover:bg-slate-800/80 disabled:opacity-45"
+                        )}
                         disabled={sessionCursor <= 0}
                         onClick={() => setSessionCursor((value) => Math.max(value - 1, 0))}
                       >
-                        →
+                        ›
                       </Button>
                     </div>
                   </div>
@@ -789,7 +797,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
             ) : (
               <>
                 {isHost ? (
-                  <div className="grid grid-cols-3 gap-1 rounded-md border border-cyan-300/28 bg-slate-900/55 p-1">
+                  <div className="grid grid-cols-3 gap-1 rounded-xl border border-cyan-300/28 bg-slate-900/55 p-1">
                     {VOTE_SYSTEM_OPTIONS.map((option) => (
                       <button
                         key={`mobile-${option.value}`}
@@ -807,27 +815,33 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                     ))}
                   </div>
                 ) : null}
-                <div className="rounded-md border border-cyan-300/20 bg-slate-950/42 px-2 py-1.5 text-xs text-cyan-50">
+                <div className="rounded-xl border border-cyan-300/20 bg-slate-950/42 px-2 py-1.5 text-xs text-cyan-50">
                   <div className="mb-1 flex items-center justify-between gap-2">
                     <span className="font-semibold">{selectedSession?.roundLabel ?? "Session"}</span>
                     <div className="flex items-center gap-1">
                       <Button
                         variant="secondary"
                         size="sm"
-                        className={cn("h-7 px-2 text-xs", CTA_NEON_SECONDARY_SUBTLE)}
+                        className={cn(
+                          GAME_TAB_BUTTON,
+                          "h-8 w-8 border-cyan-300/30 bg-slate-900/65 px-0 text-base font-semibold text-cyan-100 hover:bg-slate-800/80 disabled:opacity-45"
+                        )}
                         disabled={sessionCursor >= sessionEntries.length - 1}
                         onClick={() => setSessionCursor((value) => Math.min(value + 1, sessionEntries.length - 1))}
                       >
-                        ←
+                        ‹
                       </Button>
                       <Button
                         variant="secondary"
                         size="sm"
-                        className={cn("h-7 px-2 text-xs", CTA_NEON_SECONDARY_SUBTLE)}
+                        className={cn(
+                          GAME_TAB_BUTTON,
+                          "h-8 w-8 border-cyan-300/30 bg-slate-900/65 px-0 text-base font-semibold text-cyan-100 hover:bg-slate-800/80 disabled:opacity-45"
+                        )}
                         disabled={sessionCursor <= 0}
                         onClick={() => setSessionCursor((value) => Math.max(value - 1, 0))}
                       >
-                        →
+                        ›
                       </Button>
                     </div>
                   </div>
