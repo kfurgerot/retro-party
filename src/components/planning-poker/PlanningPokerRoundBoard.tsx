@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from "react";
+﻿import React, { useEffect, useMemo, useRef, useState } from "react";
 import { AVATARS } from "@/types/game";
 import { PLANNING_POKER_DECKS } from "@/lib/planningPoker";
 import { PlanningPokerPlayer, PlanningPokerVoteSystem } from "@/types/planningPoker";
@@ -70,6 +70,9 @@ const SeatVoteCard: React.FC<{
   voteSystem: PlanningPokerVoteSystem;
 }> = ({ player, revealed, voteSystem }) => {
   const [flipped, setFlipped] = useState(false);
+  const [votePulse, setVotePulse] = useState(false);
+  const previousVoteRef = useRef<string | null>(player.vote ?? null);
+  const previousHasVotedRef = useRef<boolean>(player.hasVoted);
   const normalizedVote = normalizeVoteValue(player.vote);
   const valueLabel = normalizedVote ?? "-";
   const revealedCardStyle = useMemo(
@@ -86,22 +89,40 @@ const SeatVoteCard: React.FC<{
     return () => window.clearTimeout(timer);
   }, [player.hasVoted, player.vote, revealed]);
 
+  useEffect(() => {
+    const hasVoteChanged = previousVoteRef.current !== (player.vote ?? null);
+    const hasStartedVoting = !previousHasVotedRef.current && player.hasVoted;
+    previousVoteRef.current = player.vote ?? null;
+    previousHasVotedRef.current = player.hasVoted;
+
+    if (!player.hasVoted || !player.vote || (!hasVoteChanged && !hasStartedVoting)) return;
+    setVotePulse(true);
+    const timer = window.setTimeout(() => setVotePulse(false), 320);
+    return () => window.clearTimeout(timer);
+  }, [player.hasVoted, player.vote]);
+
   if (!player.hasVoted) {
     return (
       <div className="flex h-[44px] w-[30px] items-center justify-center rounded-xl border border-slate-300/70 bg-white text-[11px] font-semibold text-slate-400 shadow-[0_6px_14px_rgba(2,6,23,0.35)] sm:h-[56px] sm:w-[38px] sm:text-xs">
-        -
+        ⏳
       </div>
     );
   }
 
   return (
-    <div className="h-[44px] w-[30px] [perspective:700px] sm:h-[56px] sm:w-[38px]">
+    <div
+      className={`h-[44px] w-[30px] [perspective:700px] transition-transform duration-300 sm:h-[56px] sm:w-[38px] ${
+        votePulse ? "-translate-y-1 scale-105" : ""
+      }`}
+    >
       <div
         className={`relative h-full w-full transition-transform duration-500 [transform-style:preserve-3d] ${
           flipped ? "[transform:rotateY(180deg)]" : ""
         }`}
       >
-        <div className="absolute inset-0 rounded-xl border border-slate-300/70 bg-white shadow-[0_6px_14px_rgba(2,6,23,0.35)] [backface-visibility:hidden]" />
+        <div className="absolute inset-0 flex items-center justify-center rounded-xl border border-slate-300/70 bg-white text-base shadow-[0_6px_14px_rgba(2,6,23,0.35)] [backface-visibility:hidden] sm:text-lg">
+          {!revealed ? "✅" : null}
+        </div>
         <div
           style={revealedCardStyle}
           className="absolute inset-0 flex items-center justify-center rounded-xl border border-slate-300/70 bg-white text-[11px] font-bold text-slate-900 shadow-[0_6px_14px_rgba(2,6,23,0.35)] [backface-visibility:hidden] [transform:rotateY(180deg)] sm:text-xs"
@@ -158,3 +179,5 @@ export const PlanningPokerRoundBoard: React.FC<Props> = ({
     </div>
   );
 };
+
+
