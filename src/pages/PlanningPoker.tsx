@@ -145,6 +145,7 @@ const PlanningPokerPage: React.FC = () => {
       onReopenStoryVote={online.reopenStoryVote}
       onRevealVotes={online.revealVotes}
       onResetVotes={online.resetVotes}
+      onRevoteCurrentStory={online.revoteCurrentStory}
       onLeave={leaveSession}
       onRoleChange={online.setRole}
       onVoteSystemChange={online.setVoteSystem}

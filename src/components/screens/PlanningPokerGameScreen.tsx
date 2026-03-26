@@ -45,6 +45,7 @@ type Props = {
   onReopenStoryVote: (storyTitle: string, returnStoryTitle: string) => void;
   onRevealVotes: () => void;
   onResetVotes: () => void;
+  onRevoteCurrentStory: () => void;
   onLeave: () => void;
   onRoleChange: (role: PlanningPokerRole) => void;
   onVoteSystemChange: (voteSystem: PlanningPokerState["voteSystem"]) => void;
@@ -109,6 +110,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
   onReopenStoryVote,
   onRevealVotes,
   onResetVotes,
+  onRevoteCurrentStory,
   onLeave,
   onRoleChange,
   onVoteSystemChange,
@@ -510,6 +512,11 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
               </div>
 
               <div className="grid w-full min-w-0 grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:justify-end">
+                {isHost && state.revealed ? (
+                  <SecondaryButton className={cn("h-9 min-w-0 w-full text-[11px] sm:w-auto sm:text-xs", CTA_NEON_SECONDARY_SUBTLE)} onClick={onRevoteCurrentStory}>
+                    Revoter cette story
+                  </SecondaryButton>
+                ) : null}
                 <PrimaryButton className={cn("h-9 min-w-0 w-full text-[11px] sm:w-auto sm:text-xs", CTA_NEON_PRIMARY)} disabled={!isHost} onClick={handleHostMainAction}>
                   <span className="sm:hidden">{hostMainActionShortLabel}</span>
                   <span className="hidden sm:inline">{hostMainActionLabel}</span>
@@ -885,6 +892,11 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                 <SecondaryButton className={cn("h-10 w-full text-xs", CTA_NEON_SECONDARY_SUBTLE)} onClick={() => onRoleChange(myRole === "player" ? "spectator" : "player")}>
                   {myRole === "player" ? fr.planningPoker.switchSpectator : fr.planningPoker.switchPlayer}
                 </SecondaryButton>
+                {isHost && state.revealed ? (
+                  <SecondaryButton className={cn("h-10 w-full text-xs", CTA_NEON_SECONDARY_SUBTLE)} onClick={onRevoteCurrentStory}>
+                    Revoter cette story
+                  </SecondaryButton>
+                ) : null}
                 <SecondaryButton className={cn("h-10 w-full text-xs", CTA_NEON_DANGER)} onClick={requestLeave}>
                   {fr.onlineLobby.leaveParty}
                 </SecondaryButton>

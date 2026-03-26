@@ -303,6 +303,10 @@ export function usePlanningPokerOnlineState() {
     socket.emit("reset_votes");
   }, []);
 
+  const revoteCurrentStory = useCallback(() => {
+    socket.emit("revote_current_story");
+  }, []);
+
   const setVoteSystem = useCallback((voteSystem: PlanningPokerVoteSystem) => {
     socket.emit("set_vote_system", { voteSystem });
   }, []);
@@ -349,6 +353,7 @@ export function usePlanningPokerOnlineState() {
     reopenStoryVote,
     revealVotes,
     resetVotes,
+    revoteCurrentStory,
     setVoteSystem,
     setRole,
     setStoryTitle,

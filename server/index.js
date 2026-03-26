@@ -1329,6 +1329,24 @@ io.on("connection", (socket) => {
     broadcastPokerState(code);
   });
 
+  socket.on("revote_current_story", () => {
+    const code = socketToPokerRoom.get(socket.id);
+    if (!code) return;
+    const room = pokerRooms.get(code);
+    if (!room) return;
+    if (room.hostSocketId !== socket.id) return;
+    if (room.phase !== "playing") return;
+
+    room.votesOpen = true;
+    room.revealed = false;
+    room.lobby = room.lobby.map((player) => ({
+      ...player,
+      hasVoted: false,
+      vote: null,
+    }));
+    broadcastPokerState(code);
+  });
+
   socket.on("reopen_story_vote", ({ storyTitle, returnStoryTitle }) => {
     const code = socketToPokerRoom.get(socket.id);
     if (!code) return;
