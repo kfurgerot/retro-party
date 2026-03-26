@@ -31,7 +31,7 @@ import {
   GAME_TAB_BUTTON,
   GAME_TAB_BUTTON_ACTIVE,
 } from "@/lib/uiTokens";
-import { computePlanningPokerStats, formatPlanningValue, PLANNING_POKER_DECKS } from "@/lib/planningPoker";
+import { computePlanningPokerStats, formatPlanningValueForSystem, PLANNING_POKER_DECKS } from "@/lib/planningPoker";
 
 type Props = {
   state: PlanningPokerState;
@@ -141,8 +141,8 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
     : consensusPct >= 60
     ? "Consensus modere"
     : "Consensus faible";
-  const averageLabel = state.revealed ? formatPlanningValue(stats.average) : "-";
-  const medianLabel = state.revealed ? formatPlanningValue(stats.median) : "-";
+  const averageLabel = state.revealed ? formatPlanningValueForSystem(stats.average, state.voteSystem) : "-";
+  const medianLabel = state.revealed ? formatPlanningValueForSystem(stats.median, state.voteSystem) : "-";
   const desktopLeaveBtn = cn(GAME_TAB_BUTTON, "border-rose-300/45 bg-rose-500/14 text-rose-100 hover:bg-rose-500/22 hover:text-rose-50");
 
   const requestLeave = () => {
@@ -529,11 +529,11 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                 <div className={cn("grid grid-cols-2 gap-2 p-2", GAME_SUBPANEL_SURFACE)}>
                   <div>
                     <div className="text-slate-300">Min</div>
-                    <div className="font-semibold text-cyan-50">{formatPlanningValue(stats.min)}</div>
+                    <div className="font-semibold text-cyan-50">{formatPlanningValueForSystem(stats.min, state.voteSystem)}</div>
                   </div>
                   <div>
                     <div className="text-slate-300">Max</div>
-                    <div className="font-semibold text-cyan-50">{formatPlanningValue(stats.max)}</div>
+                    <div className="font-semibold text-cyan-50">{formatPlanningValueForSystem(stats.max, state.voteSystem)}</div>
                   </div>
                 </div>
                 {state.revealed ? (
@@ -571,8 +571,8 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                         <span className="text-[11px] text-slate-300">{entry.storyTitle || "-"}</span>
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-[11px]">
-                        <div>Moy: <span className="font-semibold text-cyan-50">{formatPlanningValue(entry.average)}</span></div>
-                        <div>Med: <span className="font-semibold text-cyan-50">{formatPlanningValue(entry.median)}</span></div>
+                        <div>Moy: <span className="font-semibold text-cyan-50">{formatPlanningValueForSystem(entry.average, entry.voteSystem)}</span></div>
+                        <div>Med: <span className="font-semibold text-cyan-50">{formatPlanningValueForSystem(entry.median, entry.voteSystem)}</span></div>
                       </div>
                       <div className="flex flex-wrap gap-1">
                         {entry.votes.map((vote, index) => (
@@ -673,7 +673,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                   [...history].reverse().map((entry) => (
                     <div key={`mobile-${entry.id}`} className="rounded-md border border-cyan-300/20 bg-slate-950/42 px-2 py-1.5 text-xs text-cyan-50">
                       <div className="font-semibold">Vote #{entry.round} · {entry.storyTitle || "-"}</div>
-                      <div className="text-slate-300">Moy: {formatPlanningValue(entry.average)} · Med: {formatPlanningValue(entry.median)}</div>
+                      <div className="text-slate-300">Moy: {formatPlanningValueForSystem(entry.average, entry.voteSystem)} · Med: {formatPlanningValueForSystem(entry.median, entry.voteSystem)}</div>
                       <div className="mt-1 text-slate-300">{entry.votes.map((vote) => `${vote.playerName}:${displayVoteValue(vote.value)}`).join(" · ")}</div>
                     </div>
                   ))

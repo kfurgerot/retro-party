@@ -14,6 +14,14 @@ const TSHIRT_SCALE: Record<string, number> = {
   XL: 5,
   XXL: 6,
 };
+const TSHIRT_SCALE_LABELS: Record<number, string> = {
+  1: "XS",
+  2: "S",
+  3: "M",
+  4: "L",
+  5: "XL",
+  6: "XXL",
+};
 
 const toNumberVote = (value: string, voteSystem: PlanningPokerVoteSystem): number | null => {
   if (voteSystem === "tshirt") {
@@ -71,6 +79,22 @@ export const computePlanningPokerStats = (
 
 export const formatPlanningValue = (value: number | null) => {
   if (value == null) return "-";
-  const fixed = Number(value.toFixed(2));
-  return Number.isInteger(fixed) ? String(fixed) : fixed.toString();
+  return String(Math.round(value));
+};
+
+const clampToTshirtScale = (value: number) => Math.min(6, Math.max(1, value));
+
+export const formatPlanningValueForSystem = (
+  value: number | null,
+  voteSystem: PlanningPokerVoteSystem
+) => {
+  if (value == null) return "-";
+
+  const rounded = Math.round(value);
+  if (voteSystem === "tshirt") {
+    const tshirtValue = clampToTshirtScale(rounded);
+    return TSHIRT_SCALE_LABELS[tshirtValue] ?? "-";
+  }
+
+  return String(rounded);
 };
