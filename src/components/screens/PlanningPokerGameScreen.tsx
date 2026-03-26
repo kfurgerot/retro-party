@@ -224,11 +224,6 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
     selectedLeadVote && (selectedSession?.totalVotes ?? 0) > 0
       ? Math.round((selectedLeadVote[1] / (selectedSession?.totalVotes ?? 1)) * 100)
       : 0;
-  const selectedProgressPct = selectedSession?.isCurrent
-    ? voteProgressPct
-    : (selectedSession?.totalVotes ?? 0) > 0
-    ? 100
-    : 0;
   const selectedStatusLabel = selectedSession?.isCurrent
     ? state.revealed
       ? "Revele"
@@ -501,8 +496,13 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                   </div>
                 </>
               ) : (
-                <div className="rounded-xl border border-cyan-300/20 bg-slate-950/42 px-3 py-2 text-sm text-slate-300">
-                  Mode spectateur: deck non interactif.
+                <div className="flex items-center justify-center py-1">
+                  <div className="relative h-[58px] w-[38px] rounded-xl border border-cyan-300/35 bg-gradient-to-b from-slate-900/82 to-slate-950/82 shadow-[0_8px_20px_rgba(2,6,23,0.45)] sm:h-[94px] sm:w-[62px]">
+                    <div className="absolute inset-0 flex items-center justify-center text-[9px] font-semibold uppercase tracking-[0.06em] text-slate-300/85 sm:text-xs sm:tracking-[0.08em]">
+                      Spectateur
+                    </div>
+                    <div className="pointer-events-none absolute left-[-14%] top-1/2 h-[2px] w-[128%] -translate-y-1/2 rotate-[-36deg] rounded bg-rose-500/95 shadow-[0_0_10px_rgba(244,63,94,0.65)] sm:h-[3px]" />
+                  </div>
                 </div>
               )}
             </div>
@@ -628,15 +628,6 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                         : "Votes non lances"
                       : "Question archivee"}
                   </div>
-                  <div className="mt-1 flex items-center justify-between">
-                    <span className="text-slate-300">Progression</span>
-                    <span className="font-semibold text-cyan-50">
-                      {selectedSession?.isCurrent ? voteProgressLabel : `${selectedSession?.totalVotes ?? 0} votes`}
-                    </span>
-                  </div>
-                  <div className="h-1.5 overflow-hidden rounded bg-slate-900/55">
-                    <div className="h-full rounded bg-cyan-400/90" style={{ width: `${selectedProgressPct}%` }} />
-                  </div>
                 </div>
                 {isHost ? (
                   <div className={cn("grid gap-2 p-2", GAME_SUBPANEL_SURFACE)}>
@@ -733,6 +724,15 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
 
         <div className="sticky bottom-0 z-30 pb-[calc(env(safe-area-inset-bottom)+4px)] sm:hidden">
           <Card className={cn(GAME_HUD_SURFACE, "px-2 py-2 shadow-[0_-8px_24px_rgba(2,6,23,0.35)]")}>
+            <div className="mb-2">
+              <Button
+                variant="secondary"
+                className={cn(GAME_MOBILE_ACTION_BUTTON, CTA_NEON_SECONDARY_SUBTLE, "h-9 w-full text-xs")}
+                onClick={() => onRoleChange(myRole === "player" ? "spectator" : "player")}
+              >
+                {myRole === "player" ? fr.planningPoker.switchSpectator : fr.planningPoker.switchPlayer}
+              </Button>
+            </div>
             <div className={cn("grid gap-2", "grid-cols-3")}>
               {isHost ? (
                 <>
@@ -793,15 +793,6 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                 </>
               )}
             </div>
-            <div className="mt-2">
-              <Button
-                variant="secondary"
-                className={cn(GAME_MOBILE_ACTION_BUTTON, CTA_NEON_SECONDARY_SUBTLE, "h-9 w-full text-xs")}
-                onClick={() => onRoleChange(myRole === "player" ? "spectator" : "player")}
-              >
-                {myRole === "player" ? fr.planningPoker.switchSpectator : fr.planningPoker.switchPlayer}
-              </Button>
-            </div>
           </Card>
         </div>
       </div>
@@ -828,8 +819,11 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
             ) : (
               <>
                 {isHost ? (
-                  <div className={cn("rounded-xl p-2 text-xs", GAME_SUBPANEL_SURFACE)}>
-                    <div className="mb-1 text-slate-300">Configuration du vote</div>
+                  <>
+                    <div className="px-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-cyan-100/90">
+                      Configuration du vote en cours
+                    </div>
+                    <div className={cn("rounded-xl p-2 text-xs", GAME_SUBPANEL_SURFACE)}>
                     <div className="grid grid-cols-3 gap-1 rounded-xl border border-cyan-300/28 bg-slate-900/55 p-1">
                       {VOTE_SYSTEM_OPTIONS.map((option) => (
                         <button
@@ -847,21 +841,23 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                         </button>
                       ))}
                     </div>
-                    <div className="mt-2 rounded-xl border border-cyan-300/20 bg-slate-950/42 p-2">
-                      <input
-                        type="text"
-                        value={storyDraft}
-                        onChange={(event) => setStoryDraft(event.target.value)}
-                        onBlur={submitStoryTitle}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter") submitStoryTitle();
-                        }}
-                        className="h-9 w-full rounded-lg border border-cyan-300/28 bg-slate-950/55 px-2 text-xs text-cyan-50 outline-none focus:border-cyan-300/65"
-                        placeholder="Story en cours"
-                      />
+                    <input
+                      type="text"
+                      value={storyDraft}
+                      onChange={(event) => setStoryDraft(event.target.value)}
+                      onBlur={submitStoryTitle}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") submitStoryTitle();
+                      }}
+                      className="mt-2 h-9 w-full rounded-xl border border-cyan-300/28 bg-slate-950/55 px-2 text-xs text-cyan-50 outline-none focus:border-cyan-300/65"
+                      placeholder="Story en cours"
+                    />
                     </div>
-                  </div>
+                  </>
                 ) : null}
+                <div className="px-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-cyan-100/90">
+                  Historique des votes
+                </div>
                 <div className="rounded-xl border border-cyan-300/20 bg-slate-950/42 px-2 py-1.5 text-xs text-cyan-50">
                   <div className="mb-1 flex items-center justify-between gap-2">
                     <span className="font-semibold">{selectedSession?.roundLabel ?? "Session"}</span>
@@ -894,22 +890,13 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                   </div>
                   <div className="truncate text-sm font-semibold">{selectedSession?.storyTitle || "-"}</div>
                   <div className="mt-2 grid grid-cols-2 gap-2">
-                    <div className="rounded-lg border border-cyan-300/18 bg-slate-950/45 px-2 py-1">
+                    <div className="rounded-xl border border-cyan-300/18 bg-slate-950/45 px-2 py-1">
                       <div className="text-[10px] text-slate-300">Statut</div>
                       <div className="font-semibold text-cyan-50">{selectedStatusLabel}</div>
                     </div>
-                    <div className="rounded-lg border border-cyan-300/18 bg-slate-950/45 px-2 py-1">
+                    <div className="rounded-xl border border-cyan-300/18 bg-slate-950/45 px-2 py-1">
                       <div className="text-[10px] text-slate-300">Nombre de votes</div>
                       <div className="font-semibold text-cyan-50">{selectedProgressLabel}</div>
-                    </div>
-                  </div>
-                  <div className="mt-2 grid gap-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-300">Progression</span>
-                      <span className="font-semibold text-cyan-50">{selectedProgressPct}%</span>
-                    </div>
-                    <div className="h-1.5 overflow-hidden rounded bg-slate-900/55">
-                      <div className="h-full rounded bg-cyan-400/90" style={{ width: `${selectedProgressPct}%` }} />
                     </div>
                   </div>
                   {isHost ? (
