@@ -1366,8 +1366,8 @@ io.on("connection", (socket) => {
     if (room.returnStoryTitle) {
       room.storyTitle = room.returnStoryTitle;
       room.returnStoryTitle = null;
-    } else if (!room.storyTitle || room.storyTitle.startsWith("Story #")) {
-      room.storyTitle = buildNextPokerStoryTitle(room.storyTitle, room.round);
+    } else {
+      room.storyTitle = `Story #${room.round}`;
     }
     room.lobby = room.lobby.map((player) => ({
       ...player,

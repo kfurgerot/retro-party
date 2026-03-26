@@ -815,6 +815,21 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                     ))}
                   </div>
                 ) : null}
+                {isHost ? (
+                  <div className="rounded-xl border border-cyan-300/20 bg-slate-950/42 p-2">
+                    <input
+                      type="text"
+                      value={storyDraft}
+                      onChange={(event) => setStoryDraft(event.target.value)}
+                      onBlur={submitStoryTitle}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") submitStoryTitle();
+                      }}
+                      className="h-9 w-full rounded-lg border border-cyan-300/28 bg-slate-950/55 px-2 text-xs text-cyan-50 outline-none focus:border-cyan-300/65"
+                      placeholder="Story en cours"
+                    />
+                  </div>
+                ) : null}
                 <div className="rounded-xl border border-cyan-300/20 bg-slate-950/42 px-2 py-1.5 text-xs text-cyan-50">
                   <div className="mb-1 flex items-center justify-between gap-2">
                     <span className="font-semibold">{selectedSession?.roundLabel ?? "Session"}</span>
