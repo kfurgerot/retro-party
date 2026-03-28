@@ -53,13 +53,13 @@ const axisMessage = (axis: keyof RadarAxisValues, value: number): string => {
   return "Cadre et adaptation globalement bien doses.";
 };
 
-const sortByExtremeness = (radar: RadarAxisValues) =>
+const sortByScore = (radar: RadarAxisValues) =>
   (Object.entries(radar) as [keyof RadarAxisValues, number][])
-    .map(([axis, value]) => ({ axis, value, delta: Math.abs(value - 50) }))
-    .sort((a, b) => b.delta - a.delta);
+    .map(([axis, value]) => ({ axis, value }))
+    .sort((a, b) => b.value - a.value);
 
 export function buildIndividualInsights(radar: RadarAxisValues): IndividualInsights {
-  const sorted = sortByExtremeness(radar);
+  const sorted = sortByScore(radar);
   const [a1, a2, a3] = sorted;
 
   return {

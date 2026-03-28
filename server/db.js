@@ -119,9 +119,17 @@ export async function initDatabase() {
       title TEXT NULL,
       facilitator_name TEXT NULL,
       created_by_user_id UUID NULL REFERENCES users(id) ON DELETE SET NULL,
+      status TEXT NOT NULL DEFAULT 'lobby' CHECK (status IN ('lobby', 'started')),
+      started_at TIMESTAMPTZ NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
   `);
+  await pool.query(
+    "ALTER TABLE radar_sessions ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'lobby';"
+  );
+  await pool.query(
+    "ALTER TABLE radar_sessions ADD COLUMN IF NOT EXISTS started_at TIMESTAMPTZ NULL;"
+  );
   await pool.query(
     "CREATE INDEX IF NOT EXISTS idx_radar_sessions_created_by_user_id ON radar_sessions(created_by_user_id);"
   );

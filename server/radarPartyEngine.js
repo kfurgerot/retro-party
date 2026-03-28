@@ -114,14 +114,14 @@ function axisMessage(axis, value) {
   return "Bon equilibre entre cadre et adaptation.";
 }
 
-function sortByExtremeness(radar) {
+function sortByScore(radar) {
   return Object.entries(radar)
-    .map(([axis, value]) => ({ axis, value: Number(value), delta: Math.abs(Number(value) - 50) }))
-    .sort((a, b) => b.delta - a.delta);
+    .map(([axis, value]) => ({ axis, value: Number(value) }))
+    .sort((a, b) => b.value - a.value);
 }
 
 export function buildIndividualInsights(radar) {
-  const sorted = sortByExtremeness(radar);
+  const sorted = sortByScore(radar);
   const first = sorted[0];
   const second = sorted[1];
   const third = sorted[2];

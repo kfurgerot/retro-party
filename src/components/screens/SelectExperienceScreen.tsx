@@ -33,18 +33,18 @@ const TOOLS: ToolItem[] = [
     available: true,
   },
   {
-    id: "draw-duel",
-    Icon: Pencil,
-    title: fr.selectExperience.drawDuelTitle,
-    description: fr.selectExperience.drawDuelDescription,
-    available: false,
-  },
-  {
     id: "agile-radar",
     Icon: Radar,
     title: "Radar Party",
     description: "Radar d'equipe Agile avec questionnaire, scoring et insights atelier.",
     available: true,
+  },
+  {
+    id: "draw-duel",
+    Icon: Pencil,
+    title: fr.selectExperience.drawDuelTitle,
+    description: fr.selectExperience.drawDuelDescription,
+    available: false,
   },
   {
     id: "retro-generator",
@@ -137,13 +137,13 @@ export const SelectExperienceScreen: React.FC<SelectExperienceScreenProps> = ({
                 )}
               >
                 {(() => {
-                  const isPlanningParty = tool.id === "planning-poker";
-                  const availableBadgeClass = isPlanningParty
+                  const isBetaExperience = tool.id === "planning-poker" || tool.id === "agile-radar";
+                  const availableBadgeClass = isBetaExperience
                     ? "border border-sky-400/45 bg-sky-500/12 text-sky-200"
                     : "border border-emerald-400/40 bg-emerald-500/10 text-emerald-200";
                   const badgeText = !tool.available
                     ? fr.selectExperience.soon
-                    : isPlanningParty
+                    : isBetaExperience
                     ? fr.selectExperience.beta
                     : fr.selectExperience.ready;
 

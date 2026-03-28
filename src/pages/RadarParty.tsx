@@ -80,6 +80,7 @@ const RadarPartyPage = () => {
     organization: 50,
   });
   const [teamInsights, setTeamInsights] = useState<RadarTeamInsights | null>(null);
+  const [sessionStatus, setSessionStatus] = useState<"lobby" | "started">("lobby");
 
   const currentQuestion = RADAR_QUESTIONS[questionIndex];
   const progressPct = Math.round(((questionIndex + 1) / RADAR_QUESTIONS.length) * 100);
@@ -90,12 +91,17 @@ const RadarPartyPage = () => {
   );
 
   const canPublish = Boolean(roomCode && participantId && localResult);
+  const isHost = useMemo(
+    () => participants.some((participant) => participant.id === participantId && participant.isHost),
+    [participants, participantId]
+  );
 
   const refreshSession = async (codeArg?: string) => {
     const code = (codeArg ?? roomCode ?? "").trim().toUpperCase();
     if (!code) return;
     const response = await api.radarGetSession(code);
     setRoomCode(response.session.code);
+    setSessionStatus(response.session.status);
     setParticipants(response.participants);
 
     const memberRadars = response.participants
@@ -105,6 +111,13 @@ const RadarPartyPage = () => {
     const nextTeamInsights = response.team?.insights ?? emptyTeamInsights(nextTeamRadar, response.participants);
     setTeamRadar(nextTeamRadar);
     setTeamInsights(nextTeamInsights);
+
+    if (response.session.status === "started" && stage === "lobby") {
+      setAnswers({});
+      setQuestionIndex(0);
+      setLocalResult(null);
+      setStage("questionnaire");
+    }
   };
 
   useEffect(() => {
@@ -150,6 +163,7 @@ const RadarPartyPage = () => {
       setProfile({ name, avatar });
       setParticipantId(joined.participant.id);
       setRoomCode(joined.session.code);
+      setSessionStatus(joined.session.status);
       setParticipants([joined.participant]);
       setShowOnlineOnboarding(false);
       setStage("lobby");
@@ -172,6 +186,7 @@ const RadarPartyPage = () => {
       setProfile({ name, avatar });
       setParticipantId(joined.participant.id);
       setRoomCode(joined.session.code);
+      setSessionStatus(joined.session.status);
       setShowOnlineOnboarding(false);
       setStage("lobby");
       await refreshSession(joined.session.code);
@@ -187,6 +202,7 @@ const RadarPartyPage = () => {
       setRoomCode(null);
       setParticipants([]);
       setParticipantId("");
+      setSessionStatus("lobby");
       setTeamInsights(null);
       setTeamRadar({ collaboration: 50, product: 50, decision: 50, organization: 50 });
       return;
@@ -213,6 +229,20 @@ const RadarPartyPage = () => {
       setTeamInsights(response.team.insights);
       await refreshSession(roomCode);
       setStage("team-radar");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur serveur");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStartSession = async () => {
+    if (!roomCode || !participantId || !isHost) return;
+    setLoading(true);
+    setError(null);
+    try {
+      await api.radarStartSession(roomCode, { participantId });
+      await refreshSession(roomCode);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur serveur");
     } finally {
@@ -272,12 +302,9 @@ const RadarPartyPage = () => {
             setShowOnlineOnboarding(true);
           }}
           onStartGame={() => {
-            setAnswers({});
-            setQuestionIndex(0);
-            setLocalResult(null);
-            setStage("questionnaire");
+            void handleStartSession();
           }}
-          canStart={Boolean(roomCode)}
+          canStart={Boolean(roomCode) && isHost}
           initialName={profile.name || undefined}
           initialAvatar={profile.avatar}
           initialMode={initialMode}
@@ -296,10 +323,10 @@ const RadarPartyPage = () => {
   const resultToShow = localResult;
 
   return (
-    <div className="scanlines relative flex min-h-svh w-full items-start justify-center overflow-hidden px-4 pb-12 pt-4 sm:pt-6">
+    <div className="scanlines relative flex min-h-svh w-full items-start justify-center overflow-x-hidden px-4 pb-12 pt-4 sm:pt-6">
       <RetroScreenBackground />
 
-      <Card className="relative z-10 flex w-full max-w-5xl flex-col gap-4 p-5 sm:p-8">
+      <Card className="relative z-10 flex w-full max-w-5xl min-w-0 flex-col gap-4 overflow-x-hidden p-4 sm:p-8">
         <header className="flex flex-wrap items-center justify-between gap-2 text-xs uppercase tracking-[0.14em] text-cyan-200/80">
           <span>Retro Party - Radar Party</span>
           <span className="rounded-full border border-cyan-300/40 px-2 py-0.5">Module Agile</span>
@@ -308,7 +335,7 @@ const RadarPartyPage = () => {
         {error ? <p className="text-sm text-red-300">{error}</p> : null}
 
         {stage === "questionnaire" ? (
-          <section className={cn("rounded-xl p-5", APP_SHELL_SURFACE_SOFT)}>
+          <section className={cn("min-w-0 overflow-x-hidden rounded-xl p-4 sm:p-5", APP_SHELL_SURFACE_SOFT)}>
             <div className="flex items-center justify-between gap-2 text-xs text-slate-300">
               <span>
                 Question {questionIndex + 1} / {RADAR_QUESTIONS.length}
@@ -321,7 +348,7 @@ const RadarPartyPage = () => {
 
             <div className="mt-6 rounded-lg border border-cyan-300/25 bg-slate-950/45 p-4">
               <p className="text-xs uppercase tracking-[0.12em] text-cyan-200/80">{AXIS_FR[currentQuestion.dimension]}</p>
-              <p className="mt-3 text-lg text-slate-100">{currentQuestion.text}</p>
+              <p className="mt-3 break-words text-lg text-slate-100">{currentQuestion.text}</p>
             </div>
 
             <div className="mt-6 grid grid-cols-1 gap-2 sm:grid-cols-5">
@@ -350,7 +377,7 @@ const RadarPartyPage = () => {
         ) : null}
 
         {stage === "individual" && resultToShow ? (
-          <section className="grid gap-4">
+          <section className="grid min-w-0 gap-4 overflow-x-hidden">
             <RadarChartCard
               title="Radar individuel"
               subtitle="Convention: collaboration = % team, produit = % qualite, decision = % data, organisation = % structure"
@@ -359,7 +386,7 @@ const RadarPartyPage = () => {
 
             <Card className="rounded-xl border-cyan-300/30 bg-slate-950/45 p-4">
               <h3 className="text-base font-semibold text-cyan-100">Resume individuel</h3>
-              <p className="mt-2 text-sm text-slate-200">{resultToShow.insights.summary}</p>
+              <p className="mt-2 break-words text-sm text-slate-200">{resultToShow.insights.summary}</p>
             </Card>
 
             <div className="grid gap-4 lg:grid-cols-3">
@@ -367,7 +394,7 @@ const RadarPartyPage = () => {
                 <h4 className="text-sm font-semibold text-cyan-100">Points forts potentiels</h4>
                 <ul className="mt-3 space-y-2 text-sm text-slate-200">
                   {resultToShow.insights.strengths.map((item) => (
-                    <li key={item}>- {item}</li>
+                    <li key={item} className="break-words">- {item}</li>
                   ))}
                 </ul>
               </Card>
@@ -375,7 +402,7 @@ const RadarPartyPage = () => {
                 <h4 className="text-sm font-semibold text-cyan-100">Points de vigilance potentiels</h4>
                 <ul className="mt-3 space-y-2 text-sm text-slate-200">
                   {resultToShow.insights.watchouts.map((item) => (
-                    <li key={item}>- {item}</li>
+                    <li key={item} className="break-words">- {item}</li>
                   ))}
                 </ul>
               </Card>
@@ -383,7 +410,7 @@ const RadarPartyPage = () => {
                 <h4 className="text-sm font-semibold text-cyan-100">Questions a se poser</h4>
                 <ul className="mt-3 space-y-2 text-sm text-slate-200">
                   {resultToShow.insights.workshopQuestions.map((item) => (
-                    <li key={item}>- {item}</li>
+                    <li key={item} className="break-words">- {item}</li>
                   ))}
                 </ul>
               </Card>
@@ -400,12 +427,12 @@ const RadarPartyPage = () => {
         ) : null}
 
         {stage === "team-radar" ? (
-          <section className="grid gap-4">
+          <section className="grid min-w-0 gap-4 overflow-x-hidden">
             <Card className="rounded-xl border-cyan-300/30 bg-slate-950/45 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <h3 className="text-base font-semibold text-cyan-100">Session equipe</h3>
-                  <p className="text-sm text-slate-200">Code de session: {roomCode || "-"}</p>
+                  <p className="break-words text-sm text-slate-200">Code de session: {roomCode || "-"}</p>
                 </div>
                 <div className="flex gap-2">
                   <SecondaryButton disabled={loading} onClick={() => refreshSession()}>
@@ -424,8 +451,8 @@ const RadarPartyPage = () => {
 
             <Card className="rounded-xl border-cyan-300/30 bg-slate-950/45 p-4">
               <h4 className="text-sm font-semibold text-cyan-100">Vue comparaison equipe</h4>
-              <div className="mt-3 overflow-auto">
-                <table className="min-w-full text-left text-xs text-slate-200">
+              <div className="mt-3 max-w-full overflow-x-auto">
+                <table className="w-full table-fixed text-left text-xs text-slate-200">
                   <thead>
                     <tr className="border-b border-cyan-300/20 text-cyan-100">
                       <th className="py-2 pr-3">Participant</th>
@@ -437,7 +464,7 @@ const RadarPartyPage = () => {
                   <tbody>
                     {participants.map((participant) => (
                       <tr key={participant.id} className="border-b border-cyan-300/10">
-                        <td className="py-2 pr-3">{participant.displayName}</td>
+                        <td className="break-words py-2 pr-3">{participant.displayName}</td>
                         {AXIS_ORDER.map((axis) => (
                           <td key={axis} className="py-2 pr-3">
                             {participant.result?.radar ? participant.result.radar[axis] : "-"}
@@ -452,7 +479,7 @@ const RadarPartyPage = () => {
 
             <Card className="rounded-xl border-cyan-300/30 bg-slate-950/45 p-4">
               <h4 className="text-sm font-semibold text-cyan-100">Axes homogenes et axes polarises</h4>
-              <p className="mt-2 text-sm text-slate-200">
+              <p className="mt-2 break-words text-sm text-slate-200">
                 {(teamInsights ?? emptyTeamInsights(teamRadar, participants)).summary}
               </p>
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -460,7 +487,7 @@ const RadarPartyPage = () => {
                   <p className="text-xs uppercase tracking-[0.12em] text-emerald-200">Homogenes</p>
                   <ul className="mt-2 space-y-1 text-sm text-slate-200">
                     {(teamInsights?.homogeneousAxes ?? []).length > 0 ? (
-                      (teamInsights?.homogeneousAxes ?? []).map((item) => <li key={item}>- {item}</li>)
+                      (teamInsights?.homogeneousAxes ?? []).map((item) => <li key={item} className="break-words">- {item}</li>)
                     ) : (
                       <li>Aucun axe fortement homogene pour le moment.</li>
                     )}
@@ -470,7 +497,7 @@ const RadarPartyPage = () => {
                   <p className="text-xs uppercase tracking-[0.12em] text-amber-200">Polarises</p>
                   <ul className="mt-2 space-y-1 text-sm text-slate-200">
                     {(teamInsights?.polarizedAxes ?? []).length > 0 ? (
-                      (teamInsights?.polarizedAxes ?? []).map((item) => <li key={item}>- {item}</li>)
+                      (teamInsights?.polarizedAxes ?? []).map((item) => <li key={item} className="break-words">- {item}</li>)
                     ) : (
                       <li>Aucun axe de divergence forte (&gt; 25 points).</li>
                     )}
@@ -487,20 +514,20 @@ const RadarPartyPage = () => {
         ) : null}
 
         {stage === "workshop" ? (
-          <section className="grid gap-4">
+          <section className="grid min-w-0 gap-4 overflow-x-hidden">
             <Card className="rounded-xl border-cyan-300/30 bg-slate-950/45 p-4">
               <div className="flex items-center gap-2">
                 <MessageSquareText className="h-4 w-4 text-cyan-200" />
                 <h3 className="text-base font-semibold text-cyan-100">Insights atelier</h3>
               </div>
-              <p className="mt-2 text-sm text-slate-200">{teamInsights?.summary ?? "Aucune donnee equipe disponible."}</p>
+              <p className="mt-2 break-words text-sm text-slate-200">{teamInsights?.summary ?? "Aucune donnee equipe disponible."}</p>
             </Card>
 
             <Card className="rounded-xl border-cyan-300/30 bg-slate-950/45 p-4">
               <h4 className="text-sm font-semibold text-cyan-100">Ecarts par axe (min / max)</h4>
               <ul className="mt-3 space-y-2 text-sm text-slate-200">
                 {(teamInsights?.spreads ?? []).map((spread) => (
-                  <li key={spread.axis}>
+                  <li key={spread.axis} className="break-words">
                     {AXIS_FR[spread.axis]}: min {spread.min}, max {spread.max}, ecart {spread.spread}
                     {spread.polarized ? " (divergence forte)" : ""}
                   </li>
@@ -512,7 +539,7 @@ const RadarPartyPage = () => {
               <h4 className="text-sm font-semibold text-cyan-100">Questions de discussion</h4>
               <ul className="mt-3 space-y-2 text-sm text-slate-200">
                 {(teamInsights?.workshopQuestions ?? []).map((question) => (
-                  <li key={question}>- {question}</li>
+                  <li key={question} className="break-words">- {question}</li>
                 ))}
               </ul>
             </Card>

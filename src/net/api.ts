@@ -74,6 +74,8 @@ export type RadarSessionInfo = {
   code: string;
   title: string | null;
   facilitatorName: string | null;
+  status: "lobby" | "started";
+  startedAt: string | null;
   createdAt?: string;
 };
 
@@ -286,4 +288,12 @@ export const api = {
     }>(`/radar/sessions/${encodeURIComponent(code)}`, {
       method: "GET",
     }),
+  radarStartSession: (code: string, payload: { participantId: string }) =>
+    request<{ session: Pick<RadarSessionInfo, "id" | "code" | "status" | "startedAt"> }>(
+      `/radar/sessions/${encodeURIComponent(code)}/start`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }
+    ),
 };

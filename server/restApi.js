@@ -1052,8 +1052,8 @@ export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCod
 
       await pool.query(
         `
-          INSERT INTO radar_sessions (id, session_code, title, facilitator_name, created_by_user_id)
-          VALUES ($1, $2, $3, $4, $5)
+          INSERT INTO radar_sessions (id, session_code, title, facilitator_name, created_by_user_id, status)
+          VALUES ($1, $2, $3, $4, $5, 'lobby')
         `,
         [sessionId, code, title || null, facilitatorName || null, req.currentUser?.id ?? null]
       );
@@ -1064,6 +1064,8 @@ export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCod
           code,
           title: title || null,
           facilitatorName: facilitatorName || null,
+          status: "lobby",
+          startedAt: null,
         },
       });
     } catch (err) {
@@ -1081,7 +1083,7 @@ export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCod
       if (displayName.length < 2) return res.status(400).json({ error: "Invalid payload" });
 
       const sessionResult = await pool.query(
-        "SELECT id, session_code, title, facilitator_name, created_at FROM radar_sessions WHERE session_code = $1 LIMIT 1",
+        "SELECT id, session_code, title, facilitator_name, status, started_at, created_at FROM radar_sessions WHERE session_code = $1 LIMIT 1",
         [code]
       );
       const session = sessionResult.rows[0];
@@ -1109,6 +1111,8 @@ export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCod
           code: session.session_code,
           title: session.title,
           facilitatorName: session.facilitator_name,
+          status: session.status,
+          startedAt: session.started_at,
           createdAt: session.created_at,
         },
         participant: serializeRadarParticipant(participantResult.rows[0]),
@@ -1127,11 +1131,14 @@ export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCod
       if (!participantId || !answers) return res.status(400).json({ error: "Invalid payload" });
 
       const sessionResult = await client.query(
-        "SELECT id, session_code FROM radar_sessions WHERE session_code = $1 LIMIT 1",
+        "SELECT id, session_code, status FROM radar_sessions WHERE session_code = $1 LIMIT 1",
         [code]
       );
       const session = sessionResult.rows[0];
       if (!session) return res.status(404).json({ error: "Not found" });
+      if (session.status !== "started" && session.status !== "lobby") {
+        return res.status(400).json({ error: "Invalid payload" });
+      }
 
       const participantResult = await client.query(
         "SELECT * FROM radar_participants WHERE id = $1 AND session_id = $2 LIMIT 1",
@@ -1230,7 +1237,7 @@ export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCod
     try {
       const code = String(req.params.code || "").trim().toUpperCase();
       const sessionResult = await pool.query(
-        "SELECT id, session_code, title, facilitator_name, created_at FROM radar_sessions WHERE session_code = $1 LIMIT 1",
+        "SELECT id, session_code, title, facilitator_name, status, started_at, created_at FROM radar_sessions WHERE session_code = $1 LIMIT 1",
         [code]
       );
       const session = sessionResult.rows[0];
@@ -1271,6 +1278,8 @@ export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCod
           code: session.session_code,
           title: session.title,
           facilitatorName: session.facilitator_name,
+          status: session.status,
+          startedAt: session.started_at,
           createdAt: session.created_at,
         },
         participants: participantsResult.rows.map((row) => ({
@@ -1301,6 +1310,51 @@ export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCod
               updatedAt: team.updated_at,
             }
           : null,
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.post("/api/radar/sessions/:code/start", async (req, res, next) => {
+    try {
+      const code = String(req.params.code || "").trim().toUpperCase();
+      const participantId = typeof req.body?.participantId === "string" ? req.body.participantId : "";
+      if (!participantId) return res.status(400).json({ error: "Invalid payload" });
+
+      const sessionResult = await pool.query(
+        "SELECT id, session_code, status, started_at FROM radar_sessions WHERE session_code = $1 LIMIT 1",
+        [code]
+      );
+      const session = sessionResult.rows[0];
+      if (!session) return res.status(404).json({ error: "Not found" });
+
+      const participantResult = await pool.query(
+        "SELECT id, is_host FROM radar_participants WHERE id = $1 AND session_id = $2 LIMIT 1",
+        [participantId, session.id]
+      );
+      const participant = participantResult.rows[0];
+      if (!participant) return res.status(404).json({ error: "Not found" });
+      if (!participant.is_host) return res.status(403).json({ error: "Unauthorized" });
+
+      const updateResult = await pool.query(
+        `
+          UPDATE radar_sessions
+          SET status = 'started', started_at = COALESCE(started_at, now())
+          WHERE id = $1
+          RETURNING id, session_code, status, started_at
+        `,
+        [session.id]
+      );
+      const updated = updateResult.rows[0];
+
+      return res.status(200).json({
+        session: {
+          id: updated.id,
+          code: updated.session_code,
+          status: updated.status,
+          startedAt: updated.started_at,
+        },
       });
     } catch (err) {
       next(err);
