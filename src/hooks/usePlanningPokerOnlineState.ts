@@ -23,6 +23,7 @@ const EMPTY_STATE: PlanningPokerState = {
 };
 
 const STORAGE_KEY = "retro-party:planning-poker:session";
+const HISTORY_STORAGE_KEY = "retro-party:planning-poker:history";
 let sessionFallbackCounter = 0;
 
 const makeSessionId = () => {
@@ -74,8 +75,57 @@ const storeSession = (session: PlanningPokerSession | null) => {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
 };
 
+type PersistedHistory = {
+  sessionId: string;
+  code: string;
+  history: PlanningPokerRoundSummary[];
+};
+
+const isRoundSummary = (value: unknown): value is PlanningPokerRoundSummary => {
+  if (!value || typeof value !== "object") return false;
+  const summary = value as Partial<PlanningPokerRoundSummary>;
+  return (
+    typeof summary.id === "string" &&
+    typeof summary.round === "number" &&
+    typeof summary.storyTitle === "string" &&
+    typeof summary.voteSystem === "string" &&
+    Array.isArray(summary.votes)
+  );
+};
+
+const loadHistory = (session: PlanningPokerSession | null): PlanningPokerRoundSummary[] => {
+  if (typeof window === "undefined" || !session) return [];
+  try {
+    const raw = window.localStorage.getItem(HISTORY_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as Partial<PersistedHistory>;
+    const sameSession =
+      parsed.sessionId === session.sessionId && parsed.code === session.code && Array.isArray(parsed.history);
+    if (!sameSession) return [];
+    return parsed.history.filter(isRoundSummary);
+  } catch {
+    return [];
+  }
+};
+
+const storeHistory = (session: PlanningPokerSession | null, history: PlanningPokerRoundSummary[]) => {
+  if (typeof window === "undefined") return;
+  if (!session || history.length === 0) {
+    window.localStorage.removeItem(HISTORY_STORAGE_KEY);
+    return;
+  }
+
+  const payload: PersistedHistory = {
+    sessionId: session.sessionId,
+    code: session.code,
+    history,
+  };
+  window.localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(payload));
+};
+
 export function usePlanningPokerOnlineState() {
   const initialSession = loadSession();
+  const initialHistory = loadHistory(initialSession);
 
   const [connected, setConnected] = useState(socket.connected);
   const [code, setCode] = useState<string | null>(initialSession?.code ?? null);
@@ -83,11 +133,11 @@ export function usePlanningPokerOnlineState() {
   const [state, setState] = useState<PlanningPokerState>(
     initialSession?.code ? { ...EMPTY_STATE, roomCode: initialSession.code } : EMPTY_STATE
   );
-  const [history, setHistory] = useState<PlanningPokerRoundSummary[]>([]);
+  const [history, setHistory] = useState<PlanningPokerRoundSummary[]>(initialHistory);
   const [error, setError] = useState<string | null>(null);
 
   const sessionRef = useRef<PlanningPokerSession | null>(initialSession);
-  const recordedSummariesRef = useRef<Set<string>>(new Set());
+  const recordedSummariesRef = useRef<Set<string>>(new Set(initialHistory.map((entry) => entry.id)));
   const pendingProfileRef = useRef<{ name: string; avatar: number; sessionId: string } | null>(
     initialSession
       ? { name: initialSession.name, avatar: initialSession.avatar, sessionId: initialSession.sessionId }
@@ -178,6 +228,7 @@ export function usePlanningPokerOnlineState() {
       const normalized = text.toLowerCase();
       if (!normalized.includes("introuvable")) return;
 
+      storeHistory(sessionRef.current, []);
       sessionRef.current = null;
       pendingProfileRef.current = null;
       recordedSummariesRef.current.clear();
@@ -189,8 +240,11 @@ export function usePlanningPokerOnlineState() {
 
     const onRoomClosed = ({ message }: { message?: string }) => {
       setError(message ?? null);
+      storeHistory(sessionRef.current, []);
       sessionRef.current = null;
       pendingProfileRef.current = null;
+      recordedSummariesRef.current.clear();
+      setHistory([]);
       storeSession(null);
       setCode(null);
       setState(EMPTY_STATE);
@@ -270,6 +324,7 @@ export function usePlanningPokerOnlineState() {
     if (socket.connected) {
       socket.emit("leave_poker_room");
     }
+    storeHistory(sessionRef.current, []);
     sessionRef.current = null;
     pendingProfileRef.current = null;
     recordedSummariesRef.current.clear();
@@ -290,6 +345,10 @@ export function usePlanningPokerOnlineState() {
   const revealVotes = useCallback(() => {
     socket.emit("reveal_votes");
   }, []);
+
+  useEffect(() => {
+    storeHistory(sessionRef.current, history);
+  }, [history]);
 
   const openVotes = useCallback(() => {
     socket.emit("open_votes");
