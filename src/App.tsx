@@ -9,6 +9,7 @@ import {
   loadNotFoundPage,
   loadPlayPage,
   loadPreparePage,
+  loadRadarPartyPage,
   loadResetPasswordPage,
   loadTemplateEditorPage,
 } from "@/lib/routeLoaders";
@@ -17,6 +18,7 @@ import { UI_MODE } from "@/lib/uiMode";
 const Home = lazy(loadHomePage);
 const Index = lazy(loadPlayPage);
 const PreparePage = lazy(loadPreparePage);
+const RadarPartyPage = lazy(loadRadarPartyPage);
 const TemplateEditorPage = lazy(loadTemplateEditorPage);
 const ResetPasswordPage = lazy(loadResetPasswordPage);
 const NotFound = lazy(loadNotFoundPage);
@@ -47,6 +49,7 @@ const App = () => {
               <Route path="/" element={<Home />} />
               <Route path="/play" element={<Index />} />
               <Route path="/prepare" element={<PreparePage />} />
+              <Route path="/radar-party" element={<RadarPartyPage />} />
               <Route path="/prepare/templates/:templateId" element={<TemplateEditorPage />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

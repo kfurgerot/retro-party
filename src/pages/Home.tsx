@@ -16,6 +16,7 @@ const Home = () => {
   const [selectedExperience, setSelectedExperience] = useState<ExperienceId>(() => {
     const params = new URLSearchParams(location.search);
     const experienceParam = params.get("experience");
+    if (experienceParam === "agile-radar") return "agile-radar";
     return experienceParam === "planning-poker" ? "planning-poker" : "retro-party";
   });
   const [stage, setStage] = useState<"press-start" | "select-experience" | "select-entry">(() => {
@@ -28,9 +29,17 @@ const Home = () => {
   const playPrefetchedRef = useRef(false);
   const [progressPct, setProgressPct] = useState(20);
   const selectedExperienceBrandLabel =
-    selectedExperience === "planning-poker" ? fr.planningPoker.gameTitle : fr.home.title;
+    selectedExperience === "planning-poker"
+      ? fr.planningPoker.gameTitle
+      : selectedExperience === "agile-radar"
+      ? "Radar Party"
+      : fr.home.title;
   const selectedExperienceTitle =
-    selectedExperience === "planning-poker" ? fr.planningPoker.gameTitle : fr.home.title;
+    selectedExperience === "planning-poker"
+      ? fr.planningPoker.gameTitle
+      : selectedExperience === "agile-radar"
+      ? "Radar Party"
+      : fr.home.title;
 
   const prefetchPlayRoute = () => {
     if (playPrefetchedRef.current) return;
@@ -79,7 +88,7 @@ const Home = () => {
         stepTotal={5}
         onBack={() => setStage("press-start")}
         onSelect={(experience: ExperienceId) => {
-          if (experience !== "retro-party" && experience !== "planning-poker") return;
+          if (experience !== "retro-party" && experience !== "planning-poker" && experience !== "agile-radar") return;
           setSelectedExperience(experience);
           setProgressPct(20);
           setEntryChoice("play");
@@ -113,7 +122,7 @@ const Home = () => {
         </div>
 
         <Card className="mt-6 rounded-md p-4 sm:p-5">
-          <div className={cn("grid flex-1 content-start grid-cols-1 gap-3", selectedExperience === "retro-party" ? "sm:grid-cols-2" : "")}>
+          <div className={cn("grid flex-1 content-start grid-cols-1 gap-3", selectedExperience !== "planning-poker" ? "sm:grid-cols-2" : "")}>
             <button
               type="button"
               onClick={() => setEntryChoice("play")}
@@ -121,6 +130,8 @@ const Home = () => {
                 navigate(
                   selectedExperience === "planning-poker"
                     ? "/play?from=entry&experience=planning-poker"
+                    : selectedExperience === "agile-radar"
+                    ? "/radar-party?from=entry&mode=host"
                     : "/play?from=entry"
                 )
               }
@@ -137,11 +148,13 @@ const Home = () => {
               <div className="text-sm font-semibold text-cyan-100">{fr.home.playNow}</div>
               <div className="mt-1 text-xs text-slate-300">{fr.home.quickPartyTitle}</div>
             </button>
-            {selectedExperience === "retro-party" ? (
+            {selectedExperience !== "planning-poker" ? (
               <button
                 type="button"
                 onClick={() => setEntryChoice("prepare")}
-                onDoubleClick={() => navigate("/prepare")}
+                onDoubleClick={() =>
+                  navigate(selectedExperience === "agile-radar" ? "/radar-party?from=entry&mode=join" : "/prepare")
+                }
                 title={fr.home.preparePartyTitle}
                 className={cn(
                   `${APP_SHELL_SURFACE_SOFT} p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900`,
@@ -172,8 +185,14 @@ const Home = () => {
                   navigate(
                     selectedExperience === "planning-poker"
                       ? "/play?from=entry&experience=planning-poker"
+                      : selectedExperience === "agile-radar"
+                      ? "/radar-party?from=entry&mode=host"
                       : "/play?from=entry"
                   );
+                  return;
+                }
+                if (selectedExperience === "agile-radar") {
+                  navigate("/radar-party?from=entry&mode=join");
                   return;
                 }
                 navigate("/prepare");
@@ -198,8 +217,14 @@ const Home = () => {
                   navigate(
                     selectedExperience === "planning-poker"
                       ? "/play?from=entry&experience=planning-poker"
+                      : selectedExperience === "agile-radar"
+                      ? "/radar-party?from=entry&mode=host"
                       : "/play?from=entry"
                   );
+                  return;
+                }
+                if (selectedExperience === "agile-radar") {
+                  navigate("/radar-party?from=entry&mode=join");
                   return;
                 }
                 navigate("/prepare");

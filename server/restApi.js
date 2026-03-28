@@ -4,6 +4,13 @@ import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { QUESTIONS } from "./questions.js";
 import { testMail } from "./mailService.js";
 import { sendMail } from "./mailService.js";
+import { RADAR_QUESTIONS } from "./radarPartyQuestions.js";
+import {
+  buildIndividualInsights,
+  buildTeamInsights,
+  computeRadarScores,
+  computeTeamAverageRadar,
+} from "./radarPartyEngine.js";
 
 const SESSION_COOKIE_NAME = process.env.SESSION_COOKIE_NAME || "rp_session";
 const SESSION_TTL_DAYS = Number(process.env.SESSION_TTL_DAYS || 7);
@@ -240,6 +247,34 @@ async function getOwnedTemplate(pool, userId, templateId) {
     [templateId, userId]
   );
   return result.rows[0] ?? null;
+}
+
+function serializeRadarParticipant(row) {
+  return {
+    id: row.id,
+    displayName: row.display_name,
+    avatar: Number.isFinite(Number(row.avatar)) ? Number(row.avatar) : 0,
+    isHost: !!row.is_host,
+    createdAt: row.created_at,
+  };
+}
+
+function normalizeRadarAnswers(payload) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
+  const answers = {};
+  for (const question of RADAR_QUESTIONS) {
+    const raw = payload[String(question.id)] ?? payload[question.id];
+    const value = Number(raw);
+    if (!Number.isFinite(value)) return null;
+    const rounded = Math.round(value);
+    if (rounded < 1 || rounded > 5) return null;
+    answers[String(question.id)] = rounded;
+  }
+  return answers;
+}
+
+function toJson(value) {
+  return JSON.stringify(value ?? {});
 }
 
 export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCode, isCodeReserved }) {
@@ -997,6 +1032,275 @@ export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCod
         roomId,
         roomCode: code,
         mode: "quick",
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.get("/api/radar/questions", (_req, res) => {
+    return res.status(200).json({ items: RADAR_QUESTIONS });
+  });
+
+  app.post("/api/radar/sessions", async (req, res, next) => {
+    try {
+      const title = typeof req.body?.title === "string" ? req.body.title.trim().slice(0, 120) : "";
+      const facilitatorName =
+        typeof req.body?.facilitatorName === "string" ? req.body.facilitatorName.trim().slice(0, 80) : "";
+      const code = await generateUniqueRoomCode({ pool, rooms, makeCode, isCodeReserved });
+      const sessionId = crypto.randomUUID();
+
+      await pool.query(
+        `
+          INSERT INTO radar_sessions (id, session_code, title, facilitator_name, created_by_user_id)
+          VALUES ($1, $2, $3, $4, $5)
+        `,
+        [sessionId, code, title || null, facilitatorName || null, req.currentUser?.id ?? null]
+      );
+
+      return res.status(201).json({
+        session: {
+          id: sessionId,
+          code,
+          title: title || null,
+          facilitatorName: facilitatorName || null,
+        },
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.post("/api/radar/sessions/:code/participants", async (req, res, next) => {
+    try {
+      const code = String(req.params.code || "").trim().toUpperCase();
+      const displayName =
+        typeof req.body?.displayName === "string" ? req.body.displayName.trim().slice(0, 80) : "";
+      const avatarRaw = Number(req.body?.avatar);
+      const avatar = Number.isFinite(avatarRaw) ? Math.max(0, Math.min(30, Math.round(avatarRaw))) : 0;
+      if (displayName.length < 2) return res.status(400).json({ error: "Invalid payload" });
+
+      const sessionResult = await pool.query(
+        "SELECT id, session_code, title, facilitator_name, created_at FROM radar_sessions WHERE session_code = $1 LIMIT 1",
+        [code]
+      );
+      const session = sessionResult.rows[0];
+      if (!session) return res.status(404).json({ error: "Not found" });
+
+      const hostCountResult = await pool.query(
+        "SELECT COUNT(*)::int AS count FROM radar_participants WHERE session_id = $1 AND is_host = true",
+        [session.id]
+      );
+      const shouldBeHost = Number(hostCountResult.rows[0]?.count ?? 0) === 0;
+
+      const participantId = crypto.randomUUID();
+      const participantResult = await pool.query(
+        `
+          INSERT INTO radar_participants (id, session_id, display_name, avatar, is_host)
+          VALUES ($1, $2, $3, $4, $5)
+          RETURNING *
+        `,
+        [participantId, session.id, displayName, avatar, shouldBeHost]
+      );
+
+      return res.status(201).json({
+        session: {
+          id: session.id,
+          code: session.session_code,
+          title: session.title,
+          facilitatorName: session.facilitator_name,
+          createdAt: session.created_at,
+        },
+        participant: serializeRadarParticipant(participantResult.rows[0]),
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.post("/api/radar/sessions/:code/submissions", async (req, res, next) => {
+    const client = await pool.connect();
+    try {
+      const code = String(req.params.code || "").trim().toUpperCase();
+      const participantId = typeof req.body?.participantId === "string" ? req.body.participantId : "";
+      const answers = normalizeRadarAnswers(req.body?.answers);
+      if (!participantId || !answers) return res.status(400).json({ error: "Invalid payload" });
+
+      const sessionResult = await client.query(
+        "SELECT id, session_code FROM radar_sessions WHERE session_code = $1 LIMIT 1",
+        [code]
+      );
+      const session = sessionResult.rows[0];
+      if (!session) return res.status(404).json({ error: "Not found" });
+
+      const participantResult = await client.query(
+        "SELECT * FROM radar_participants WHERE id = $1 AND session_id = $2 LIMIT 1",
+        [participantId, session.id]
+      );
+      const participant = participantResult.rows[0];
+      if (!participant) return res.status(404).json({ error: "Not found" });
+
+      const scoring = computeRadarScores(answers);
+      const insights = buildIndividualInsights(scoring.radar);
+
+      await client.query("BEGIN");
+      const responseResult = await client.query(
+        `
+          INSERT INTO radar_responses (
+            id, session_id, participant_id, answers, radar, poles, summary, strengths, watchouts, workshop_questions
+          )
+          VALUES ($1, $2, $3, $4::jsonb, $5::jsonb, $6::jsonb, $7, $8::jsonb, $9::jsonb, $10::jsonb)
+          ON CONFLICT (participant_id) DO UPDATE SET
+            answers = EXCLUDED.answers,
+            radar = EXCLUDED.radar,
+            poles = EXCLUDED.poles,
+            summary = EXCLUDED.summary,
+            strengths = EXCLUDED.strengths,
+            watchouts = EXCLUDED.watchouts,
+            workshop_questions = EXCLUDED.workshop_questions,
+            updated_at = now()
+          RETURNING *
+        `,
+        [
+          crypto.randomUUID(),
+          session.id,
+          participant.id,
+          toJson(answers),
+          toJson(scoring.radar),
+          toJson(scoring.polesPercent),
+          insights.summary,
+          toJson(insights.strengths),
+          toJson(insights.watchouts),
+          toJson(insights.workshopQuestions),
+        ]
+      );
+
+      const allResponsesResult = await client.query(
+        "SELECT radar FROM radar_responses WHERE session_id = $1 ORDER BY updated_at ASC",
+        [session.id]
+      );
+      const memberRadars = allResponsesResult.rows
+        .map((row) => row.radar)
+        .filter((value) => value && typeof value === "object");
+      const teamRadar = computeTeamAverageRadar(memberRadars);
+      const teamInsights = buildTeamInsights(teamRadar, memberRadars);
+
+      await client.query(
+        `
+          INSERT INTO radar_team_results (session_id, member_count, radar, insight, updated_at)
+          VALUES ($1, $2, $3::jsonb, $4::jsonb, now())
+          ON CONFLICT (session_id) DO UPDATE SET
+            member_count = EXCLUDED.member_count,
+            radar = EXCLUDED.radar,
+            insight = EXCLUDED.insight,
+            updated_at = now()
+        `,
+        [session.id, memberRadars.length, toJson(teamRadar), toJson(teamInsights)]
+      );
+      await client.query("COMMIT");
+
+      const row = responseResult.rows[0];
+      return res.status(201).json({
+        participant: { id: participant.id, displayName: participant.display_name },
+        result: {
+          radar: row.radar,
+          polesPercent: row.poles,
+          insights: {
+            summary: row.summary,
+            strengths: row.strengths,
+            watchouts: row.watchouts,
+            workshopQuestions: row.workshop_questions,
+          },
+        },
+        team: {
+          memberCount: memberRadars.length,
+          radar: teamRadar,
+          insights: teamInsights,
+        },
+      });
+    } catch (err) {
+      await client.query("ROLLBACK");
+      next(err);
+    } finally {
+      client.release();
+    }
+  });
+
+  app.get("/api/radar/sessions/:code", async (req, res, next) => {
+    try {
+      const code = String(req.params.code || "").trim().toUpperCase();
+      const sessionResult = await pool.query(
+        "SELECT id, session_code, title, facilitator_name, created_at FROM radar_sessions WHERE session_code = $1 LIMIT 1",
+        [code]
+      );
+      const session = sessionResult.rows[0];
+      if (!session) return res.status(404).json({ error: "Not found" });
+
+      const participantsResult = await pool.query(
+        `
+          SELECT
+            p.id,
+            p.display_name,
+            p.avatar,
+            p.is_host,
+            p.created_at,
+            r.radar,
+            r.poles,
+            r.summary,
+            r.strengths,
+            r.watchouts,
+            r.workshop_questions,
+            r.updated_at AS submitted_at
+          FROM radar_participants p
+          LEFT JOIN radar_responses r ON r.participant_id = p.id
+          WHERE p.session_id = $1
+          ORDER BY p.created_at ASC
+        `,
+        [session.id]
+      );
+
+      const teamResult = await pool.query(
+        "SELECT member_count, radar, insight, updated_at FROM radar_team_results WHERE session_id = $1 LIMIT 1",
+        [session.id]
+      );
+      const team = teamResult.rows[0];
+
+      return res.status(200).json({
+        session: {
+          id: session.id,
+          code: session.session_code,
+          title: session.title,
+          facilitatorName: session.facilitator_name,
+          createdAt: session.created_at,
+        },
+        participants: participantsResult.rows.map((row) => ({
+          id: row.id,
+          displayName: row.display_name,
+          avatar: Number.isFinite(Number(row.avatar)) ? Number(row.avatar) : 0,
+          isHost: !!row.is_host,
+          createdAt: row.created_at,
+          submittedAt: row.submitted_at,
+          result: row.radar
+            ? {
+                radar: row.radar,
+                polesPercent: row.poles,
+                insights: {
+                  summary: row.summary,
+                  strengths: row.strengths,
+                  watchouts: row.watchouts,
+                  workshopQuestions: row.workshop_questions,
+                },
+              }
+            : null,
+        })),
+        team: team
+          ? {
+              memberCount: team.member_count,
+              radar: team.radar,
+              insights: team.insight,
+              updatedAt: team.updated_at,
+            }
+          : null,
       });
     } catch (err) {
       next(err);

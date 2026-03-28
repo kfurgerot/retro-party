@@ -42,9 +42,9 @@ const TOOLS: ToolItem[] = [
   {
     id: "agile-radar",
     Icon: Radar,
-    title: fr.selectExperience.agileRadarTitle,
-    description: fr.selectExperience.agileRadarDescription,
-    available: false,
+    title: "Radar Party",
+    description: "Radar d'equipe Agile avec questionnaire, scoring et insights atelier.",
+    available: true,
   },
   {
     id: "retro-generator",

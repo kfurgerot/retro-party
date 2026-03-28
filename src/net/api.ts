@@ -26,6 +26,67 @@ export type TemplateQuestion = {
   updatedAt: string;
 };
 
+export type RadarAxisValues = {
+  collaboration: number;
+  product: number;
+  decision: number;
+  organization: number;
+};
+
+export type RadarPolesPercent = {
+  collaboration: { solo: number; team: number };
+  product: { delivery: number; quality: number };
+  decision: { data: number; intuition: number };
+  organization: { structured: number; adaptive: number };
+};
+
+export type RadarIndividualInsights = {
+  summary: string;
+  strengths: string[];
+  watchouts: string[];
+  workshopQuestions: string[];
+};
+
+export type RadarIndividualResult = {
+  radar: RadarAxisValues;
+  polesPercent: RadarPolesPercent;
+  insights: RadarIndividualInsights;
+};
+
+export type RadarTeamInsights = {
+  summary: string;
+  homogeneousAxes: string[];
+  polarizedAxes: string[];
+  divergenceAxes: string[];
+  workshopQuestions: string[];
+  spreads: Array<{
+    axis: keyof RadarAxisValues;
+    min: number;
+    max: number;
+    spread: number;
+    homogeneous: boolean;
+    polarized: boolean;
+  }>;
+};
+
+export type RadarSessionInfo = {
+  id: string;
+  code: string;
+  title: string | null;
+  facilitatorName: string | null;
+  createdAt?: string;
+};
+
+export type RadarParticipant = {
+  id: string;
+  displayName: string;
+  avatar: number;
+  isHost: boolean;
+  createdAt?: string;
+  submittedAt?: string | null;
+  result?: RadarIndividualResult | null;
+};
+
 type ApiError = { error?: string };
 
 const API_BASE = `${resolveBackendUrl()}/api`;
@@ -182,5 +243,47 @@ export const api = {
     request<{ roomId: string; roomCode: string; mode: "quick" }>("/rooms/quick", {
       method: "POST",
       body: JSON.stringify({ baseConfig: baseConfig ?? {} }),
+    }),
+
+  radarCreateSession: (payload: { title?: string; facilitatorName?: string }) =>
+    request<{ session: RadarSessionInfo }>("/radar/sessions", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  radarJoinSession: (code: string, payload: { displayName: string; avatar?: number }) =>
+    request<{ session: RadarSessionInfo; participant: RadarParticipant }>(
+      `/radar/sessions/${encodeURIComponent(code)}/participants`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }
+    ),
+  radarSubmitAnswers: (
+    code: string,
+    payload: {
+      participantId: string;
+      answers: Record<number, number>;
+    }
+  ) =>
+    request<{
+      participant: Pick<RadarParticipant, "id" | "displayName">;
+      result: RadarIndividualResult;
+      team: { memberCount: number; radar: RadarAxisValues; insights: RadarTeamInsights };
+    }>(`/radar/sessions/${encodeURIComponent(code)}/submissions`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  radarGetSession: (code: string) =>
+    request<{
+      session: RadarSessionInfo;
+      participants: RadarParticipant[];
+      team: {
+        memberCount: number;
+        radar: RadarAxisValues;
+        insights: RadarTeamInsights;
+        updatedAt: string;
+      } | null;
+    }>(`/radar/sessions/${encodeURIComponent(code)}`, {
+      method: "GET",
     }),
 };

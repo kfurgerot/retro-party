@@ -17,6 +17,7 @@ Fonctions principales:
 - gestion de templates de partie + questions personnalisees
 - creation de room rapide ou basee sur template
 - reset de mot de passe via email (SMTP Gmail)
+- module Radar Party (questionnaire Agile, radar individuel/equipe, insights atelier)
 
 ## Stack technique
 
@@ -189,6 +190,16 @@ Templates (auth requis):
 
 Rooms:
 - `POST /api/rooms/quick`
+
+Radar Party:
+- `GET /api/radar/questions`
+- `POST /api/radar/sessions`
+- `POST /api/radar/sessions/:code/participants`
+- `POST /api/radar/sessions/:code/submissions`
+- `GET /api/radar/sessions/:code`
+
+Documentation module:
+- `docs/radar-party.md`
 
 ## Socket.IO (evenements principaux)
 

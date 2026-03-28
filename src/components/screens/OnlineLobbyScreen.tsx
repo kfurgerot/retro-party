@@ -50,6 +50,7 @@ interface OnlineLobbyScreenProps {
   stepTotal?: number;
   titleWhenNoRoomOverride?: string;
   shellStyle?: "default" | "transparent";
+  hideRoundsControl?: boolean;
 }
 
 type Pending = "idle" | "hosting" | "joining" | "starting";
@@ -80,6 +81,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
   stepTotal,
   titleWhenNoRoomOverride,
   shellStyle = "default",
+  hideRoundsControl = false,
 }) => {
   const [mode, setMode] = useState<"host" | "join">(initialMode ?? "host");
   const [name, setName] = useState(() => cleanName(initialName ?? ""));
@@ -406,33 +408,35 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
                     {fr.onlineLobby.hostLaunchHint}
                   </p>
 
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <label className="text-xs text-cyan-100/85">{fr.onlineLobby.roundsLabel}</label>
-                      <span className="rounded-md border border-cyan-300/35 bg-cyan-500/10 px-2 py-0.5 text-xs font-semibold text-cyan-100">
-                        {maxRounds}
-                      </span>
-                    </div>
-                    <div className="rounded-lg border border-cyan-300/20 bg-slate-900/55 px-3 py-3">
-                      <Slider
-                        min={1}
-                        max={30}
-                        step={1}
-                        value={[maxRounds]}
-                        onValueChange={(values) => {
-                          const next = values[0];
-                          if (!Number.isFinite(next)) return;
-                          setMaxRounds(Math.max(1, Math.min(30, Math.round(next))));
-                        }}
-                        className="px-1"
-                        aria-label={fr.onlineLobby.roundsLabel}
-                      />
-                      <div className="mt-2 flex items-center justify-between text-[10px] text-slate-300">
-                        <span>1</span>
-                        <span>30</span>
+                  {!hideRoundsControl ? (
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <label className="text-xs text-cyan-100/85">{fr.onlineLobby.roundsLabel}</label>
+                        <span className="rounded-md border border-cyan-300/35 bg-cyan-500/10 px-2 py-0.5 text-xs font-semibold text-cyan-100">
+                          {maxRounds}
+                        </span>
+                      </div>
+                      <div className="rounded-lg border border-cyan-300/20 bg-slate-900/55 px-3 py-3">
+                        <Slider
+                          min={1}
+                          max={30}
+                          step={1}
+                          value={[maxRounds]}
+                          onValueChange={(values) => {
+                            const next = values[0];
+                            if (!Number.isFinite(next)) return;
+                            setMaxRounds(Math.max(1, Math.min(30, Math.round(next))));
+                          }}
+                          className="px-1"
+                          aria-label={fr.onlineLobby.roundsLabel}
+                        />
+                        <div className="mt-2 flex items-center justify-between text-[10px] text-slate-300">
+                          <span>1</span>
+                          <span>30</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  ) : null}
 
                 </>
               ) : (

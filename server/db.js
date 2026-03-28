@@ -111,4 +111,68 @@ export async function initDatabase() {
   await pool.query(
     "CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_expires_at ON password_reset_tokens(expires_at);"
   );
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS radar_sessions (
+      id UUID PRIMARY KEY,
+      session_code VARCHAR(8) NOT NULL UNIQUE,
+      title TEXT NULL,
+      facilitator_name TEXT NULL,
+      created_by_user_id UUID NULL REFERENCES users(id) ON DELETE SET NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `);
+  await pool.query(
+    "CREATE INDEX IF NOT EXISTS idx_radar_sessions_created_by_user_id ON radar_sessions(created_by_user_id);"
+  );
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS radar_participants (
+      id UUID PRIMARY KEY,
+      session_id UUID NOT NULL REFERENCES radar_sessions(id) ON DELETE CASCADE,
+      display_name TEXT NOT NULL,
+      avatar INT NOT NULL DEFAULT 0,
+      is_host BOOLEAN NOT NULL DEFAULT false,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `);
+  await pool.query(
+    "ALTER TABLE radar_participants ADD COLUMN IF NOT EXISTS avatar INT NOT NULL DEFAULT 0;"
+  );
+  await pool.query(
+    "ALTER TABLE radar_participants ADD COLUMN IF NOT EXISTS is_host BOOLEAN NOT NULL DEFAULT false;"
+  );
+  await pool.query(
+    "CREATE INDEX IF NOT EXISTS idx_radar_participants_session_id ON radar_participants(session_id);"
+  );
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS radar_responses (
+      id UUID PRIMARY KEY,
+      session_id UUID NOT NULL REFERENCES radar_sessions(id) ON DELETE CASCADE,
+      participant_id UUID NOT NULL UNIQUE REFERENCES radar_participants(id) ON DELETE CASCADE,
+      answers JSONB NOT NULL,
+      radar JSONB NOT NULL,
+      poles JSONB NOT NULL,
+      summary TEXT NOT NULL,
+      strengths JSONB NOT NULL,
+      watchouts JSONB NOT NULL,
+      workshop_questions JSONB NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `);
+  await pool.query(
+    "CREATE INDEX IF NOT EXISTS idx_radar_responses_session_id ON radar_responses(session_id);"
+  );
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS radar_team_results (
+      session_id UUID PRIMARY KEY REFERENCES radar_sessions(id) ON DELETE CASCADE,
+      member_count INT NOT NULL DEFAULT 0,
+      radar JSONB NOT NULL,
+      insight JSONB NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `);
 }
