@@ -1,64 +1,54 @@
-export type RadarDimension = "collaboration" | "product" | "decision" | "organization";
-
-export type RadarPole =
-  | "solo"
-  | "team"
-  | "delivery"
-  | "quality"
-  | "data"
-  | "intuition"
-  | "structured"
-  | "adaptive";
+export type RadarDimension = "visionStrategy" | "planning" | "execution" | "mindsetBehaviors";
 
 export type RadarQuestion = {
   id: number;
   text: string;
   dimension: RadarDimension;
-  pole: RadarPole;
+  subdimension: string;
 };
 
 export const RADAR_QUESTIONS: RadarQuestion[] = [
-  { id: 1, text: "Je prefere travailler seul sur mes taches.", dimension: "collaboration", pole: "solo" },
-  { id: 2, text: "J'aime resoudre des problemes en groupe.", dimension: "collaboration", pole: "team" },
-  { id: 3, text: "Je sollicite facilement mes collegues quand j'ai un doute.", dimension: "collaboration", pole: "team" },
-  { id: 4, text: "Je prefere avancer sans dependre des autres.", dimension: "collaboration", pole: "solo" },
-  { id: 5, text: "Les echanges d'equipe ameliorent souvent la qualite d'une solution.", dimension: "collaboration", pole: "team" },
-  { id: 6, text: "Je trouve les reunions souvent peu utiles pour avancer.", dimension: "collaboration", pole: "solo" },
-  { id: 7, text: "J'aime partager regulierement mes avancees.", dimension: "collaboration", pole: "team" },
-  { id: 8, text: "Je suis plus efficace quand je gere mes sujets de maniere autonome.", dimension: "collaboration", pole: "solo" },
-  { id: 9, text: "Travailler en binome ou en revue croisee apporte de la valeur.", dimension: "collaboration", pole: "team" },
-  { id: 10, text: "Je produis mon meilleur travail quand je suis seul.", dimension: "collaboration", pole: "solo" },
+  { id: 1, text: "Notre vision produit est claire et partagee par l'equipe.", dimension: "visionStrategy", subdimension: "Vision & Purpose" },
+  { id: 2, text: "Nous comprenons bien les besoins reels de nos clients.", dimension: "visionStrategy", subdimension: "Customer Focus" },
+  { id: 3, text: "Nous utilisons des objectifs explicites pour guider nos choix.", dimension: "visionStrategy", subdimension: "Goals & Outcomes" },
+  { id: 4, text: "Nous prenons le temps d'experimenter de nouvelles approches.", dimension: "visionStrategy", subdimension: "Learning & Experimenting" },
+  { id: 5, text: "Nous favorisons la creativite et l'innovation dans l'equipe.", dimension: "visionStrategy", subdimension: "Creativity & Innovation" },
+  { id: 6, text: "Nos choix strategiques sont coherents avec la valeur attendue.", dimension: "visionStrategy", subdimension: "Strategic Alignment" },
+  { id: 7, text: "Nous savons expliquer pourquoi une priorite est retenue.", dimension: "visionStrategy", subdimension: "Prioritization Logic" },
+  { id: 8, text: "Les retours de terrain influencent reellement notre direction.", dimension: "visionStrategy", subdimension: "Feedback Integration" },
+  { id: 9, text: "Nous adaptons notre strategie quand les signaux changent.", dimension: "visionStrategy", subdimension: "Strategic Adaptability" },
+  { id: 10, text: "Notre feuille de route reste lisible meme quand le contexte evolue.", dimension: "visionStrategy", subdimension: "Roadmap Clarity" },
 
-  { id: 11, text: "Livrer rapidement est souvent plus important que livrer parfaitement.", dimension: "product", pole: "delivery" },
-  { id: 12, text: "Je prefere prendre plus de temps pour garantir la qualite.", dimension: "product", pole: "quality" },
-  { id: 13, text: "Une premiere version imparfaite mais disponible vite peut etre une bonne chose.", dimension: "product", pole: "delivery" },
-  { id: 14, text: "La robustesse technique doit primer sur la vitesse.", dimension: "product", pole: "quality" },
-  { id: 15, text: "Les tests sont indispensables avant de livrer.", dimension: "product", pole: "quality" },
-  { id: 16, text: "On peut ameliorer apres, l'important est de mettre vite entre les mains des utilisateurs.", dimension: "product", pole: "delivery" },
-  { id: 17, text: "Reduire la dette technique est une priorite importante.", dimension: "product", pole: "quality" },
-  { id: 18, text: "Le time-to-market doit souvent passer avant le perfectionnement.", dimension: "product", pole: "delivery" },
-  { id: 19, text: "Je suis a l'aise avec des livraisons frequentes meme si tout n'est pas optimal.", dimension: "product", pole: "delivery" },
-  { id: 20, text: "La stabilite d'ensemble vaut mieux qu'une sortie rapide.", dimension: "product", pole: "quality" },
+  { id: 11, text: "Nous decoupons bien le travail en objectifs court terme atteignables.", dimension: "planning", subdimension: "Short-Term Plan" },
+  { id: 12, text: "Nos priorites sont ordonnees de facon transparente.", dimension: "planning", subdimension: "Prioritization Breakdown" },
+  { id: 13, text: "Nous maintenons une roadmap realiste et actualisee.", dimension: "planning", subdimension: "Roadmap" },
+  { id: 14, text: "Les dependances et risques sont identifies en amont.", dimension: "planning", subdimension: "Risk Anticipation" },
+  { id: 15, text: "Les responsabilites sont claires avant de lancer une iteration.", dimension: "planning", subdimension: "Roles & Skills" },
+  { id: 16, text: "Les outils supports nous aident vraiment a planifier.", dimension: "planning", subdimension: "Tools" },
+  { id: 17, text: "Nous estimons la charge avec un niveau de precision suffisant.", dimension: "planning", subdimension: "Capacity Planning" },
+  { id: 18, text: "Nos plans restent compréhensibles pour toutes les parties prenantes.", dimension: "planning", subdimension: "Stakeholder Visibility" },
+  { id: 19, text: "Nous preparons les sessions de planification de facon efficace.", dimension: "planning", subdimension: "Planning Hygiene" },
+  { id: 20, text: "Nous revisons regulierement le plan plutot que de le figer.", dimension: "planning", subdimension: "Plan Adaptation" },
 
-  { id: 21, text: "Je prends plus facilement une decision quand j'ai des donnees pour l'appuyer.", dimension: "decision", pole: "data" },
-  { id: 22, text: "Je me fie souvent a mon ressenti pour decider.", dimension: "decision", pole: "intuition" },
-  { id: 23, text: "Les metriques sont essentielles pour arbitrer.", dimension: "decision", pole: "data" },
-  { id: 24, text: "Le ressenti de l'equipe compte autant que les indicateurs.", dimension: "decision", pole: "intuition" },
-  { id: 25, text: "J'aime analyser avant d'agir.", dimension: "decision", pole: "data" },
-  { id: 26, text: "Je peux decider rapidement meme sans disposer de toutes les informations.", dimension: "decision", pole: "intuition" },
-  { id: 27, text: "Les faits doivent primer sur les opinions.", dimension: "decision", pole: "data" },
-  { id: 28, text: "L'humain doit parfois passer avant les chiffres.", dimension: "decision", pole: "intuition" },
-  { id: 29, text: "Je challenge plus facilement une decision a partir d'elements mesurables.", dimension: "decision", pole: "data" },
-  { id: 30, text: "Je privilegie volontiers le consensus meme si toutes les donnees ne sont pas disponibles.", dimension: "decision", pole: "intuition" },
+  { id: 21, text: "Nos rituels d'equipe sont utiles et bien animes.", dimension: "execution", subdimension: "Effective Meetings" },
+  { id: 22, text: "Les decisions operationnelles sont prises sans lenteur inutile.", dimension: "execution", subdimension: "Operational Decision-Making" },
+  { id: 23, text: "Nous suivons des metriques pertinentes pour piloter l'execution.", dimension: "execution", subdimension: "Metrics" },
+  { id: 24, text: "Nous supprimons rapidement les obstacles qui bloquent l'equipe.", dimension: "execution", subdimension: "Obstacle Removal" },
+  { id: 25, text: "Nous gardons une cadence de livraison stable.", dimension: "execution", subdimension: "Delivery Rhythm" },
+  { id: 26, text: "La qualite d'execution reste constante sprint apres sprint.", dimension: "execution", subdimension: "Execution Consistency" },
+  { id: 27, text: "Nos engagements sont tenus avec un bon niveau de fiabilite.", dimension: "execution", subdimension: "Reliability" },
+  { id: 28, text: "Nous ajustons vite notre facon de faire quand un probleme revient.", dimension: "execution", subdimension: "Continuous Improvement" },
+  { id: 29, text: "Nous faisons circuler l'information utile au bon moment.", dimension: "execution", subdimension: "Operational Transparency" },
+  { id: 30, text: "Nos actions quotidiennes restent alignees avec le plan.", dimension: "execution", subdimension: "Plan Execution" },
 
-  { id: 31, text: "J'aime planifier mon travail a l'avance.", dimension: "organization", pole: "structured" },
-  { id: 32, text: "Je prefere m'adapter au fil de l'eau plutot que tout prevoir.", dimension: "organization", pole: "adaptive" },
-  { id: 33, text: "Les processus clairs aident l'equipe a mieux avancer.", dimension: "organization", pole: "structured" },
-  { id: 34, text: "Je n'aime pas etre trop contraint par des regles ou un cadre fixe.", dimension: "organization", pole: "adaptive" },
-  { id: 35, text: "Les rituels Agile sont utiles quand ils sont bien utilises.", dimension: "organization", pole: "structured" },
-  { id: 36, text: "Je prefere garder de la flexibilite plutot que figer un mode de fonctionnement.", dimension: "organization", pole: "adaptive" },
-  { id: 37, text: "J'aime avoir un cadre clair pour travailler sereinement.", dimension: "organization", pole: "structured" },
-  { id: 38, text: "Je m'adapte facilement aux imprevus et changements de cap.", dimension: "organization", pole: "adaptive" },
-  { id: 39, text: "Les priorites doivent etre cadrees tot pour eviter la confusion.", dimension: "organization", pole: "structured" },
-  { id: 40, text: "Je suis a l'aise dans l'incertitude si l'equipe garde sa capacite d'ajustement.", dimension: "organization", pole: "adaptive" },
+  { id: 31, text: "Les membres de l'equipe se sentent engages dans les objectifs communs.", dimension: "mindsetBehaviors", subdimension: "Engaged & Motivated" },
+  { id: 32, text: "Nous laissons de l'autonomie pour prendre des initiatives.", dimension: "mindsetBehaviors", subdimension: "Autonomy" },
+  { id: 33, text: "Le respect et la confiance sont visibles dans nos interactions.", dimension: "mindsetBehaviors", subdimension: "Trust & Respect" },
+  { id: 34, text: "Nous prenons soin de l'equilibre et du bien-etre de l'equipe.", dimension: "mindsetBehaviors", subdimension: "Well-Being" },
+  { id: 35, text: "Le climat de securite psychologique favorise la prise de parole.", dimension: "mindsetBehaviors", subdimension: "Psychological Safety" },
+  { id: 36, text: "Nous avons des conversations constructives meme en cas de desaccord.", dimension: "mindsetBehaviors", subdimension: "Constructive Conversations" },
+  { id: 37, text: "La diversite des points de vue est valorisee.", dimension: "mindsetBehaviors", subdimension: "Diversity & Inclusion" },
+  { id: 38, text: "Chacun prend sa part de responsabilite sur les resultats collectifs.", dimension: "mindsetBehaviors", subdimension: "Accountability & Ownership" },
+  { id: 39, text: "Le feedback et la reconnaissance sont regulierement pratiques.", dimension: "mindsetBehaviors", subdimension: "Feedback & Recognition" },
+  { id: 40, text: "Nous cooperons de facon ouverte entre les profils et metiers.", dimension: "mindsetBehaviors", subdimension: "Open & Collaborative" },
 ];

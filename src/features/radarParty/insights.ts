@@ -26,31 +26,16 @@ export type TeamInsights = {
 };
 
 const AXIS_LABELS: Record<keyof RadarAxisValues, string> = {
-  collaboration: "Collaboration",
-  product: "Approche produit",
-  decision: "Decision",
-  organization: "Organisation",
+  visionStrategy: "Vision & strategie",
+  planning: "Planification",
+  execution: "Execution",
+  mindsetBehaviors: "Etat d'esprit & comportements",
 };
 
 const axisMessage = (axis: keyof RadarAxisValues, value: number): string => {
-  if (axis === "collaboration") {
-    if (value > 70) return "Equipe tres tournee collectif.";
-    if (value < 35) return "Forte autonomie individuelle, risque de silos.";
-    return "Equilibre entre autonomie et dynamique collective.";
-  }
-  if (axis === "product") {
-    if (value > 70) return "Bonne exigence qualite, attention a la lenteur potentielle.";
-    if (value < 35) return "Forte culture delivery, attention a la dette technique.";
-    return "Compromis sain entre vitesse et robustesse.";
-  }
-  if (axis === "decision") {
-    if (value > 70) return "Decisions fortement pilotees par la mesure.";
-    if (value < 35) return "Decisions plus intuitives et humaines.";
-    return "Usage combine des donnees et de l'experience terrain.";
-  }
-  if (value > 70) return "Cadre fort et lisible, avec risque de rigidite.";
-  if (value < 35) return "Souplesse elevee, avec risque de flou.";
-  return "Cadre et adaptation globalement bien doses.";
+  if (value >= 75) return `${AXIS_LABELS[axis]} est un vrai point d'appui d'equipe.`;
+  if (value <= 40) return `${AXIS_LABELS[axis]} semble sous tension et merite un focus.`;
+  return `${AXIS_LABELS[axis]} est globalement stable avec marge de progression.`;
 };
 
 const sortByScore = (radar: RadarAxisValues) =>
@@ -65,19 +50,19 @@ export function buildIndividualInsights(radar: RadarAxisValues): IndividualInsig
   return {
     summary: `Profil dominant: ${AXIS_LABELS[a1.axis]} (${a1.value}/100). ${axisMessage(a1.axis, a1.value)}`,
     strengths: [
-      `Point fort possible sur ${AXIS_LABELS[a1.axis].toLowerCase()}: ${axisMessage(a1.axis, a1.value)}`,
-      `Point fort possible sur ${AXIS_LABELS[a2.axis].toLowerCase()}: ${axisMessage(a2.axis, a2.value)}`,
-      `Point fort possible sur ${AXIS_LABELS[a3.axis].toLowerCase()}: ${axisMessage(a3.axis, a3.value)}`,
+      `Point fort potentiel: ${axisMessage(a1.axis, a1.value)}`,
+      `Levier secondaire: ${axisMessage(a2.axis, a2.value)}`,
+      `Atout complementaire: ${axisMessage(a3.axis, a3.value)}`,
     ],
     watchouts: [
-      `Vigilance: verifier l'impact de ${AXIS_LABELS[a1.axis].toLowerCase()} sur les autres axes.`,
-      `Vigilance: eviter les angles morts quand ${AXIS_LABELS[a2.axis].toLowerCase()} devient prioritaire.`,
-      `Vigilance: expliciter les arbitrages autour de ${AXIS_LABELS[a3.axis].toLowerCase()}.`,
+      `Vigilance: eviter de negliger les axes moins bien notes au profit de ${AXIS_LABELS[a1.axis]}.`,
+      `Vigilance: verifier les effets de bord de ${AXIS_LABELS[a2.axis]} sur la charge de l'equipe.`,
+      `Vigilance: formaliser des actions concretes autour de ${AXIS_LABELS[a3.axis]}.`,
     ],
     workshopQuestions: [
-      `Qu'est-ce qui nous aide aujourd'hui sur l'axe ${AXIS_LABELS[a1.axis]} ?`,
-      `Quel risque concret observons-nous si ${AXIS_LABELS[a2.axis].toLowerCase()} est sur- ou sous-pondere ?`,
-      `Quel experiment sur 2 semaines peut mieux equilibrer ${AXIS_LABELS[a3.axis].toLowerCase()} ?`,
+      `Qu'est-ce qui explique notre score sur ${AXIS_LABELS[a1.axis]} ?`,
+      `Quel micro-changement pourrait faire progresser ${AXIS_LABELS[a2.axis]} des le prochain sprint ?`,
+      `Quel signal concret suivrons-nous pour ameliorer ${AXIS_LABELS[a3.axis]} ?`,
     ],
   };
 }
@@ -100,20 +85,16 @@ export function buildTeamInsights(teamRadar: RadarAxisValues, memberRadars: Rada
 
   const homogeneousAxes = spreads.filter((item) => item.homogeneous).map((item) => AXIS_LABELS[item.axis]);
   const polarizedAxes = spreads.filter((item) => item.polarized).map((item) => AXIS_LABELS[item.axis]);
-  const divergenceAxes = polarizedAxes;
 
   return {
-    summary: [
-      `Radar equipe: Collaboration ${teamRadar.collaboration}, Produit ${teamRadar.product}, Decision ${teamRadar.decision}, Organisation ${teamRadar.organization}.`,
-      `Lecture: ${axisMessage("collaboration", teamRadar.collaboration)} ${axisMessage("product", teamRadar.product)}`,
-    ].join(" "),
+    summary: `Radar equipe: Vision & strategie ${teamRadar.visionStrategy}, Planification ${teamRadar.planning}, Execution ${teamRadar.execution}, Etat d'esprit & comportements ${teamRadar.mindsetBehaviors}.`,
     homogeneousAxes,
     polarizedAxes,
-    divergenceAxes,
+    divergenceAxes: polarizedAxes,
     workshopQuestions: [
-      "Sur quel axe avons-nous le plus besoin d'un langage commun ?",
-      "Quel est le cout actuel de nos ecarts de perception ?",
-      "Quel accord d'equipe testons-nous au prochain sprint pour reduire un ecart critique ?",
+      "Quel axe a le plus d'impact business si on l'ameliore de 10 points ?",
+      "Sur quel axe observons-nous le plus d'ecart de perception entre membres ?",
+      "Quelle action d'equipe testons-nous des la prochaine iteration ?",
     ],
     spreads,
   };

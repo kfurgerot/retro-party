@@ -27,18 +27,13 @@ export type TemplateQuestion = {
 };
 
 export type RadarAxisValues = {
-  collaboration: number;
-  product: number;
-  decision: number;
-  organization: number;
+  visionStrategy: number;
+  planning: number;
+  execution: number;
+  mindsetBehaviors: number;
 };
 
-export type RadarPolesPercent = {
-  collaboration: { solo: number; team: number };
-  product: { delivery: number; quality: number };
-  decision: { data: number; intuition: number };
-  organization: { structured: number; adaptive: number };
-};
+export type RadarPolesPercent = Record<string, number>;
 
 export type RadarIndividualInsights = {
   summary: string;

@@ -10,108 +10,82 @@ function round(value) {
   return Math.round(value);
 }
 
+function toPct(avgOnFive) {
+  return ((avgOnFive - 1) / 4) * 100;
+}
+
 export function computeRadarScores(answers) {
-  const raw = {
-    collaboration: { solo: 0, team: 0 },
-    product: { delivery: 0, quality: 0 },
-    decision: { data: 0, intuition: 0 },
-    organization: { structured: 0, adaptive: 0 },
+  const byDimension = {
+    visionStrategy: [],
+    planning: [],
+    execution: [],
+    mindsetBehaviors: [],
   };
+
+  const bySubdimension = {};
 
   for (const question of RADAR_QUESTIONS) {
     const answer = clampAnswer(answers?.[String(question.id)] ?? answers?.[question.id]);
-    if (question.dimension === "collaboration") raw.collaboration[question.pole] += answer;
-    if (question.dimension === "product") raw.product[question.pole] += answer;
-    if (question.dimension === "decision") raw.decision[question.pole] += answer;
-    if (question.dimension === "organization") raw.organization[question.pole] += answer;
+    byDimension[question.dimension].push(answer);
+
+    if (!bySubdimension[question.subdimension]) {
+      bySubdimension[question.subdimension] = [];
+    }
+    bySubdimension[question.subdimension].push(answer);
   }
 
-  const polesPercent = {
-    collaboration: { solo: 50, team: 50 },
-    product: { delivery: 50, quality: 50 },
-    decision: { data: 50, intuition: 50 },
-    organization: { structured: 50, adaptive: 50 },
+  const radar = {
+    visionStrategy: round(toPct(byDimension.visionStrategy.reduce((a, b) => a + b, 0) / byDimension.visionStrategy.length)),
+    planning: round(toPct(byDimension.planning.reduce((a, b) => a + b, 0) / byDimension.planning.length)),
+    execution: round(toPct(byDimension.execution.reduce((a, b) => a + b, 0) / byDimension.execution.length)),
+    mindsetBehaviors: round(
+      toPct(byDimension.mindsetBehaviors.reduce((a, b) => a + b, 0) / byDimension.mindsetBehaviors.length)
+    ),
   };
 
-  const collaborationTotal = raw.collaboration.solo + raw.collaboration.team;
-  const collaborationSolo = collaborationTotal > 0 ? (raw.collaboration.solo / collaborationTotal) * 100 : 50;
-  polesPercent.collaboration.solo = round(collaborationSolo);
-  polesPercent.collaboration.team = 100 - polesPercent.collaboration.solo;
+  const polesPercent = {};
+  Object.entries(bySubdimension).forEach(([key, values]) => {
+    const avg = values.reduce((a, b) => a + b, 0) / values.length;
+    polesPercent[key] = round(toPct(avg));
+  });
 
-  const productTotal = raw.product.delivery + raw.product.quality;
-  const productDelivery = productTotal > 0 ? (raw.product.delivery / productTotal) * 100 : 50;
-  polesPercent.product.delivery = round(productDelivery);
-  polesPercent.product.quality = 100 - polesPercent.product.delivery;
-
-  const decisionTotal = raw.decision.data + raw.decision.intuition;
-  const decisionData = decisionTotal > 0 ? (raw.decision.data / decisionTotal) * 100 : 50;
-  polesPercent.decision.data = round(decisionData);
-  polesPercent.decision.intuition = 100 - polesPercent.decision.data;
-
-  const organizationTotal = raw.organization.structured + raw.organization.adaptive;
-  const organizationStructured = organizationTotal > 0 ? (raw.organization.structured / organizationTotal) * 100 : 50;
-  polesPercent.organization.structured = round(organizationStructured);
-  polesPercent.organization.adaptive = 100 - polesPercent.organization.structured;
-
-  return {
-    radar: {
-      collaboration: polesPercent.collaboration.team,
-      product: polesPercent.product.quality,
-      decision: polesPercent.decision.data,
-      organization: polesPercent.organization.structured,
-    },
-    polesPercent,
-  };
+  return { radar, polesPercent };
 }
 
 export function computeTeamAverageRadar(radars) {
   if (!Array.isArray(radars) || radars.length === 0) {
-    return { collaboration: 50, product: 50, decision: 50, organization: 50 };
+    return { visionStrategy: 50, planning: 50, execution: 50, mindsetBehaviors: 50 };
   }
+
   const total = radars.reduce(
     (acc, radar) => ({
-      collaboration: acc.collaboration + Number(radar.collaboration || 0),
-      product: acc.product + Number(radar.product || 0),
-      decision: acc.decision + Number(radar.decision || 0),
-      organization: acc.organization + Number(radar.organization || 0),
+      visionStrategy: acc.visionStrategy + Number(radar.visionStrategy || 0),
+      planning: acc.planning + Number(radar.planning || 0),
+      execution: acc.execution + Number(radar.execution || 0),
+      mindsetBehaviors: acc.mindsetBehaviors + Number(radar.mindsetBehaviors || 0),
     }),
-    { collaboration: 0, product: 0, decision: 0, organization: 0 }
+    { visionStrategy: 0, planning: 0, execution: 0, mindsetBehaviors: 0 }
   );
 
   return {
-    collaboration: round(total.collaboration / radars.length),
-    product: round(total.product / radars.length),
-    decision: round(total.decision / radars.length),
-    organization: round(total.organization / radars.length),
+    visionStrategy: round(total.visionStrategy / radars.length),
+    planning: round(total.planning / radars.length),
+    execution: round(total.execution / radars.length),
+    mindsetBehaviors: round(total.mindsetBehaviors / radars.length),
   };
 }
 
 const AXIS_LABELS = {
-  collaboration: "Collaboration",
-  product: "Approche produit",
-  decision: "Decision",
-  organization: "Organisation",
+  visionStrategy: "Vision & strategie",
+  planning: "Planification",
+  execution: "Execution",
+  mindsetBehaviors: "Etat d'esprit & comportements",
 };
 
 function axisMessage(axis, value) {
-  if (axis === "collaboration") {
-    if (value > 70) return "Equipe tres tournee collectif.";
-    if (value < 35) return "Forte autonomie individuelle, risque de silos.";
-    return "Equilibre entre autonomie et dynamique collective.";
-  }
-  if (axis === "product") {
-    if (value > 70) return "Bonne exigence qualite, attention a la lenteur potentielle.";
-    if (value < 35) return "Attention dette technique / fragilite.";
-    return "Compromis sain entre vitesse et robustesse.";
-  }
-  if (axis === "decision") {
-    if (value > 70) return "Decisions tres pilotees par la mesure.";
-    if (value < 35) return "Decisions plus intuitives / humaines.";
-    return "Usage combine donnees et intuition terrain.";
-  }
-  if (value > 70) return "Cadre fort, bonne lisibilite mais possible rigidite.";
-  if (value < 35) return "Souplesse elevee, mais possible flou.";
-  return "Bon equilibre entre cadre et adaptation.";
+  if (value >= 75) return `${AXIS_LABELS[axis]} est un vrai point d'appui d'equipe.`;
+  if (value <= 40) return `${AXIS_LABELS[axis]} semble sous tension et merite un focus.`;
+  return `${AXIS_LABELS[axis]} est globalement stable avec marge de progression.`;
 }
 
 function sortByScore(radar) {
@@ -129,19 +103,19 @@ export function buildIndividualInsights(radar) {
   return {
     summary: `Profil dominant: ${AXIS_LABELS[first.axis]} (${first.value}/100). ${axisMessage(first.axis, first.value)}`,
     strengths: [
-      `Point fort possible sur ${AXIS_LABELS[first.axis].toLowerCase()}: ${axisMessage(first.axis, first.value)}`,
-      `Point fort possible sur ${AXIS_LABELS[second.axis].toLowerCase()}: ${axisMessage(second.axis, second.value)}`,
-      `Point fort possible sur ${AXIS_LABELS[third.axis].toLowerCase()}: ${axisMessage(third.axis, third.value)}`,
+      `Point fort potentiel: ${axisMessage(first.axis, first.value)}`,
+      `Levier secondaire: ${axisMessage(second.axis, second.value)}`,
+      `Atout complementaire: ${axisMessage(third.axis, third.value)}`,
     ],
     watchouts: [
-      `Vigilance: surveiller les effets de bord sur l'axe ${AXIS_LABELS[first.axis].toLowerCase()}.`,
-      `Vigilance: expliciter les arbitrages quand ${AXIS_LABELS[second.axis].toLowerCase()} devient prioritaire.`,
-      `Vigilance: conserver la coherence d'equipe autour de ${AXIS_LABELS[third.axis].toLowerCase()}.`,
+      `Vigilance: eviter de negliger les axes moins bien notes au profit de ${AXIS_LABELS[first.axis]}.`,
+      `Vigilance: verifier les effets de bord de ${AXIS_LABELS[second.axis]} sur la charge de l'equipe.`,
+      `Vigilance: formaliser des actions concretes autour de ${AXIS_LABELS[third.axis]}.`,
     ],
     workshopQuestions: [
-      `Qu'est-ce qui nous rend performants sur ${AXIS_LABELS[first.axis]} ?`,
-      `Quel risque concret voyons-nous si ${AXIS_LABELS[second.axis].toLowerCase()} est desequilibre ?`,
-      `Quel test d'equipe mettons-nous en place pour mieux equilibrer ${AXIS_LABELS[third.axis].toLowerCase()} ?`,
+      `Qu'est-ce qui explique notre score sur ${AXIS_LABELS[first.axis]} ?`,
+      `Quel micro-changement pourrait faire progresser ${AXIS_LABELS[second.axis]} des le prochain sprint ?`,
+      `Quel signal concret suivrons-nous pour ameliorer ${AXIS_LABELS[third.axis]} ?`,
     ],
   };
 }
@@ -166,14 +140,14 @@ export function buildTeamInsights(teamRadar, memberRadars) {
   const polarizedAxes = spreads.filter((x) => x.polarized).map((x) => AXIS_LABELS[x.axis]);
 
   return {
-    summary: `Radar equipe: Collaboration ${teamRadar.collaboration}, Produit ${teamRadar.product}, Decision ${teamRadar.decision}, Organisation ${teamRadar.organization}.`,
+    summary: `Radar equipe: Vision & strategie ${teamRadar.visionStrategy}, Planification ${teamRadar.planning}, Execution ${teamRadar.execution}, Etat d'esprit & comportements ${teamRadar.mindsetBehaviors}.`,
     homogeneousAxes,
     polarizedAxes,
     divergenceAxes: polarizedAxes,
     workshopQuestions: [
-      "Sur quel axe avons-nous le plus besoin d'un langage commun ?",
-      "Quel est le cout actuel de nos ecarts de perception ?",
-      "Quel accord d'equipe testons-nous au prochain sprint pour reduire une divergence majeure ?",
+      "Quel axe a le plus d'impact business si on l'ameliore de 10 points ?",
+      "Sur quel axe observons-nous le plus d'ecart de perception entre membres ?",
+      "Quelle action d'equipe testons-nous des la prochaine iteration ?",
     ],
     spreads,
   };

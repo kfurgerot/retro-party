@@ -1,12 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { RefreshCw, MessageSquareText } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { OnlineLobbyScreen } from "@/components/screens/OnlineLobbyScreen";
 import { OnlineOnboardingScreen } from "@/components/screens/OnlineOnboardingScreen";
 import { RetroScreenBackground } from "@/components/screens/RetroScreenBackground";
 import { Card, PrimaryButton, SecondaryButton } from "@/components/app-shell";
 import { cn } from "@/lib/utils";
-import { APP_SHELL_SURFACE_SOFT } from "@/lib/uiTokens";
+import {
+  APP_SHELL_SURFACE_SOFT,
+  CTA_NEON_DANGER,
+  CTA_NEON_SECONDARY_SUBTLE,
+  GAME_DIALOG_CONTENT,
+} from "@/lib/uiTokens";
 import { RadarChartCard } from "@/components/radar-party/RadarChartCard";
 import { RADAR_QUESTIONS } from "@/features/radarParty/questions";
 import { buildIndividualInsights, buildTeamInsights } from "@/features/radarParty/insights";
@@ -17,8 +22,18 @@ import {
   type RadarAxisValues,
 } from "@/features/radarParty/scoring";
 import { api, type RadarParticipant, type RadarTeamInsights } from "@/net/api";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
-type Stage = "lobby" | "questionnaire" | "individual" | "team-radar" | "workshop";
+type Stage = "lobby" | "questionnaire" | "individual" | "team-radar";
 
 type LocalResult = {
   radar: RadarAxisValues;
@@ -41,12 +56,12 @@ const likertScale = [
   { uiId: "disagree-strong", score: 1, size: "h-12 w-12 sm:h-16 sm:w-16", side: "disagree" as const },
 ] as const;
 
-const AXIS_ORDER: Array<keyof RadarAxisValues> = ["collaboration", "product", "decision", "organization"];
+const AXIS_ORDER: Array<keyof RadarAxisValues> = ["visionStrategy", "planning", "execution", "mindsetBehaviors"];
 const AXIS_FR: Record<keyof RadarAxisValues, string> = {
-  collaboration: "Collaboration",
-  product: "Approche produit",
-  decision: "Decision",
-  organization: "Organisation",
+  visionStrategy: "Vision & Strategie",
+  planning: "Planification",
+  execution: "Execution",
+  mindsetBehaviors: "Mindset",
 };
 
 function emptyTeamInsights(teamRadar: RadarAxisValues, participants: RadarParticipant[]): RadarTeamInsights {
@@ -81,13 +96,14 @@ const RadarPartyPage = () => {
   const [onboardingInitialStep, setOnboardingInitialStep] = useState<1 | 2>(1);
 
   const [teamRadar, setTeamRadar] = useState<RadarAxisValues>({
-    collaboration: 50,
-    product: 50,
-    decision: 50,
-    organization: 50,
+    visionStrategy: 50,
+    planning: 50,
+    execution: 50,
+    mindsetBehaviors: 50,
   });
   const [teamInsights, setTeamInsights] = useState<RadarTeamInsights | null>(null);
   const [sessionStatus, setSessionStatus] = useState<"lobby" | "started">("lobby");
+  const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
 
   const currentQuestion = RADAR_QUESTIONS[questionIndex];
   const progressPct = Math.round(((questionIndex + 1) / RADAR_QUESTIONS.length) * 100);
@@ -102,6 +118,19 @@ const RadarPartyPage = () => {
     () => participants.some((participant) => participant.id === participantId && participant.isHost),
     [participants, participantId]
   );
+  const teamDetailScores = useMemo(() => {
+    const keys = Array.from(new Set(RADAR_QUESTIONS.map((question) => question.subdimension)));
+    const aggregated: Record<string, number> = {};
+    keys.forEach((key) => {
+      const values = participants
+        .map((participant) => participant.result?.polesPercent?.[key])
+        .filter((value): value is number => Number.isFinite(value));
+      if (values.length > 0) {
+        aggregated[key] = Math.round(values.reduce((sum, value) => sum + value, 0) / values.length);
+      }
+    });
+    return aggregated;
+  }, [participants]);
 
   const refreshSession = async (codeArg?: string) => {
     const code = (codeArg ?? roomCode ?? "").trim().toUpperCase();
@@ -211,7 +240,7 @@ const RadarPartyPage = () => {
       setParticipantId("");
       setSessionStatus("lobby");
       setTeamInsights(null);
-      setTeamRadar({ collaboration: 50, product: 50, decision: 50, organization: 50 });
+      setTeamRadar({ visionStrategy: 50, planning: 50, execution: 50, mindsetBehaviors: 50 });
       return;
     }
     if (showOnlineOnboarding) {
@@ -255,6 +284,24 @@ const RadarPartyPage = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const confirmQuitSession = () => {
+    setLeaveDialogOpen(false);
+    setRoomCode(null);
+    setParticipantId("");
+    setParticipants([]);
+    setSessionStatus("lobby");
+    setAnswers({});
+    setQuestionIndex(0);
+    setLocalResult(null);
+    setTeamInsights(null);
+    setTeamRadar({ visionStrategy: 50, planning: 50, execution: 50, mindsetBehaviors: 50 });
+    if (fromEntry) {
+      navigate("/?stage=entry&experience=agile-radar");
+      return;
+    }
+    navigate("/?stage=select-experience");
   };
 
   if (stage === "lobby") {
@@ -409,8 +456,9 @@ const RadarPartyPage = () => {
           <section className="grid min-w-0 gap-4 overflow-x-hidden">
             <RadarChartCard
               title="Radar individuel"
-              subtitle="Convention: collaboration = % team, produit = % qualite, decision = % data, organisation = % structure"
+              subtitle="Axe moyen + sous-categories integrees (0 a 100)"
               radar={resultToShow.radar}
+              detailScores={resultToShow.polesPercent}
             />
 
             <Card className="rounded-xl border-cyan-300/30 bg-slate-950/45 p-4">
@@ -447,10 +495,8 @@ const RadarPartyPage = () => {
 
             <div className="flex flex-wrap gap-2">
               <PrimaryButton onClick={submitToSession} disabled={!canPublish || loading}>
-                Publier mon profil dans la session
+                Comparer avec l'equipe
               </PrimaryButton>
-              <SecondaryButton onClick={() => setStage("questionnaire")}>Repasser le questionnaire</SecondaryButton>
-              <SecondaryButton onClick={() => setStage("lobby")}>Retour au lobby</SecondaryButton>
             </div>
           </section>
         ) : null}
@@ -474,8 +520,9 @@ const RadarPartyPage = () => {
 
             <RadarChartCard
               title="Radar equipe"
-              subtitle="Moyenne des radars individuels soumis"
+              subtitle="Moyenne des axes + sous-categories equipe"
               radar={teamRadar}
+              detailScores={teamDetailScores}
             />
 
             <Card className="rounded-xl border-cyan-300/30 bg-slate-950/45 p-4">
@@ -536,45 +583,9 @@ const RadarPartyPage = () => {
             </Card>
 
             <div className="flex flex-wrap gap-2">
-              <PrimaryButton onClick={() => setStage("workshop")}>Voir insights atelier</PrimaryButton>
-              <SecondaryButton onClick={() => setStage("lobby")}>Retour lobby</SecondaryButton>
-            </div>
-          </section>
-        ) : null}
-
-        {stage === "workshop" ? (
-          <section className="grid min-w-0 gap-4 overflow-x-hidden">
-            <Card className="rounded-xl border-cyan-300/30 bg-slate-950/45 p-4">
-              <div className="flex items-center gap-2">
-                <MessageSquareText className="h-4 w-4 text-cyan-200" />
-                <h3 className="text-base font-semibold text-cyan-100">Insights atelier</h3>
-              </div>
-              <p className="mt-2 break-words text-sm text-slate-200">{teamInsights?.summary ?? "Aucune donnee equipe disponible."}</p>
-            </Card>
-
-            <Card className="rounded-xl border-cyan-300/30 bg-slate-950/45 p-4">
-              <h4 className="text-sm font-semibold text-cyan-100">Ecarts par axe (min / max)</h4>
-              <ul className="mt-3 space-y-2 text-sm text-slate-200">
-                {(teamInsights?.spreads ?? []).map((spread) => (
-                  <li key={spread.axis} className="break-words">
-                    {AXIS_FR[spread.axis]}: min {spread.min}, max {spread.max}, ecart {spread.spread}
-                    {spread.polarized ? " (divergence forte)" : ""}
-                  </li>
-                ))}
-              </ul>
-            </Card>
-
-            <Card className="rounded-xl border-cyan-300/30 bg-slate-950/45 p-4">
-              <h4 className="text-sm font-semibold text-cyan-100">Questions de discussion</h4>
-              <ul className="mt-3 space-y-2 text-sm text-slate-200">
-                {(teamInsights?.workshopQuestions ?? []).map((question) => (
-                  <li key={question} className="break-words">- {question}</li>
-                ))}
-              </ul>
-            </Card>
-
-            <div className="flex flex-wrap gap-2">
-              <SecondaryButton onClick={() => setStage("team-radar")}>Retour radar equipe</SecondaryButton>
+              <SecondaryButton className={cn(CTA_NEON_DANGER)} onClick={() => setLeaveDialogOpen(true)}>
+                Quitter
+              </SecondaryButton>
             </div>
           </section>
         ) : null}
@@ -588,6 +599,32 @@ const RadarPartyPage = () => {
           </div>
         ) : null}
       </Card>
+
+      <AlertDialog open={leaveDialogOpen} onOpenChange={setLeaveDialogOpen}>
+        <AlertDialogContent
+          className={cn(
+            GAME_DIALOG_CONTENT,
+            "max-w-md rounded-2xl border-cyan-300/40 p-5 sm:p-6 shadow-[0_0_0_1px_rgba(34,211,238,0.2),0_14px_40px_rgba(2,6,23,0.6)]"
+          )}
+        >
+          <AlertDialogHeader className="space-y-3">
+            <AlertDialogTitle className="text-base uppercase tracking-[0.08em] text-cyan-100">
+              Quitter Radar Party ?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-sm text-slate-300">
+              Tu vas quitter la session en cours et revenir a la selection des experiences.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-1 grid grid-cols-1 gap-2 sm:grid-cols-2 sm:space-x-0">
+            <AlertDialogCancel className={cn(CTA_NEON_SECONDARY_SUBTLE, "h-11 w-full rounded-xl text-cyan-100")}>
+              Annuler
+            </AlertDialogCancel>
+            <AlertDialogAction className={cn(CTA_NEON_DANGER, "h-11 w-full rounded-xl")} onClick={confirmQuitSession}>
+              Quitter
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
