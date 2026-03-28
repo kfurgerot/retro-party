@@ -33,6 +33,13 @@ const answerLabels = [
   "Plutot d'accord",
   "Tout a fait d'accord",
 ];
+const likertScale = [
+  { uiId: "agree-strong", score: 5, size: "h-12 w-12 sm:h-16 sm:w-16", side: "agree" as const },
+  { uiId: "agree", score: 4, size: "h-10 w-10 sm:h-14 sm:w-14", side: "agree" as const },
+  { uiId: "neutral", score: 3, size: "h-8 w-8 sm:h-11 sm:w-11", side: "neutral" as const },
+  { uiId: "disagree", score: 2, size: "h-10 w-10 sm:h-14 sm:w-14", side: "disagree" as const },
+  { uiId: "disagree-strong", score: 1, size: "h-12 w-12 sm:h-16 sm:w-16", side: "disagree" as const },
+] as const;
 
 const AXIS_ORDER: Array<keyof RadarAxisValues> = ["collaboration", "product", "decision", "organization"];
 const AXIS_FR: Record<keyof RadarAxisValues, string> = {
@@ -351,18 +358,40 @@ const RadarPartyPage = () => {
               <p className="mt-3 break-words text-lg text-slate-100">{currentQuestion.text}</p>
             </div>
 
-            <div className="mt-6 grid grid-cols-1 gap-2 sm:grid-cols-5">
-              {[1, 2, 3, 4, 5].map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => handleSelectAnswer(value)}
-                  className="rounded-lg border border-cyan-300/30 bg-slate-950/45 p-3 text-left transition hover:border-cyan-300/55 hover:bg-cyan-500/10"
-                >
-                  <div className="text-base font-semibold text-cyan-100">{value}</div>
-                  <div className="mt-1 text-xs text-slate-300">{answerLabels[value - 1]}</div>
-                </button>
-              ))}
+            <div className="mt-6 rounded-lg border border-cyan-300/20 bg-slate-950/45 px-3 py-4 sm:px-6">
+              <div className="flex items-center justify-between gap-3 text-sm">
+                <span className="font-medium text-emerald-300">D'accord</span>
+                <span className="font-medium text-fuchsia-300">En desaccord</span>
+              </div>
+              <div className="mt-4 grid grid-cols-5 gap-1.5 sm:gap-3">
+                {likertScale.map((item) => (
+                  <button
+                    key={item.uiId}
+                    type="button"
+                    onClick={() => handleSelectAnswer(item.score)}
+                    title={answerLabels[item.score - 1]}
+                    aria-label={answerLabels[item.score - 1]}
+                    className="group inline-flex min-w-0 items-center justify-center"
+                  >
+                    <span
+                      className={cn(
+                        "rounded-full border-4 transition-transform duration-150 group-hover:scale-105",
+                        item.size,
+                        item.side === "agree" && "border-emerald-400/90 bg-emerald-500/10",
+                        item.side === "neutral" && "border-slate-400/80 bg-slate-500/10",
+                        item.side === "disagree" && "border-fuchsia-400/90 bg-fuchsia-500/10"
+                      )}
+                    />
+                  </button>
+                ))}
+              </div>
+              <div className="mt-4 grid grid-cols-5 gap-1 text-center text-[10px] text-slate-300 sm:text-xs">
+                {likertScale.map((item) => (
+                  <span key={`${item.uiId}-label`} className="block break-words">
+                    {answerLabels[item.score - 1]}
+                  </span>
+                ))}
+              </div>
             </div>
 
             <div className="mt-6 flex flex-wrap gap-2">
