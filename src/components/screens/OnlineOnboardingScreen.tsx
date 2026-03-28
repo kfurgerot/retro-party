@@ -11,6 +11,8 @@ interface OnlineOnboardingScreenProps {
   connected: boolean;
   initialName?: string;
   initialAvatar?: number;
+  initialStep?: 1 | 2;
+  brandLabel?: string;
   onSubmit: (payload: { name: string; avatar: number }) => void;
   onBack: () => void;
   overallStepStart?: number;
@@ -23,12 +25,14 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
   connected,
   initialName,
   initialAvatar,
+  initialStep = 1,
+  brandLabel,
   onSubmit,
   onBack,
   overallStepStart,
   overallStepTotal,
 }) => {
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<1 | 2>(initialStep);
   const [name, setName] = useState(() => cleanName(initialName ?? ""));
   const [avatar, setAvatar] = useState(() => {
     const next = Number.isFinite(initialAvatar) ? Number(initialAvatar) : 0;
@@ -78,7 +82,7 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
 
       <Card className="relative z-10 flex min-h-[82svh] w-full max-w-4xl flex-col p-5 sm:p-8">
         <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.16em] text-cyan-200/80">
-          <span>{fr.onlineOnboarding.brand}</span>
+          <span>{brandLabel || fr.onlineOnboarding.brand}</span>
           <span className="rounded-full border border-cyan-300/40 px-2 py-0.5">
             {showOverallStep
               ? `${fr.onlineOnboarding.step} ${currentOverallStep}/${overallStepTotal}`
@@ -173,7 +177,7 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
               className="h-11"
               onClick={goBack}
             >
-              {step === 1 ? fr.onlineOnboarding.back : fr.onlineOnboarding.previous}
+              {fr.onlineOnboarding.back}
             </SecondaryButton>
 
             {step === 1 ? (
@@ -207,7 +211,7 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
               className="h-12 min-h-0"
               onClick={goBack}
             >
-              {step === 1 ? fr.onlineOnboarding.back : fr.onlineOnboarding.previous}
+              {fr.onlineOnboarding.back}
             </SecondaryButton>
 
             {step === 1 ? (

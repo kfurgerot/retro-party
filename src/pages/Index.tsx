@@ -9,6 +9,7 @@ import { GameScreen } from '@/components/screens/GameScreen';
 import { ResultsScreen } from '@/components/screens/ResultsScreen';
 import { perfLog, perfMark, perfMeasure } from "@/lib/perf";
 import { fr } from "@/i18n/fr";
+import PlanningPokerPage from "@/pages/PlanningPoker";
 
 const Index: React.FC = () => {
   const location = useLocation();
@@ -21,6 +22,7 @@ const Index: React.FC = () => {
     const avatar = Number(params.get("avatar"));
     const auto = params.get("auto");
     const from = params.get("from");
+    const experience = params.get("experience");
     return {
       mode: mode === "join" ? "join" : "host",
       code: code ? code.toUpperCase() : "",
@@ -29,8 +31,13 @@ const Index: React.FC = () => {
       autoSubmit: auto === "1",
       direct: auto === "1" || !!code,
       fromEntry: from === "entry",
+      experience: experience === "planning-poker" ? "planning-poker" : "retro-party",
     };
   }, [location.search]);
+
+  if (initialParams.experience === "planning-poker") {
+    return <PlanningPokerPage />;
+  }
 
   const isOnline = useMemo(() => {
     if (typeof window === 'undefined') return false;
@@ -60,6 +67,9 @@ const Index: React.FC = () => {
   const [showOnlineOnboarding, setShowOnlineOnboarding] = useState<boolean>(
     () => !initialParams.name && !initialParams.direct
   );
+  const [onboardingInitialStep, setOnboardingInitialStep] = useState<1 | 2>(() =>
+    initialParams.name ? 2 : 1
+  );
 
   React.useEffect(() => {
     perfMark(screenTransitionStartMark);
@@ -76,7 +86,7 @@ const Index: React.FC = () => {
 
   const leaveOnlineSession = () => {
     online.leaveRoom();
-    navigate(initialParams.fromEntry ? "/?stage=entry" : "/");
+    navigate("/?stage=select-experience");
   };
 
   if (isOnline) {
@@ -85,20 +95,23 @@ const Index: React.FC = () => {
         return (
           <OnlineOnboardingScreen
             connected={online.connected}
+            brandLabel={fr.home.title}
             initialName={onboardingProfile.name || undefined}
             initialAvatar={onboardingProfile.avatar}
+            initialStep={onboardingInitialStep}
             overallStepStart={3}
             overallStepTotal={5}
             onSubmit={({ name, avatar }) => {
               setOnboardingProfile({ name, avatar });
+              setOnboardingInitialStep(1);
               setShowOnlineOnboarding(false);
             }}
             onBack={() => {
-              if (onboardingProfile.name) {
-                setShowOnlineOnboarding(false);
+              if (initialParams.fromEntry) {
+                navigate("/?stage=entry&experience=retro-party");
                 return;
               }
-              navigate(initialParams.fromEntry ? "/?stage=entry" : "/");
+              navigate("/?stage=select-experience");
             }}
           />
         );
@@ -108,6 +121,7 @@ const Index: React.FC = () => {
         <div className="h-full w-full">
           <OnlineLobbyScreen
             connected={online.connected}
+            brandLabel={fr.home.title}
             roomCode={online.code}
             lobbyPlayers={online.lobby}
             onHost={online.createRoom}
@@ -115,7 +129,10 @@ const Index: React.FC = () => {
             onLeave={() => {
               leaveOnlineSession();
             }}
-            onEditProfile={() => setShowOnlineOnboarding(true)}
+            onEditProfile={() => {
+              setOnboardingInitialStep(2);
+              setShowOnlineOnboarding(true);
+            }}
             onStartGame={online.startGame}
             canStart={online.isHost}
             initialName={onboardingProfile.name || initialParams.name || undefined}
@@ -126,6 +143,8 @@ const Index: React.FC = () => {
             stepLabel={`${fr.onlineOnboarding.step} 5/5`}
             stepCurrent={5}
             stepTotal={5}
+            shellStyle="transparent"
+            titleWhenNoRoomOverride={"Creer ou rejoindre un plateau"}
           />
         </div>
       );

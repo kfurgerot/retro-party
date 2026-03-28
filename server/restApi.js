@@ -149,10 +149,11 @@ function canAttemptLogin(key) {
   return current.length < LOGIN_RATE_LIMIT_MAX;
 }
 
-async function generateUniqueRoomCode({ pool, rooms, makeCode }) {
+async function generateUniqueRoomCode({ pool, rooms, makeCode, isCodeReserved }) {
   for (let i = 0; i < 30; i += 1) {
     const code = makeCode();
     if (rooms.has(code)) continue;
+    if (typeof isCodeReserved === "function" && isCodeReserved(code)) continue;
     const existing = await pool.query("SELECT 1 FROM rooms WHERE room_code = $1 LIMIT 1", [code]);
     if (existing.rowCount === 0) return code;
   }
@@ -241,7 +242,7 @@ async function getOwnedTemplate(pool, userId, templateId) {
   return result.rows[0] ?? null;
 }
 
-export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCode }) {
+export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCode, isCodeReserved }) {
   app.use("/api", async (req, res, next) => {
     try {
       req.currentUser = await getUserFromRequest(req, pool);
@@ -932,7 +933,7 @@ export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCod
         baseConfig: template.base_config || {},
         customQuestions: questionsResult.rows.map(serializeQuestion),
       };
-      const code = await generateUniqueRoomCode({ pool, rooms, makeCode });
+      const code = await generateUniqueRoomCode({ pool, rooms, makeCode, isCodeReserved });
       const roomId = crypto.randomUUID();
 
       await pool.query(
@@ -968,7 +969,7 @@ export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCod
       if (baseConfig != null && (typeof baseConfig !== "object" || Array.isArray(baseConfig))) {
         return res.status(400).json({ error: "Invalid payload" });
       }
-      const code = await generateUniqueRoomCode({ pool, rooms, makeCode });
+      const code = await generateUniqueRoomCode({ pool, rooms, makeCode, isCodeReserved });
       const roomId = crypto.randomUUID();
       const configSnapshot = {
         baseConfig: baseConfig ?? {},

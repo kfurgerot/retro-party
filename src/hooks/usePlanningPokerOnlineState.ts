@@ -1,0 +1,420 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { socket } from "@/net/socket";
+import { PlanningPokerRole, PlanningPokerRoundSummary, PlanningPokerState, PlanningPokerVoteSystem } from "@/types/planningPoker";
+import { computePlanningPokerStats } from "@/lib/planningPoker";
+
+type PlanningPokerSession = {
+  code: string;
+  name: string;
+  avatar: number;
+  sessionId: string;
+};
+
+const EMPTY_STATE: PlanningPokerState = {
+  phase: "lobby",
+  roomCode: null,
+  storyTitle: "Story #1",
+  voteSystem: "fibonacci",
+  votesOpen: false,
+  players: [],
+  revealed: false,
+  round: 1,
+  updatedAt: Date.now(),
+};
+
+const STORAGE_KEY = "retro-party:planning-poker:session";
+const HISTORY_STORAGE_KEY = "retro-party:planning-poker:history";
+let sessionFallbackCounter = 0;
+
+const makeSessionId = () => {
+  const webCrypto = globalThis.crypto;
+  if (webCrypto && typeof webCrypto.randomUUID === "function") {
+    return webCrypto.randomUUID();
+  }
+
+  if (webCrypto && typeof webCrypto.getRandomValues === "function") {
+    const bytes = new Uint8Array(8);
+    webCrypto.getRandomValues(bytes);
+    const randomHex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+    return `pp-${Date.now()}-${randomHex}`;
+  }
+
+  sessionFallbackCounter += 1;
+  return `pp-${Date.now()}-${sessionFallbackCounter.toString(36)}`;
+};
+
+const isSession = (value: unknown): value is PlanningPokerSession => {
+  if (!value || typeof value !== "object") return false;
+  const session = value as Partial<PlanningPokerSession>;
+  return (
+    typeof session.code === "string" &&
+    typeof session.name === "string" &&
+    typeof session.avatar === "number" &&
+    typeof session.sessionId === "string"
+  );
+};
+
+const loadSession = (): PlanningPokerSession | null => {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return isSession(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+};
+
+const storeSession = (session: PlanningPokerSession | null) => {
+  if (typeof window === "undefined") return;
+  if (!session) {
+    window.localStorage.removeItem(STORAGE_KEY);
+    return;
+  }
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+};
+
+type PersistedHistory = {
+  sessionId: string;
+  code: string;
+  history: PlanningPokerRoundSummary[];
+};
+
+const isRoundSummary = (value: unknown): value is PlanningPokerRoundSummary => {
+  if (!value || typeof value !== "object") return false;
+  const summary = value as Partial<PlanningPokerRoundSummary>;
+  return (
+    typeof summary.id === "string" &&
+    typeof summary.round === "number" &&
+    typeof summary.storyTitle === "string" &&
+    typeof summary.voteSystem === "string" &&
+    Array.isArray(summary.votes)
+  );
+};
+
+const loadHistory = (session: PlanningPokerSession | null): PlanningPokerRoundSummary[] => {
+  if (typeof window === "undefined" || !session) return [];
+  try {
+    const raw = window.localStorage.getItem(HISTORY_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as Partial<PersistedHistory>;
+    const sameSession =
+      parsed.sessionId === session.sessionId && parsed.code === session.code && Array.isArray(parsed.history);
+    if (!sameSession) return [];
+    return parsed.history.filter(isRoundSummary);
+  } catch {
+    return [];
+  }
+};
+
+const storeHistory = (session: PlanningPokerSession | null, history: PlanningPokerRoundSummary[]) => {
+  if (typeof window === "undefined") return;
+  if (!session || history.length === 0) {
+    window.localStorage.removeItem(HISTORY_STORAGE_KEY);
+    return;
+  }
+
+  const payload: PersistedHistory = {
+    sessionId: session.sessionId,
+    code: session.code,
+    history,
+  };
+  window.localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(payload));
+};
+
+export function usePlanningPokerOnlineState() {
+  const initialSession = loadSession();
+  const initialHistory = loadHistory(initialSession);
+
+  const [connected, setConnected] = useState(socket.connected);
+  const [code, setCode] = useState<string | null>(initialSession?.code ?? null);
+  const [myPlayerId, setMyPlayerId] = useState<string | null>(socket.id ?? null);
+  const [state, setState] = useState<PlanningPokerState>(
+    initialSession?.code ? { ...EMPTY_STATE, roomCode: initialSession.code } : EMPTY_STATE
+  );
+  const [history, setHistory] = useState<PlanningPokerRoundSummary[]>(initialHistory);
+  const [error, setError] = useState<string | null>(null);
+
+  const sessionRef = useRef<PlanningPokerSession | null>(initialSession);
+  const recordedSummariesRef = useRef<Set<string>>(new Set(initialHistory.map((entry) => entry.id)));
+  const pendingProfileRef = useRef<{ name: string; avatar: number; sessionId: string } | null>(
+    initialSession
+      ? { name: initialSession.name, avatar: initialSession.avatar, sessionId: initialSession.sessionId }
+      : null
+  );
+
+  useEffect(() => {
+    const tryResume = () => {
+      const active = sessionRef.current;
+      if (!active?.code) return;
+      if (!socket.connected) {
+        socket.connect();
+        return;
+      }
+      socket.emit("reconnect_poker_room", {
+        code: active.code,
+        sessionId: active.sessionId,
+      });
+    };
+
+    const onConnect = () => {
+      setConnected(true);
+      setMyPlayerId(socket.id ?? null);
+      tryResume();
+    };
+
+    const onDisconnect = () => {
+      setConnected(false);
+    };
+
+    const onStateUpdate = (nextState: PlanningPokerState) => {
+      setState(nextState);
+      if (nextState.roomCode) {
+        setCode(nextState.roomCode);
+      }
+
+      if (nextState.phase !== "playing" || !nextState.roomCode || !nextState.revealed) return;
+      const summaryId = `${nextState.roomCode}:${nextState.round}`;
+      if (recordedSummariesRef.current.has(summaryId)) return;
+
+      const votedPlayers = nextState.players.filter((player) => player.role === "player" && player.vote != null);
+      const stats = computePlanningPokerStats(nextState.players, nextState.voteSystem);
+      const summary: PlanningPokerRoundSummary = {
+        id: summaryId,
+        round: nextState.round,
+        storyTitle: nextState.storyTitle,
+        voteSystem: nextState.voteSystem,
+        totalVotes: stats.totalVotes,
+        average: stats.average,
+        median: stats.median,
+        min: stats.min,
+        max: stats.max,
+        distribution: stats.distribution,
+        votes: votedPlayers.map((player) => ({
+          playerName: player.name,
+          avatar: player.avatar,
+          value: player.vote ?? "-",
+        })),
+        revealedAt: nextState.updatedAt || Date.now(),
+      };
+
+      recordedSummariesRef.current.add(summaryId);
+      setHistory((previous) => [...previous, summary]);
+    };
+
+    const onRoomKnown = ({ code: roomCode }: { code: string }) => {
+      if (sessionRef.current?.code && sessionRef.current.code !== roomCode) {
+        recordedSummariesRef.current.clear();
+        setHistory([]);
+      }
+      setCode(roomCode);
+      setError(null);
+      if (!pendingProfileRef.current) return;
+
+      const nextSession: PlanningPokerSession = {
+        code: roomCode,
+        name: pendingProfileRef.current.name,
+        avatar: pendingProfileRef.current.avatar,
+        sessionId: pendingProfileRef.current.sessionId,
+      };
+      sessionRef.current = nextSession;
+      storeSession(nextSession);
+    };
+
+    const onError = ({ message }: { message?: string }) => {
+      const text = message ?? "Erreur socket";
+      setError(text);
+      const normalized = text.toLowerCase();
+      if (!normalized.includes("introuvable")) return;
+
+      storeHistory(sessionRef.current, []);
+      sessionRef.current = null;
+      pendingProfileRef.current = null;
+      recordedSummariesRef.current.clear();
+      setHistory([]);
+      storeSession(null);
+      setCode(null);
+      setState(EMPTY_STATE);
+    };
+
+    const onRoomClosed = ({ message }: { message?: string }) => {
+      setError(message ?? null);
+      storeHistory(sessionRef.current, []);
+      sessionRef.current = null;
+      pendingProfileRef.current = null;
+      recordedSummariesRef.current.clear();
+      setHistory([]);
+      storeSession(null);
+      setCode(null);
+      setState(EMPTY_STATE);
+    };
+
+    socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
+    socket.on("poker_state_update", onStateUpdate);
+    socket.on("poker_room_created", onRoomKnown);
+    socket.on("poker_room_joined", onRoomKnown);
+    socket.on("poker_room_reconnected", onRoomKnown);
+    socket.on("poker_error_msg", onError);
+    socket.on("poker_room_closed", onRoomClosed);
+
+    if (socket.connected) onConnect();
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState !== "visible") return;
+      tryResume();
+    };
+    const onWindowFocus = () => tryResume();
+    const onOnline = () => tryResume();
+
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("focus", onWindowFocus);
+    window.addEventListener("online", onOnline);
+
+    return () => {
+      socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
+      socket.off("poker_state_update", onStateUpdate);
+      socket.off("poker_room_created", onRoomKnown);
+      socket.off("poker_room_joined", onRoomKnown);
+      socket.off("poker_room_reconnected", onRoomKnown);
+      socket.off("poker_error_msg", onError);
+      socket.off("poker_room_closed", onRoomClosed);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("focus", onWindowFocus);
+      window.removeEventListener("online", onOnline);
+    };
+  }, []);
+
+  const createRoom = useCallback(
+    (name: string, avatar: number, role: PlanningPokerRole, voteSystem: PlanningPokerVoteSystem) => {
+      const normalizedName = name.trim() || "Hote";
+      const sessionId = sessionRef.current?.sessionId ?? makeSessionId();
+      pendingProfileRef.current = { name: normalizedName, avatar, sessionId };
+      setError(null);
+      if (!socket.connected) socket.connect();
+      socket.emit("create_poker_room", {
+        name: normalizedName,
+        avatar,
+        role,
+        voteSystem,
+        sessionId,
+      });
+    },
+    []
+  );
+
+  const joinRoom = useCallback((roomCode: string, name: string, avatar: number, role: PlanningPokerRole) => {
+    const normalizedName = name.trim() || "Joueur";
+    const sessionId = sessionRef.current?.sessionId ?? makeSessionId();
+    pendingProfileRef.current = { name: normalizedName, avatar, sessionId };
+    setError(null);
+    if (!socket.connected) socket.connect();
+    socket.emit("join_poker_room", {
+      code: roomCode,
+      name: normalizedName,
+      avatar,
+      role,
+      sessionId,
+    });
+  }, []);
+
+  const leaveRoom = useCallback(() => {
+    if (socket.connected) {
+      socket.emit("leave_poker_room");
+    }
+    storeHistory(sessionRef.current, []);
+    sessionRef.current = null;
+    pendingProfileRef.current = null;
+    recordedSummariesRef.current.clear();
+    setHistory([]);
+    storeSession(null);
+    setCode(null);
+    setState(EMPTY_STATE);
+  }, []);
+
+  const startSession = useCallback(() => {
+    socket.emit("start_poker_session");
+  }, []);
+
+  const voteCard = useCallback((value: string) => {
+    socket.emit("vote_card", { value });
+  }, []);
+
+  const revealVotes = useCallback(() => {
+    socket.emit("reveal_votes");
+  }, []);
+
+  useEffect(() => {
+    storeHistory(sessionRef.current, history);
+  }, [history]);
+
+  const openVotes = useCallback(() => {
+    socket.emit("open_votes");
+  }, []);
+
+  const reopenStoryVote = useCallback((storyTitle: string, returnStoryTitle: string) => {
+    socket.emit("reopen_story_vote", { storyTitle, returnStoryTitle });
+  }, []);
+
+  const resetVotes = useCallback(() => {
+    socket.emit("reset_votes");
+  }, []);
+
+  const revoteCurrentStory = useCallback(() => {
+    socket.emit("revote_current_story");
+  }, []);
+
+  const setVoteSystem = useCallback((voteSystem: PlanningPokerVoteSystem) => {
+    socket.emit("set_vote_system", { voteSystem });
+  }, []);
+
+  const setRole = useCallback((role: PlanningPokerRole) => {
+    socket.emit("set_poker_role", { role });
+  }, []);
+
+  const setStoryTitle = useCallback((storyTitle: string) => {
+    socket.emit("set_story_title", { storyTitle });
+  }, []);
+
+  const isHost = useMemo(() => {
+    if (!myPlayerId) return false;
+    return state.players.some((player) => player.socketId === myPlayerId && player.isHost);
+  }, [myPlayerId, state.players]);
+
+  const myRole = useMemo(() => {
+    if (!myPlayerId) return "spectator" as PlanningPokerRole;
+    return state.players.find((player) => player.socketId === myPlayerId)?.role ?? "spectator";
+  }, [myPlayerId, state.players]);
+
+  const myVote = useMemo(() => {
+    if (!myPlayerId) return null;
+    return state.players.find((player) => player.socketId === myPlayerId)?.vote ?? null;
+  }, [myPlayerId, state.players]);
+
+  return {
+    connected,
+    code,
+    error,
+    state,
+    history,
+    myPlayerId,
+    myRole,
+    myVote,
+    isHost,
+    createRoom,
+    joinRoom,
+    leaveRoom,
+    startSession,
+    voteCard,
+    openVotes,
+    reopenStoryVote,
+    revealVotes,
+    resetVotes,
+    revoteCurrentStory,
+    setVoteSystem,
+    setRole,
+    setStoryTitle,
+  };
+}
