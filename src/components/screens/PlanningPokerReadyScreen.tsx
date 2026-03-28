@@ -37,6 +37,7 @@ type Props = {
   connected: boolean;
   roomCode: string;
   lobbyPlayers: LobbyPlayer[];
+  brandLabel?: string;
   voteSystem: PlanningPokerVoteSystem;
   myRole: PlanningPokerRole;
   isHost: boolean;
@@ -58,6 +59,7 @@ export const PlanningPokerReadyScreen: React.FC<Props> = ({
   connected,
   roomCode,
   lobbyPlayers,
+  brandLabel,
   voteSystem,
   myRole,
   isHost,
@@ -117,7 +119,7 @@ export const PlanningPokerReadyScreen: React.FC<Props> = ({
 
       <Card className="relative z-10 flex min-h-[82svh] w-full max-w-4xl flex-col p-5 sm:p-8">
         <div className="flex items-center justify-between gap-2 text-[10px] uppercase tracking-[0.16em] text-cyan-200/80">
-          <span>{fr.onlineLobby.brand}</span>
+          <span>{brandLabel || fr.onlineLobby.brand}</span>
         </div>
 
         <h1 className="mt-4 text-center text-xl text-cyan-200 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)] sm:text-3xl">

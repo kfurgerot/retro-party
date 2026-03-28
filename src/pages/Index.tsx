@@ -95,6 +95,7 @@ const Index: React.FC = () => {
         return (
           <OnlineOnboardingScreen
             connected={online.connected}
+            brandLabel={fr.home.title}
             initialName={onboardingProfile.name || undefined}
             initialAvatar={onboardingProfile.avatar}
             initialStep={onboardingInitialStep}
@@ -120,6 +121,7 @@ const Index: React.FC = () => {
         <div className="h-full w-full">
           <OnlineLobbyScreen
             connected={online.connected}
+            brandLabel={fr.home.title}
             roomCode={online.code}
             lobbyPlayers={online.lobby}
             onHost={online.createRoom}

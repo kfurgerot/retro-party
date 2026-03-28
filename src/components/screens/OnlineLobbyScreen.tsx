@@ -33,6 +33,7 @@ interface OnlineLobbyScreenProps {
   connected: boolean;
   roomCode: string | null;
   lobbyPlayers: LobbyPlayer[];
+  brandLabel?: string;
   onHost: (name: string, avatar: number) => void;
   onJoin: (code: string, name: string, avatar: number) => void;
   onLeave: () => void;
@@ -62,6 +63,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
   connected,
   roomCode,
   lobbyPlayers,
+  brandLabel,
   onHost,
   onJoin,
   onLeave,
@@ -271,7 +273,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
 
       <ShellContainer className={shellClassName}>
         <div className="flex items-center justify-between gap-2 text-[10px] uppercase tracking-[0.16em] text-cyan-200/80">
-          <span>{fr.onlineLobby.brand}</span>
+          <span>{brandLabel || fr.onlineLobby.brand}</span>
           {!roomCode && stepLabel ? (
             <span className="rounded-full border border-cyan-300/40 px-2 py-0.5">
               {stepLabel}

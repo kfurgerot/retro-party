@@ -12,6 +12,7 @@ interface OnlineOnboardingScreenProps {
   initialName?: string;
   initialAvatar?: number;
   initialStep?: 1 | 2;
+  brandLabel?: string;
   onSubmit: (payload: { name: string; avatar: number }) => void;
   onBack: () => void;
   overallStepStart?: number;
@@ -25,6 +26,7 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
   initialName,
   initialAvatar,
   initialStep = 1,
+  brandLabel,
   onSubmit,
   onBack,
   overallStepStart,
@@ -80,7 +82,7 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
 
       <Card className="relative z-10 flex min-h-[82svh] w-full max-w-4xl flex-col p-5 sm:p-8">
         <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.16em] text-cyan-200/80">
-          <span>{fr.onlineOnboarding.brand}</span>
+          <span>{brandLabel || fr.onlineOnboarding.brand}</span>
           <span className="rounded-full border border-cyan-300/40 px-2 py-0.5">
             {showOverallStep
               ? `${fr.onlineOnboarding.step} ${currentOverallStep}/${overallStepTotal}`

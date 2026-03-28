@@ -62,6 +62,7 @@ const PlanningPokerPage: React.FC = () => {
       return (
         <OnlineOnboardingScreen
           connected={online.connected}
+          brandLabel={fr.planningPoker.gameTitle}
           initialName={profile.name || undefined}
           initialAvatar={profile.avatar}
           initialStep={onboardingInitialStep}
@@ -84,6 +85,7 @@ const PlanningPokerPage: React.FC = () => {
         <div className="h-full w-full">
           <OnlineLobbyScreen
             connected={online.connected}
+            brandLabel={fr.planningPoker.gameTitle}
             roomCode={null}
             lobbyPlayers={[]}
             onHost={(name, avatar) => online.createRoom(name, avatar, "player", voteSystem)}
@@ -113,6 +115,7 @@ const PlanningPokerPage: React.FC = () => {
     return (
       <PlanningPokerReadyScreen
         connected={online.connected}
+        brandLabel={fr.planningPoker.gameTitle}
         roomCode={online.code}
         lobbyPlayers={online.state.players}
         voteSystem={online.state.voteSystem || voteSystem}

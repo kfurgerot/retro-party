@@ -27,6 +27,10 @@ const Home = () => {
   });
   const playPrefetchedRef = useRef(false);
   const [progressPct, setProgressPct] = useState(20);
+  const selectedExperienceBrandLabel =
+    selectedExperience === "planning-poker" ? fr.planningPoker.gameTitle : fr.home.title;
+  const selectedExperienceTitle =
+    selectedExperience === "planning-poker" ? fr.planningPoker.gameTitle : fr.home.title;
 
   const prefetchPlayRoute = () => {
     if (playPrefetchedRef.current) return;
@@ -91,14 +95,14 @@ const Home = () => {
 
       <Card className="relative z-10 flex min-h-[82svh] w-full max-w-4xl flex-col p-5 sm:p-8">
         <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.16em] text-cyan-200/80">
-          <span>{fr.selectExperience.brand}</span>
+          <span>{selectedExperienceBrandLabel}</span>
           <span className="rounded-full border border-cyan-300/40 px-2 py-0.5">
             {`${fr.onlineOnboarding.step} 2/5`}
           </span>
         </div>
 
         <h1 className="mt-4 text-center text-xl text-cyan-200 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)] sm:text-3xl">
-          {fr.home.title}
+          {selectedExperienceTitle}
         </h1>
 
         <div className="mt-4 h-1 w-full overflow-hidden rounded bg-slate-900/55">

@@ -136,19 +136,33 @@ export const SelectExperienceScreen: React.FC<SelectExperienceScreenProps> = ({
                   selectedExperience === tool.id && tool.available && "border-cyan-300/50 bg-cyan-500/10"
                 )}
               >
+                {(() => {
+                  const isPlanningParty = tool.id === "planning-poker";
+                  const availableBadgeClass = isPlanningParty
+                    ? "border border-sky-400/45 bg-sky-500/12 text-sky-200"
+                    : "border border-emerald-400/40 bg-emerald-500/10 text-emerald-200";
+                  const badgeText = !tool.available
+                    ? fr.selectExperience.soon
+                    : isPlanningParty
+                    ? fr.selectExperience.beta
+                    : fr.selectExperience.ready;
+
+                  return (
                 <div className="flex items-center justify-between gap-2">
                   <tool.Icon className="h-7 w-7 text-cyan-100" aria-hidden="true" />
                   <span
                     className={cn(
                       "rounded-full px-2 py-0.5 text-[10px] uppercase tracking-[0.12em]",
                       tool.available
-                        ? "border border-emerald-400/40 bg-emerald-500/10 text-emerald-200"
+                        ? availableBadgeClass
                         : "border border-amber-400/40 bg-amber-500/10 text-amber-200"
                     )}
                   >
-                    {tool.available ? fr.selectExperience.ready : fr.selectExperience.soon}
+                    {badgeText}
                   </span>
                 </div>
+                  );
+                })()}
                 <div className="mt-3 text-sm font-semibold text-cyan-100">{tool.title}</div>
                 <div className="mt-1 text-xs text-slate-300">{tool.description}</div>
               </button>
