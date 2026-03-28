@@ -118,7 +118,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
 }) => {
   const [mobileActionsOpen, setMobileActionsOpen] = useState(false);
   const [mobileMenuTab, setMobileMenuTab] = useState<"spectators" | "session">("session");
-  const [sidebarTab, setSidebarTab] = useState<"spectators" | "session">("spectators");
+  const [sidebarTab, setSidebarTab] = useState<"spectators" | "session">("session");
   const [sessionCursor, setSessionCursor] = useState(0);
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
@@ -311,6 +311,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
     const normalized = mobileStoryEditorDraft.trim();
     if (!normalized) {
       setMobileStoryEditorOpen(false);
+      setMobileActionsOpen(false);
       return;
     }
     if (normalized !== state.storyTitle) {
@@ -318,6 +319,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
       setStoryDraft(normalized);
     }
     setMobileStoryEditorOpen(false);
+    setMobileActionsOpen(false);
   }, [isHost, mobileStoryEditorDraft, onStoryTitleChange, state.storyTitle]);
 
   const handleDeckVote = React.useCallback(
