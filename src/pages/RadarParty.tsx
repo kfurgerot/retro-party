@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Frown, Meh, Smile } from "lucide-react";
+import { FileDown, Frown, Meh, Smile } from "lucide-react";
 import { OnlineLobbyScreen } from "@/components/screens/OnlineLobbyScreen";
 import { OnlineOnboardingScreen } from "@/components/screens/OnlineOnboardingScreen";
 import { RetroScreenBackground } from "@/components/screens/RetroScreenBackground";
@@ -241,6 +241,9 @@ const RadarPartyPage = () => {
   const [hostParticipates, setHostParticipates] = useState(true);
   const [resultPublished, setResultPublished] = useState(false);
   const publishInFlightRef = useRef(false);
+  const individualRadarCaptureRef = useRef<HTMLDivElement | null>(null);
+  const teamRadarCaptureRef = useRef<HTMLDivElement | null>(null);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
 
   const currentQuestion = RADAR_QUESTIONS[questionIndex];
   const progressPct = Math.round(((questionIndex + 1) / RADAR_QUESTIONS.length) * 100);
@@ -301,6 +304,10 @@ const RadarPartyPage = () => {
     [progressRows]
   );
   const teamCompletionPct = expectedResponders > 0 ? Math.round((completedResponders / expectedResponders) * 100) : 0;
+  const resolvedTeamInsights = useMemo(
+    () => teamInsights ?? emptyTeamInsights(teamRadar, participants),
+    [teamInsights, teamRadar, participants]
+  );
 
   const renderThemeCardsBlock = (
     radarValues: RadarAxisValues,
@@ -352,6 +359,31 @@ const RadarPartyPage = () => {
       </Card>
     );
   };
+
+  const buildPdfThemeRows = (radarValues: RadarAxisValues) =>
+    RADAR_DIMENSIONS.map((dimension) => {
+      const score = clampPercent(Number(radarValues?.[dimension] ?? 0));
+      const shortTitles: Record<RadarDimension, string> = {
+        collaboration: "Collaboration",
+        fun: "Fun",
+        learning: "Apprentissages",
+        alignment: "Alignement",
+        ownership: "Ownership",
+        process: "Processus",
+        resources: "Ressources",
+        roles: "Roles",
+        speed: "Vitesse",
+        value: "Valeur",
+      };
+      const color =
+        score >= 75 ? [16, 185, 129] : score >= 55 ? [132, 204, 22] : score >= 35 ? [245, 158, 11] : [239, 68, 68];
+      return {
+        dimension,
+        score,
+        title: shortTitles[dimension],
+        color,
+      };
+    }).sort((a, b) => b.score - a.score);
 
   const refreshSession = async (codeArg?: string) => {
     const code = (codeArg ?? roomCode ?? "").trim().toUpperCase();
@@ -610,6 +642,404 @@ const RadarPartyPage = () => {
     setStage("team-radar");
   };
 
+  const handleExportTeamPdf = async () => {
+    if (!isHost || stage !== "team-radar") return;
+    if (isExportingPdf) return;
+
+    const captureElement = teamRadarCaptureRef.current;
+    if (!captureElement) {
+      setError("Export PDF indisponible: radar equipe introuvable.");
+      return;
+    }
+
+    setIsExportingPdf(true);
+    setError(null);
+
+    try {
+      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import("html2canvas"), import("jspdf")]);
+      const screenshot = await html2canvas(captureElement, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#020617",
+      });
+
+      const radarImage = screenshot.toDataURL("image/png");
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 12;
+      const contentWidth = pageWidth - margin * 2;
+      const hostName = participants.find((participant) => participant.isHost)?.displayName ?? "Hote";
+      const sessionCode = roomCode || "-";
+      const generatedAt = new Date().toLocaleString("fr-FR", {
+        dateStyle: "medium",
+        timeStyle: "short",
+      });
+      const themeRows = buildPdfThemeRows(teamRadar);
+
+      const addPageBackground = (subtitle: string) => {
+        pdf.setFillColor(2, 6, 23);
+        pdf.rect(0, 0, pageWidth, pageHeight, "F");
+        pdf.setDrawColor(34, 211, 238);
+        pdf.setLineWidth(0.4);
+        pdf.roundedRect(6, 6, pageWidth - 12, pageHeight - 12, 3, 3, "S");
+
+        pdf.setFillColor(8, 145, 178);
+        pdf.roundedRect(margin, margin, contentWidth, 21, 3, 3, "F");
+        pdf.setTextColor(236, 254, 255);
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(14);
+        pdf.text("Retro Party - Radar Party", margin + 4, margin + 8);
+        pdf.setFontSize(9);
+        pdf.setTextColor(186, 230, 253);
+        pdf.text(subtitle, margin + 4, margin + 14);
+      };
+
+      const drawWrappedParagraph = (text: string, x: number, y: number, width: number) => {
+        const lines = pdf.splitTextToSize(text, width);
+        pdf.text(lines, x, y);
+        return y + lines.length * 4.8;
+      };
+      const drawMetaCard = (
+        x: number,
+        y: number,
+        width: number,
+        height: number,
+        label: string,
+        value: string,
+        color: [number, number, number]
+      ) => {
+        pdf.setFillColor(15, 23, 42);
+        pdf.roundedRect(x, y, width, height, 2.5, 2.5, "F");
+        pdf.setDrawColor(color[0], color[1], color[2]);
+        pdf.setLineWidth(0.3);
+        pdf.roundedRect(x, y, width, height, 2.5, 2.5, "S");
+        pdf.setFont("helvetica", "bold");
+        pdf.setTextColor(148, 163, 184);
+        pdf.setFontSize(7.8);
+        pdf.text(label, x + 3, y + 4.2);
+        pdf.setFont("helvetica", "bold");
+        pdf.setTextColor(236, 254, 255);
+        pdf.setFontSize(12.4);
+        pdf.text(value, x + 3, y + height - 3.7);
+      };
+
+      addPageBackground("Rapport equipe - export atelier");
+
+      let cursorY = margin + 26;
+      const cardGap = 4;
+      const halfCardWidth = (contentWidth - cardGap) / 2;
+      drawMetaCard(margin, cursorY, halfCardWidth, 16, "CODE SESSION", sessionCode, [56, 189, 248]);
+      drawMetaCard(margin + halfCardWidth + cardGap, cursorY, halfCardWidth, 16, "HOTE", hostName, [34, 197, 94]);
+      cursorY += 18;
+      drawMetaCard(
+        margin,
+        cursorY,
+        halfCardWidth,
+        16,
+        "PARTICIPANTS",
+        `${participants.length} (${completedResponders}/${expectedResponders} completes)`,
+        [14, 165, 233]
+      );
+      drawMetaCard(
+        margin + halfCardWidth + cardGap,
+        cursorY,
+        halfCardWidth,
+        16,
+        "PROGRESSION",
+        `${teamCompletionPct}%`,
+        [250, 204, 21]
+      );
+      cursorY += 18;
+      drawMetaCard(margin, cursorY, contentWidth, 13.5, "GENERE LE", generatedAt, [125, 211, 252]);
+      cursorY += 17;
+
+      pdf.setFillColor(15, 23, 42);
+      pdf.roundedRect(margin, cursorY, contentWidth, 108, 3, 3, "F");
+      const imageMaxWidth = contentWidth - 8;
+      const imageMaxHeight = 100;
+      const imageRatio = screenshot.width / screenshot.height;
+      let imageWidth = imageMaxWidth;
+      let imageHeight = imageWidth / imageRatio;
+      if (imageHeight > imageMaxHeight) {
+        imageHeight = imageMaxHeight;
+        imageWidth = imageHeight * imageRatio;
+      }
+      const imageX = margin + (contentWidth - imageWidth) / 2;
+      const imageY = cursorY + (108 - imageHeight) / 2;
+      pdf.addImage(radarImage, "PNG", imageX, imageY, imageWidth, imageHeight, undefined, "FAST");
+
+      cursorY += 114;
+      pdf.setFont("helvetica", "bold");
+      pdf.setTextColor(236, 254, 255);
+      pdf.setFontSize(11);
+      pdf.text("Lecture rapide par themes (equipe)", margin, cursorY);
+      cursorY += 4;
+
+      themeRows.forEach((row) => {
+        const rowHeight = 8.1;
+        const pillWidth = 21;
+        const rowTop = cursorY;
+        const barX = margin + 53;
+        const barWidth = contentWidth - (barX - margin) - pillWidth - 6;
+        const barHeight = 2.3;
+        const scoreWidth = (barWidth * row.score) / 100;
+        const pillX = margin + contentWidth - pillWidth - 2;
+
+        pdf.setFillColor(15, 23, 42);
+        pdf.roundedRect(margin, rowTop, contentWidth, rowHeight - 0.9, 2, 2, "F");
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(8.7);
+        pdf.setTextColor(226, 232, 240);
+        pdf.text(row.title, margin + 3, rowTop + 3.4);
+
+        pdf.setFillColor(30, 41, 59);
+        pdf.roundedRect(barX, rowTop + 4.1, barWidth, barHeight, 1.4, 1.4, "F");
+        pdf.setFillColor(row.color[0], row.color[1], row.color[2]);
+        pdf.roundedRect(barX, rowTop + 4.1, Math.max(2, scoreWidth), barHeight, 1.4, 1.4, "F");
+
+        pdf.setFillColor(row.color[0], row.color[1], row.color[2]);
+        pdf.roundedRect(pillX, rowTop + 1.1, pillWidth, 5.1, 2, 2, "F");
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(8.3);
+        pdf.setTextColor(2, 6, 23);
+        pdf.text(`${row.score}%`, pillX + pillWidth / 2, rowTop + 4.8, { align: "center" });
+        cursorY += rowHeight;
+      });
+
+      pdf.addPage();
+      addPageBackground("Insights atelier");
+      cursorY = margin + 27;
+
+      pdf.setFillColor(15, 23, 42);
+      pdf.roundedRect(margin, cursorY, contentWidth, 36, 3, 3, "F");
+      pdf.setFont("helvetica", "bold");
+      pdf.setTextColor(236, 254, 255);
+      pdf.setFontSize(11);
+      pdf.text("Resume equipe", margin + 4, cursorY + 7);
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(9.5);
+      pdf.setTextColor(203, 213, 225);
+      cursorY = drawWrappedParagraph(resolvedTeamInsights.summary, margin + 4, cursorY + 13, contentWidth - 8) + 5;
+
+      const homogeneousLines =
+        resolvedTeamInsights.homogeneousAxes.length > 0
+          ? resolvedTeamInsights.homogeneousAxes
+          : ["Aucun axe fortement homogene pour le moment."];
+      const polarizedLines =
+        resolvedTeamInsights.polarizedAxes.length > 0
+          ? resolvedTeamInsights.polarizedAxes
+          : ["Aucun axe de divergence forte (> 25 points)."];
+
+      const drawBulletSection = (title: string, items: string[], tone: [number, number, number]) => {
+        const estimatedHeight = 12 + items.length * 9;
+        if (cursorY + estimatedHeight > pageHeight - margin) {
+          pdf.addPage();
+          addPageBackground("Insights atelier");
+          cursorY = margin + 18;
+        }
+        pdf.setFillColor(15, 23, 42);
+        pdf.roundedRect(margin, cursorY, contentWidth, estimatedHeight, 3, 3, "F");
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(10.5);
+        pdf.setTextColor(tone[0], tone[1], tone[2]);
+        pdf.text(title, margin + 4, cursorY + 7);
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(9.2);
+        pdf.setTextColor(226, 232, 240);
+        let itemY = cursorY + 12;
+        items.forEach((item) => {
+          itemY = drawWrappedParagraph(`- ${item}`, margin + 4, itemY, contentWidth - 8);
+        });
+        cursorY = itemY + 2;
+      };
+
+      drawBulletSection("Axes homogenes", homogeneousLines, [52, 211, 153]);
+      drawBulletSection("Axes polarises", polarizedLines, [251, 191, 36]);
+
+      const topThemes = themeRows.slice(0, 3).map((theme) => `${theme.title} (${theme.score}%)`);
+      const focusThemes = [...themeRows].reverse().slice(0, 3).map((theme) => `${theme.title} (${theme.score}%)`);
+      drawBulletSection("Themes les plus solides", topThemes, [34, 211, 238]);
+      drawBulletSection("Themes a consolider", focusThemes, [248, 113, 113]);
+
+      const stamp = `${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, "0")}${String(new Date().getDate()).padStart(2, "0")}-${String(new Date().getHours()).padStart(2, "0")}${String(new Date().getMinutes()).padStart(2, "0")}`;
+      const filename = `retro-party-radar-equipe-${(roomCode || "session").toLowerCase()}-${stamp}.pdf`;
+      pdf.save(filename);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur lors de l'export PDF.");
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
+  const handleExportIndividualPdf = async () => {
+    if (stage !== "individual" || !localResult) return;
+    if (isExportingPdf) return;
+
+    const captureElement = individualRadarCaptureRef.current;
+    if (!captureElement) {
+      setError("Export PDF indisponible: radar individuel introuvable.");
+      return;
+    }
+
+    setIsExportingPdf(true);
+    setError(null);
+
+    try {
+      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import("html2canvas"), import("jspdf")]);
+      const screenshot = await html2canvas(captureElement, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#020617",
+      });
+
+      const radarImage = screenshot.toDataURL("image/png");
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 12;
+      const contentWidth = pageWidth - margin * 2;
+      const generatedAt = new Date().toLocaleString("fr-FR", {
+        dateStyle: "medium",
+        timeStyle: "short",
+      });
+      const themeRows = buildPdfThemeRows(localResult.radar);
+
+      const addPageBackground = (subtitle: string) => {
+        pdf.setFillColor(2, 6, 23);
+        pdf.rect(0, 0, pageWidth, pageHeight, "F");
+        pdf.setDrawColor(34, 211, 238);
+        pdf.setLineWidth(0.4);
+        pdf.roundedRect(6, 6, pageWidth - 12, pageHeight - 12, 3, 3, "S");
+
+        pdf.setFillColor(8, 145, 178);
+        pdf.roundedRect(margin, margin, contentWidth, 21, 3, 3, "F");
+        pdf.setTextColor(236, 254, 255);
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(14);
+        pdf.text("Retro Party - Radar Party", margin + 4, margin + 8);
+        pdf.setFontSize(9);
+        pdf.setTextColor(186, 230, 253);
+        pdf.text(subtitle, margin + 4, margin + 14);
+      };
+
+      const drawWrappedParagraph = (text: string, x: number, y: number, width: number) => {
+        const lines = pdf.splitTextToSize(text, width);
+        pdf.text(lines, x, y);
+        return y + lines.length * 4.8;
+      };
+
+      addPageBackground("Rapport individuel");
+
+      let cursorY = margin + 26;
+      pdf.setFillColor(15, 23, 42);
+      pdf.roundedRect(margin, cursorY, contentWidth, 20, 3, 3, "F");
+      pdf.setDrawColor(34, 211, 238);
+      pdf.setLineWidth(0.25);
+      pdf.roundedRect(margin, cursorY, contentWidth, 20, 3, 3, "S");
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(10);
+      pdf.setTextColor(224, 242, 254);
+      pdf.text(`Profil: ${profile.name || "Participant"}`, margin + 4, cursorY + 7);
+      pdf.text(`Session: ${roomCode || "-"}`, margin + 4, cursorY + 12);
+      pdf.text(`Genere le: ${generatedAt}`, margin + 4, cursorY + 17);
+
+      cursorY += 25;
+      pdf.setFillColor(15, 23, 42);
+      pdf.roundedRect(margin, cursorY, contentWidth, 108, 3, 3, "F");
+      const imageMaxWidth = contentWidth - 8;
+      const imageMaxHeight = 100;
+      const imageRatio = screenshot.width / screenshot.height;
+      let imageWidth = imageMaxWidth;
+      let imageHeight = imageWidth / imageRatio;
+      if (imageHeight > imageMaxHeight) {
+        imageHeight = imageMaxHeight;
+        imageWidth = imageHeight * imageRatio;
+      }
+      const imageX = margin + (contentWidth - imageWidth) / 2;
+      const imageY = cursorY + (108 - imageHeight) / 2;
+      pdf.addImage(radarImage, "PNG", imageX, imageY, imageWidth, imageHeight, undefined, "FAST");
+
+      cursorY += 114;
+      pdf.setFont("helvetica", "bold");
+      pdf.setTextColor(236, 254, 255);
+      pdf.setFontSize(11);
+      pdf.text("Scores par themes", margin, cursorY);
+      cursorY += 4;
+
+      themeRows.forEach((row) => {
+        const barY = cursorY + 1.2;
+        const barX = margin + 53;
+        const barWidth = 84;
+        const barHeight = 3.6;
+        const scoreWidth = (barWidth * row.score) / 100;
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(8.8);
+        pdf.setTextColor(226, 232, 240);
+        pdf.text(row.title, margin, cursorY + 3.8);
+        pdf.setFont("helvetica", "normal");
+        pdf.setTextColor(203, 213, 225);
+        pdf.text(`${row.score}%`, margin + 142, cursorY + 3.8, { align: "right" });
+        pdf.setFillColor(30, 41, 59);
+        pdf.roundedRect(barX, barY, barWidth, barHeight, 1.9, 1.9, "F");
+        pdf.setFillColor(row.color[0], row.color[1], row.color[2]);
+        pdf.roundedRect(barX, barY, Math.max(2, scoreWidth), barHeight, 1.9, 1.9, "F");
+        cursorY += 6.5;
+      });
+
+      pdf.addPage();
+      addPageBackground("Synthese individuelle");
+      cursorY = margin + 27;
+
+      pdf.setFillColor(15, 23, 42);
+      pdf.roundedRect(margin, cursorY, contentWidth, 38, 3, 3, "F");
+      pdf.setFont("helvetica", "bold");
+      pdf.setTextColor(236, 254, 255);
+      pdf.setFontSize(11);
+      pdf.text("Resume individuel", margin + 4, cursorY + 7);
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(9.4);
+      pdf.setTextColor(203, 213, 225);
+      cursorY = drawWrappedParagraph(localResult.insights.summary, margin + 4, cursorY + 13, contentWidth - 8) + 5;
+
+      const drawBulletSection = (title: string, items: string[], tone: [number, number, number]) => {
+        const estimatedHeight = 12 + items.length * 8.7;
+        if (cursorY + estimatedHeight > pageHeight - margin) {
+          pdf.addPage();
+          addPageBackground("Synthese individuelle");
+          cursorY = margin + 18;
+        }
+        pdf.setFillColor(15, 23, 42);
+        pdf.roundedRect(margin, cursorY, contentWidth, estimatedHeight, 3, 3, "F");
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(10.5);
+        pdf.setTextColor(tone[0], tone[1], tone[2]);
+        pdf.text(title, margin + 4, cursorY + 7);
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(9.2);
+        pdf.setTextColor(226, 232, 240);
+        let itemY = cursorY + 12;
+        items.forEach((item) => {
+          itemY = drawWrappedParagraph(`- ${item}`, margin + 4, itemY, contentWidth - 8);
+        });
+        cursorY = itemY + 2;
+      };
+
+      drawBulletSection("Points forts", localResult.insights.strengths, [52, 211, 153]);
+      drawBulletSection("Points de vigilance", localResult.insights.watchouts, [251, 191, 36]);
+      drawBulletSection("Questions atelier", localResult.insights.workshopQuestions, [56, 189, 248]);
+
+      const now = new Date();
+      const stamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}-${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}`;
+      const filename = `retro-party-radar-individuel-${(roomCode || "session").toLowerCase()}-${stamp}.pdf`;
+      pdf.save(filename);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur lors de l'export PDF individuel.");
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
   const handleStartSession = async () => {
     if (!roomCode || !participantId || !isHost) return;
     setLoading(true);
@@ -745,6 +1175,8 @@ const RadarPartyPage = () => {
   }
 
   const resultToShow = localResult;
+  const canExportIndividualPdf = stage === "individual" && Boolean(resultToShow);
+  const canExportTeamPdf = stage === "team-radar" && isHost;
 
   return (
     <div className="scanlines relative flex min-h-svh w-full items-start justify-center px-4 pb-12 pt-4 sm:pt-6">
@@ -754,6 +1186,18 @@ const RadarPartyPage = () => {
         <header className="flex flex-wrap items-center justify-between gap-2 text-xs uppercase tracking-[0.14em] text-cyan-200/80">
           <span>Retro Party - Radar Party</span>
           <div className="flex flex-wrap items-center justify-end gap-2">
+            {canExportIndividualPdf || canExportTeamPdf ? (
+              <SecondaryButton
+                onClick={() => void (canExportTeamPdf ? handleExportTeamPdf() : handleExportIndividualPdf())}
+                disabled={isExportingPdf}
+                className="h-8 rounded-full border-cyan-300/45 bg-cyan-500/18 px-3 text-[11px] font-semibold tracking-[0.08em] text-cyan-50 hover:bg-cyan-500/26"
+              >
+                <span className="inline-flex items-center gap-1.5">
+                  <FileDown className="h-3.5 w-3.5" />
+                  {isExportingPdf ? "Export PDF..." : canExportTeamPdf ? "Exporter PDF equipe" : "Exporter PDF"}
+                </span>
+              </SecondaryButton>
+            ) : null}
             {roomCode ? (
               <div className="inline-flex max-w-full items-center gap-1 rounded-full border border-cyan-300/40 bg-cyan-500/12 px-2.5 py-1 text-[11px] font-semibold tracking-[0.08em] text-cyan-50">
                 <span className="uppercase text-cyan-100/85">Code</span>
@@ -834,12 +1278,14 @@ const RadarPartyPage = () => {
               <p className="mt-2 break-words text-sm text-slate-200">{resultToShow.insights.summary}</p>
             </Card>
 
-            <RadarChartCard
-              title="Radar individuel"
-              subtitle="Projection sur les 10 themes (score de 0 a 100)"
-              radar={resultToShow.radar}
-              detailScores={resultToShow.polesPercent}
-            />
+            <div ref={individualRadarCaptureRef} className="min-w-0">
+              <RadarChartCard
+                title="Radar individuel"
+                subtitle="Projection sur les 10 themes (score de 0 a 100)"
+                radar={resultToShow.radar}
+                detailScores={resultToShow.polesPercent}
+              />
+            </div>
 
             {renderThemeCardsBlock(resultToShow.radar)}
 
@@ -892,16 +1338,18 @@ const RadarPartyPage = () => {
               </div>
             </Card>
 
-            <RadarChartCard
-              title="Radar equipe"
-              subtitle="Moyenne des themes de l'equipe (mise a jour temps reel)"
-              radar={resultToShow?.radar ?? teamRadar}
-              detailScores={resultToShow ? resultToShow.polesPercent : teamDetailScores}
-              compareRadar={resultToShow ? teamRadar : undefined}
-              compareDetailScores={resultToShow ? teamDetailScores : undefined}
-              primaryLabel={resultToShow ? "Mon profil" : "Equipe"}
-              compareLabel="Equipe"
-            />
+            <div ref={teamRadarCaptureRef} className="min-w-0">
+              <RadarChartCard
+                title="Radar equipe"
+                subtitle="Moyenne des themes de l'equipe (mise a jour temps reel)"
+                radar={resultToShow?.radar ?? teamRadar}
+                detailScores={resultToShow ? resultToShow.polesPercent : teamDetailScores}
+                compareRadar={resultToShow ? teamRadar : undefined}
+                compareDetailScores={resultToShow ? teamDetailScores : undefined}
+                primaryLabel={resultToShow ? "Mon profil" : "Equipe"}
+                compareLabel="Equipe"
+              />
+            </div>
 
             {renderThemeCardsBlock(teamRadar, {
               title: "Cartes thematiques equipe",
@@ -911,7 +1359,7 @@ const RadarPartyPage = () => {
             <Card className="rounded-3xl border-cyan-300/30 bg-slate-950/45 p-4">
               <h4 className="text-sm font-semibold text-cyan-100">Axes homogenes et axes polarises</h4>
               <p className="mt-2 break-words text-sm text-slate-200">
-                {(teamInsights ?? emptyTeamInsights(teamRadar, participants)).summary}
+                {resolvedTeamInsights.summary}
               </p>
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
                 <div>
