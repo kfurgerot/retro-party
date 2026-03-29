@@ -1366,10 +1366,10 @@ const RadarPartyPage = () => {
 
             <div className="flex flex-wrap gap-2">
               {isHost && roomCode && sessionStatus === "started" ? (
-                <SecondaryButton onClick={() => setStage("team-progress")}>Suivi equipe</SecondaryButton>
+                <SecondaryButton onClick={() => setStage("team-progress")}>Progression</SecondaryButton>
               ) : null}
               <PrimaryButton onClick={submitToSession} disabled={!canPublish || loading}>
-                Comparer avec l'equipe
+                Radar equipe
               </PrimaryButton>
             </div>
           </section>
@@ -1380,8 +1380,8 @@ const RadarPartyPage = () => {
             <Card className="rounded-3xl border-cyan-300/30 bg-slate-950/45 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <h3 className="text-base font-semibold text-cyan-100">Session equipe</h3>
-                  <p className="break-words text-sm text-slate-200">Code de session: {roomCode || "-"}</p>
+                  <h3 className="text-base font-semibold text-cyan-100">Resume equipe</h3>
+                  <p className="mt-1 break-words text-sm text-slate-200">{resolvedTeamInsights.summary}</p>
                 </div>
               </div>
             </Card>
@@ -1406,9 +1406,6 @@ const RadarPartyPage = () => {
 
             <Card className="rounded-3xl border-cyan-300/30 bg-slate-950/45 p-4">
               <h4 className="text-sm font-semibold text-cyan-100">Axes homogenes et axes polarises</h4>
-              <p className="mt-2 break-words text-sm text-slate-200">
-                {resolvedTeamInsights.summary}
-              </p>
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
                 <div>
                   <p className="text-xs uppercase tracking-[0.12em] text-emerald-200">Homogenes</p>
@@ -1436,10 +1433,10 @@ const RadarPartyPage = () => {
             <div className="flex w-full items-center justify-between gap-2">
               <div className="flex flex-wrap items-center gap-2">
                 {resultToShow ? (
-                  <SecondaryButton onClick={() => setStage("individual")}>Retour a mon radar</SecondaryButton>
+                  <SecondaryButton onClick={() => setStage("individual")}>Mon radar</SecondaryButton>
                 ) : null}
                 {isHost && roomCode && sessionStatus === "started" ? (
-                  <SecondaryButton onClick={() => setStage("team-progress")}>Suivi equipe</SecondaryButton>
+                  <SecondaryButton onClick={() => setStage("team-progress")}>Progression</SecondaryButton>
                 ) : null}
               </div>
               <SecondaryButton className={cn(CTA_NEON_DANGER)} onClick={() => setLeaveDialogOpen(true)}>
@@ -1532,7 +1529,7 @@ const RadarPartyPage = () => {
           <div className="flex w-full flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap gap-2">
               {isHost && roomCode && sessionStatus === "started" ? (
-                <SecondaryButton onClick={() => setStage("team-progress")}>Suivi equipe</SecondaryButton>
+                <SecondaryButton onClick={() => setStage("team-progress")}>Progression</SecondaryButton>
               ) : null}
             </div>
             <SecondaryButton className={cn(CTA_NEON_DANGER)} onClick={() => setLeaveDialogOpen(true)}>
