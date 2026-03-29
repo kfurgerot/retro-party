@@ -27,10 +27,16 @@ export type TemplateQuestion = {
 };
 
 export type RadarAxisValues = {
-  visionStrategy: number;
-  planning: number;
-  execution: number;
-  mindsetBehaviors: number;
+  collaboration: number;
+  fun: number;
+  learning: number;
+  alignment: number;
+  ownership: number;
+  process: number;
+  resources: number;
+  roles: number;
+  speed: number;
+  value: number;
 };
 
 export type RadarPolesPercent = Record<string, number>;

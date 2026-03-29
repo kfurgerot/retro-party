@@ -13,9 +13,14 @@ import {
   GAME_DIALOG_CONTENT,
 } from "@/lib/uiTokens";
 import { RadarChartCard } from "@/components/radar-party/RadarChartCard";
-import { RADAR_QUESTIONS } from "@/features/radarParty/questions";
+import {
+  RADAR_DIMENSIONS,
+  RADAR_DIMENSION_LABELS,
+  RADAR_QUESTIONS,
+} from "@/features/radarParty/questions";
 import { buildIndividualInsights, buildTeamInsights } from "@/features/radarParty/insights";
 import {
+  createNeutralRadar,
   computeRadarScores,
   computeTeamAverageRadar,
   type RadarAnswers,
@@ -56,13 +61,8 @@ const likertScale = [
   { uiId: "disagree-strong", score: 1, size: "h-12 w-12 sm:h-16 sm:w-16", side: "disagree" as const },
 ] as const;
 
-const AXIS_ORDER: Array<keyof RadarAxisValues> = ["visionStrategy", "planning", "execution", "mindsetBehaviors"];
-const AXIS_FR: Record<keyof RadarAxisValues, string> = {
-  visionStrategy: "Vision & Strategie",
-  planning: "Planification",
-  execution: "Execution",
-  mindsetBehaviors: "Mindset",
-};
+const AXIS_ORDER: Array<keyof RadarAxisValues> = [...RADAR_DIMENSIONS];
+const AXIS_FR: Record<keyof RadarAxisValues, string> = RADAR_DIMENSION_LABELS;
 
 function emptyTeamInsights(teamRadar: RadarAxisValues, participants: RadarParticipant[]): RadarTeamInsights {
   return buildTeamInsights(
@@ -95,12 +95,7 @@ const RadarPartyPage = () => {
   const [showOnlineOnboarding, setShowOnlineOnboarding] = useState(true);
   const [onboardingInitialStep, setOnboardingInitialStep] = useState<1 | 2>(1);
 
-  const [teamRadar, setTeamRadar] = useState<RadarAxisValues>({
-    visionStrategy: 50,
-    planning: 50,
-    execution: 50,
-    mindsetBehaviors: 50,
-  });
+  const [teamRadar, setTeamRadar] = useState<RadarAxisValues>(createNeutralRadar());
   const [teamInsights, setTeamInsights] = useState<RadarTeamInsights | null>(null);
   const [sessionStatus, setSessionStatus] = useState<"lobby" | "started">("lobby");
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
@@ -240,7 +235,7 @@ const RadarPartyPage = () => {
       setParticipantId("");
       setSessionStatus("lobby");
       setTeamInsights(null);
-      setTeamRadar({ visionStrategy: 50, planning: 50, execution: 50, mindsetBehaviors: 50 });
+      setTeamRadar(createNeutralRadar());
       return;
     }
     if (showOnlineOnboarding) {
@@ -296,7 +291,7 @@ const RadarPartyPage = () => {
     setQuestionIndex(0);
     setLocalResult(null);
     setTeamInsights(null);
-    setTeamRadar({ visionStrategy: 50, planning: 50, execution: 50, mindsetBehaviors: 50 });
+    setTeamRadar(createNeutralRadar());
     if (fromEntry) {
       navigate("/?stage=entry&experience=agile-radar");
       return;
@@ -377,10 +372,10 @@ const RadarPartyPage = () => {
   const resultToShow = localResult;
 
   return (
-    <div className="scanlines relative flex min-h-svh w-full items-start justify-center overflow-x-hidden px-4 pb-12 pt-4 sm:pt-6">
+    <div className="scanlines relative flex min-h-svh w-full items-start justify-center px-4 pb-12 pt-4 sm:pt-6">
       <RetroScreenBackground />
 
-      <Card className="relative z-10 flex w-full max-w-5xl min-w-0 flex-col gap-4 overflow-x-hidden p-4 sm:p-8">
+      <Card className="relative z-10 flex w-full max-w-5xl min-w-0 flex-col gap-4 p-4 sm:p-8">
         <header className="flex flex-wrap items-center justify-between gap-2 text-xs uppercase tracking-[0.14em] text-cyan-200/80">
           <span>Retro Party - Radar Party</span>
           <span className="rounded-full border border-cyan-300/40 px-2 py-0.5">Module Agile</span>
@@ -389,7 +384,7 @@ const RadarPartyPage = () => {
         {error ? <p className="text-sm text-red-300">{error}</p> : null}
 
         {stage === "questionnaire" ? (
-          <section className={cn("min-w-0 overflow-x-hidden rounded-xl p-4 sm:p-5", APP_SHELL_SURFACE_SOFT)}>
+          <section className={cn("min-w-0 rounded-xl p-4 sm:p-5", APP_SHELL_SURFACE_SOFT)}>
             <div className="flex items-center justify-between gap-2 text-xs text-slate-300">
               <span>
                 Question {questionIndex + 1} / {RADAR_QUESTIONS.length}
@@ -453,10 +448,10 @@ const RadarPartyPage = () => {
         ) : null}
 
         {stage === "individual" && resultToShow ? (
-          <section className="grid min-w-0 gap-4 overflow-x-hidden">
+          <section className="grid min-w-0 gap-4">
             <RadarChartCard
               title="Radar individuel"
-              subtitle="Axe moyen + sous-categories integrees (0 a 100)"
+              subtitle="Projection sur les 10 themes (score de 0 a 100)"
               radar={resultToShow.radar}
               detailScores={resultToShow.polesPercent}
             />
@@ -502,7 +497,7 @@ const RadarPartyPage = () => {
         ) : null}
 
         {stage === "team-radar" ? (
-          <section className="grid min-w-0 gap-4 overflow-x-hidden">
+          <section className="grid min-w-0 gap-4">
             <Card className="rounded-xl border-cyan-300/30 bg-slate-950/45 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
@@ -520,15 +515,15 @@ const RadarPartyPage = () => {
 
             <RadarChartCard
               title="Radar equipe"
-              subtitle="Moyenne des axes + sous-categories equipe"
+              subtitle="Moyenne des themes de l'equipe"
               radar={teamRadar}
               detailScores={teamDetailScores}
             />
 
             <Card className="rounded-xl border-cyan-300/30 bg-slate-950/45 p-4">
               <h4 className="text-sm font-semibold text-cyan-100">Vue comparaison equipe</h4>
-              <div className="mt-3 max-w-full overflow-x-auto">
-                <table className="w-full table-fixed text-left text-xs text-slate-200">
+              <div className="-mx-2 mt-3 overflow-x-auto px-2 sm:mx-0 sm:px-0">
+                <table className="w-full min-w-[900px] table-auto text-left text-xs text-slate-200 sm:min-w-[980px]">
                   <thead>
                     <tr className="border-b border-cyan-300/20 text-cyan-100">
                       <th className="py-2 pr-3">Participant</th>

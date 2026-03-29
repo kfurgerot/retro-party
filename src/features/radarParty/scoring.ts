@@ -1,4 +1,4 @@
-import { RADAR_QUESTIONS, type RadarDimension } from "./questions";
+import { RADAR_DIMENSIONS, type RadarDimension, RADAR_QUESTIONS } from "./questions";
 
 export type RadarAxisValues = Record<RadarDimension, number>;
 export type RadarDetailScores = Record<string, number>;
@@ -14,14 +14,17 @@ const clampScore = (value: number) => Math.max(1, Math.min(5, Math.round(value))
 const round = (value: number) => Math.round(value);
 const toPct = (avgOnFive: number) => ((avgOnFive - 1) / 4) * 100;
 
-export function computeRadarScores(answers: RadarAnswers): RadarScoreResult {
-  const byDimension = {
-    visionStrategy: [] as number[],
-    planning: [] as number[],
-    execution: [] as number[],
-    mindsetBehaviors: [] as number[],
-  };
+const createBuckets = (): Record<RadarDimension, number[]> =>
+  Object.fromEntries(RADAR_DIMENSIONS.map((dimension) => [dimension, [] as number[]])) as Record<RadarDimension, number[]>;
 
+export function createNeutralRadar(seed = 50): RadarAxisValues {
+  return Object.fromEntries(
+    RADAR_DIMENSIONS.map((dimension) => [dimension, round(seed)])
+  ) as RadarAxisValues;
+}
+
+export function computeRadarScores(answers: RadarAnswers): RadarScoreResult {
+  const byDimension = createBuckets();
   const bySubdimension: Record<string, number[]> = {};
 
   for (const question of RADAR_QUESTIONS) {
@@ -31,14 +34,12 @@ export function computeRadarScores(answers: RadarAnswers): RadarScoreResult {
     bySubdimension[question.subdimension].push(answer);
   }
 
-  const radar: RadarAxisValues = {
-    visionStrategy: round(toPct(byDimension.visionStrategy.reduce((a, b) => a + b, 0) / byDimension.visionStrategy.length)),
-    planning: round(toPct(byDimension.planning.reduce((a, b) => a + b, 0) / byDimension.planning.length)),
-    execution: round(toPct(byDimension.execution.reduce((a, b) => a + b, 0) / byDimension.execution.length)),
-    mindsetBehaviors: round(
-      toPct(byDimension.mindsetBehaviors.reduce((a, b) => a + b, 0) / byDimension.mindsetBehaviors.length)
-    ),
-  };
+  const radar = RADAR_DIMENSIONS.reduce((acc, dimension) => {
+    const values = byDimension[dimension];
+    const averageScore = values.length > 0 ? values.reduce((sum, value) => sum + value, 0) / values.length : 3;
+    acc[dimension] = round(toPct(averageScore));
+    return acc;
+  }, createNeutralRadar());
 
   const polesPercent: RadarDetailScores = {};
   Object.entries(bySubdimension).forEach(([key, values]) => {
@@ -51,22 +52,22 @@ export function computeRadarScores(answers: RadarAnswers): RadarScoreResult {
 
 export function computeTeamAverageRadar(radars: RadarAxisValues[]): RadarAxisValues {
   if (radars.length === 0) {
-    return { visionStrategy: 50, planning: 50, execution: 50, mindsetBehaviors: 50 };
+    return createNeutralRadar();
   }
-  const total = radars.reduce(
-    (acc, radar) => ({
-      visionStrategy: acc.visionStrategy + radar.visionStrategy,
-      planning: acc.planning + radar.planning,
-      execution: acc.execution + radar.execution,
-      mindsetBehaviors: acc.mindsetBehaviors + radar.mindsetBehaviors,
-    }),
-    { visionStrategy: 0, planning: 0, execution: 0, mindsetBehaviors: 0 }
-  );
 
-  return {
-    visionStrategy: round(total.visionStrategy / radars.length),
-    planning: round(total.planning / radars.length),
-    execution: round(total.execution / radars.length),
-    mindsetBehaviors: round(total.mindsetBehaviors / radars.length),
-  };
+  const totals = RADAR_DIMENSIONS.reduce((acc, dimension) => {
+    acc[dimension] = 0;
+    return acc;
+  }, createNeutralRadar(0));
+
+  for (const radar of radars) {
+    for (const dimension of RADAR_DIMENSIONS) {
+      totals[dimension] += Number(radar[dimension] ?? 0);
+    }
+  }
+
+  return RADAR_DIMENSIONS.reduce((acc, dimension) => {
+    acc[dimension] = round(totals[dimension] / radars.length);
+    return acc;
+  }, createNeutralRadar());
 }
