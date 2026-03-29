@@ -136,11 +136,11 @@ const answerLabels = [
   "Tout a fait d'accord",
 ];
 const likertScale = [
-  { uiId: "disagree-strong", score: 1, size: "h-12 w-12 sm:h-16 sm:w-16" },
-  { uiId: "disagree", score: 2, size: "h-10 w-10 sm:h-14 sm:w-14" },
-  { uiId: "neutral", score: 3, size: "h-8 w-8 sm:h-11 sm:w-11" },
-  { uiId: "agree", score: 4, size: "h-10 w-10 sm:h-14 sm:w-14" },
-  { uiId: "agree-strong", score: 5, size: "h-12 w-12 sm:h-16 sm:w-16" },
+  { uiId: "disagree-strong", score: 1, size: "h-10 w-10 sm:h-16 sm:w-16" },
+  { uiId: "disagree", score: 2, size: "h-9 w-9 sm:h-14 sm:w-14" },
+  { uiId: "neutral", score: 3, size: "h-7 w-7 sm:h-11 sm:w-11" },
+  { uiId: "agree", score: 4, size: "h-9 w-9 sm:h-14 sm:w-14" },
+  { uiId: "agree-strong", score: 5, size: "h-10 w-10 sm:h-16 sm:w-16" },
 ] as const;
 
 const likertColorByScore: Record<number, string> = {
@@ -1521,10 +1521,20 @@ const RadarPartyPage = () => {
   const canExportTeamPdf = stage === "team-radar" && isHost;
 
   return (
-    <div className="scanlines relative flex min-h-svh w-full items-start justify-center px-4 pb-12 pt-4 sm:pt-6">
+    <div
+      className={cn(
+        "scanlines relative flex min-h-svh w-full items-start justify-center px-4 pt-4 sm:pt-6",
+        stage === "questionnaire" ? "pb-4 sm:pb-12" : "pb-12"
+      )}
+    >
       <RetroScreenBackground />
 
-      <Card className="relative z-10 flex w-full max-w-5xl min-w-0 flex-col gap-4 p-4 sm:p-8">
+      <Card
+        className={cn(
+          "relative z-10 flex w-full max-w-5xl min-w-0 flex-col",
+          stage === "questionnaire" ? "gap-3 p-3 sm:gap-4 sm:p-8" : "gap-4 p-4 sm:p-8"
+        )}
+      >
         <header className="text-xs uppercase tracking-[0.14em] text-cyan-200/80">
           <div className="flex items-start justify-between gap-2 sm:hidden">
             <span className="min-w-0 truncate pr-2">Retro Party - Radar Party</span>
@@ -1577,7 +1587,7 @@ const RadarPartyPage = () => {
         {error ? <p className="text-sm text-red-300">{error}</p> : null}
 
         {stage === "questionnaire" ? (
-          <section className={cn("min-w-0 rounded-3xl p-4 sm:p-5", APP_SHELL_SURFACE_SOFT)}>
+          <section className={cn("min-w-0 rounded-3xl p-3 sm:p-5", APP_SHELL_SURFACE_SOFT, "flex min-h-0 flex-col")}>
             <div className="flex items-center justify-between gap-2 text-xs text-slate-300">
               <span>
                 Question {questionIndex + 1} / {RADAR_QUESTIONS.length}
@@ -1610,22 +1620,24 @@ const RadarPartyPage = () => {
               <div className="h-full rounded bg-cyan-400/90 transition-all duration-300" style={{ width: `${progressPct}%` }} />
             </div>
 
-            <div className="mt-6 rounded-3xl border border-cyan-300/25 bg-slate-950/45 p-4">
+            <div className="mt-4 rounded-3xl border border-cyan-300/25 bg-slate-950/45 p-4 sm:mt-6">
               <p className="text-xs uppercase tracking-[0.12em] text-cyan-200/80">{AXIS_FR[currentQuestion.dimension]}</p>
-              <p className="mt-3 break-words text-lg text-slate-100">{currentQuestion.text}</p>
+              <div className="mt-2 min-h-[5.5rem] max-h-[5.5rem] overflow-y-auto pr-1 sm:mt-3 sm:min-h-0 sm:max-h-none sm:overflow-visible sm:pr-0">
+                <p className="break-words text-lg text-slate-100">{currentQuestion.text}</p>
+              </div>
             </div>
 
-            <div className="mt-6 rounded-3xl border border-cyan-300/20 bg-slate-950/45 px-3 py-4 sm:px-6">
+            <div className="mt-4 rounded-3xl border border-cyan-300/20 bg-slate-950/45 px-3 py-3 sm:mt-6 sm:px-6 sm:py-4">
               <div className="flex items-center justify-between gap-3 text-sm">
                 <span className="font-medium text-red-300">Pas du tout d'accord</span>
                 <span className="font-medium text-emerald-300">Tout a fait d'accord</span>
               </div>
-              <p className="mt-2 text-xs text-slate-300">
+              <p className="mt-2 min-h-4 text-xs text-slate-300">
                 {isCurrentAnswered
                   ? `Reponse enregistree: ${answerLabels[(currentAnswer as number) - 1]}`
                   : "Selectionne une reponse pour cette question."}
               </p>
-              <div className="mt-4 grid grid-cols-5 gap-1.5 sm:gap-3">
+              <div className="mt-3 grid grid-cols-5 gap-1 sm:mt-4 sm:gap-3">
                 {likertScale.map((item) => (
                   <button
                     key={item.uiId}
@@ -1648,7 +1660,7 @@ const RadarPartyPage = () => {
                   </button>
                 ))}
               </div>
-              <div className="mt-4 grid grid-cols-5 gap-1 text-center text-[10px] text-slate-300 sm:text-xs">
+              <div className="mt-3 grid grid-cols-5 gap-1 text-center text-[9px] text-slate-300 sm:mt-4 sm:text-xs">
                 {likertScale.map((item) => (
                   <span
                     key={`${item.uiId}-label`}
@@ -1660,7 +1672,20 @@ const RadarPartyPage = () => {
               </div>
             </div>
 
-            {questionNavMessage ? <p className="mt-3 text-xs text-amber-200">{questionNavMessage}</p> : null}
+            <p className={cn("mt-3 min-h-4 text-xs", questionNavMessage ? "text-amber-200" : "text-transparent")}>
+              {questionNavMessage ?? "."}
+            </p>
+
+            <div className="mt-2 flex items-center gap-2 sm:hidden">
+              {isHost && roomCode && sessionStatus === "started" ? (
+                <SecondaryButton className="h-9 px-3 text-xs" onClick={() => setStage("team-progress")}>
+                  Progression
+                </SecondaryButton>
+              ) : null}
+              <SecondaryButton className={cn("ml-auto h-9 px-3 text-xs", CTA_NEON_DANGER)} onClick={() => setLeaveDialogOpen(true)}>
+                Quitter
+              </SecondaryButton>
+            </div>
 
             <div className="mt-6 hidden flex-wrap justify-between gap-2 sm:flex">
               <SecondaryButton
@@ -1888,7 +1913,7 @@ const RadarPartyPage = () => {
         ) : null}
 
         {stage === "questionnaire" ? (
-          <div className="flex w-full flex-wrap items-center justify-between gap-2">
+          <div className="hidden w-full flex-wrap items-center justify-between gap-2 sm:flex">
             <div className="flex flex-wrap gap-2">
               {isHost && roomCode && sessionStatus === "started" ? (
                 <SecondaryButton onClick={() => setStage("team-progress")}>Progression</SecondaryButton>
