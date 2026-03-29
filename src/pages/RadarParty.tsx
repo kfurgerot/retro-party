@@ -899,6 +899,12 @@ const RadarPartyPage = () => {
       const pageHeight = pdf.internal.pageSize.getHeight();
       const margin = 12;
       const contentWidth = pageWidth - margin * 2;
+      const participantName =
+        profile.name ||
+        participants.find((participant) => participant.id === participantId)?.displayName ||
+        "Participant";
+      const avatarSymbol = AVATARS[profile.avatar] ?? "?";
+      const sessionCode = roomCode || "-";
       const generatedAt = new Date().toLocaleString("fr-FR", {
         dateStyle: "medium",
         timeStyle: "short",
@@ -928,23 +934,51 @@ const RadarPartyPage = () => {
         pdf.text(lines, x, y);
         return y + lines.length * 4.8;
       };
+      const drawMetaCard = (
+        x: number,
+        y: number,
+        width: number,
+        height: number,
+        label: string,
+        value: string,
+        color: [number, number, number]
+      ) => {
+        pdf.setFillColor(15, 23, 42);
+        pdf.roundedRect(x, y, width, height, 2.5, 2.5, "F");
+        pdf.setDrawColor(color[0], color[1], color[2]);
+        pdf.setLineWidth(0.3);
+        pdf.roundedRect(x, y, width, height, 2.5, 2.5, "S");
+        pdf.setFont("helvetica", "bold");
+        pdf.setTextColor(148, 163, 184);
+        pdf.setFontSize(7.8);
+        pdf.text(label, x + 3, y + 4.2);
+        pdf.setFont("helvetica", "bold");
+        pdf.setTextColor(236, 254, 255);
+        pdf.setFontSize(12.4);
+        pdf.text(value, x + 3, y + height - 3.7);
+      };
 
-      addPageBackground("Rapport individuel");
-
+      addPageBackground("Rapport individuel - export atelier");
       let cursorY = margin + 26;
-      pdf.setFillColor(15, 23, 42);
-      pdf.roundedRect(margin, cursorY, contentWidth, 20, 3, 3, "F");
-      pdf.setDrawColor(34, 211, 238);
-      pdf.setLineWidth(0.25);
-      pdf.roundedRect(margin, cursorY, contentWidth, 20, 3, 3, "S");
-      pdf.setFont("helvetica", "normal");
-      pdf.setFontSize(10);
-      pdf.setTextColor(224, 242, 254);
-      pdf.text(`Profil: ${profile.name || "Participant"}`, margin + 4, cursorY + 7);
-      pdf.text(`Session: ${roomCode || "-"}`, margin + 4, cursorY + 12);
-      pdf.text(`Genere le: ${generatedAt}`, margin + 4, cursorY + 17);
+      const cardGap = 4;
+      const halfCardWidth = (contentWidth - cardGap) / 2;
+      drawMetaCard(margin, cursorY, halfCardWidth, 16, "CODE SESSION", sessionCode, [56, 189, 248]);
+      drawMetaCard(margin + halfCardWidth + cardGap, cursorY, halfCardWidth, 16, "PROFIL", participantName, [34, 197, 94]);
+      cursorY += 18;
+      drawMetaCard(margin, cursorY, halfCardWidth, 16, "AVATAR", avatarSymbol, [14, 165, 233]);
+      drawMetaCard(
+        margin + halfCardWidth + cardGap,
+        cursorY,
+        halfCardWidth,
+        16,
+        "PROGRESSION",
+        `${completionCount}/${TOTAL_QUESTIONS}`,
+        [250, 204, 21]
+      );
+      cursorY += 18;
+      drawMetaCard(margin, cursorY, contentWidth, 13.5, "GENERE LE", generatedAt, [125, 211, 252]);
+      cursorY += 17;
 
-      cursorY += 25;
       pdf.setFillColor(15, 23, 42);
       pdf.roundedRect(margin, cursorY, contentWidth, 108, 3, 3, "F");
       const imageMaxWidth = contentWidth - 8;
@@ -964,49 +998,60 @@ const RadarPartyPage = () => {
       pdf.setFont("helvetica", "bold");
       pdf.setTextColor(236, 254, 255);
       pdf.setFontSize(11);
-      pdf.text("Scores par themes", margin, cursorY);
+      pdf.text("Lecture rapide par themes (individuel)", margin, cursorY);
       cursorY += 4;
 
       themeRows.forEach((row) => {
-        const barY = cursorY + 1.2;
+        const rowHeight = 8.1;
+        const pillWidth = 21;
+        const rowTop = cursorY;
         const barX = margin + 53;
-        const barWidth = 84;
-        const barHeight = 3.6;
+        const barWidth = contentWidth - (barX - margin) - pillWidth - 6;
+        const barHeight = 2.3;
         const scoreWidth = (barWidth * row.score) / 100;
+        const pillX = margin + contentWidth - pillWidth - 2;
+
+        pdf.setFillColor(15, 23, 42);
+        pdf.roundedRect(margin, rowTop, contentWidth, rowHeight - 0.9, 2, 2, "F");
         pdf.setFont("helvetica", "bold");
-        pdf.setFontSize(8.8);
+        pdf.setFontSize(8.7);
         pdf.setTextColor(226, 232, 240);
-        pdf.text(row.title, margin, cursorY + 3.8);
-        pdf.setFont("helvetica", "normal");
-        pdf.setTextColor(203, 213, 225);
-        pdf.text(`${row.score}%`, margin + 142, cursorY + 3.8, { align: "right" });
+        pdf.text(row.title, margin + 3, rowTop + 3.4);
+
         pdf.setFillColor(30, 41, 59);
-        pdf.roundedRect(barX, barY, barWidth, barHeight, 1.9, 1.9, "F");
+        pdf.roundedRect(barX, rowTop + 4.1, barWidth, barHeight, 1.4, 1.4, "F");
         pdf.setFillColor(row.color[0], row.color[1], row.color[2]);
-        pdf.roundedRect(barX, barY, Math.max(2, scoreWidth), barHeight, 1.9, 1.9, "F");
-        cursorY += 6.5;
+        pdf.roundedRect(barX, rowTop + 4.1, Math.max(2, scoreWidth), barHeight, 1.4, 1.4, "F");
+
+        pdf.setFillColor(row.color[0], row.color[1], row.color[2]);
+        pdf.roundedRect(pillX, rowTop + 1.1, pillWidth, 5.1, 2, 2, "F");
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(8.3);
+        pdf.setTextColor(2, 6, 23);
+        pdf.text(`${row.score}%`, pillX + pillWidth / 2, rowTop + 4.8, { align: "center" });
+        cursorY += rowHeight;
       });
 
       pdf.addPage();
-      addPageBackground("Synthese individuelle");
+      addPageBackground("Insights atelier");
       cursorY = margin + 27;
 
       pdf.setFillColor(15, 23, 42);
-      pdf.roundedRect(margin, cursorY, contentWidth, 38, 3, 3, "F");
+      pdf.roundedRect(margin, cursorY, contentWidth, 36, 3, 3, "F");
       pdf.setFont("helvetica", "bold");
       pdf.setTextColor(236, 254, 255);
       pdf.setFontSize(11);
       pdf.text("Resume individuel", margin + 4, cursorY + 7);
       pdf.setFont("helvetica", "normal");
-      pdf.setFontSize(9.4);
+      pdf.setFontSize(9.5);
       pdf.setTextColor(203, 213, 225);
       cursorY = drawWrappedParagraph(localResult.insights.summary, margin + 4, cursorY + 13, contentWidth - 8) + 5;
 
       const drawBulletSection = (title: string, items: string[], tone: [number, number, number]) => {
-        const estimatedHeight = 12 + items.length * 8.7;
+        const estimatedHeight = 12 + items.length * 9;
         if (cursorY + estimatedHeight > pageHeight - margin) {
           pdf.addPage();
-          addPageBackground("Synthese individuelle");
+          addPageBackground("Insights atelier");
           cursorY = margin + 18;
         }
         pdf.setFillColor(15, 23, 42);
@@ -1028,9 +1073,12 @@ const RadarPartyPage = () => {
       drawBulletSection("Points forts", localResult.insights.strengths, [52, 211, 153]);
       drawBulletSection("Points de vigilance", localResult.insights.watchouts, [251, 191, 36]);
       drawBulletSection("Questions atelier", localResult.insights.workshopQuestions, [56, 189, 248]);
+      const topThemes = themeRows.slice(0, 3).map((theme) => `${theme.title} (${theme.score}%)`);
+      const focusThemes = [...themeRows].reverse().slice(0, 3).map((theme) => `${theme.title} (${theme.score}%)`);
+      drawBulletSection("Themes les plus solides", topThemes, [34, 211, 238]);
+      drawBulletSection("Themes a consolider", focusThemes, [248, 113, 113]);
 
-      const now = new Date();
-      const stamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}-${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}`;
+      const stamp = `${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, "0")}${String(new Date().getDate()).padStart(2, "0")}-${String(new Date().getHours()).padStart(2, "0")}${String(new Date().getMinutes()).padStart(2, "0")}`;
       const filename = `retro-party-radar-individuel-${(roomCode || "session").toLowerCase()}-${stamp}.pdf`;
       pdf.save(filename);
     } catch (err) {
