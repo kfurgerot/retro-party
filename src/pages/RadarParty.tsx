@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { OnlineLobbyScreen } from "@/components/screens/OnlineLobbyScreen";
 import { OnlineOnboardingScreen } from "@/components/screens/OnlineOnboardingScreen";
@@ -102,6 +102,8 @@ const RadarPartyPage = () => {
   const [sessionStatus, setSessionStatus] = useState<"lobby" | "started">("lobby");
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
   const [hostParticipates, setHostParticipates] = useState(true);
+  const [resultPublished, setResultPublished] = useState(false);
+  const publishInFlightRef = useRef(false);
 
   const currentQuestion = RADAR_QUESTIONS[questionIndex];
   const progressPct = Math.round(((questionIndex + 1) / RADAR_QUESTIONS.length) * 100);
@@ -179,13 +181,15 @@ const RadarPartyPage = () => {
     const nextTeamInsights = response.team?.insights ?? emptyTeamInsights(nextTeamRadar, response.participants);
     setTeamRadar(nextTeamRadar);
     setTeamInsights(nextTeamInsights);
+    const self = response.participants.find((participant) => participant.id === participantId);
+    setResultPublished(Boolean(self?.submittedAt));
 
     if (response.session.status === "started" && stage === "lobby") {
-      const self = response.participants.find((participant) => participant.id === participantId);
       const shouldOpenProgressMenu = Boolean(self?.isHost) && response.session.hostParticipates === false;
       setAnswers({});
       setQuestionIndex(0);
       setLocalResult(null);
+      setResultPublished(false);
       setStage(shouldOpenProgressMenu ? "team-progress" : "questionnaire");
     }
   };
@@ -226,6 +230,9 @@ const RadarPartyPage = () => {
 
     if (!socket.connected) socket.connect();
     subscribe();
+    if (canLiveSync) {
+      void refreshSession(code);
+    }
     socket.on("connect", onConnect);
     socket.on("radar_session_update", onRadarSessionUpdate);
     document.addEventListener("visibilitychange", onVisibilityChange);
@@ -262,9 +269,51 @@ const RadarPartyPage = () => {
     if (!roomCode || !participantId) return;
     const answeredCount = RADAR_QUESTIONS.filter((question) => Number.isFinite(nextAnswers[question.id])).length;
     try {
-      await api.radarUpdateProgress(roomCode, { participantId, answeredCount });
+      const updated = await api.radarUpdateProgress(roomCode, { participantId, answeredCount });
+      setParticipants((previous) =>
+        previous.map((participant) =>
+          participant.id === participantId
+            ? {
+                ...participant,
+                progressAnswered: updated.participant.progressAnswered,
+                progressTotal: updated.participant.progressTotal,
+                progressPct: updated.participant.progressPct,
+              }
+            : participant
+        )
+      );
     } catch {
       // Keep questionnaire flow resilient if progress sync fails transiently.
+    }
+  };
+
+  const publishAnswersToSession = async (answersToPublish: RadarAnswers, options?: { silent?: boolean }) => {
+    if (!roomCode || !participantId) return false;
+    if (publishInFlightRef.current) return false;
+
+    const silent = options?.silent === true;
+    publishInFlightRef.current = true;
+    if (!silent) {
+      setLoading(true);
+      setError(null);
+    }
+
+    try {
+      const response = await api.radarSubmitAnswers(roomCode, { participantId, answers: answersToPublish });
+      setTeamRadar(response.team.radar);
+      setTeamInsights(response.team.insights);
+      setResultPublished(true);
+      return true;
+    } catch (err) {
+      if (!silent) {
+        setError(err instanceof Error ? err.message : "Erreur serveur");
+      }
+      return false;
+    } finally {
+      publishInFlightRef.current = false;
+      if (!silent) {
+        setLoading(false);
+      }
     }
   };
 
@@ -276,6 +325,7 @@ const RadarPartyPage = () => {
     if (questionIndex === RADAR_QUESTIONS.length - 1) {
       computeLocalResult(nextAnswers);
       setStage("individual");
+      void publishAnswersToSession(nextAnswers, { silent: true });
       return;
     }
     setQuestionIndex((prev) => prev + 1);
@@ -299,6 +349,7 @@ const RadarPartyPage = () => {
       setRoomCode(joined.session.code);
       setSessionStatus(joined.session.status);
       setParticipants([joined.participant]);
+      setResultPublished(false);
       setShowOnlineOnboarding(false);
       setStage("lobby");
       await refreshSession(joined.session.code);
@@ -322,6 +373,7 @@ const RadarPartyPage = () => {
       setRoomCode(joined.session.code);
       setSessionStatus(joined.session.status);
       setShowOnlineOnboarding(false);
+      setResultPublished(false);
       setStage("lobby");
       await refreshSession(joined.session.code);
     } catch (err) {
@@ -341,6 +393,7 @@ const RadarPartyPage = () => {
       setHostParticipates(true);
       setTeamInsights(null);
       setTeamRadar(createNeutralRadar());
+      setResultPublished(false);
       return;
     }
     if (showOnlineOnboarding) {
@@ -357,19 +410,16 @@ const RadarPartyPage = () => {
 
   const submitToSession = async () => {
     if (!canPublish || !roomCode) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await api.radarSubmitAnswers(roomCode, { participantId, answers });
-      setTeamRadar(response.team.radar);
-      setTeamInsights(response.team.insights);
+    if (resultPublished) {
       await refreshSession(roomCode);
       setStage("team-radar");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur serveur");
-    } finally {
-      setLoading(false);
+      return;
     }
+
+    const ok = await publishAnswersToSession(answers, { silent: false });
+    if (!ok) return;
+    await refreshSession(roomCode);
+    setStage("team-radar");
   };
 
   const handleStartSession = async () => {
@@ -401,6 +451,7 @@ const RadarPartyPage = () => {
     setTeamInsights(null);
     setHostParticipates(true);
     setTeamRadar(createNeutralRadar());
+    setResultPublished(false);
     if (fromEntry) {
       navigate("/?stage=entry&experience=agile-radar");
       return;
