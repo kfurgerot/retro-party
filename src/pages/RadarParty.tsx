@@ -903,8 +903,8 @@ const RadarPartyPage = () => {
         profile.name ||
         participants.find((participant) => participant.id === participantId)?.displayName ||
         "Participant";
-      const avatarSymbol = AVATARS[profile.avatar] ?? "?";
       const sessionCode = roomCode || "-";
+      const progressPercent = Math.round((completionCount / Math.max(1, TOTAL_QUESTIONS)) * 100);
       const generatedAt = new Date().toLocaleString("fr-FR", {
         dateStyle: "medium",
         timeStyle: "short",
@@ -965,14 +965,14 @@ const RadarPartyPage = () => {
       drawMetaCard(margin, cursorY, halfCardWidth, 16, "CODE SESSION", sessionCode, [56, 189, 248]);
       drawMetaCard(margin + halfCardWidth + cardGap, cursorY, halfCardWidth, 16, "PROFIL", participantName, [34, 197, 94]);
       cursorY += 18;
-      drawMetaCard(margin, cursorY, halfCardWidth, 16, "AVATAR", avatarSymbol, [14, 165, 233]);
+      drawMetaCard(margin, cursorY, halfCardWidth, 16, "REPONSES", `${completionCount}/${TOTAL_QUESTIONS}`, [14, 165, 233]);
       drawMetaCard(
         margin + halfCardWidth + cardGap,
         cursorY,
         halfCardWidth,
         16,
         "PROGRESSION",
-        `${completionCount}/${TOTAL_QUESTIONS}`,
+        `${progressPercent}%`,
         [250, 204, 21]
       );
       cursorY += 18;
@@ -1364,13 +1364,18 @@ const RadarPartyPage = () => {
               </Card>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              {isHost && roomCode && sessionStatus === "started" ? (
-                <SecondaryButton onClick={() => setStage("team-progress")}>Progression</SecondaryButton>
-              ) : null}
-              <PrimaryButton onClick={submitToSession} disabled={!canPublish || loading}>
-                Radar equipe
-              </PrimaryButton>
+            <div className="flex w-full items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <PrimaryButton onClick={submitToSession} disabled={!canPublish || loading}>
+                  Radar equipe
+                </PrimaryButton>
+                {isHost && roomCode && sessionStatus === "started" ? (
+                  <SecondaryButton onClick={() => setStage("team-progress")}>Progression</SecondaryButton>
+                ) : null}
+              </div>
+              <SecondaryButton className={cn(CTA_NEON_DANGER)} onClick={() => setLeaveDialogOpen(true)}>
+                Quitter
+              </SecondaryButton>
             </div>
           </section>
         ) : null}
