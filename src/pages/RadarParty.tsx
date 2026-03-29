@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight, FileDown, Frown, Meh, Smile } from "lucide-r
 import { OnlineLobbyScreen } from "@/components/screens/OnlineLobbyScreen";
 import { OnlineOnboardingScreen } from "@/components/screens/OnlineOnboardingScreen";
 import { RetroScreenBackground } from "@/components/screens/RetroScreenBackground";
-import { Card, PrimaryButton, SecondaryButton } from "@/components/app-shell";
+import { Card, SecondaryButton } from "@/components/app-shell";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { AVATARS } from "@/types/game";
@@ -264,6 +264,12 @@ const RadarPartyPage = () => {
     () => participants.some((participant) => participant.id === participantId && participant.isHost),
     [participants, participantId]
   );
+  const selfParticipant = useMemo(
+    () => participants.find((participant) => participant.id === participantId) ?? null,
+    [participants, participantId]
+  );
+  const hostHasSubmitted = Boolean(selfParticipant?.submittedAt);
+  const canResumeHostQuestionnaire = isHost && hostParticipates && !hostHasSubmitted;
   const teamDetailScores = useMemo(() => {
     const keys = Array.from(new Set(RADAR_QUESTIONS.map((question) => question.subdimension)));
     const aggregated: Record<string, number> = {};
@@ -1274,10 +1280,18 @@ const RadarPartyPage = () => {
       <RetroScreenBackground />
 
       <Card className="relative z-10 flex w-full max-w-5xl min-w-0 flex-col gap-4 p-4 sm:p-8">
-        <header className="flex flex-wrap items-center justify-between gap-2 text-xs uppercase tracking-[0.14em] text-cyan-200/80">
-          <span>Retro Party - Radar Party</span>
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            {canExportIndividualPdf || canExportTeamPdf ? (
+        <header className="text-xs uppercase tracking-[0.14em] text-cyan-200/80">
+          <div className="flex items-start justify-between gap-2 sm:hidden">
+            <span className="min-w-0 truncate pr-2">Retro Party - Radar Party</span>
+            {roomCode ? (
+              <div className="inline-flex shrink-0 items-center gap-1 rounded-full border border-cyan-300/40 bg-cyan-500/12 px-2.5 py-1 text-[11px] font-semibold tracking-[0.08em] text-cyan-50">
+                <span className="uppercase text-cyan-100/85">Code</span>
+                <span>{roomCode}</span>
+              </div>
+            ) : null}
+          </div>
+          {canExportIndividualPdf || canExportTeamPdf ? (
+            <div className="mt-2 flex justify-end sm:hidden">
               <SecondaryButton
                 onClick={() => void (canExportTeamPdf ? handleExportTeamPdf() : handleExportIndividualPdf())}
                 disabled={isExportingPdf}
@@ -1288,13 +1302,30 @@ const RadarPartyPage = () => {
                   {isExportingPdf ? "Export PDF..." : canExportTeamPdf ? "Exporter PDF equipe" : "Exporter PDF"}
                 </span>
               </SecondaryButton>
-            ) : null}
-            {roomCode ? (
-              <div className="inline-flex max-w-full items-center gap-1 rounded-full border border-cyan-300/40 bg-cyan-500/12 px-2.5 py-1 text-[11px] font-semibold tracking-[0.08em] text-cyan-50">
-                <span className="uppercase text-cyan-100/85">Code</span>
-                <span className="truncate">{roomCode}</span>
-              </div>
-            ) : null}
+            </div>
+          ) : null}
+          <div className="hidden flex-wrap items-center justify-between gap-2 sm:flex">
+            <span>Retro Party - Radar Party</span>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {canExportIndividualPdf || canExportTeamPdf ? (
+                <SecondaryButton
+                  onClick={() => void (canExportTeamPdf ? handleExportTeamPdf() : handleExportIndividualPdf())}
+                  disabled={isExportingPdf}
+                  className="h-8 rounded-full border-cyan-300/45 bg-cyan-500/18 px-3 text-[11px] font-semibold tracking-[0.08em] text-cyan-50 hover:bg-cyan-500/26"
+                >
+                  <span className="inline-flex items-center gap-1.5">
+                    <FileDown className="h-3.5 w-3.5" />
+                    {isExportingPdf ? "Export PDF..." : canExportTeamPdf ? "Exporter PDF equipe" : "Exporter PDF"}
+                  </span>
+                </SecondaryButton>
+              ) : null}
+              {roomCode ? (
+                <div className="inline-flex max-w-full items-center gap-1 rounded-full border border-cyan-300/40 bg-cyan-500/12 px-2.5 py-1 text-[11px] font-semibold tracking-[0.08em] text-cyan-50">
+                  <span className="uppercase text-cyan-100/85">Code</span>
+                  <span className="truncate">{roomCode}</span>
+                </div>
+              ) : null}
+            </div>
           </div>
         </header>
 
@@ -1447,9 +1478,9 @@ const RadarPartyPage = () => {
 
             <div className="flex w-full items-center justify-between gap-2">
               <div className="flex flex-wrap items-center gap-2">
-                <PrimaryButton onClick={submitToSession} disabled={!canPublish || loading}>
+                <SecondaryButton onClick={submitToSession} disabled={!canPublish || loading}>
                   Radar equipe
-                </PrimaryButton>
+                </SecondaryButton>
                 {isHost && roomCode && sessionStatus === "started" ? (
                   <SecondaryButton onClick={() => setStage("team-progress")}>Progression</SecondaryButton>
                 ) : null}
@@ -1540,9 +1571,6 @@ const RadarPartyPage = () => {
                   <h3 className="text-base font-semibold text-cyan-100">Suivi d'avancement equipe</h3>
                   <p className="break-words text-sm text-slate-200">Code de session: {roomCode || "-"}</p>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <SecondaryButton onClick={() => setStage("team-radar")}>Voir radar equipe</SecondaryButton>
-                </div>
               </div>
               <div className="mt-4">
                 <div className="flex items-center justify-between gap-2 text-xs text-slate-300">
@@ -1603,11 +1631,14 @@ const RadarPartyPage = () => {
               </div>
             </Card>
 
-            {isHost && hostParticipates ? (
-              <div className="flex w-full justify-start">
-                <SecondaryButton onClick={() => setStage("questionnaire")}>Reprendre le questionnaire</SecondaryButton>
+            <div className="flex w-full justify-start">
+              <div className="flex flex-wrap items-center gap-2">
+                <SecondaryButton onClick={() => setStage("team-radar")}>Radar equipe</SecondaryButton>
+                {canResumeHostQuestionnaire ? (
+                  <SecondaryButton onClick={() => setStage("questionnaire")}>Reprendre le questionnaire</SecondaryButton>
+                ) : null}
               </div>
-            ) : null}
+            </div>
           </section>
         ) : null}
 
