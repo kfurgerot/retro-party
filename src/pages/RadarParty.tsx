@@ -55,12 +55,20 @@ const answerLabels = [
   "Tout a fait d'accord",
 ];
 const likertScale = [
-  { uiId: "agree-strong", score: 5, size: "h-12 w-12 sm:h-16 sm:w-16", side: "agree" as const },
-  { uiId: "agree", score: 4, size: "h-10 w-10 sm:h-14 sm:w-14", side: "agree" as const },
-  { uiId: "neutral", score: 3, size: "h-8 w-8 sm:h-11 sm:w-11", side: "neutral" as const },
-  { uiId: "disagree", score: 2, size: "h-10 w-10 sm:h-14 sm:w-14", side: "disagree" as const },
-  { uiId: "disagree-strong", score: 1, size: "h-12 w-12 sm:h-16 sm:w-16", side: "disagree" as const },
+  { uiId: "disagree-strong", score: 1, size: "h-12 w-12 sm:h-16 sm:w-16" },
+  { uiId: "disagree", score: 2, size: "h-10 w-10 sm:h-14 sm:w-14" },
+  { uiId: "neutral", score: 3, size: "h-8 w-8 sm:h-11 sm:w-11" },
+  { uiId: "agree", score: 4, size: "h-10 w-10 sm:h-14 sm:w-14" },
+  { uiId: "agree-strong", score: 5, size: "h-12 w-12 sm:h-16 sm:w-16" },
 ] as const;
+
+const likertColorByScore: Record<number, string> = {
+  1: "border-red-500/95 bg-red-500/12",
+  2: "border-orange-400/95 bg-orange-500/12",
+  3: "border-yellow-300/95 bg-yellow-400/12",
+  4: "border-lime-400/95 bg-lime-500/12",
+  5: "border-emerald-500/95 bg-emerald-600/15",
+};
 
 const AXIS_FR: Record<keyof RadarAxisValues, string> = RADAR_DIMENSION_LABELS;
 const TOTAL_QUESTIONS = RADAR_QUESTIONS.length;
@@ -489,7 +497,7 @@ const RadarPartyPage = () => {
     return (
       <div>
         {error ? (
-          <div className="fixed left-1/2 top-4 z-50 -translate-x-1/2 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-200">
+          <div className="fixed left-1/2 top-4 z-50 -translate-x-1/2 rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-200">
             {error}
           </div>
         ) : null}
@@ -529,7 +537,7 @@ const RadarPartyPage = () => {
                 <p className="text-xs uppercase tracking-[0.1em] text-cyan-100/90">
                   Participation de l'hote
                 </p>
-                <div className="flex items-center justify-between gap-3 rounded-md border border-cyan-300/25 bg-slate-950/35 px-3 py-2">
+                <div className="flex items-center justify-between gap-3 rounded-2xl border border-cyan-300/25 bg-slate-950/35 px-3 py-2">
                   <div className="min-w-0">
                     <p className="text-sm text-cyan-50">
                       {hostParticipates ? "L'hote repond au questionnaire" : "L'hote n'a pas besoin de repondre"}
@@ -566,19 +574,11 @@ const RadarPartyPage = () => {
         <header className="flex flex-wrap items-center justify-between gap-2 text-xs uppercase tracking-[0.14em] text-cyan-200/80">
           <span>Retro Party - Radar Party</span>
           <div className="flex flex-wrap items-center justify-end gap-2">
-            <span className="rounded-full border border-cyan-300/40 px-2 py-0.5">Module Agile</span>
-            {isHost && roomCode && sessionStatus === "started" && stage !== "team-progress" ? (
-              <SecondaryButton className="h-8 min-h-0 px-3 text-xs" onClick={() => setStage("team-progress")}>
-                Suivi equipe
-              </SecondaryButton>
-            ) : null}
-            {isHost && roomCode && sessionStatus === "started" && stage === "team-progress" && hostParticipates ? (
-              <SecondaryButton
-                className="h-8 min-h-0 px-3 text-xs"
-                onClick={() => setStage(localResult ? "individual" : "questionnaire")}
-              >
-                {localResult ? "Voir mon resultat" : "Reprendre questionnaire"}
-              </SecondaryButton>
+            {roomCode ? (
+              <div className="inline-flex max-w-full items-center gap-1 rounded-full border border-cyan-300/40 bg-cyan-500/12 px-2.5 py-1 text-[11px] font-semibold tracking-[0.08em] text-cyan-50">
+                <span className="uppercase text-cyan-100/85">Code</span>
+                <span className="truncate">{roomCode}</span>
+              </div>
             ) : null}
           </div>
         </header>
@@ -586,7 +586,7 @@ const RadarPartyPage = () => {
         {error ? <p className="text-sm text-red-300">{error}</p> : null}
 
         {stage === "questionnaire" ? (
-          <section className={cn("min-w-0 rounded-xl p-4 sm:p-5", APP_SHELL_SURFACE_SOFT)}>
+          <section className={cn("min-w-0 rounded-3xl p-4 sm:p-5", APP_SHELL_SURFACE_SOFT)}>
             <div className="flex items-center justify-between gap-2 text-xs text-slate-300">
               <span>
                 Question {questionIndex + 1} / {RADAR_QUESTIONS.length}
@@ -597,15 +597,15 @@ const RadarPartyPage = () => {
               <div className="h-full rounded bg-cyan-400/90 transition-all duration-300" style={{ width: `${progressPct}%` }} />
             </div>
 
-            <div className="mt-6 rounded-lg border border-cyan-300/25 bg-slate-950/45 p-4">
+            <div className="mt-6 rounded-3xl border border-cyan-300/25 bg-slate-950/45 p-4">
               <p className="text-xs uppercase tracking-[0.12em] text-cyan-200/80">{AXIS_FR[currentQuestion.dimension]}</p>
               <p className="mt-3 break-words text-lg text-slate-100">{currentQuestion.text}</p>
             </div>
 
-            <div className="mt-6 rounded-lg border border-cyan-300/20 bg-slate-950/45 px-3 py-4 sm:px-6">
+            <div className="mt-6 rounded-3xl border border-cyan-300/20 bg-slate-950/45 px-3 py-4 sm:px-6">
               <div className="flex items-center justify-between gap-3 text-sm">
-                <span className="font-medium text-emerald-300">D'accord</span>
-                <span className="font-medium text-fuchsia-300">En desaccord</span>
+                <span className="font-medium text-red-300">Pas du tout d'accord</span>
+                <span className="font-medium text-emerald-300">Tout a fait d'accord</span>
               </div>
               <div className="mt-4 grid grid-cols-5 gap-1.5 sm:gap-3">
                 {likertScale.map((item) => (
@@ -621,9 +621,7 @@ const RadarPartyPage = () => {
                       className={cn(
                         "rounded-full border-4 transition-transform duration-150 group-hover:scale-105",
                         item.size,
-                        item.side === "agree" && "border-emerald-400/90 bg-emerald-500/10",
-                        item.side === "neutral" && "border-slate-400/80 bg-slate-500/10",
-                        item.side === "disagree" && "border-fuchsia-400/90 bg-fuchsia-500/10"
+                        likertColorByScore[item.score]
                       )}
                     />
                   </button>
@@ -658,13 +656,13 @@ const RadarPartyPage = () => {
               detailScores={resultToShow.polesPercent}
             />
 
-            <Card className="rounded-xl border-cyan-300/30 bg-slate-950/45 p-4">
+            <Card className="rounded-3xl border-cyan-300/30 bg-slate-950/45 p-4">
               <h3 className="text-base font-semibold text-cyan-100">Resume individuel</h3>
               <p className="mt-2 break-words text-sm text-slate-200">{resultToShow.insights.summary}</p>
             </Card>
 
             <div className="grid gap-4 lg:grid-cols-3">
-              <Card className="rounded-xl border-cyan-300/30 bg-slate-950/45 p-4">
+              <Card className="rounded-3xl border-cyan-300/30 bg-slate-950/45 p-4">
                 <h4 className="text-sm font-semibold text-cyan-100">Points forts potentiels</h4>
                 <ul className="mt-3 space-y-2 text-sm text-slate-200">
                   {resultToShow.insights.strengths.map((item) => (
@@ -672,7 +670,7 @@ const RadarPartyPage = () => {
                   ))}
                 </ul>
               </Card>
-              <Card className="rounded-xl border-cyan-300/30 bg-slate-950/45 p-4">
+              <Card className="rounded-3xl border-cyan-300/30 bg-slate-950/45 p-4">
                 <h4 className="text-sm font-semibold text-cyan-100">Points de vigilance potentiels</h4>
                 <ul className="mt-3 space-y-2 text-sm text-slate-200">
                   {resultToShow.insights.watchouts.map((item) => (
@@ -680,7 +678,7 @@ const RadarPartyPage = () => {
                   ))}
                 </ul>
               </Card>
-              <Card className="rounded-xl border-cyan-300/30 bg-slate-950/45 p-4">
+              <Card className="rounded-3xl border-cyan-300/30 bg-slate-950/45 p-4">
                 <h4 className="text-sm font-semibold text-cyan-100">Questions a se poser</h4>
                 <ul className="mt-3 space-y-2 text-sm text-slate-200">
                   {resultToShow.insights.workshopQuestions.map((item) => (
@@ -700,7 +698,7 @@ const RadarPartyPage = () => {
 
         {stage === "team-radar" ? (
           <section className="grid min-w-0 gap-4">
-            <Card className="rounded-xl border-cyan-300/30 bg-slate-950/45 p-4">
+            <Card className="rounded-3xl border-cyan-300/30 bg-slate-950/45 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <h3 className="text-base font-semibold text-cyan-100">Session equipe</h3>
@@ -720,7 +718,7 @@ const RadarPartyPage = () => {
               compareLabel="Equipe"
             />
 
-            <Card className="rounded-xl border-cyan-300/30 bg-slate-950/45 p-4">
+            <Card className="rounded-3xl border-cyan-300/30 bg-slate-950/45 p-4">
               <h4 className="text-sm font-semibold text-cyan-100">Axes homogenes et axes polarises</h4>
               <p className="mt-2 break-words text-sm text-slate-200">
                 {(teamInsights ?? emptyTeamInsights(teamRadar, participants)).summary}
@@ -764,7 +762,7 @@ const RadarPartyPage = () => {
 
         {stage === "team-progress" ? (
           <section className="grid min-w-0 gap-4">
-            <Card className="rounded-xl border-cyan-300/30 bg-slate-950/45 p-4">
+            <Card className="rounded-3xl border-cyan-300/30 bg-slate-950/45 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <h3 className="text-base font-semibold text-cyan-100">Suivi d'avancement equipe</h3>
@@ -792,14 +790,14 @@ const RadarPartyPage = () => {
               </div>
             </Card>
 
-            <Card className="rounded-xl border-cyan-300/30 bg-slate-950/45 p-4">
+            <Card className="rounded-3xl border-cyan-300/30 bg-slate-950/45 p-4">
               <h4 className="text-sm font-semibold text-cyan-100">Progression par joueur</h4>
               <div className="mt-3 space-y-3">
                 {progressRows.map((row) => (
-                  <div key={row.participant.id} className="rounded-lg border border-cyan-300/20 bg-slate-900/45 p-3">
+                  <div key={row.participant.id} className="rounded-2xl border border-cyan-300/20 bg-slate-900/45 p-3">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex min-w-0 items-center gap-2">
-                        <span className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-cyan-300/30 bg-slate-950/65 text-lg">
+                        <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-cyan-300/30 bg-slate-950/65 text-lg">
                           {AVATARS[row.participant.avatar] ?? "?"}
                         </span>
                         <div className="min-w-0">
@@ -832,15 +830,25 @@ const RadarPartyPage = () => {
                 ))}
               </div>
             </Card>
+
+            {isHost && hostParticipates ? (
+              <div className="flex w-full justify-start">
+                <SecondaryButton onClick={() => setStage("questionnaire")}>Reprendre le questionnaire</SecondaryButton>
+              </div>
+            ) : null}
           </section>
         ) : null}
 
         {stage === "questionnaire" ? (
-          <div className="flex flex-wrap gap-2">
-            <PrimaryButton onClick={() => setStage("individual")} disabled={completionCount < RADAR_QUESTIONS.length}>
-              Voir mon resultat
-            </PrimaryButton>
-            <SecondaryButton onClick={() => setStage("lobby")}>Retour lobby</SecondaryButton>
+          <div className="flex w-full flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap gap-2">
+              {isHost && roomCode && sessionStatus === "started" ? (
+                <SecondaryButton onClick={() => setStage("team-progress")}>Suivi equipe</SecondaryButton>
+              ) : null}
+            </div>
+            <SecondaryButton className={cn(CTA_NEON_DANGER)} onClick={() => setLeaveDialogOpen(true)}>
+              Quitter
+            </SecondaryButton>
           </div>
         ) : null}
       </Card>

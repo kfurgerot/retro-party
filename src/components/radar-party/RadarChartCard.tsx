@@ -149,7 +149,7 @@ export function RadarChartCard({
   );
 
   return (
-    <Card className="relative overflow-hidden rounded-xl border border-cyan-300/30 bg-slate-950/60 p-3 sm:p-4 text-cyan-50 shadow-[0_0_0_1px_rgba(34,211,238,0.2),0_14px_36px_rgba(2,6,23,0.55)]">
+    <Card className="relative overflow-hidden rounded-3xl border border-cyan-300/30 bg-slate-950/60 p-3 sm:p-4 text-cyan-50 shadow-[0_0_0_1px_rgba(34,211,238,0.2),0_14px_36px_rgba(2,6,23,0.55)]">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(34,211,238,0.12),transparent_45%),radial-gradient(circle_at_80%_75%,rgba(59,130,246,0.08),transparent_42%)]" />
       <h3 className="relative text-base font-semibold uppercase tracking-[0.12em] text-cyan-100">{title}</h3>
       {subtitle ? <p className="relative mt-1 text-xs text-slate-300">{subtitle}</p> : null}
