@@ -43,12 +43,90 @@ import {
 } from "@/components/ui/alert-dialog";
 
 type Stage = "lobby" | "questionnaire" | "individual" | "team-radar" | "team-progress";
+const RADAR_STAGES: Stage[] = ["lobby", "questionnaire", "individual", "team-radar", "team-progress"];
+const RADAR_SESSION_STORAGE_KEY = "retro-party:radar-party:session";
 
 type LocalResult = {
   radar: RadarAxisValues;
   polesPercent: ReturnType<typeof computeRadarScores>["polesPercent"];
   insights: ReturnType<typeof buildIndividualInsights>;
 };
+
+type RadarPersistedSession = {
+  code: string;
+  participantId: string;
+  profile: { name: string; avatar: number };
+  stage: Stage;
+  answers: RadarAnswers;
+  questionIndex: number;
+  hostParticipates: boolean;
+  resultPublished: boolean;
+  updatedAt: number;
+};
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function normalizePersistedAnswers(raw: unknown): RadarAnswers {
+  if (!isPlainObject(raw)) return {};
+  const normalized: RadarAnswers = {};
+  Object.entries(raw).forEach(([rawKey, rawValue]) => {
+    const key = Number(rawKey);
+    const value = Number(rawValue);
+    if (!Number.isFinite(key) || !Number.isFinite(value)) return;
+    const rounded = Math.round(value);
+    if (rounded < 1 || rounded > 5) return;
+    normalized[key] = rounded;
+  });
+  return normalized;
+}
+
+function loadPersistedRadarSession(): RadarPersistedSession | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(RADAR_SESSION_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!isPlainObject(parsed)) return null;
+
+    const code = typeof parsed.code === "string" ? parsed.code.trim().toUpperCase() : "";
+    const participantId = typeof parsed.participantId === "string" ? parsed.participantId.trim() : "";
+    if (!code || !participantId) return null;
+
+    const profileRaw = isPlainObject(parsed.profile) ? parsed.profile : {};
+    const stageRaw = typeof parsed.stage === "string" ? parsed.stage : "";
+    const stage = RADAR_STAGES.includes(stageRaw as Stage) ? (stageRaw as Stage) : "lobby";
+    const questionIndexRaw = Number(parsed.questionIndex);
+    const questionIndex = Number.isFinite(questionIndexRaw) ? Math.max(0, Math.round(questionIndexRaw)) : 0;
+
+    return {
+      code,
+      participantId,
+      profile: {
+        name: typeof profileRaw.name === "string" ? profileRaw.name : "",
+        avatar: Number.isFinite(Number(profileRaw.avatar)) ? Number(profileRaw.avatar) : 0,
+      },
+      stage,
+      answers: normalizePersistedAnswers(parsed.answers),
+      questionIndex,
+      hostParticipates: parsed.hostParticipates !== false,
+      resultPublished: parsed.resultPublished === true,
+      updatedAt: Number.isFinite(Number(parsed.updatedAt)) ? Number(parsed.updatedAt) : Date.now(),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function persistRadarSession(session: RadarPersistedSession | null) {
+  if (typeof window === "undefined") return;
+  if (!session) {
+    window.localStorage.removeItem(RADAR_SESSION_STORAGE_KEY);
+    return;
+  }
+  window.localStorage.setItem(RADAR_SESSION_STORAGE_KEY, JSON.stringify(session));
+}
 
 const answerLabels = [
   "Pas du tout d'accord",
@@ -240,6 +318,7 @@ const RadarPartyPage = () => {
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
   const [submitDialogOpen, setSubmitDialogOpen] = useState(false);
   const [questionNavMessage, setQuestionNavMessage] = useState<string | null>(null);
+  const [isRestoringSession, setIsRestoringSession] = useState(true);
   const [hostParticipates, setHostParticipates] = useState(true);
   const [resultPublished, setResultPublished] = useState(false);
   const publishInFlightRef = useRef(false);
@@ -414,15 +493,23 @@ const RadarPartyPage = () => {
     setTeamRadar(nextTeamRadar);
     setTeamInsights(nextTeamInsights);
     const self = response.participants.find((participant) => participant.id === participantId);
-    setResultPublished(Boolean(self?.submittedAt));
+    const submitted = Boolean(self?.submittedAt);
+    setResultPublished(submitted);
+    if (submitted && self?.result) {
+      setLocalResult({
+        radar: self.result.radar,
+        polesPercent: self.result.polesPercent,
+        insights: self.result.insights,
+      });
+    }
 
     if (response.session.status === "started" && stage === "lobby") {
       const shouldOpenProgressMenu = Boolean(self?.isHost) && response.session.hostParticipates === false;
-      setAnswers({});
-      setQuestionIndex(0);
-      setLocalResult(null);
-      setResultPublished(false);
-      setStage(shouldOpenProgressMenu ? "team-progress" : "questionnaire");
+      if (submitted) {
+        setStage("individual");
+      } else {
+        setStage(shouldOpenProgressMenu ? "team-progress" : "questionnaire");
+      }
     }
   };
 
@@ -496,6 +583,141 @@ const RadarPartyPage = () => {
     setLocalResult(result);
     return result;
   };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const restoreSession = async () => {
+      const persisted = loadPersistedRadarSession();
+      if (!persisted) {
+        if (!cancelled) setIsRestoringSession(false);
+        return;
+      }
+
+      try {
+        const response = await api.radarGetSession(persisted.code);
+        if (cancelled) return;
+
+        const self = response.participants.find((participant) => participant.id === persisted.participantId);
+        if (!self) {
+          persistRadarSession(null);
+          if (!cancelled) setIsRestoringSession(false);
+          return;
+        }
+
+        const memberRadars = response.participants
+          .map((participant) => participant.result?.radar)
+          .filter((radar): radar is RadarAxisValues => Boolean(radar));
+        const nextTeamRadar = response.team?.radar ?? computeTeamAverageRadar(memberRadars);
+        const nextTeamInsights = response.team?.insights ?? emptyTeamInsights(nextTeamRadar, response.participants);
+
+        const restoredAnswers = persisted.answers ?? {};
+        const restoredCompletionCount = RADAR_QUESTIONS.filter((question) =>
+          Number.isFinite(restoredAnswers[question.id])
+        ).length;
+        const restoredAllAnswered = restoredCompletionCount === RADAR_QUESTIONS.length;
+        const boundedQuestionIndex = Math.max(0, Math.min(RADAR_QUESTIONS.length - 1, persisted.questionIndex));
+
+        setRoomCode(response.session.code);
+        setParticipantId(self.id);
+        setProfile({
+          name: persisted.profile.name || self.displayName,
+          avatar: Number.isFinite(persisted.profile.avatar) ? persisted.profile.avatar : self.avatar,
+        });
+        setShowOnlineOnboarding(false);
+        setOnboardingInitialStep(1);
+        setParticipants(response.participants);
+        setSessionStatus(response.session.status);
+        setHostParticipates(response.session.hostParticipates !== false);
+        setTeamRadar(nextTeamRadar);
+        setTeamInsights(nextTeamInsights);
+        setAnswers(restoredAnswers);
+        setQuestionIndex(boundedQuestionIndex);
+        setQuestionNavMessage(null);
+
+        const submitted = Boolean(self.submittedAt);
+        setResultPublished(submitted);
+
+        if (submitted && self.result) {
+          setLocalResult({
+            radar: self.result.radar,
+            polesPercent: self.result.polesPercent,
+            insights: self.result.insights,
+          });
+        } else if (!submitted && restoredAllAnswered) {
+          const scoring = computeRadarScores(restoredAnswers);
+          setLocalResult({
+            radar: scoring.radar,
+            polesPercent: scoring.polesPercent,
+            insights: buildIndividualInsights(scoring.radar),
+          });
+        } else {
+          setLocalResult(null);
+        }
+
+        if (response.session.status === "lobby") {
+          setStage("lobby");
+        } else if (submitted) {
+          if (persisted.stage === "team-progress" && self.isHost) {
+            setStage("team-progress");
+          } else if (persisted.stage === "team-radar") {
+            setStage("team-radar");
+          } else {
+            setStage("individual");
+          }
+        } else if (self.isHost && response.session.hostParticipates === false) {
+          setStage("team-progress");
+        } else if (restoredAllAnswered && persisted.stage === "individual") {
+          setStage("individual");
+        } else {
+          setStage("questionnaire");
+        }
+      } catch {
+        persistRadarSession(null);
+      } finally {
+        if (!cancelled) setIsRestoringSession(false);
+      }
+    };
+
+    void restoreSession();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isRestoringSession) return;
+    if (!roomCode || !participantId) {
+      persistRadarSession(null);
+      return;
+    }
+
+    persistRadarSession({
+      code: roomCode,
+      participantId,
+      profile: {
+        name: profile.name ?? "",
+        avatar: Number.isFinite(profile.avatar) ? profile.avatar : 0,
+      },
+      stage,
+      answers,
+      questionIndex: Math.max(0, Math.min(RADAR_QUESTIONS.length - 1, questionIndex)),
+      hostParticipates,
+      resultPublished,
+      updatedAt: Date.now(),
+    });
+  }, [
+    answers,
+    hostParticipates,
+    isRestoringSession,
+    participantId,
+    profile.avatar,
+    profile.name,
+    questionIndex,
+    resultPublished,
+    roomCode,
+    stage,
+  ]);
 
   const findFirstUnansweredIndex = (sourceAnswers: RadarAnswers) =>
     RADAR_QUESTIONS.findIndex((question) => !Number.isFinite(sourceAnswers[question.id]));
@@ -617,6 +839,10 @@ const RadarPartyPage = () => {
       setRoomCode(joined.session.code);
       setSessionStatus(joined.session.status);
       setParticipants([joined.participant]);
+      setAnswers({});
+      setQuestionIndex(0);
+      setLocalResult(null);
+      setQuestionNavMessage(null);
       setResultPublished(false);
       setShowOnlineOnboarding(false);
       setStage("lobby");
@@ -640,6 +866,10 @@ const RadarPartyPage = () => {
       setParticipantId(joined.participant.id);
       setRoomCode(joined.session.code);
       setSessionStatus(joined.session.status);
+      setAnswers({});
+      setQuestionIndex(0);
+      setLocalResult(null);
+      setQuestionNavMessage(null);
       setShowOnlineOnboarding(false);
       setResultPublished(false);
       setStage("lobby");
@@ -652,6 +882,7 @@ const RadarPartyPage = () => {
   };
 
   const handleLeaveLobby = () => {
+    persistRadarSession(null);
     if (roomCode) {
       socket.emit("leave_radar_room", { code: roomCode });
       setRoomCode(null);
@@ -1151,6 +1382,7 @@ const RadarPartyPage = () => {
   };
 
   const confirmQuitSession = () => {
+    persistRadarSession(null);
     if (roomCode) {
       socket.emit("leave_radar_room", { code: roomCode });
     }
@@ -1173,6 +1405,19 @@ const RadarPartyPage = () => {
     }
     navigate("/?stage=select-experience");
   };
+
+  if (isRestoringSession) {
+    return (
+      <div className="scanlines relative flex min-h-svh w-full items-start justify-center px-4 pb-12 pt-6">
+        <RetroScreenBackground />
+        <Card className="relative z-10 flex w-full max-w-xl flex-col gap-2 rounded-3xl p-6">
+          <p className="text-xs uppercase tracking-[0.12em] text-cyan-200/80">Radar Party</p>
+          <h2 className="text-lg font-semibold text-cyan-100">Reconnexion en cours</h2>
+          <p className="text-sm text-slate-200">Nous restaurons ta session pour reprendre la partie.</p>
+        </Card>
+      </div>
+    );
+  }
 
   if (stage === "lobby") {
     if (!roomCode && showOnlineOnboarding) {
