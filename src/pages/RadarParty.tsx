@@ -1519,12 +1519,13 @@ const RadarPartyPage = () => {
   const resultToShow = localResult;
   const canExportIndividualPdf = stage === "individual" && Boolean(resultToShow);
   const canExportTeamPdf = stage === "team-radar" && isHost;
+  const hasRadarStickyFooter = stage === "individual" || stage === "team-radar";
 
   return (
     <div
       className={cn(
         "scanlines relative flex min-h-svh w-full items-start justify-center px-4 pt-4 sm:pt-6",
-        stage === "questionnaire" ? "pb-4 sm:pb-12" : "pb-12"
+        hasRadarStickyFooter ? "pb-28 sm:pb-32" : stage === "questionnaire" ? "pb-4 sm:pb-12" : "pb-12"
       )}
     >
       <RetroScreenBackground />
@@ -1746,19 +1747,6 @@ const RadarPartyPage = () => {
               </Card>
             </div>
 
-            <div className="flex w-full items-center justify-between gap-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <SecondaryButton onClick={submitToSession} disabled={!canPublish || loading}>
-                  Radar equipe
-                </SecondaryButton>
-                {isHost && roomCode && sessionStatus === "started" ? (
-                  <SecondaryButton onClick={() => setStage("team-progress")}>Progression</SecondaryButton>
-                ) : null}
-              </div>
-              <SecondaryButton className={cn(CTA_NEON_DANGER)} onClick={() => setLeaveDialogOpen(true)}>
-                Quitter
-              </SecondaryButton>
-            </div>
           </section>
         ) : null}
 
@@ -1817,19 +1805,6 @@ const RadarPartyPage = () => {
               </div>
             </Card>
 
-            <div className="flex w-full items-center justify-between gap-2">
-              <div className="flex flex-wrap items-center gap-2">
-                {resultToShow ? (
-                  <SecondaryButton onClick={() => setStage("individual")}>Mon radar</SecondaryButton>
-                ) : null}
-                {isHost && roomCode && sessionStatus === "started" ? (
-                  <SecondaryButton onClick={() => setStage("team-progress")}>Progression</SecondaryButton>
-                ) : null}
-              </div>
-              <SecondaryButton className={cn(CTA_NEON_DANGER)} onClick={() => setLeaveDialogOpen(true)}>
-                Quitter
-              </SecondaryButton>
-            </div>
           </section>
         ) : null}
 
@@ -1925,6 +1900,61 @@ const RadarPartyPage = () => {
           </div>
         ) : null}
       </Card>
+
+      {hasRadarStickyFooter ? (
+        <>
+          <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 hidden px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:block">
+            <Card className="pointer-events-auto mx-auto w-full max-w-5xl border-cyan-300/40 bg-slate-950/92 p-3 shadow-[0_0_0_1px_rgba(34,211,238,0.2),0_8px_28px_rgba(2,6,23,0.55)]">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  {stage === "individual" ? (
+                    <SecondaryButton onClick={submitToSession} disabled={!canPublish || loading}>
+                      Radar equipe
+                    </SecondaryButton>
+                  ) : null}
+                  {stage === "team-radar" && resultToShow ? (
+                    <SecondaryButton onClick={() => setStage("individual")}>Mon radar</SecondaryButton>
+                  ) : null}
+                  {isHost && roomCode && sessionStatus === "started" ? (
+                    <SecondaryButton onClick={() => setStage("team-progress")}>Progression</SecondaryButton>
+                  ) : null}
+                </div>
+                <SecondaryButton className={cn(CTA_NEON_DANGER)} onClick={() => setLeaveDialogOpen(true)}>
+                  Quitter
+                </SecondaryButton>
+              </div>
+            </Card>
+          </div>
+
+          <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:hidden">
+            <Card className="pointer-events-auto mx-auto w-full max-w-5xl border-cyan-300/40 bg-slate-950/92 p-2.5 shadow-[0_0_0_1px_rgba(34,211,238,0.2),0_8px_28px_rgba(2,6,23,0.55)]">
+              <div className="grid grid-cols-3 gap-2">
+                {stage === "individual" ? (
+                  <SecondaryButton className="h-10 px-2 text-[11px]" onClick={submitToSession} disabled={!canPublish || loading}>
+                    Radar equipe
+                  </SecondaryButton>
+                ) : (
+                  <SecondaryButton className="h-10 px-2 text-[11px]" onClick={() => setStage("individual")} disabled={!resultToShow}>
+                    Mon radar
+                  </SecondaryButton>
+                )}
+                {isHost && roomCode && sessionStatus === "started" ? (
+                  <SecondaryButton className="h-10 px-2 text-[11px]" onClick={() => setStage("team-progress")}>
+                    Progression
+                  </SecondaryButton>
+                ) : (
+                  <SecondaryButton className="h-10 px-2 text-[11px] opacity-0 pointer-events-none" aria-hidden>
+                    Progression
+                  </SecondaryButton>
+                )}
+                <SecondaryButton className={cn("h-10 px-2 text-[11px]", CTA_NEON_DANGER)} onClick={() => setLeaveDialogOpen(true)}>
+                  Quitter
+                </SecondaryButton>
+              </div>
+            </Card>
+          </div>
+        </>
+      ) : null}
 
       <AlertDialog open={leaveDialogOpen} onOpenChange={setLeaveDialogOpen}>
         <AlertDialogContent
