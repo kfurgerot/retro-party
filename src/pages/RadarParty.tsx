@@ -14,7 +14,6 @@ import {
 } from "@/lib/uiTokens";
 import { RadarChartCard } from "@/components/radar-party/RadarChartCard";
 import {
-  RADAR_DIMENSIONS,
   RADAR_DIMENSION_LABELS,
   RADAR_QUESTIONS,
 } from "@/features/radarParty/questions";
@@ -61,7 +60,6 @@ const likertScale = [
   { uiId: "disagree-strong", score: 1, size: "h-12 w-12 sm:h-16 sm:w-16", side: "disagree" as const },
 ] as const;
 
-const AXIS_ORDER: Array<keyof RadarAxisValues> = [...RADAR_DIMENSIONS];
 const AXIS_FR: Record<keyof RadarAxisValues, string> = RADAR_DIMENSION_LABELS;
 
 function emptyTeamInsights(teamRadar: RadarAxisValues, participants: RadarParticipant[]): RadarTeamInsights {
@@ -519,34 +517,6 @@ const RadarPartyPage = () => {
               radar={teamRadar}
               detailScores={teamDetailScores}
             />
-
-            <Card className="rounded-xl border-cyan-300/30 bg-slate-950/45 p-4">
-              <h4 className="text-sm font-semibold text-cyan-100">Vue comparaison equipe</h4>
-              <div className="-mx-2 mt-3 overflow-x-auto px-2 sm:mx-0 sm:px-0">
-                <table className="w-full min-w-[900px] table-auto text-left text-xs text-slate-200 sm:min-w-[980px]">
-                  <thead>
-                    <tr className="border-b border-cyan-300/20 text-cyan-100">
-                      <th className="py-2 pr-3">Participant</th>
-                      {AXIS_ORDER.map((axis) => (
-                        <th key={axis} className="py-2 pr-3">{AXIS_FR[axis]}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {participants.map((participant) => (
-                      <tr key={participant.id} className="border-b border-cyan-300/10">
-                        <td className="break-words py-2 pr-3">{participant.displayName}</td>
-                        {AXIS_ORDER.map((axis) => (
-                          <td key={axis} className="py-2 pr-3">
-                            {participant.result?.radar ? participant.result.radar[axis] : "-"}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
 
             <Card className="rounded-xl border-cyan-300/30 bg-slate-950/45 p-4">
               <h4 className="text-sm font-semibold text-cyan-100">Axes homogenes et axes polarises</h4>
