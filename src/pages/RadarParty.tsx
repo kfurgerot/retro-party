@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { Frown, Meh, Smile } from "lucide-react";
 import { OnlineLobbyScreen } from "@/components/screens/OnlineLobbyScreen";
 import { OnlineOnboardingScreen } from "@/components/screens/OnlineOnboardingScreen";
 import { RetroScreenBackground } from "@/components/screens/RetroScreenBackground";
@@ -15,8 +16,10 @@ import {
 } from "@/lib/uiTokens";
 import { RadarChartCard } from "@/components/radar-party/RadarChartCard";
 import {
+  RADAR_DIMENSIONS,
   RADAR_DIMENSION_LABELS,
   RADAR_QUESTIONS,
+  type RadarDimension,
 } from "@/features/radarParty/questions";
 import { buildIndividualInsights, buildTeamInsights } from "@/features/radarParty/insights";
 import {
@@ -73,6 +76,132 @@ const likertColorByScore: Record<number, string> = {
 const AXIS_FR: Record<keyof RadarAxisValues, string> = RADAR_DIMENSION_LABELS;
 const TOTAL_QUESTIONS = RADAR_QUESTIONS.length;
 const RADAR_FALLBACK_SYNC_MS = 12000;
+
+type ThemeCardMeta = {
+  title: string;
+  description: string;
+  high: string;
+  medium: string;
+  low: string;
+};
+
+const THEME_CARD_META: Record<RadarDimension, ThemeCardMeta> = {
+  collaboration: {
+    title: "Collaboration",
+    description: "La communication et l'entraide rendent l'execution collective plus fluide.",
+    high: "Le collectif est un vrai levier. Continuez les feedbacks croises et la co-construction.",
+    medium: "La base est bonne, mais certains moments de coordination peuvent etre renforces.",
+    low: "Risque de silos. Clarifiez les attentes et augmentez les temps de synchronisation.",
+  },
+  fun: {
+    title: "Fun (Ambiance)",
+    description: "L'energie de l'equipe soutient la motivation et la resilience.",
+    high: "Ambiance tres favorable. Capitalisez avec des rituels de celebration.",
+    medium: "Climat correct mais inconstant. Preservez des temps de respiration.",
+    low: "Moral fragile. Traitez les irritants et recreez des moments de cohesion.",
+  },
+  learning: {
+    title: "Apprentissages",
+    description: "L'equipe transforme ses retours en progression continue.",
+    high: "Excellente dynamique d'apprentissage. Partagez davantage les bonnes pratiques.",
+    medium: "La progression existe mais manque parfois de regularite.",
+    low: "Peu d'apprentissage visible. Planifiez des actions d'amelioration concretes.",
+  },
+  alignment: {
+    title: "Alignement",
+    description: "Les objectifs et priorites sont compris pour orienter les decisions.",
+    high: "Alignement tres fort. Gardez ce cap avec une priorisation explicite.",
+    medium: "Vision partagee partielle. Revalidez regulierement objectifs et perimetre.",
+    low: "Manque de cap commun. Reposez les objectifs et les criteres de valeur.",
+  },
+  ownership: {
+    title: "Ownership (Responsabilite)",
+    description: "L'equipe assume ses decisions et la responsabilite du resultat.",
+    high: "Ownership eleve. Continuez a proteger l'autonomie de l'equipe.",
+    medium: "Responsabilites globalement claires mais parfois hesitantes.",
+    low: "Dependance externe forte. Clarifiez qui decide quoi et jusqu'ou.",
+  },
+  process: {
+    title: "Processus",
+    description: "Les pratiques et rituels soutiennent l'efficacite sans lourdeur.",
+    high: "Processus utiles et adaptables. Conservez ce niveau d'ajustement.",
+    medium: "Les rituels aident mais peuvent etre mieux calibres.",
+    low: "Processus subis ou inefficaces. Simplifiez et mesurez la valeur de chaque pratique.",
+  },
+  resources: {
+    title: "Ressources",
+    description: "Outils, support et temps permettent de livrer dans de bonnes conditions.",
+    high: "Ressources bien maitrisees. Profitez-en pour accelerer la qualite de delivery.",
+    medium: "Les moyens sont presents mais pas toujours fluides.",
+    low: "Contraintes fortes. Traitez les blocages de support et de dependances en priorite.",
+  },
+  roles: {
+    title: "Roles",
+    description: "Les roles et responsabilites structurent la collaboration.",
+    high: "Roles tres lisibles. Maintenez cette clarte lors des changements.",
+    medium: "Repartition comprise avec quelques zones de flou.",
+    low: "Ambiguite des roles. Redefinissez les responsabilites et interfaces.",
+  },
+  speed: {
+    title: "Vitesse",
+    description: "Le flux de delivery reste soutenable et previsible.",
+    high: "Bonne cadence. Conservez le rythme sans degrader la qualite.",
+    medium: "Vitesse correcte mais fragile face aux imprevus.",
+    low: "Flux ralenti ou instable. Traitez les goulots et le travail en attente.",
+  },
+  value: {
+    title: "Valeur",
+    description: "La valeur livree est reliee aux besoins metier et utilisateurs.",
+    high: "Orientation valeur tres forte. Continuez a piloter avec les retours utilisateurs.",
+    medium: "Valeur visible mais encore inegalement mesuree.",
+    low: "Valeur peu lisible. Reconnectez priorisation, impact et apprentissages client.",
+  },
+};
+
+function clampPercent(value: number) {
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function getThemeTone(score: number) {
+  if (score >= 75) {
+    return {
+      Icon: Smile,
+      cardClass: "border-emerald-300/60 bg-emerald-500/12",
+      badgeClass: "border-emerald-300/70 bg-emerald-600/20 text-emerald-100",
+      iconClass: "text-emerald-300",
+      level: "Tres fort",
+      messageKey: "high" as const,
+    };
+  }
+  if (score >= 55) {
+    return {
+      Icon: Smile,
+      cardClass: "border-lime-300/60 bg-lime-500/12",
+      badgeClass: "border-lime-300/70 bg-lime-600/18 text-lime-100",
+      iconClass: "text-lime-300",
+      level: "Solide",
+      messageKey: "medium" as const,
+    };
+  }
+  if (score >= 35) {
+    return {
+      Icon: Meh,
+      cardClass: "border-amber-300/60 bg-amber-500/12",
+      badgeClass: "border-amber-300/70 bg-amber-600/18 text-amber-100",
+      iconClass: "text-amber-300",
+      level: "A consolider",
+      messageKey: "medium" as const,
+    };
+  }
+  return {
+    Icon: Frown,
+    cardClass: "border-red-300/60 bg-red-500/12",
+    badgeClass: "border-red-300/70 bg-red-600/18 text-red-100",
+    iconClass: "text-red-300",
+    level: "Prioritaire",
+    messageKey: "low" as const,
+  };
+}
 
 function emptyTeamInsights(teamRadar: RadarAxisValues, participants: RadarParticipant[]): RadarTeamInsights {
   return buildTeamInsights(
@@ -655,6 +784,43 @@ const RadarPartyPage = () => {
               radar={resultToShow.radar}
               detailScores={resultToShow.polesPercent}
             />
+
+            <Card className="rounded-3xl border-cyan-300/30 bg-slate-950/45 p-4">
+              <h3 className="text-base font-semibold text-cyan-100">Cartes thematiques</h3>
+              <p className="mt-1 text-xs text-slate-300">
+                Lecture rapide par theme avec tonalite visuelle, score et interpretation.
+              </p>
+              <div className="mt-3 grid gap-3 lg:grid-cols-2">
+                {RADAR_DIMENSIONS.map((dimension) => {
+                  const score = clampPercent(Number(resultToShow.radar?.[dimension] ?? 0));
+                  const tone = getThemeTone(score);
+                  const meta = THEME_CARD_META[dimension];
+                  const Icon = tone.Icon;
+                  const scoreOnFive = (score / 20).toFixed(1);
+
+                  return (
+                    <div key={dimension} className={cn("rounded-3xl border p-4", tone.cardClass)}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-base font-semibold text-slate-100">{meta.title}</p>
+                          <p className="mt-1 text-xs text-slate-200/90">{meta.description}</p>
+                        </div>
+                        <span className={cn("inline-flex shrink-0 rounded-full border px-2.5 py-1 text-xs font-semibold", tone.badgeClass)}>
+                          {scoreOnFive}/5
+                        </span>
+                      </div>
+                      <div className="mt-3 flex items-start gap-2">
+                        <Icon className={cn("mt-0.5 h-5 w-5 shrink-0", tone.iconClass)} />
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-100/90">{tone.level}</p>
+                          <p className="mt-1 text-sm text-slate-100/90">{meta[tone.messageKey]}</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
 
             <Card className="rounded-3xl border-cyan-300/30 bg-slate-950/45 p-4">
               <h3 className="text-base font-semibold text-cyan-100">Resume individuel</h3>
