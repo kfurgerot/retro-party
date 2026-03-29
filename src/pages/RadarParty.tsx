@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { FileDown, Frown, Meh, Smile } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileDown, Frown, Meh, Smile } from "lucide-react";
 import { OnlineLobbyScreen } from "@/components/screens/OnlineLobbyScreen";
 import { OnlineOnboardingScreen } from "@/components/screens/OnlineOnboardingScreen";
 import { RetroScreenBackground } from "@/components/screens/RetroScreenBackground";
@@ -238,6 +238,8 @@ const RadarPartyPage = () => {
   const [teamInsights, setTeamInsights] = useState<RadarTeamInsights | null>(null);
   const [sessionStatus, setSessionStatus] = useState<"lobby" | "started">("lobby");
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
+  const [submitDialogOpen, setSubmitDialogOpen] = useState(false);
+  const [questionNavMessage, setQuestionNavMessage] = useState<string | null>(null);
   const [hostParticipates, setHostParticipates] = useState(true);
   const [resultPublished, setResultPublished] = useState(false);
   const publishInFlightRef = useRef(false);
@@ -252,6 +254,10 @@ const RadarPartyPage = () => {
     () => RADAR_QUESTIONS.filter((question) => Number.isFinite(answers[question.id])).length,
     [answers]
   );
+  const currentAnswer = answers[currentQuestion.id];
+  const isCurrentAnswered = Number.isFinite(currentAnswer);
+  const isLastQuestion = questionIndex === RADAR_QUESTIONS.length - 1;
+  const allQuestionsAnswered = completionCount === RADAR_QUESTIONS.length;
 
   const canPublish = Boolean(roomCode && participantId && localResult);
   const isHost = useMemo(
@@ -485,6 +491,37 @@ const RadarPartyPage = () => {
     return result;
   };
 
+  const findFirstUnansweredIndex = (sourceAnswers: RadarAnswers) =>
+    RADAR_QUESTIONS.findIndex((question) => !Number.isFinite(sourceAnswers[question.id]));
+
+  const finalizeQuestionnaire = () => {
+    computeLocalResult(answers);
+    setSubmitDialogOpen(false);
+    setQuestionNavMessage(null);
+    setStage("individual");
+    void publishAnswersToSession(answers, { silent: true });
+  };
+
+  const goToPreviousQuestion = () => {
+    setQuestionNavMessage(null);
+    setQuestionIndex((prev) => Math.max(0, prev - 1));
+  };
+
+  const goToNextQuestion = () => {
+    setQuestionNavMessage(null);
+    if (questionIndex < RADAR_QUESTIONS.length - 1) {
+      setQuestionIndex((prev) => Math.min(RADAR_QUESTIONS.length - 1, prev + 1));
+      return;
+    }
+    const firstUnanswered = findFirstUnansweredIndex(answers);
+    if (firstUnanswered !== -1) {
+      setQuestionNavMessage("Il reste des questions sans reponse. Completons-les avant validation.");
+      setQuestionIndex(firstUnanswered);
+      return;
+    }
+    setSubmitDialogOpen(true);
+  };
+
   const pushProgressUpdate = async (nextAnswers: RadarAnswers) => {
     if (!roomCode || !participantId) return;
     const answeredCount = RADAR_QUESTIONS.filter((question) => Number.isFinite(nextAnswers[question.id])).length;
@@ -540,12 +577,17 @@ const RadarPartyPage = () => {
   const handleSelectAnswer = (value: number) => {
     const nextAnswers = { ...answers, [currentQuestion.id]: value };
     setAnswers(nextAnswers);
+    setQuestionNavMessage(null);
     void pushProgressUpdate(nextAnswers);
 
     if (questionIndex === RADAR_QUESTIONS.length - 1) {
-      computeLocalResult(nextAnswers);
-      setStage("individual");
-      void publishAnswersToSession(nextAnswers, { silent: true });
+      const firstUnanswered = findFirstUnansweredIndex(nextAnswers);
+      if (firstUnanswered === -1) {
+        setSubmitDialogOpen(true);
+      } else {
+        setQuestionNavMessage("Il reste des questions sans reponse. Completons-les avant validation.");
+        setQuestionIndex(firstUnanswered);
+      }
       return;
     }
     setQuestionIndex((prev) => prev + 1);
@@ -1107,6 +1149,7 @@ const RadarPartyPage = () => {
       socket.emit("leave_radar_room", { code: roomCode });
     }
     setLeaveDialogOpen(false);
+    setSubmitDialogOpen(false);
     setRoomCode(null);
     setParticipantId("");
     setParticipants([]);
@@ -1263,8 +1306,30 @@ const RadarPartyPage = () => {
               <span>
                 Question {questionIndex + 1} / {RADAR_QUESTIONS.length}
               </span>
-              <span>{completionCount} reponses enregistrees</span>
+              <div className="hidden sm:flex items-center gap-2">
+                <span>{completionCount} reponses enregistrees</span>
+              </div>
+              <div className="flex items-center gap-2 sm:hidden">
+                <button
+                  type="button"
+                  onClick={goToPreviousQuestion}
+                  disabled={questionIndex === 0}
+                  aria-label="Question precedente"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-cyan-300/35 bg-slate-900/70 text-cyan-100 transition disabled:opacity-40"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={goToNextQuestion}
+                  aria-label="Question suivante"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-cyan-300/35 bg-slate-900/70 text-cyan-100 transition"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
             </div>
+            <p className="mt-1 text-[11px] text-slate-300 sm:hidden">{completionCount} reponses enregistrees</p>
             <div className="mt-2 h-2 overflow-hidden rounded bg-slate-900/80">
               <div className="h-full rounded bg-cyan-400/90 transition-all duration-300" style={{ width: `${progressPct}%` }} />
             </div>
@@ -1279,6 +1344,11 @@ const RadarPartyPage = () => {
                 <span className="font-medium text-red-300">Pas du tout d'accord</span>
                 <span className="font-medium text-emerald-300">Tout a fait d'accord</span>
               </div>
+              <p className="mt-2 text-xs text-slate-300">
+                {isCurrentAnswered
+                  ? `Reponse enregistree: ${answerLabels[(currentAnswer as number) - 1]}`
+                  : "Selectionne une reponse pour cette question."}
+              </p>
               <div className="mt-4 grid grid-cols-5 gap-1.5 sm:gap-3">
                 {likertScale.map((item) => (
                   <button
@@ -1293,7 +1363,10 @@ const RadarPartyPage = () => {
                       className={cn(
                         "rounded-full border-4 transition-transform duration-150 group-hover:scale-105",
                         item.size,
-                        likertColorByScore[item.score]
+                        likertColorByScore[item.score],
+                        currentAnswer === item.score
+                          ? "scale-105 ring-2 ring-cyan-200/80 ring-offset-2 ring-offset-slate-950 shadow-[0_0_14px_rgba(34,211,238,0.35)]"
+                          : "opacity-80"
                       )}
                     />
                   </button>
@@ -1301,19 +1374,27 @@ const RadarPartyPage = () => {
               </div>
               <div className="mt-4 grid grid-cols-5 gap-1 text-center text-[10px] text-slate-300 sm:text-xs">
                 {likertScale.map((item) => (
-                  <span key={`${item.uiId}-label`} className="block break-words">
+                  <span
+                    key={`${item.uiId}-label`}
+                    className={cn("block break-words", currentAnswer === item.score ? "font-semibold text-cyan-100" : undefined)}
+                  >
                     {answerLabels[item.score - 1]}
                   </span>
                 ))}
               </div>
             </div>
 
-            <div className="mt-6 flex flex-wrap gap-2">
+            {questionNavMessage ? <p className="mt-3 text-xs text-amber-200">{questionNavMessage}</p> : null}
+
+            <div className="mt-6 hidden flex-wrap justify-between gap-2 sm:flex">
               <SecondaryButton
                 disabled={questionIndex === 0}
-                onClick={() => setQuestionIndex((prev) => Math.max(0, prev - 1))}
+                onClick={goToPreviousQuestion}
               >
-                Question precedente
+                Precedent
+              </SecondaryButton>
+              <SecondaryButton onClick={goToNextQuestion}>
+                Suivante
               </SecondaryButton>
             </div>
           </section>
@@ -1565,6 +1646,32 @@ const RadarPartyPage = () => {
             </AlertDialogCancel>
             <AlertDialogAction className={cn(CTA_NEON_DANGER, "h-11 w-full rounded-xl")} onClick={confirmQuitSession}>
               Quitter
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={submitDialogOpen} onOpenChange={setSubmitDialogOpen}>
+        <AlertDialogContent
+          className={cn(
+            GAME_DIALOG_CONTENT,
+            "max-w-md rounded-2xl border-cyan-300/40 p-5 sm:p-6 shadow-[0_0_0_1px_rgba(34,211,238,0.2),0_14px_40px_rgba(2,6,23,0.6)]"
+          )}
+        >
+          <AlertDialogHeader className="space-y-3">
+            <AlertDialogTitle className="text-base uppercase tracking-[0.08em] text-cyan-100">
+              Valider le questionnaire ?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-sm text-slate-300">
+              Tu vas finaliser tes reponses et acceder a ton radar individuel.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-1 grid grid-cols-1 gap-2 sm:grid-cols-2 sm:space-x-0">
+            <AlertDialogCancel className={cn(CTA_NEON_SECONDARY_SUBTLE, "h-11 w-full rounded-xl text-cyan-100")}>
+              Continuer a verifier
+            </AlertDialogCancel>
+            <AlertDialogAction className={cn("h-11 w-full rounded-xl")} onClick={finalizeQuestionnaire}>
+              Valider
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
