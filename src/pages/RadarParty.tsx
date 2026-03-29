@@ -28,6 +28,7 @@ import {
   type RadarAxisValues,
 } from "@/features/radarParty/scoring";
 import { api, type RadarParticipant, type RadarTeamInsights } from "@/net/api";
+import { socket } from "@/net/socket";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -64,6 +65,7 @@ const likertScale = [
 
 const AXIS_FR: Record<keyof RadarAxisValues, string> = RADAR_DIMENSION_LABELS;
 const TOTAL_QUESTIONS = RADAR_QUESTIONS.length;
+const RADAR_FALLBACK_SYNC_MS = 12000;
 
 function emptyTeamInsights(teamRadar: RadarAxisValues, participants: RadarParticipant[]): RadarTeamInsights {
   return buildTeamInsights(
@@ -190,10 +192,62 @@ const RadarPartyPage = () => {
   };
 
   useEffect(() => {
+    if (!roomCode) return;
+    const code = roomCode.trim().toUpperCase();
+    if (!code) return;
+
+    const canLiveSync = stage === "lobby" || stage === "team-progress";
+    const subscribe = () => socket.emit("join_radar_room", { code });
+
+    const onConnect = () => {
+      subscribe();
+      if (canLiveSync) {
+        void refreshSession(code);
+      }
+    };
+    const onRadarSessionUpdate = (payload: { code?: string }) => {
+      const updatedCode = typeof payload?.code === "string" ? payload.code.trim().toUpperCase() : "";
+      if (!updatedCode || updatedCode !== code) return;
+      if (!canLiveSync) return;
+      void refreshSession(code);
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState !== "visible") return;
+      subscribe();
+      if (canLiveSync) {
+        void refreshSession(code);
+      }
+    };
+    const onWindowFocus = () => {
+      subscribe();
+      if (canLiveSync) {
+        void refreshSession(code);
+      }
+    };
+
+    if (!socket.connected) socket.connect();
+    subscribe();
+    socket.on("connect", onConnect);
+    socket.on("radar_session_update", onRadarSessionUpdate);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("focus", onWindowFocus);
+    window.addEventListener("online", onWindowFocus);
+
+    return () => {
+      socket.off("connect", onConnect);
+      socket.off("radar_session_update", onRadarSessionUpdate);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("focus", onWindowFocus);
+      window.removeEventListener("online", onWindowFocus);
+      socket.emit("leave_radar_room", { code });
+    };
+  }, [roomCode, stage, participantId]);
+
+  useEffect(() => {
     if (!roomCode || (stage !== "lobby" && stage !== "team-progress")) return;
     const interval = window.setInterval(() => {
       void refreshSession(roomCode);
-    }, 4000);
+    }, RADAR_FALLBACK_SYNC_MS);
     return () => window.clearInterval(interval);
   }, [roomCode, stage, participantId]);
 
@@ -280,6 +334,7 @@ const RadarPartyPage = () => {
 
   const handleLeaveLobby = () => {
     if (roomCode) {
+      socket.emit("leave_radar_room", { code: roomCode });
       setRoomCode(null);
       setParticipants([]);
       setParticipantId("");
@@ -333,6 +388,9 @@ const RadarPartyPage = () => {
   };
 
   const confirmQuitSession = () => {
+    if (roomCode) {
+      socket.emit("leave_radar_room", { code: roomCode });
+    }
     setLeaveDialogOpen(false);
     setRoomCode(null);
     setParticipantId("");

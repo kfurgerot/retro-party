@@ -285,7 +285,7 @@ function toJson(value) {
   return JSON.stringify(value ?? {});
 }
 
-export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCode, isCodeReserved }) {
+export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCode, isCodeReserved, io }) {
   app.use("/api", async (req, res, next) => {
     try {
       req.currentUser = await getUserFromRequest(req, pool);
@@ -329,6 +329,17 @@ export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCod
       return res.status(401).json({ error: "Unauthorized" });
     }
     next();
+  }
+
+  function emitRadarSessionUpdate(rawCode, reason) {
+    if (!io) return;
+    const code = typeof rawCode === "string" ? rawCode.trim().toUpperCase() : "";
+    if (!code) return;
+    io.to(`radar:${code}`).emit("radar_session_update", {
+      code,
+      reason,
+      at: Date.now(),
+    });
   }
 
   app.get("/api/auth/me", (req, res) => {
@@ -1115,6 +1126,8 @@ export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCod
         [participantId, session.id, displayName, avatar, shouldBeHost]
       );
 
+      emitRadarSessionUpdate(session.session_code, "participant_joined");
+
       return res.status(201).json({
         session: {
           id: session.id,
@@ -1187,6 +1200,8 @@ export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCod
       const progressAnswered = Number(updated.progress_answered || 0);
       const progressTotal = Math.max(1, Number(updated.progress_total || totalCount));
       const progressPct = Math.max(0, Math.min(100, Math.round((progressAnswered / progressTotal) * 100)));
+
+      emitRadarSessionUpdate(session.session_code, "progress_updated");
 
       return res.status(200).json({
         participant: {
@@ -1295,6 +1310,8 @@ export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCod
         [session.id, memberRadars.length, toJson(teamRadar), toJson(teamInsights)]
       );
       await client.query("COMMIT");
+
+      emitRadarSessionUpdate(session.session_code, "submission_received");
 
       const row = responseResult.rows[0];
       return res.status(201).json({
@@ -1469,6 +1486,8 @@ export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCod
           [session.id, RADAR_QUESTIONS.length]
         );
       }
+
+      emitRadarSessionUpdate(updated.session_code, "session_started");
 
       return res.status(200).json({
         session: {

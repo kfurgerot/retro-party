@@ -169,8 +169,41 @@ const rooms = new Map(); // code -> { state, hostSocketId, clients, lobby, disco
 const socketToRoom = new Map(); // socketId -> code
 const pokerRooms = new Map(); // code -> { code, phase, voteSystem, round, revealed, hostSocketId, clients, lobby, disconnectTimers }
 const socketToPokerRoom = new Map(); // socketId -> code
+const socketToRadarRoom = new Map(); // socketId -> code
 const POKER_VOTE_SYSTEMS = new Set(["fibonacci", "man-day", "tshirt"]);
 const POKER_MAX_PLAYERS = 20;
+
+function normalizeSessionCode(value) {
+  if (typeof value !== "string") return "";
+  return value.trim().toUpperCase();
+}
+
+function radarRoomKey(code) {
+  return `radar:${code}`;
+}
+
+function attachSocketToRadarRoom(socket, rawCode) {
+  const code = normalizeSessionCode(rawCode);
+  if (!code) return null;
+
+  const previous = socketToRadarRoom.get(socket.id);
+  if (previous && previous !== code) {
+    socket.leave(radarRoomKey(previous));
+  }
+
+  socketToRadarRoom.set(socket.id, code);
+  socket.join(radarRoomKey(code));
+  return code;
+}
+
+function detachSocketFromRadarRoom(socket, codeHint = null) {
+  const activeCode = socketToRadarRoom.get(socket.id);
+  const code = activeCode || normalizeSessionCode(codeHint ?? "");
+  if (!code) return null;
+  socket.leave(radarRoomKey(code));
+  if (activeCode) socketToRadarRoom.delete(socket.id);
+  return code;
+}
 
 function makeUniqueRoomCode() {
   for (let i = 0; i < 30; i += 1) {
@@ -464,6 +497,7 @@ registerApiRoutes({
   createRuntimeRoom,
   makeCode,
   isCodeReserved: (code) => pokerRooms.has(code),
+  io,
 });
 
 function setWhoSaidItTimer(room, callback, delayMs) {
@@ -1134,6 +1168,16 @@ function attachSocketToExistingPlayer(code, room, player, socket) {
 
 io.on("connection", (socket) => {
   socket.emit("server_hello", { ok: true });
+
+  socket.on("join_radar_room", ({ code }) => {
+    const joined = attachSocketToRadarRoom(socket, code);
+    if (!joined) return;
+    socket.emit("radar_room_joined", { code: joined });
+  });
+
+  socket.on("leave_radar_room", ({ code } = {}) => {
+    detachSocketFromRadarRoom(socket, code);
+  });
 
   socket.on("create_poker_room", ({ name, avatar, role, voteSystem, sessionId }) => {
     const code = makeUniqueRoomCode();
@@ -1860,6 +1904,8 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
+    socketToRadarRoom.delete(socket.id);
+
     const pokerCode = socketToPokerRoom.get(socket.id);
     if (pokerCode) {
       const pokerRoom = pokerRooms.get(pokerCode);
