@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { RefreshCw } from "lucide-react";
 import { OnlineLobbyScreen } from "@/components/screens/OnlineLobbyScreen";
 import { OnlineOnboardingScreen } from "@/components/screens/OnlineOnboardingScreen";
 import { RetroScreenBackground } from "@/components/screens/RetroScreenBackground";
@@ -196,7 +195,7 @@ const RadarPartyPage = () => {
     const code = roomCode.trim().toUpperCase();
     if (!code) return;
 
-    const canLiveSync = stage === "lobby" || stage === "team-progress";
+    const canLiveSync = stage === "lobby" || stage === "team-progress" || stage === "team-radar";
     const subscribe = () => socket.emit("join_radar_room", { code });
 
     const onConnect = () => {
@@ -244,7 +243,7 @@ const RadarPartyPage = () => {
   }, [roomCode, stage, participantId]);
 
   useEffect(() => {
-    if (!roomCode || (stage !== "lobby" && stage !== "team-progress")) return;
+    if (!roomCode || (stage !== "lobby" && stage !== "team-progress" && stage !== "team-radar")) return;
     const interval = window.setInterval(() => {
       void refreshSession(roomCode);
     }, RADAR_FALLBACK_SYNC_MS);
@@ -656,20 +655,18 @@ const RadarPartyPage = () => {
                   <h3 className="text-base font-semibold text-cyan-100">Session equipe</h3>
                   <p className="break-words text-sm text-slate-200">Code de session: {roomCode || "-"}</p>
                 </div>
-                <div className="flex gap-2">
-                  <SecondaryButton disabled={loading} onClick={() => refreshSession()}>
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    Actualiser
-                  </SecondaryButton>
-                </div>
               </div>
             </Card>
 
             <RadarChartCard
               title="Radar equipe"
-              subtitle="Moyenne des themes de l'equipe"
-              radar={teamRadar}
-              detailScores={teamDetailScores}
+              subtitle="Moyenne des themes de l'equipe (mise a jour temps reel)"
+              radar={resultToShow?.radar ?? teamRadar}
+              detailScores={resultToShow ? resultToShow.polesPercent : teamDetailScores}
+              compareRadar={resultToShow ? teamRadar : undefined}
+              compareDetailScores={resultToShow ? teamDetailScores : undefined}
+              primaryLabel={resultToShow ? "Mon profil" : "Equipe"}
+              compareLabel="Equipe"
             />
 
             <Card className="rounded-xl border-cyan-300/30 bg-slate-950/45 p-4">
@@ -701,7 +698,12 @@ const RadarPartyPage = () => {
               </div>
             </Card>
 
-            <div className="flex flex-wrap gap-2">
+            <div className="flex w-full items-center justify-between gap-2">
+              {resultToShow ? (
+                <SecondaryButton onClick={() => setStage("individual")}>Retour a mon radar</SecondaryButton>
+              ) : (
+                <span />
+              )}
               <SecondaryButton className={cn(CTA_NEON_DANGER)} onClick={() => setLeaveDialogOpen(true)}>
                 Quitter
               </SecondaryButton>
@@ -718,10 +720,6 @@ const RadarPartyPage = () => {
                   <p className="break-words text-sm text-slate-200">Code de session: {roomCode || "-"}</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <SecondaryButton disabled={loading} onClick={() => refreshSession()}>
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    Actualiser
-                  </SecondaryButton>
                   <SecondaryButton onClick={() => setStage("team-radar")}>Voir radar equipe</SecondaryButton>
                 </div>
               </div>

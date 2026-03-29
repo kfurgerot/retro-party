@@ -11,6 +11,10 @@ type RadarChartCardProps = {
   subtitle?: string;
   radar: RadarAxisValues;
   detailScores?: Record<string, number>;
+  compareRadar?: RadarAxisValues;
+  compareDetailScores?: Record<string, number>;
+  compareLabel?: string;
+  primaryLabel?: string;
 };
 
 type ThemeDefinition = {
@@ -39,8 +43,8 @@ const polarPoint = (cx: number, cy: number, radius: number, angleRad: number) =>
   y: cy + Math.sin(angleRad) * radius,
 });
 
-export function RadarChartCard({ title, subtitle, radar, detailScores }: RadarChartCardProps) {
-  const themeScores = THEMES.map((theme) => {
+function buildThemeScores(radar: RadarAxisValues, detailScores?: Record<string, number>) {
+  return THEMES.map((theme) => {
     const detailScore = detailScores?.[theme.key];
     const score = Number.isFinite(detailScore) ? Number(detailScore) : radar[theme.key];
 
@@ -50,6 +54,20 @@ export function RadarChartCard({ title, subtitle, radar, detailScores }: RadarCh
       score: clampPercent(score),
     };
   });
+}
+
+export function RadarChartCard({
+  title,
+  subtitle,
+  radar,
+  detailScores,
+  compareRadar,
+  compareDetailScores,
+  compareLabel = "Mon radar",
+  primaryLabel = "Equipe",
+}: RadarChartCardProps) {
+  const themeScores = buildThemeScores(radar, detailScores);
+  const comparisonScores = compareRadar ? buildThemeScores(compareRadar, compareDetailScores) : null;
 
   const size = 600;
   const center = size / 2;
@@ -57,10 +75,8 @@ export function RadarChartCard({ title, subtitle, radar, detailScores }: RadarCh
   const labelRadius = 258;
   const rings = [20, 40, 60, 80, 100];
 
-  const points = themeScores.map((theme, index) => {
+  const axes = THEMES.map((theme, index) => {
     const angleRad = (index / RADAR_DIMENSIONS.length) * Math.PI * 2 - Math.PI / 2;
-    const valueRadius = (theme.score / 100) * maxRadius;
-    const valuePoint = polarPoint(center, center, valueRadius, angleRad);
     const axisPoint = polarPoint(center, center, maxRadius, angleRad);
     const labelPoint = polarPoint(center, center, labelRadius, angleRad);
     const cosine = Math.cos(angleRad);
@@ -69,8 +85,6 @@ export function RadarChartCard({ title, subtitle, radar, detailScores }: RadarCh
     return {
       ...theme,
       angleRad,
-      x: valuePoint.x,
-      y: valuePoint.y,
       axisX: axisPoint.x,
       axisY: axisPoint.y,
       labelX: labelPoint.x,
@@ -79,6 +93,32 @@ export function RadarChartCard({ title, subtitle, radar, detailScores }: RadarCh
       labelDy: sine > 0.35 ? 10 : sine < -0.35 ? -7 : 2,
     };
   });
+
+  const points = themeScores.map((theme, index) => {
+    const axis = axes[index];
+    const valueRadius = (theme.score / 100) * maxRadius;
+    const valuePoint = polarPoint(center, center, valueRadius, axis.angleRad);
+    return {
+      ...axis,
+      score: theme.score,
+      x: valuePoint.x,
+      y: valuePoint.y,
+    };
+  });
+
+  const comparisonPoints = comparisonScores
+    ? comparisonScores.map((theme, index) => {
+        const axis = axes[index];
+        const valueRadius = (theme.score / 100) * maxRadius;
+        const valuePoint = polarPoint(center, center, valueRadius, axis.angleRad);
+        return {
+          ...axis,
+          score: theme.score,
+          x: valuePoint.x,
+          y: valuePoint.y,
+        };
+      })
+    : null;
 
   const spiderRings = rings.map((ring, index) => {
     const ringRadius = (ring / 100) * maxRadius;
@@ -138,7 +178,7 @@ export function RadarChartCard({ title, subtitle, radar, detailScores }: RadarCh
             />
           ))}
 
-          {points.map((point) => (
+          {axes.map((point) => (
             <line
               key={`axis-${point.key}`}
               x1={center}
@@ -180,6 +220,20 @@ export function RadarChartCard({ title, subtitle, radar, detailScores }: RadarCh
             vectorEffect="non-scaling-stroke"
           />
 
+          {comparisonPoints ? (
+            <polyline
+              points={[...comparisonPoints, comparisonPoints[0]]
+                .map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`)
+                .join(" ")}
+              fill="rgba(239,68,68,0.12)"
+              stroke="#ef4444"
+              strokeWidth={2.8}
+              strokeLinejoin="round"
+              strokeLinecap="round"
+              vectorEffect="non-scaling-stroke"
+            />
+          ) : null}
+
           {points.map((point) => (
             <g key={`point-${point.key}`}>
               <circle
@@ -198,6 +252,23 @@ export function RadarChartCard({ title, subtitle, radar, detailScores }: RadarCh
               <title>{`${point.label}: ${point.score}%`}</title>
             </g>
           ))}
+
+          {comparisonPoints
+            ? comparisonPoints.map((point) => (
+                <g key={`compare-point-${point.key}`}>
+                  <circle
+                    cx={point.x}
+                    cy={point.y}
+                    r={4.2}
+                    fill="#ef4444"
+                    stroke="#fee2e2"
+                    strokeWidth={1.2}
+                    vectorEffect="non-scaling-stroke"
+                  />
+                  <title>{`${compareLabel} - ${point.label}: ${point.score}%`}</title>
+                </g>
+              ))
+            : null}
 
           <g className="hidden sm:block">
             {points.map((point) => (
@@ -249,6 +320,19 @@ export function RadarChartCard({ title, subtitle, radar, detailScores }: RadarCh
           <circle cx={center} cy={center} r={7} fill="#0f172a" stroke="rgba(34,211,238,0.7)" strokeWidth="1.2" />
         </svg>
       </div>
+
+      {comparisonPoints ? (
+        <div className="mt-2 flex flex-wrap gap-3 text-xs text-slate-200">
+          <span className="inline-flex items-center gap-1.5">
+            <span className="inline-block h-2.5 w-2.5 rounded-full bg-cyan-400" />
+            {primaryLabel}
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="inline-block h-2.5 w-2.5 rounded-full bg-red-500" />
+            {compareLabel}
+          </span>
+        </div>
+      ) : null}
     </Card>
   );
 }
