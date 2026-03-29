@@ -302,6 +302,57 @@ const RadarPartyPage = () => {
   );
   const teamCompletionPct = expectedResponders > 0 ? Math.round((completedResponders / expectedResponders) * 100) : 0;
 
+  const renderThemeCardsBlock = (
+    radarValues: RadarAxisValues,
+    options?: { title?: string; helperText?: string }
+  ) => {
+    const title = options?.title ?? "Cartes thematiques";
+    const helperText =
+      options?.helperText ?? "Lecture rapide par theme avec tonalite visuelle, score et interpretation.";
+
+    return (
+      <Card className="rounded-3xl border-cyan-300/30 bg-slate-950/45 p-4">
+        <h3 className="text-base font-semibold text-cyan-100">{title}</h3>
+        <p className="mt-1 text-xs text-slate-300">{helperText}</p>
+        <div className="mt-3 grid gap-3 lg:grid-cols-2">
+          {RADAR_DIMENSIONS.map((dimension) => {
+            const score = clampPercent(Number(radarValues?.[dimension] ?? 0));
+            const tone = getThemeTone(score);
+            const meta = THEME_CARD_META[dimension];
+            const Icon = tone.Icon;
+            const scoreOnFive = (score / 20).toFixed(1);
+
+            return (
+              <div key={dimension} className={cn("rounded-3xl border p-4", tone.cardClass)}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-base font-semibold text-slate-100">{meta.title}</p>
+                    <p className="mt-1 text-xs text-slate-200/90">{meta.description}</p>
+                  </div>
+                  <span
+                    className={cn(
+                      "inline-flex shrink-0 rounded-full border px-2.5 py-1 text-xs font-semibold",
+                      tone.badgeClass
+                    )}
+                  >
+                    {scoreOnFive}/5
+                  </span>
+                </div>
+                <div className="mt-3 flex items-start gap-2">
+                  <Icon className={cn("mt-0.5 h-5 w-5 shrink-0", tone.iconClass)} />
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-100/90">{tone.level}</p>
+                    <p className="mt-1 text-sm text-slate-100/90">{meta[tone.messageKey]}</p>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+    );
+  };
+
   const refreshSession = async (codeArg?: string) => {
     const code = (codeArg ?? roomCode ?? "").trim().toUpperCase();
     if (!code) return;
@@ -778,6 +829,11 @@ const RadarPartyPage = () => {
 
         {stage === "individual" && resultToShow ? (
           <section className="grid min-w-0 gap-4">
+            <Card className="rounded-3xl border-cyan-300/30 bg-slate-950/45 p-4">
+              <h3 className="text-base font-semibold text-cyan-100">Resume individuel</h3>
+              <p className="mt-2 break-words text-sm text-slate-200">{resultToShow.insights.summary}</p>
+            </Card>
+
             <RadarChartCard
               title="Radar individuel"
               subtitle="Projection sur les 10 themes (score de 0 a 100)"
@@ -785,47 +841,7 @@ const RadarPartyPage = () => {
               detailScores={resultToShow.polesPercent}
             />
 
-            <Card className="rounded-3xl border-cyan-300/30 bg-slate-950/45 p-4">
-              <h3 className="text-base font-semibold text-cyan-100">Cartes thematiques</h3>
-              <p className="mt-1 text-xs text-slate-300">
-                Lecture rapide par theme avec tonalite visuelle, score et interpretation.
-              </p>
-              <div className="mt-3 grid gap-3 lg:grid-cols-2">
-                {RADAR_DIMENSIONS.map((dimension) => {
-                  const score = clampPercent(Number(resultToShow.radar?.[dimension] ?? 0));
-                  const tone = getThemeTone(score);
-                  const meta = THEME_CARD_META[dimension];
-                  const Icon = tone.Icon;
-                  const scoreOnFive = (score / 20).toFixed(1);
-
-                  return (
-                    <div key={dimension} className={cn("rounded-3xl border p-4", tone.cardClass)}>
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="text-base font-semibold text-slate-100">{meta.title}</p>
-                          <p className="mt-1 text-xs text-slate-200/90">{meta.description}</p>
-                        </div>
-                        <span className={cn("inline-flex shrink-0 rounded-full border px-2.5 py-1 text-xs font-semibold", tone.badgeClass)}>
-                          {scoreOnFive}/5
-                        </span>
-                      </div>
-                      <div className="mt-3 flex items-start gap-2">
-                        <Icon className={cn("mt-0.5 h-5 w-5 shrink-0", tone.iconClass)} />
-                        <div className="min-w-0">
-                          <p className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-100/90">{tone.level}</p>
-                          <p className="mt-1 text-sm text-slate-100/90">{meta[tone.messageKey]}</p>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </Card>
-
-            <Card className="rounded-3xl border-cyan-300/30 bg-slate-950/45 p-4">
-              <h3 className="text-base font-semibold text-cyan-100">Resume individuel</h3>
-              <p className="mt-2 break-words text-sm text-slate-200">{resultToShow.insights.summary}</p>
-            </Card>
+            {renderThemeCardsBlock(resultToShow.radar)}
 
             <div className="grid gap-4 lg:grid-cols-3">
               <Card className="rounded-3xl border-cyan-300/30 bg-slate-950/45 p-4">
@@ -883,6 +899,11 @@ const RadarPartyPage = () => {
               primaryLabel={resultToShow ? "Mon profil" : "Equipe"}
               compareLabel="Equipe"
             />
+
+            {renderThemeCardsBlock(teamRadar, {
+              title: "Cartes thematiques equipe",
+              helperText: "Lecture par theme basee sur la moyenne des reponses de l'equipe.",
+            })}
 
             <Card className="rounded-3xl border-cyan-300/30 bg-slate-950/45 p-4">
               <h4 className="text-sm font-semibold text-cyan-100">Axes homogenes et axes polarises</h4>
