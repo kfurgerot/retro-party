@@ -5,7 +5,9 @@ import { OnlineLobbyScreen } from "@/components/screens/OnlineLobbyScreen";
 import { OnlineOnboardingScreen } from "@/components/screens/OnlineOnboardingScreen";
 import { RetroScreenBackground } from "@/components/screens/RetroScreenBackground";
 import { Card, PrimaryButton, SecondaryButton } from "@/components/app-shell";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
+import { AVATARS } from "@/types/game";
 import {
   APP_SHELL_SURFACE_SOFT,
   CTA_NEON_DANGER,
@@ -37,7 +39,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-type Stage = "lobby" | "questionnaire" | "individual" | "team-radar";
+type Stage = "lobby" | "questionnaire" | "individual" | "team-radar" | "team-progress";
 
 type LocalResult = {
   radar: RadarAxisValues;
@@ -61,6 +63,7 @@ const likertScale = [
 ] as const;
 
 const AXIS_FR: Record<keyof RadarAxisValues, string> = RADAR_DIMENSION_LABELS;
+const TOTAL_QUESTIONS = RADAR_QUESTIONS.length;
 
 function emptyTeamInsights(teamRadar: RadarAxisValues, participants: RadarParticipant[]): RadarTeamInsights {
   return buildTeamInsights(
@@ -97,6 +100,7 @@ const RadarPartyPage = () => {
   const [teamInsights, setTeamInsights] = useState<RadarTeamInsights | null>(null);
   const [sessionStatus, setSessionStatus] = useState<"lobby" | "started">("lobby");
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
+  const [hostParticipates, setHostParticipates] = useState(true);
 
   const currentQuestion = RADAR_QUESTIONS[questionIndex];
   const progressPct = Math.round(((questionIndex + 1) / RADAR_QUESTIONS.length) * 100);
@@ -124,6 +128,39 @@ const RadarPartyPage = () => {
     });
     return aggregated;
   }, [participants]);
+  const progressRows = useMemo(() => {
+    return participants.map((participant) => {
+      const exempted = participant.isHost && !hostParticipates;
+      const total = Math.max(1, participant.progressTotal ?? TOTAL_QUESTIONS);
+      const answered = exempted
+        ? 0
+        : participant.submittedAt
+        ? total
+        : Math.max(0, Math.min(total, participant.progressAnswered ?? 0));
+      const progressPct = exempted
+        ? 0
+        : participant.submittedAt
+        ? 100
+        : Math.max(0, Math.min(100, Math.round((answered / total) * 100)));
+
+      return {
+        participant,
+        exempted,
+        answered,
+        total,
+        progressPct,
+      };
+    });
+  }, [participants, hostParticipates]);
+  const expectedResponders = useMemo(
+    () => progressRows.filter((row) => !row.exempted).length,
+    [progressRows]
+  );
+  const completedResponders = useMemo(
+    () => progressRows.filter((row) => !row.exempted && row.participant.submittedAt).length,
+    [progressRows]
+  );
+  const teamCompletionPct = expectedResponders > 0 ? Math.round((completedResponders / expectedResponders) * 100) : 0;
 
   const refreshSession = async (codeArg?: string) => {
     const code = (codeArg ?? roomCode ?? "").trim().toUpperCase();
@@ -131,6 +168,7 @@ const RadarPartyPage = () => {
     const response = await api.radarGetSession(code);
     setRoomCode(response.session.code);
     setSessionStatus(response.session.status);
+    setHostParticipates(response.session.hostParticipates !== false);
     setParticipants(response.participants);
 
     const memberRadars = response.participants
@@ -142,20 +180,22 @@ const RadarPartyPage = () => {
     setTeamInsights(nextTeamInsights);
 
     if (response.session.status === "started" && stage === "lobby") {
+      const self = response.participants.find((participant) => participant.id === participantId);
+      const shouldOpenProgressMenu = Boolean(self?.isHost) && response.session.hostParticipates === false;
       setAnswers({});
       setQuestionIndex(0);
       setLocalResult(null);
-      setStage("questionnaire");
+      setStage(shouldOpenProgressMenu ? "team-progress" : "questionnaire");
     }
   };
 
   useEffect(() => {
-    if (!roomCode || stage !== "lobby") return;
+    if (!roomCode || (stage !== "lobby" && stage !== "team-progress")) return;
     const interval = window.setInterval(() => {
       void refreshSession(roomCode);
     }, 4000);
     return () => window.clearInterval(interval);
-  }, [roomCode, stage]);
+  }, [roomCode, stage, participantId]);
 
   const computeLocalResult = (allAnswers: RadarAnswers) => {
     const scoring = computeRadarScores(allAnswers);
@@ -165,9 +205,20 @@ const RadarPartyPage = () => {
     return result;
   };
 
+  const pushProgressUpdate = async (nextAnswers: RadarAnswers) => {
+    if (!roomCode || !participantId) return;
+    const answeredCount = RADAR_QUESTIONS.filter((question) => Number.isFinite(nextAnswers[question.id])).length;
+    try {
+      await api.radarUpdateProgress(roomCode, { participantId, answeredCount });
+    } catch {
+      // Keep questionnaire flow resilient if progress sync fails transiently.
+    }
+  };
+
   const handleSelectAnswer = (value: number) => {
     const nextAnswers = { ...answers, [currentQuestion.id]: value };
     setAnswers(nextAnswers);
+    void pushProgressUpdate(nextAnswers);
 
     if (questionIndex === RADAR_QUESTIONS.length - 1) {
       computeLocalResult(nextAnswers);
@@ -184,6 +235,7 @@ const RadarPartyPage = () => {
       const created = await api.radarCreateSession({
         title: "Session Radar Party",
         facilitatorName: name,
+        hostParticipates,
       });
       const joined = await api.radarJoinSession(created.session.code, {
         displayName: name,
@@ -232,6 +284,7 @@ const RadarPartyPage = () => {
       setParticipants([]);
       setParticipantId("");
       setSessionStatus("lobby");
+      setHostParticipates(true);
       setTeamInsights(null);
       setTeamRadar(createNeutralRadar());
       return;
@@ -270,7 +323,7 @@ const RadarPartyPage = () => {
     setLoading(true);
     setError(null);
     try {
-      await api.radarStartSession(roomCode, { participantId });
+      await api.radarStartSession(roomCode, { participantId, hostParticipates });
       await refreshSession(roomCode);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur serveur");
@@ -289,6 +342,7 @@ const RadarPartyPage = () => {
     setQuestionIndex(0);
     setLocalResult(null);
     setTeamInsights(null);
+    setHostParticipates(true);
     setTeamRadar(createNeutralRadar());
     if (fromEntry) {
       navigate("/?stage=entry&experience=agile-radar");
@@ -361,6 +415,33 @@ const RadarPartyPage = () => {
           stepTotal={5}
           shellStyle="transparent"
           hideRoundsControl
+          hostSetupPanel={
+            roomCode && isHost ? (
+              <div className="space-y-3">
+                <p className="text-xs uppercase tracking-[0.1em] text-cyan-100/90">
+                  Participation de l'hote
+                </p>
+                <div className="flex items-center justify-between gap-3 rounded-md border border-cyan-300/25 bg-slate-950/35 px-3 py-2">
+                  <div className="min-w-0">
+                    <p className="text-sm text-cyan-50">
+                      {hostParticipates ? "L'hote repond au questionnaire" : "L'hote n'a pas besoin de repondre"}
+                    </p>
+                    <p className="mt-0.5 text-xs text-slate-300">
+                      {hostParticipates
+                        ? "L'hote voit le questionnaire et peut aussi suivre l'avancement."
+                        : "L'hote ouvre directement le menu de suivi quand la partie demarre."}
+                    </p>
+                  </div>
+                  <Switch
+                    checked={hostParticipates}
+                    onCheckedChange={setHostParticipates}
+                    aria-label="L'hote participe au questionnaire"
+                    className="data-[state=checked]:bg-cyan-500 data-[state=unchecked]:bg-slate-700"
+                  />
+                </div>
+              </div>
+            ) : null
+          }
           titleWhenNoRoomOverride="Creer ou rejoindre une session Radar"
         />
       </div>
@@ -376,7 +457,22 @@ const RadarPartyPage = () => {
       <Card className="relative z-10 flex w-full max-w-5xl min-w-0 flex-col gap-4 p-4 sm:p-8">
         <header className="flex flex-wrap items-center justify-between gap-2 text-xs uppercase tracking-[0.14em] text-cyan-200/80">
           <span>Retro Party - Radar Party</span>
-          <span className="rounded-full border border-cyan-300/40 px-2 py-0.5">Module Agile</span>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <span className="rounded-full border border-cyan-300/40 px-2 py-0.5">Module Agile</span>
+            {isHost && roomCode && sessionStatus === "started" && stage !== "team-progress" ? (
+              <SecondaryButton className="h-8 min-h-0 px-3 text-xs" onClick={() => setStage("team-progress")}>
+                Suivi equipe
+              </SecondaryButton>
+            ) : null}
+            {isHost && roomCode && sessionStatus === "started" && stage === "team-progress" && hostParticipates ? (
+              <SecondaryButton
+                className="h-8 min-h-0 px-3 text-xs"
+                onClick={() => setStage(localResult ? "individual" : "questionnaire")}
+              >
+                {localResult ? "Voir mon resultat" : "Reprendre questionnaire"}
+              </SecondaryButton>
+            ) : null}
+          </div>
         </header>
 
         {error ? <p className="text-sm text-red-300">{error}</p> : null}
@@ -552,6 +648,83 @@ const RadarPartyPage = () => {
                 Quitter
               </SecondaryButton>
             </div>
+          </section>
+        ) : null}
+
+        {stage === "team-progress" ? (
+          <section className="grid min-w-0 gap-4">
+            <Card className="rounded-xl border-cyan-300/30 bg-slate-950/45 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-base font-semibold text-cyan-100">Suivi d'avancement equipe</h3>
+                  <p className="break-words text-sm text-slate-200">Code de session: {roomCode || "-"}</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <SecondaryButton disabled={loading} onClick={() => refreshSession()}>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Actualiser
+                  </SecondaryButton>
+                  <SecondaryButton onClick={() => setStage("team-radar")}>Voir radar equipe</SecondaryButton>
+                </div>
+              </div>
+              <div className="mt-4">
+                <div className="flex items-center justify-between gap-2 text-xs text-slate-300">
+                  <span>
+                    Progression globale ({completedResponders}/{expectedResponders} participants attendus)
+                  </span>
+                  <span>{teamCompletionPct}%</span>
+                </div>
+                <div className="mt-2 h-2 overflow-hidden rounded bg-slate-900/80">
+                  <div className="h-full rounded bg-cyan-400/90 transition-all duration-300" style={{ width: `${teamCompletionPct}%` }} />
+                </div>
+                {!hostParticipates ? (
+                  <p className="mt-2 text-xs text-amber-200">
+                    Configuration active: l'hote ne repond pas au questionnaire.
+                  </p>
+                ) : null}
+              </div>
+            </Card>
+
+            <Card className="rounded-xl border-cyan-300/30 bg-slate-950/45 p-4">
+              <h4 className="text-sm font-semibold text-cyan-100">Progression par joueur</h4>
+              <div className="mt-3 space-y-3">
+                {progressRows.map((row) => (
+                  <div key={row.participant.id} className="rounded-lg border border-cyan-300/20 bg-slate-900/45 p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-cyan-300/30 bg-slate-950/65 text-lg">
+                          {AVATARS[row.participant.avatar] ?? "?"}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm text-cyan-50">
+                            {row.participant.displayName}
+                            {row.participant.isHost ? " (hote)" : ""}
+                          </p>
+                          <p className="text-xs text-slate-300">
+                            {row.exempted
+                              ? "Ne participe pas au questionnaire"
+                              : row.participant.submittedAt
+                              ? "Questionnaire termine"
+                              : `${row.answered}/${row.total} reponses`}
+                          </p>
+                        </div>
+                      </div>
+                      <span className="text-xs text-cyan-100">{row.exempted ? "N/A" : `${row.progressPct}%`}</span>
+                    </div>
+
+                    <div className="mt-2 h-2 overflow-hidden rounded bg-slate-900/80">
+                      <div
+                        className={cn(
+                          "h-full rounded transition-all duration-300",
+                          row.exempted ? "bg-slate-600/70" : row.participant.submittedAt ? "bg-emerald-400/90" : "bg-cyan-400/90"
+                        )}
+                        style={{ width: `${row.exempted ? 100 : row.progressPct}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
           </section>
         ) : null}
 

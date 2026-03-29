@@ -51,6 +51,7 @@ interface OnlineLobbyScreenProps {
   titleWhenNoRoomOverride?: string;
   shellStyle?: "default" | "transparent";
   hideRoundsControl?: boolean;
+  hostSetupPanel?: React.ReactNode;
 }
 
 type Pending = "idle" | "hosting" | "joining" | "starting";
@@ -82,6 +83,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
   titleWhenNoRoomOverride,
   shellStyle = "default",
   hideRoundsControl = false,
+  hostSetupPanel,
 }) => {
   const [mode, setMode] = useState<"host" | "join">(initialMode ?? "host");
   const [name, setName] = useState(() => cleanName(initialName ?? ""));
@@ -435,6 +437,12 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
                           <span>30</span>
                         </div>
                       </div>
+                    </div>
+                  ) : null}
+
+                  {hostSetupPanel ? (
+                    <div className="space-y-1 rounded-md border border-cyan-300/20 bg-slate-900/35 p-3">
+                      {hostSetupPanel}
                     </div>
                   ) : null}
 

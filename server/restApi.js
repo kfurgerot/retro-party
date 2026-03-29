@@ -250,11 +250,19 @@ async function getOwnedTemplate(pool, userId, templateId) {
 }
 
 function serializeRadarParticipant(row) {
+  const progressAnsweredRaw = Number(row.progress_answered);
+  const progressTotalRaw = Number(row.progress_total);
+  const progressAnswered = Number.isFinite(progressAnsweredRaw) ? Math.max(0, Math.round(progressAnsweredRaw)) : 0;
+  const progressTotal = Number.isFinite(progressTotalRaw) ? Math.max(1, Math.round(progressTotalRaw)) : RADAR_QUESTIONS.length;
+  const progressPct = Math.max(0, Math.min(100, Math.round((progressAnswered / progressTotal) * 100)));
   return {
     id: row.id,
     displayName: row.display_name,
     avatar: Number.isFinite(Number(row.avatar)) ? Number(row.avatar) : 0,
     isHost: !!row.is_host,
+    progressAnswered,
+    progressTotal,
+    progressPct,
     createdAt: row.created_at,
   };
 }
@@ -1047,15 +1055,16 @@ export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCod
       const title = typeof req.body?.title === "string" ? req.body.title.trim().slice(0, 120) : "";
       const facilitatorName =
         typeof req.body?.facilitatorName === "string" ? req.body.facilitatorName.trim().slice(0, 80) : "";
+      const hostParticipates = req.body?.hostParticipates !== false;
       const code = await generateUniqueRoomCode({ pool, rooms, makeCode, isCodeReserved });
       const sessionId = crypto.randomUUID();
 
       await pool.query(
         `
-          INSERT INTO radar_sessions (id, session_code, title, facilitator_name, created_by_user_id, status)
-          VALUES ($1, $2, $3, $4, $5, 'lobby')
+          INSERT INTO radar_sessions (id, session_code, title, facilitator_name, created_by_user_id, host_participates, status)
+          VALUES ($1, $2, $3, $4, $5, $6, 'lobby')
         `,
-        [sessionId, code, title || null, facilitatorName || null, req.currentUser?.id ?? null]
+        [sessionId, code, title || null, facilitatorName || null, req.currentUser?.id ?? null, hostParticipates]
       );
 
       return res.status(201).json({
@@ -1064,6 +1073,7 @@ export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCod
           code,
           title: title || null,
           facilitatorName: facilitatorName || null,
+          hostParticipates,
           status: "lobby",
           startedAt: null,
         },
@@ -1083,7 +1093,7 @@ export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCod
       if (displayName.length < 2) return res.status(400).json({ error: "Invalid payload" });
 
       const sessionResult = await pool.query(
-        "SELECT id, session_code, title, facilitator_name, status, started_at, created_at FROM radar_sessions WHERE session_code = $1 LIMIT 1",
+        "SELECT id, session_code, title, facilitator_name, host_participates, status, started_at, created_at FROM radar_sessions WHERE session_code = $1 LIMIT 1",
         [code]
       );
       const session = sessionResult.rows[0];
@@ -1111,11 +1121,80 @@ export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCod
           code: session.session_code,
           title: session.title,
           facilitatorName: session.facilitator_name,
+          hostParticipates: session.host_participates !== false,
           status: session.status,
           startedAt: session.started_at,
           createdAt: session.created_at,
         },
         participant: serializeRadarParticipant(participantResult.rows[0]),
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.post("/api/radar/sessions/:code/progress", async (req, res, next) => {
+    try {
+      const code = String(req.params.code || "").trim().toUpperCase();
+      const participantId = typeof req.body?.participantId === "string" ? req.body.participantId : "";
+      const answeredCountRaw = Number(req.body?.answeredCount);
+      const answeredCount = Number.isFinite(answeredCountRaw) ? Math.round(answeredCountRaw) : NaN;
+      const totalCount = RADAR_QUESTIONS.length;
+
+      if (!participantId || !Number.isFinite(answeredCount)) {
+        return res.status(400).json({ error: "Invalid payload" });
+      }
+      if (answeredCount < 0 || answeredCount > totalCount) {
+        return res.status(400).json({ error: "Invalid payload" });
+      }
+
+      const sessionResult = await pool.query(
+        "SELECT id, session_code, host_participates, status FROM radar_sessions WHERE session_code = $1 LIMIT 1",
+        [code]
+      );
+      const session = sessionResult.rows[0];
+      if (!session) return res.status(404).json({ error: "Not found" });
+
+      const participantResult = await pool.query(
+        "SELECT id, is_host FROM radar_participants WHERE id = $1 AND session_id = $2 LIMIT 1",
+        [participantId, session.id]
+      );
+      const participant = participantResult.rows[0];
+      if (!participant) return res.status(404).json({ error: "Not found" });
+
+      if (participant.is_host && session.host_participates === false) {
+        return res.status(200).json({
+          participant: {
+            id: participant.id,
+            progressAnswered: 0,
+            progressTotal: totalCount,
+            progressPct: 0,
+          },
+        });
+      }
+
+      const updateResult = await pool.query(
+        `
+          UPDATE radar_participants
+          SET progress_answered = $1, progress_total = $2
+          WHERE id = $3 AND session_id = $4
+          RETURNING id, progress_answered, progress_total
+        `,
+        [answeredCount, totalCount, participant.id, session.id]
+      );
+
+      const updated = updateResult.rows[0];
+      const progressAnswered = Number(updated.progress_answered || 0);
+      const progressTotal = Math.max(1, Number(updated.progress_total || totalCount));
+      const progressPct = Math.max(0, Math.min(100, Math.round((progressAnswered / progressTotal) * 100)));
+
+      return res.status(200).json({
+        participant: {
+          id: updated.id,
+          progressAnswered,
+          progressTotal,
+          progressPct,
+        },
       });
     } catch (err) {
       next(err);
@@ -1131,7 +1210,7 @@ export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCod
       if (!participantId || !answers) return res.status(400).json({ error: "Invalid payload" });
 
       const sessionResult = await client.query(
-        "SELECT id, session_code, status FROM radar_sessions WHERE session_code = $1 LIMIT 1",
+        "SELECT id, session_code, host_participates, status FROM radar_sessions WHERE session_code = $1 LIMIT 1",
         [code]
       );
       const session = sessionResult.rows[0];
@@ -1146,6 +1225,9 @@ export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCod
       );
       const participant = participantResult.rows[0];
       if (!participant) return res.status(404).json({ error: "Not found" });
+      if (participant.is_host && session.host_participates === false) {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
 
       const scoring = computeRadarScores(answers);
       const insights = buildIndividualInsights(scoring.radar);
@@ -1180,6 +1262,14 @@ export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCod
           toJson(insights.watchouts),
           toJson(insights.workshopQuestions),
         ]
+      );
+      await client.query(
+        `
+          UPDATE radar_participants
+          SET progress_answered = $1, progress_total = $1
+          WHERE id = $2
+        `,
+        [RADAR_QUESTIONS.length, participant.id]
       );
 
       const allResponsesResult = await client.query(
@@ -1237,7 +1327,7 @@ export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCod
     try {
       const code = String(req.params.code || "").trim().toUpperCase();
       const sessionResult = await pool.query(
-        "SELECT id, session_code, title, facilitator_name, status, started_at, created_at FROM radar_sessions WHERE session_code = $1 LIMIT 1",
+        "SELECT id, session_code, title, facilitator_name, host_participates, status, started_at, created_at FROM radar_sessions WHERE session_code = $1 LIMIT 1",
         [code]
       );
       const session = sessionResult.rows[0];
@@ -1250,6 +1340,8 @@ export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCod
             p.display_name,
             p.avatar,
             p.is_host,
+            p.progress_answered,
+            p.progress_total,
             p.created_at,
             r.radar,
             r.poles,
@@ -1278,6 +1370,7 @@ export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCod
           code: session.session_code,
           title: session.title,
           facilitatorName: session.facilitator_name,
+          hostParticipates: session.host_participates !== false,
           status: session.status,
           startedAt: session.started_at,
           createdAt: session.created_at,
@@ -1287,6 +1380,19 @@ export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCod
           displayName: row.display_name,
           avatar: Number.isFinite(Number(row.avatar)) ? Number(row.avatar) : 0,
           isHost: !!row.is_host,
+          progressAnswered: Number.isFinite(Number(row.progress_answered)) ? Number(row.progress_answered) : 0,
+          progressTotal: Number.isFinite(Number(row.progress_total)) ? Number(row.progress_total) : RADAR_QUESTIONS.length,
+          progressPct: Math.max(
+            0,
+            Math.min(
+              100,
+              Math.round(
+                ((Number.isFinite(Number(row.progress_answered)) ? Number(row.progress_answered) : 0) /
+                  Math.max(1, Number.isFinite(Number(row.progress_total)) ? Number(row.progress_total) : RADAR_QUESTIONS.length)) *
+                  100
+              )
+            )
+          ),
           createdAt: row.created_at,
           submittedAt: row.submitted_at,
           result: row.radar
@@ -1320,10 +1426,12 @@ export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCod
     try {
       const code = String(req.params.code || "").trim().toUpperCase();
       const participantId = typeof req.body?.participantId === "string" ? req.body.participantId : "";
+      const hostParticipates =
+        typeof req.body?.hostParticipates === "boolean" ? req.body.hostParticipates : null;
       if (!participantId) return res.status(400).json({ error: "Invalid payload" });
 
       const sessionResult = await pool.query(
-        "SELECT id, session_code, status, started_at FROM radar_sessions WHERE session_code = $1 LIMIT 1",
+        "SELECT id, session_code, status, started_at, host_participates FROM radar_sessions WHERE session_code = $1 LIMIT 1",
         [code]
       );
       const session = sessionResult.rows[0];
@@ -1340,13 +1448,27 @@ export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCod
       const updateResult = await pool.query(
         `
           UPDATE radar_sessions
-          SET status = 'started', started_at = COALESCE(started_at, now())
+          SET
+            status = 'started',
+            started_at = COALESCE(started_at, now()),
+            host_participates = COALESCE($2::boolean, host_participates)
           WHERE id = $1
-          RETURNING id, session_code, status, started_at
+          RETURNING id, session_code, status, started_at, host_participates
         `,
-        [session.id]
+        [session.id, hostParticipates]
       );
       const updated = updateResult.rows[0];
+
+      if (updated.host_participates === false) {
+        await pool.query(
+          `
+            UPDATE radar_participants
+            SET progress_answered = 0, progress_total = $2
+            WHERE session_id = $1 AND is_host = true
+          `,
+          [session.id, RADAR_QUESTIONS.length]
+        );
+      }
 
       return res.status(200).json({
         session: {
@@ -1354,6 +1476,7 @@ export function registerApiRoutes({ app, pool, rooms, createRuntimeRoom, makeCod
           code: updated.session_code,
           status: updated.status,
           startedAt: updated.started_at,
+          hostParticipates: updated.host_participates !== false,
         },
       });
     } catch (err) {

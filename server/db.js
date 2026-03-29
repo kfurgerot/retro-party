@@ -119,6 +119,7 @@ export async function initDatabase() {
       title TEXT NULL,
       facilitator_name TEXT NULL,
       created_by_user_id UUID NULL REFERENCES users(id) ON DELETE SET NULL,
+      host_participates BOOLEAN NOT NULL DEFAULT true,
       status TEXT NOT NULL DEFAULT 'lobby' CHECK (status IN ('lobby', 'started')),
       started_at TIMESTAMPTZ NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -131,6 +132,9 @@ export async function initDatabase() {
     "ALTER TABLE radar_sessions ADD COLUMN IF NOT EXISTS started_at TIMESTAMPTZ NULL;"
   );
   await pool.query(
+    "ALTER TABLE radar_sessions ADD COLUMN IF NOT EXISTS host_participates BOOLEAN NOT NULL DEFAULT true;"
+  );
+  await pool.query(
     "CREATE INDEX IF NOT EXISTS idx_radar_sessions_created_by_user_id ON radar_sessions(created_by_user_id);"
   );
 
@@ -141,6 +145,8 @@ export async function initDatabase() {
       display_name TEXT NOT NULL,
       avatar INT NOT NULL DEFAULT 0,
       is_host BOOLEAN NOT NULL DEFAULT false,
+      progress_answered INT NOT NULL DEFAULT 0,
+      progress_total INT NOT NULL DEFAULT 50,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
   `);
@@ -149,6 +155,12 @@ export async function initDatabase() {
   );
   await pool.query(
     "ALTER TABLE radar_participants ADD COLUMN IF NOT EXISTS is_host BOOLEAN NOT NULL DEFAULT false;"
+  );
+  await pool.query(
+    "ALTER TABLE radar_participants ADD COLUMN IF NOT EXISTS progress_answered INT NOT NULL DEFAULT 0;"
+  );
+  await pool.query(
+    "ALTER TABLE radar_participants ADD COLUMN IF NOT EXISTS progress_total INT NOT NULL DEFAULT 50;"
   );
   await pool.query(
     "CREATE INDEX IF NOT EXISTS idx_radar_participants_session_id ON radar_participants(session_id);"

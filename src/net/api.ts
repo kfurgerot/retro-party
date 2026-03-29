@@ -75,6 +75,7 @@ export type RadarSessionInfo = {
   code: string;
   title: string | null;
   facilitatorName: string | null;
+  hostParticipates: boolean;
   status: "lobby" | "started";
   startedAt: string | null;
   createdAt?: string;
@@ -85,6 +86,9 @@ export type RadarParticipant = {
   displayName: string;
   avatar: number;
   isHost: boolean;
+  progressAnswered?: number;
+  progressTotal?: number;
+  progressPct?: number;
   createdAt?: string;
   submittedAt?: string | null;
   result?: RadarIndividualResult | null;
@@ -248,7 +252,7 @@ export const api = {
       body: JSON.stringify({ baseConfig: baseConfig ?? {} }),
     }),
 
-  radarCreateSession: (payload: { title?: string; facilitatorName?: string }) =>
+  radarCreateSession: (payload: { title?: string; facilitatorName?: string; hostParticipates?: boolean }) =>
     request<{ session: RadarSessionInfo }>("/radar/sessions", {
       method: "POST",
       body: JSON.stringify(payload),
@@ -261,6 +265,25 @@ export const api = {
         body: JSON.stringify(payload),
       }
     ),
+  radarUpdateProgress: (
+    code: string,
+    payload: {
+      participantId: string;
+      answeredCount: number;
+    }
+  ) =>
+    request<{
+      participant: {
+        id: string;
+        progressAnswered: number;
+        progressTotal: number;
+        progressPct: number;
+      };
+    }>(`/radar/sessions/${encodeURIComponent(code)}/progress`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+
   radarSubmitAnswers: (
     code: string,
     payload: {
@@ -289,8 +312,11 @@ export const api = {
     }>(`/radar/sessions/${encodeURIComponent(code)}`, {
       method: "GET",
     }),
-  radarStartSession: (code: string, payload: { participantId: string }) =>
-    request<{ session: Pick<RadarSessionInfo, "id" | "code" | "status" | "startedAt"> }>(
+  radarStartSession: (
+    code: string,
+    payload: { participantId: string; hostParticipates?: boolean }
+  ) =>
+    request<{ session: Pick<RadarSessionInfo, "id" | "code" | "status" | "startedAt" | "hostParticipates"> }>(
       `/radar/sessions/${encodeURIComponent(code)}/start`,
       {
         method: "POST",
