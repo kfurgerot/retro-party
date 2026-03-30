@@ -1191,6 +1191,16 @@ const RadarPartyPage = () => {
         timeStyle: "short",
       });
       const themeRows = buildPdfThemeRows(localResult.radar);
+      const recommendationCards = buildIndividualRecommendations(localResult.radar).cards;
+      const recommendationToneLabel: Record<string, string> = {
+        reinforce: "A renforcer",
+        "next-lever": "Prochain levier",
+        preserve: "A preserver",
+      };
+      const recommendationLines = recommendationCards.map((card, index) => {
+        const tone = recommendationToneLabel[card.kind] ?? "Suggestion";
+        return `${index + 1}. ${tone} - ${card.axisLabel} (${card.score}/100). Constat: ${card.observation} Suggestion: ${card.suggestion} Premier pas: ${card.firstStep} Indicateur (2 semaines): ${card.indicator}`;
+      });
 
       const addPageBackground = (subtitle: string) => {
         pdf.setFillColor(2, 6, 23);
@@ -1214,6 +1224,14 @@ const RadarPartyPage = () => {
         const lines = pdf.splitTextToSize(text, width);
         pdf.text(lines, x, y);
         return y + lines.length * 4.8;
+      };
+      const estimateBulletSectionHeight = (items: string[]) => {
+        const bulletWidth = contentWidth - 8;
+        const totalLines = items.reduce((acc, item) => {
+          const wrapped = pdf.splitTextToSize(`- ${item}`, bulletWidth);
+          return acc + Math.max(1, wrapped.length);
+        }, 0);
+        return 12 + totalLines * 4.8 + 2;
       };
       const drawMetaCard = (
         x: number,
@@ -1329,7 +1347,7 @@ const RadarPartyPage = () => {
       cursorY = drawWrappedParagraph(localResult.insights.summary, margin + 4, cursorY + 13, contentWidth - 8) + 5;
 
       const drawBulletSection = (title: string, items: string[], tone: [number, number, number]) => {
-        const estimatedHeight = 12 + items.length * 9;
+        const estimatedHeight = estimateBulletSectionHeight(items);
         if (cursorY + estimatedHeight > pageHeight - margin) {
           pdf.addPage();
           addPageBackground("Insights atelier");
@@ -1351,6 +1369,13 @@ const RadarPartyPage = () => {
         cursorY = itemY + 2;
       };
 
+      if (recommendationLines.length > 0) {
+        drawBulletSection(
+          "Recommandations suggerees (2 semaines) - suggestions automatiques (sans IA externe)",
+          recommendationLines,
+          [56, 189, 248]
+        );
+      }
       drawBulletSection("Points forts", localResult.insights.strengths, [52, 211, 153]);
       drawBulletSection("Points de vigilance", localResult.insights.watchouts, [251, 191, 36]);
       drawBulletSection("Questions atelier", localResult.insights.workshopQuestions, [56, 189, 248]);
@@ -1519,10 +1544,9 @@ const RadarPartyPage = () => {
   }
 
   const resultToShow = localResult;
-  const individualRecommendations = useMemo(() => {
-    if (!resultToShow) return [];
-    return buildIndividualRecommendations(resultToShow.radar).cards;
-  }, [resultToShow]);
+  const individualRecommendations = resultToShow
+    ? buildIndividualRecommendations(resultToShow.radar).cards
+    : [];
   const canExportIndividualPdf = stage === "individual" && Boolean(resultToShow);
   const canExportTeamPdf = stage === "team-radar" && isHost;
   const hasRadarStickyFooter = stage === "individual" || stage === "team-radar";
