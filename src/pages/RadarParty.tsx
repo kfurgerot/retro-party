@@ -15,6 +15,7 @@ import {
   GAME_DIALOG_CONTENT,
 } from "@/lib/uiTokens";
 import { RadarChartCard } from "@/components/radar-party/RadarChartCard";
+import { IndividualRecommendationsSection } from "@/components/radar-party/IndividualRecommendationsSection";
 import {
   RADAR_DIMENSIONS,
   RADAR_DIMENSION_LABELS,
@@ -22,6 +23,7 @@ import {
   type RadarDimension,
 } from "@/features/radarParty/questions";
 import { buildIndividualInsights, buildTeamInsights } from "@/features/radarParty/insights";
+import { buildIndividualRecommendations } from "@/features/radarParty/individualRecommendations";
 import {
   createNeutralRadar,
   computeRadarScores,
@@ -1517,6 +1519,10 @@ const RadarPartyPage = () => {
   }
 
   const resultToShow = localResult;
+  const individualRecommendations = useMemo(() => {
+    if (!resultToShow) return [];
+    return buildIndividualRecommendations(resultToShow.radar).cards;
+  }, [resultToShow]);
   const canExportIndividualPdf = stage === "individual" && Boolean(resultToShow);
   const canExportTeamPdf = stage === "team-radar" && isHost;
   const hasRadarStickyFooter = stage === "individual" || stage === "team-radar";
@@ -1719,6 +1725,8 @@ const RadarPartyPage = () => {
             </div>
 
             {renderThemeCardsBlock(resultToShow.radar)}
+
+            <IndividualRecommendationsSection cards={individualRecommendations} />
 
             <div className="grid gap-4 lg:grid-cols-3">
               <Card className="rounded-3xl border-cyan-300/30 bg-slate-950/45 p-4">
