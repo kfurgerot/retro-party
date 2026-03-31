@@ -69,5 +69,22 @@ describe("buildIndividualRecommendations", () => {
 
     expect(result.cards.length).toBeLessThanOrEqual(3);
   });
-});
 
+  it("returns actionable cards with expected fields", () => {
+    const radar = buildRadar({
+      collaboration: 18,
+      speed: 26,
+      value: 88,
+    });
+    const result = buildIndividualRecommendations(radar);
+
+    expect(result.cards).toHaveLength(3);
+    result.cards.forEach((card) => {
+      expect(card.suggestionLabel).toBe("Suggestion");
+      expect(card.observation.length).toBeGreaterThan(0);
+      expect(card.suggestion.length).toBeGreaterThan(0);
+      expect(card.firstStep.length).toBeGreaterThan(0);
+      expect(card.indicator.length).toBeGreaterThan(0);
+    });
+  });
+});

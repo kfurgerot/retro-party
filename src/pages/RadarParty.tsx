@@ -1192,15 +1192,14 @@ const RadarPartyPage = () => {
       });
       const themeRows = buildPdfThemeRows(localResult.radar);
       const recommendationCards = buildIndividualRecommendations(localResult.radar).cards;
-      const recommendationToneLabel: Record<string, string> = {
-        reinforce: "A renforcer",
-        "next-lever": "Prochain levier",
-        preserve: "A preserver",
+      const recommendationToneMeta: Record<
+        "reinforce" | "next-lever" | "preserve",
+        { label: string; color: [number, number, number] }
+      > = {
+        reinforce: { label: "A renforcer", color: [248, 113, 113] },
+        "next-lever": { label: "Prochain levier", color: [251, 191, 36] },
+        preserve: { label: "A preserver", color: [52, 211, 153] },
       };
-      const recommendationLines = recommendationCards.map((card, index) => {
-        const tone = recommendationToneLabel[card.kind] ?? "Suggestion";
-        return `${index + 1}. ${tone} - ${card.axisLabel} (${card.score}/100). Constat: ${card.observation} Suggestion: ${card.suggestion} Premier pas: ${card.firstStep} Indicateur (2 semaines): ${card.indicator}`;
-      });
 
       const addPageBackground = (subtitle: string) => {
         pdf.setFillColor(2, 6, 23);
@@ -1369,20 +1368,190 @@ const RadarPartyPage = () => {
         cursorY = itemY + 2;
       };
 
-      if (recommendationLines.length > 0) {
-        drawBulletSection(
-          "Recommandations suggerees (2 semaines) - suggestions automatiques (sans IA externe)",
-          recommendationLines,
-          [56, 189, 248]
-        );
+      const estimateRecommendationCardHeight = (card: (typeof recommendationCards)[number]) => {
+        const cardContentWidth = contentWidth - 8;
+        const toneLabel = recommendationToneMeta[card.kind].label;
+        const fields = [
+          `${toneLabel} - ${card.axisLabel} (${card.score}/100)`,
+          `Constat: ${card.observation}`,
+          `Suggestion: ${card.suggestion}`,
+          `Premier pas: ${card.firstStep}`,
+          `Indicateur (2 semaines): ${card.indicator}`,
+        ];
+        const lineCount = fields.reduce((acc, field) => {
+          const lines = pdf.splitTextToSize(field, cardContentWidth);
+          return acc + Math.max(1, lines.length);
+        }, 0);
+        return 8 + lineCount * 4.8 + 4;
+      };
+
+      const drawRecommendationSection = () => {
+        if (recommendationCards.length === 0) return;
+
+        const sectionHeight = 18;
+        if (cursorY + sectionHeight > pageHeight - margin) {
+          pdf.addPage();
+          addPageBackground("Insights atelier");
+          cursorY = margin + 18;
+        }
+
+        pdf.setFillColor(15, 23, 42);
+        pdf.roundedRect(margin, cursorY, contentWidth, sectionHeight, 3, 3, "F");
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(10.5);
+        pdf.setTextColor(56, 189, 248);
+        pdf.text("Recommandations suggerees (2 semaines)", margin + 4, cursorY + 7);
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(8.6);
+        pdf.setTextColor(186, 230, 253);
+        pdf.text("Suggestions automatiques (sans IA externe), a adapter a votre contexte.", margin + 4, cursorY + 12);
+        cursorY += sectionHeight + 2;
+
+        recommendationCards.forEach((card, index) => {
+          const tone = recommendationToneMeta[card.kind];
+          const cardHeight = estimateRecommendationCardHeight(card);
+
+          if (cursorY + cardHeight > pageHeight - margin) {
+            pdf.addPage();
+            addPageBackground("Insights atelier");
+            cursorY = margin + 18;
+          }
+
+          pdf.setFillColor(15, 23, 42);
+          pdf.roundedRect(margin, cursorY, contentWidth, cardHeight, 3, 3, "F");
+          pdf.setDrawColor(tone.color[0], tone.color[1], tone.color[2]);
+          pdf.setLineWidth(0.3);
+          pdf.roundedRect(margin, cursorY, contentWidth, cardHeight, 3, 3, "S");
+
+          let textY = cursorY + 6;
+          const drawRecommendationField = (text: string, color: [number, number, number], font: "bold" | "normal") => {
+            pdf.setFont("helvetica", font);
+            pdf.setFontSize(9.2);
+            pdf.setTextColor(color[0], color[1], color[2]);
+            const lines = pdf.splitTextToSize(text, contentWidth - 8);
+            pdf.text(lines, margin + 4, textY);
+            textY += lines.length * 4.8;
+          };
+
+          drawRecommendationField(`${index + 1}. ${tone.label} - ${card.axisLabel} (${card.score}/100)`, tone.color, "bold");
+          drawRecommendationField(`Constat: ${card.observation}`, [226, 232, 240], "normal");
+          drawRecommendationField(`Suggestion: ${card.suggestion}`, [186, 230, 253], "normal");
+          drawRecommendationField(`Premier pas: ${card.firstStep}`, [226, 232, 240], "normal");
+          drawRecommendationField(`Indicateur (2 semaines): ${card.indicator}`, [226, 232, 240], "normal");
+
+          cursorY += cardHeight + 2;
+        });
+      };
+
+      const countBulletLines = (items: string[], width: number) =>
+        items.reduce((acc, item) => {
+          const lines = pdf.splitTextToSize(`- ${item}`, width);
+          return acc + Math.max(1, lines.length);
+        }, 0);
+
+      const estimateWorkshopThemesSectionHeight = (
+        questions: string[],
+        strongestThemes: string[],
+        weakestThemes: string[]
+      ) => {
+        const questionItems = questions.length > 0 ? questions : ["Aucune question atelier generee."];
+        const strongestItems = strongestThemes.length > 0 ? strongestThemes : ["Aucun theme solide identifie."];
+        const weakestItems = weakestThemes.length > 0 ? weakestThemes : ["Aucun theme a consolider identifie."];
+        const availableWidth = contentWidth - 8;
+        const columnGap = 4;
+        const columnWidth = (availableWidth - columnGap) / 2;
+        const questionLines = countBulletLines(questionItems, availableWidth);
+        const strongestLines = countBulletLines(strongestItems, columnWidth);
+        const weakestLines = countBulletLines(weakestItems, columnWidth);
+        const themeLines = Math.max(strongestLines, weakestLines);
+        return 31 + questionLines * 4.8 + themeLines * 4.8;
+      };
+
+      const drawWorkshopThemesSection = (questions: string[], strongestThemes: string[], weakestThemes: string[]) => {
+        const questionItems = questions.length > 0 ? questions : ["Aucune question atelier generee."];
+        const strongestItems = strongestThemes.length > 0 ? strongestThemes : ["Aucun theme solide identifie."];
+        const weakestItems = weakestThemes.length > 0 ? weakestThemes : ["Aucun theme a consolider identifie."];
+        const sectionHeight = estimateWorkshopThemesSectionHeight(questionItems, strongestItems, weakestItems);
+
+        if (cursorY + sectionHeight > pageHeight - margin) {
+          pdf.addPage();
+          addPageBackground("Insights atelier");
+          cursorY = margin + 18;
+        }
+
+        pdf.setFillColor(15, 23, 42);
+        pdf.roundedRect(margin, cursorY, contentWidth, sectionHeight, 3, 3, "F");
+        pdf.setDrawColor(56, 189, 248);
+        pdf.setLineWidth(0.3);
+        pdf.roundedRect(margin, cursorY, contentWidth, sectionHeight, 3, 3, "S");
+
+        let sectionY = cursorY + 7;
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(10.3);
+        pdf.setTextColor(56, 189, 248);
+        pdf.text("Cloture atelier", margin + 4, sectionY);
+
+        sectionY += 4.8;
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(8.6);
+        pdf.setTextColor(186, 230, 253);
+        pdf.text("Questions et priorites themes pour preparer la suite.", margin + 4, sectionY);
+
+        sectionY += 6.2;
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(9.6);
+        pdf.setTextColor(56, 189, 248);
+        pdf.text("Questions atelier", margin + 4, sectionY);
+
+        sectionY += 4.3;
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(9.2);
+        pdf.setTextColor(226, 232, 240);
+        questionItems.forEach((item) => {
+          sectionY = drawWrappedParagraph(`- ${item}`, margin + 4, sectionY, contentWidth - 8);
+        });
+
+        sectionY += 1.2;
+        pdf.setDrawColor(30, 41, 59);
+        pdf.setLineWidth(0.25);
+        pdf.line(margin + 4, sectionY, margin + contentWidth - 4, sectionY);
+
+        sectionY += 5;
+        const columnGap = 4;
+        const columnWidth = (contentWidth - 8 - columnGap) / 2;
+        const leftX = margin + 4;
+        const rightX = leftX + columnWidth + columnGap;
+
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(9.4);
+        pdf.setTextColor(52, 211, 153);
+        pdf.text("Themes les plus solides", leftX, sectionY);
+        pdf.setTextColor(248, 113, 113);
+        pdf.text("Themes a consolider", rightX, sectionY);
+
+        let leftY = sectionY + 4.3;
+        let rightY = sectionY + 4.3;
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(9.2);
+        pdf.setTextColor(226, 232, 240);
+        strongestItems.forEach((item) => {
+          leftY = drawWrappedParagraph(`- ${item}`, leftX, leftY, columnWidth);
+        });
+        weakestItems.forEach((item) => {
+          rightY = drawWrappedParagraph(`- ${item}`, rightX, rightY, columnWidth);
+        });
+
+        cursorY = Math.max(leftY, rightY) + 2;
+      };
+
+      if (recommendationCards.length > 0) {
+        drawRecommendationSection();
       }
       drawBulletSection("Points forts", localResult.insights.strengths, [52, 211, 153]);
       drawBulletSection("Points de vigilance", localResult.insights.watchouts, [251, 191, 36]);
-      drawBulletSection("Questions atelier", localResult.insights.workshopQuestions, [56, 189, 248]);
       const topThemes = themeRows.slice(0, 3).map((theme) => `${theme.title} (${theme.score}%)`);
       const focusThemes = [...themeRows].reverse().slice(0, 3).map((theme) => `${theme.title} (${theme.score}%)`);
-      drawBulletSection("Themes les plus solides", topThemes, [34, 211, 238]);
-      drawBulletSection("Themes a consolider", focusThemes, [248, 113, 113]);
+      drawWorkshopThemesSection(localResult.insights.workshopQuestions, topThemes, focusThemes);
 
       const stamp = `${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, "0")}${String(new Date().getDate()).padStart(2, "0")}-${String(new Date().getHours()).padStart(2, "0")}${String(new Date().getMinutes()).padStart(2, "0")}`;
       const filename = `retro-party-radar-individuel-${(roomCode || "session").toLowerCase()}-${stamp}.pdf`;
