@@ -1,4 +1,4 @@
-# Retro Party
+l# Retro Party
 
 Application web de retrospective d'equipe en mode jeu de plateau retro, jouable en ligne (temps reel via Socket.IO) et en local.
 
