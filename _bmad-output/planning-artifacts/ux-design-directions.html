@@ -1,0 +1,734 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AgileSuite - UX Design Directions</title>
+    <style>
+      :root {
+        --bg: #0a0d18;
+        --bg-elev: #11152a;
+        --panel: #161b33;
+        --text: #f4f7ff;
+        --text-soft: #b7bfd7;
+        --primary: #8a5bff;
+        --secondary: #14d6ff;
+        --accent: #ff9b2f;
+        --success: #32d583;
+        --warning: #fdb022;
+        --danger: #f97066;
+        --ring: rgba(138, 91, 255, 0.45);
+        --radius-lg: 16px;
+        --radius-md: 12px;
+        --radius-sm: 10px;
+        --space-unit: 8px;
+        --surface-blur: 0px;
+        --surface-border: 1px solid rgba(255, 255, 255, 0.1);
+        --surface-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+        --font-family: "Inter", "Segoe UI", "Roboto", Arial, sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: var(--font-family);
+        color: var(--text);
+        background:
+          radial-gradient(1200px 600px at 10% -5%, color-mix(in srgb, var(--primary) 28%, transparent), transparent),
+          radial-gradient(900px 500px at 100% 5%, color-mix(in srgb, var(--secondary) 24%, transparent), transparent),
+          var(--bg);
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: 360px 1fr;
+        min-height: 100vh;
+      }
+
+      .sidebar {
+        border-right: 1px solid rgba(255, 255, 255, 0.1);
+        background: color-mix(in srgb, var(--bg-elev) 82%, black);
+        padding: calc(var(--space-unit) * 3);
+        overflow: auto;
+      }
+
+      .sidebar h1 {
+        margin: 0 0 calc(var(--space-unit) * 1.5);
+        font-size: 20px;
+        line-height: 1.2;
+      }
+
+      .sidebar p {
+        margin: 0 0 calc(var(--space-unit) * 2);
+        color: var(--text-soft);
+        font-size: 14px;
+        line-height: 1.5;
+      }
+
+      .direction-list {
+        display: grid;
+        gap: calc(var(--space-unit) * 1.5);
+      }
+
+      .direction-btn {
+        width: 100%;
+        text-align: left;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: color-mix(in srgb, var(--panel) 78%, black);
+        color: var(--text);
+        border-radius: var(--radius-md);
+        padding: calc(var(--space-unit) * 1.5);
+        cursor: pointer;
+      }
+
+      .direction-btn[aria-pressed="true"] {
+        border-color: color-mix(in srgb, var(--primary) 65%, white);
+        box-shadow: 0 0 0 2px var(--ring);
+      }
+
+      .direction-btn strong {
+        display: block;
+        font-size: 14px;
+        margin-bottom: 6px;
+      }
+
+      .direction-btn span {
+        display: block;
+        font-size: 12px;
+        color: var(--text-soft);
+      }
+
+      .preview-area {
+        padding: calc(var(--space-unit) * 3);
+        overflow: auto;
+      }
+
+      .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: calc(var(--space-unit) * 1);
+        margin-bottom: calc(var(--space-unit) * 2.5);
+      }
+
+      .chip {
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: color-mix(in srgb, var(--panel) 72%, black);
+        color: var(--text);
+        border-radius: 999px;
+        padding: 8px 14px;
+        font-size: 12px;
+      }
+
+      .chip strong {
+        color: var(--secondary);
+      }
+
+      .controls {
+        margin-left: auto;
+        display: flex;
+        gap: 8px;
+      }
+
+      .toggle {
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        background: transparent;
+        color: var(--text-soft);
+        border-radius: 999px;
+        font-size: 12px;
+        padding: 8px 12px;
+        cursor: pointer;
+      }
+
+      .toggle[data-active="true"] {
+        color: var(--text);
+        border-color: var(--primary);
+        box-shadow: 0 0 0 2px var(--ring);
+      }
+
+      .canvas-wrap {
+        border: var(--surface-border);
+        border-radius: var(--radius-lg);
+        padding: calc(var(--space-unit) * 2.5);
+        background: color-mix(in srgb, var(--bg-elev) 86%, black);
+        box-shadow: var(--surface-shadow);
+        backdrop-filter: blur(var(--surface-blur));
+      }
+
+      .canvas {
+        width: 100%;
+        max-width: 1180px;
+        margin: 0 auto;
+        border-radius: calc(var(--radius-lg) + 4px);
+        border: var(--surface-border);
+        background: linear-gradient(
+          160deg,
+          color-mix(in srgb, var(--bg) 92%, black),
+          color-mix(in srgb, var(--bg-elev) 92%, black)
+        );
+        overflow: hidden;
+      }
+
+      .canvas.mobile {
+        max-width: 430px;
+      }
+
+      .screen-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: calc(var(--space-unit) * 2);
+        border-bottom: var(--surface-border);
+        background: color-mix(in srgb, var(--panel) 72%, transparent);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 700;
+        font-size: 14px;
+      }
+
+      .logo {
+        width: 24px;
+        height: 24px;
+        border-radius: 8px;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+      }
+
+      .status-pill {
+        font-size: 11px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        border: 1px solid color-mix(in srgb, var(--success) 55%, white);
+        color: color-mix(in srgb, var(--success) 80%, white);
+        background: color-mix(in srgb, var(--success) 20%, transparent);
+      }
+
+      .hero {
+        text-align: center;
+        padding: calc(var(--space-unit) * 5) calc(var(--space-unit) * 3) calc(var(--space-unit) * 4);
+      }
+
+      .hero h2 {
+        margin: 0;
+        font-size: clamp(28px, 5vw, 54px);
+        line-height: 1.05;
+        letter-spacing: -0.02em;
+      }
+
+      .hero p {
+        margin: calc(var(--space-unit) * 1.5) auto 0;
+        max-width: 720px;
+        color: var(--text-soft);
+        line-height: 1.6;
+      }
+
+      .cta {
+        margin-top: calc(var(--space-unit) * 2.5);
+        border: 1px solid color-mix(in srgb, var(--primary) 55%, white);
+        color: #fff;
+        background: linear-gradient(135deg, var(--primary), color-mix(in srgb, var(--primary) 70%, black));
+        border-radius: 12px;
+        padding: 12px 22px;
+        font-weight: 600;
+      }
+
+      .module-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: calc(var(--space-unit) * 2);
+        padding: 0 calc(var(--space-unit) * 3) calc(var(--space-unit) * 3);
+      }
+
+      .module-card {
+        border: var(--surface-border);
+        border-radius: var(--radius-md);
+        padding: calc(var(--space-unit) * 2);
+        background: color-mix(in srgb, var(--panel) 74%, transparent);
+      }
+
+      .module-card h3 {
+        margin: 10px 0 8px;
+        font-size: 16px;
+      }
+
+      .module-card p {
+        margin: 0;
+        color: var(--text-soft);
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .module-icon {
+        width: 38px;
+        height: 38px;
+        border-radius: 10px;
+        background: color-mix(in srgb, var(--accent) 30%, transparent);
+        display: grid;
+        place-items: center;
+        color: var(--accent);
+        font-weight: 700;
+      }
+
+      .lobby {
+        display: grid;
+        grid-template-columns: 1.1fr 1fr;
+        gap: calc(var(--space-unit) * 2);
+        padding: 0 calc(var(--space-unit) * 3) calc(var(--space-unit) * 3);
+      }
+
+      .panel {
+        border: var(--surface-border);
+        border-radius: var(--radius-md);
+        padding: calc(var(--space-unit) * 2);
+        background: color-mix(in srgb, var(--panel) 84%, transparent);
+      }
+
+      .panel h4 {
+        margin: 0 0 10px;
+        font-size: 14px;
+      }
+
+      .session-code {
+        font-size: 30px;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        margin-bottom: 10px;
+      }
+
+      .inline-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 8px 0;
+      }
+
+      .badge {
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        padding: 5px 10px;
+        font-size: 11px;
+        color: var(--text-soft);
+      }
+
+      .players {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+        margin-top: 10px;
+      }
+
+      .player {
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 10px;
+        padding: 10px;
+        text-align: center;
+        font-size: 12px;
+      }
+
+      .player .avatar {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        margin: 0 auto 8px;
+        display: grid;
+        place-items: center;
+        font-size: 16px;
+        background: color-mix(in srgb, var(--secondary) 20%, transparent);
+      }
+
+      .launch {
+        width: 100%;
+        margin-top: 14px;
+        border: 1px solid color-mix(in srgb, var(--secondary) 65%, white);
+        border-radius: 12px;
+        padding: 12px 14px;
+        color: #001018;
+        font-weight: 700;
+        background: linear-gradient(135deg, var(--secondary), color-mix(in srgb, var(--secondary) 70%, white));
+      }
+
+      .footer-note {
+        color: var(--text-soft);
+        font-size: 12px;
+        text-align: center;
+        padding: 0 calc(var(--space-unit) * 3) calc(var(--space-unit) * 3);
+      }
+
+      .mini-grid {
+        margin-top: calc(var(--space-unit) * 2.5);
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: calc(var(--space-unit) * 1.5);
+      }
+
+      .mini-card {
+        border: var(--surface-border);
+        border-radius: var(--radius-sm);
+        padding: calc(var(--space-unit) * 1.5);
+        background: color-mix(in srgb, var(--panel) 64%, black);
+      }
+
+      .mini-card strong {
+        display: block;
+        font-size: 12px;
+      }
+
+      .mini-card span {
+        display: block;
+        margin-top: 6px;
+        color: var(--text-soft);
+        font-size: 11px;
+        line-height: 1.45;
+      }
+
+      @media (max-width: 1100px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+
+        .sidebar {
+          border-right: 0;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .controls {
+          margin-left: 0;
+        }
+      }
+
+      @media (max-width: 760px) {
+        .module-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .lobby {
+          grid-template-columns: 1fr;
+        }
+
+        .mini-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <aside class="sidebar">
+        <h1>AgileSuite - Directions UX</h1>
+        <p>
+          8 directions visuelles bases sur la meme architecture UX. Compare rapidement l'impact de la
+          couleur, densite, contraste et navigation.
+        </p>
+        <div id="direction-list" class="direction-list"></div>
+      </aside>
+
+      <main class="preview-area">
+        <div class="toolbar">
+          <div class="chip">Direction active: <strong id="active-name">D1</strong></div>
+          <div class="chip">Intent: <strong id="active-intent">Dark Neon Clarity</strong></div>
+          <div class="chip">Risque principal: <strong id="active-risk">surcharge visuelle</strong></div>
+          <div class="controls">
+            <button class="toggle" id="desktop-btn" data-active="true">Desktop</button>
+            <button class="toggle" id="mobile-btn" data-active="false">Mobile</button>
+          </div>
+        </div>
+
+        <div class="canvas-wrap">
+          <section id="canvas" class="canvas">
+            <header class="screen-header">
+              <div class="brand"><span class="logo"></span>AgileSuite</div>
+              <span class="status-pill">Session ouverte</span>
+            </header>
+
+            <section class="hero">
+              <h2>Transformez vos ceremonies Agile en experiences memorables</h2>
+              <p>
+                Retro Party, Planning Party et Radar Party dans une interface unifiee, lisible et engageante
+                pour faciliter l'action collective.
+              </p>
+              <button class="cta">Commencer a jouer</button>
+            </section>
+
+            <section class="module-grid">
+              <article class="module-card">
+                <div class="module-icon">R</div>
+                <h3>Retro Party</h3>
+                <p>Retrospectives collaboratives, plateau interactif, dynamique de groupe en temps reel.</p>
+              </article>
+              <article class="module-card">
+                <div class="module-icon">P</div>
+                <h3>Planning Party</h3>
+                <p>Planning poker lisible, vote structure, alignement rapide sur les estimations.</p>
+              </article>
+              <article class="module-card">
+                <div class="module-icon">D</div>
+                <h3>Radar Party</h3>
+                <p>Diagnostic agile visuel, insights d'equipe, passage naturel vers plan d'action.</p>
+              </article>
+            </section>
+
+            <section class="lobby">
+              <article class="panel">
+                <h4>Code de session</h4>
+                <div class="session-code">RAD-FE0P</div>
+                <div class="inline-row">
+                  <span class="badge">Lien prive</span>
+                  <span class="badge">Copie en 1 clic</span>
+                  <span class="badge">Host: Vous</span>
+                </div>
+                <button class="launch">Creer la session et ouvrir le lobby</button>
+              </article>
+              <article class="panel">
+                <h4>Joueurs dans le lobby</h4>
+                <div class="players">
+                  <div class="player"><div class="avatar">🦊</div>Vous</div>
+                  <div class="player"><div class="avatar">🌸</div>Marie</div>
+                  <div class="player"><div class="avatar">⚪</div>Libre</div>
+                  <div class="player"><div class="avatar">⚪</div>Libre</div>
+                </div>
+                <button class="launch">Lancer la partie · 2 joueurs</button>
+              </article>
+            </section>
+
+            <p class="footer-note">
+              Objectif UX: clarte du statut de groupe, action suivante evidente, feedback temps reel rassurant.
+            </p>
+          </section>
+        </div>
+
+        <section class="mini-grid" id="mini-grid"></section>
+      </main>
+    </div>
+
+    <script>
+      const directions = [
+        {
+          id: "D1",
+          name: "Dark Neon Clarity",
+          intent: "fidelite forte a la maquette",
+          risk: "surcharge visuelle si mal dosee",
+          summary: "Equilibre entre impact neon et lisibilite operationnelle.",
+          vars: {
+            "--bg": "#080b17",
+            "--bg-elev": "#10162d",
+            "--panel": "#171f3f",
+            "--text": "#f3f7ff",
+            "--text-soft": "#b7c0df",
+            "--primary": "#8a5bff",
+            "--secondary": "#13d7ff",
+            "--accent": "#ff9e2f",
+            "--surface-shadow": "0 14px 34px rgba(0,0,0,0.45)"
+          }
+        },
+        {
+          id: "D2",
+          name: "Midnight Professional",
+          intent: "plus sobre, enterprise-ready",
+          risk: "moins de wow effect",
+          summary: "Accent contenu, hierarchie tres propre, ton premium discret.",
+          vars: {
+            "--bg": "#0c111a",
+            "--bg-elev": "#111827",
+            "--panel": "#1b2435",
+            "--text": "#f8fafc",
+            "--text-soft": "#c3cbd9",
+            "--primary": "#5b8cff",
+            "--secondary": "#35c4ff",
+            "--accent": "#f59f0b",
+            "--surface-shadow": "0 12px 26px rgba(0,0,0,0.35)"
+          }
+        },
+        {
+          id: "D3",
+          name: "Lobby Command Center",
+          intent: "orchestration temps reel",
+          risk: "trop dense sur mobile si non adapte",
+          summary: "Lobby prioritaire, signaux d'etat tres visibles, CTA decisive.",
+          vars: {
+            "--bg": "#070d18",
+            "--bg-elev": "#0d1728",
+            "--panel": "#13233f",
+            "--text": "#ecf4ff",
+            "--text-soft": "#9db3cf",
+            "--primary": "#00b3ff",
+            "--secondary": "#7af5ff",
+            "--accent": "#ff8d32",
+            "--ring": "rgba(0,179,255,0.35)"
+          }
+        },
+        {
+          id: "D4",
+          name: "Module First Cards",
+          intent: "choix module ultra rapide",
+          risk: "lobby parait secondaire",
+          summary: "Accent fort sur les cartes de modules et la promesse de chacun.",
+          vars: {
+            "--bg": "#0d0d17",
+            "--bg-elev": "#171726",
+            "--panel": "#232338",
+            "--text": "#f7f7ff",
+            "--text-soft": "#c8c8de",
+            "--primary": "#a855f7",
+            "--secondary": "#22d3ee",
+            "--accent": "#fb923c",
+            "--surface-border": "1px solid rgba(255,255,255,0.14)"
+          }
+        },
+        {
+          id: "D5",
+          name: "High Contrast Utility",
+          intent: "accessibilite et lisibilite max",
+          risk: "esthetique plus stricte",
+          summary: "Priorite contraste AA, structure nette, faible ambiguite.",
+          vars: {
+            "--bg": "#07090f",
+            "--bg-elev": "#0f1422",
+            "--panel": "#151d2f",
+            "--text": "#ffffff",
+            "--text-soft": "#d5dded",
+            "--primary": "#6ea8ff",
+            "--secondary": "#68e7ff",
+            "--accent": "#ffb454",
+            "--surface-border": "1px solid rgba(255,255,255,0.2)"
+          }
+        },
+        {
+          id: "D6",
+          name: "Calm Data Glow",
+          intent: "serenite et confiance",
+          risk: "moins energique pour le cote jeu",
+          summary: "Neon adouci, ambiance calme, excellent pour usage frequent.",
+          vars: {
+            "--bg": "#0b1020",
+            "--bg-elev": "#121a2f",
+            "--panel": "#1a2440",
+            "--text": "#edf4ff",
+            "--text-soft": "#aebad2",
+            "--primary": "#7a8cff",
+            "--secondary": "#4de1cf",
+            "--accent": "#f8b84e",
+            "--surface-blur": "2px"
+          }
+        },
+        {
+          id: "D7",
+          name: "Sprint Energy",
+          intent: "momentum et action",
+          risk: "fatigue visuelle sur longues sessions",
+          summary: "CTA tres energiques, contrastes vifs, rythme de progression accentue.",
+          vars: {
+            "--bg": "#110b14",
+            "--bg-elev": "#1b1123",
+            "--panel": "#281736",
+            "--text": "#fff4ff",
+            "--text-soft": "#d6bfe0",
+            "--primary": "#d946ef",
+            "--secondary": "#22d3ee",
+            "--accent": "#f97316",
+            "--surface-shadow": "0 16px 40px rgba(0,0,0,0.5)"
+          }
+        },
+        {
+          id: "D8",
+          name: "Hybrid Enterprise Game",
+          intent: "equilibre pro + ludique",
+          risk: "demande gouvernance stricte des variantes",
+          summary: "Direction recommandee: sobrie operationnelle avec signatures gamifiees.",
+          vars: {
+            "--bg": "#0a101d",
+            "--bg-elev": "#111b2e",
+            "--panel": "#19253d",
+            "--text": "#f4f8ff",
+            "--text-soft": "#afbdd4",
+            "--primary": "#7c6cff",
+            "--secondary": "#3ed4ff",
+            "--accent": "#ff9f43"
+          }
+        }
+      ];
+
+      const directionList = document.getElementById("direction-list");
+      const miniGrid = document.getElementById("mini-grid");
+      const activeName = document.getElementById("active-name");
+      const activeIntent = document.getElementById("active-intent");
+      const activeRisk = document.getElementById("active-risk");
+      const canvas = document.getElementById("canvas");
+      const desktopBtn = document.getElementById("desktop-btn");
+      const mobileBtn = document.getElementById("mobile-btn");
+
+      let activeDirectionId = "D8";
+
+      function applyDirection(direction) {
+        Object.entries(direction.vars).forEach(([key, value]) => {
+          document.documentElement.style.setProperty(key, value);
+        });
+        activeName.textContent = direction.id + " - " + direction.name;
+        activeIntent.textContent = direction.intent;
+        activeRisk.textContent = direction.risk;
+        activeDirectionId = direction.id;
+
+        document.querySelectorAll(".direction-btn").forEach((btn) => {
+          btn.setAttribute("aria-pressed", btn.dataset.id === direction.id ? "true" : "false");
+        });
+      }
+
+      function renderDirectionButtons() {
+        directionList.innerHTML = "";
+        directions.forEach((direction) => {
+          const button = document.createElement("button");
+          button.className = "direction-btn";
+          button.dataset.id = direction.id;
+          button.setAttribute("aria-pressed", direction.id === activeDirectionId ? "true" : "false");
+          button.innerHTML =
+            "<strong>" +
+            direction.id +
+            " · " +
+            direction.name +
+            "</strong><span>" +
+            direction.summary +
+            "</span>";
+          button.addEventListener("click", () => applyDirection(direction));
+          directionList.appendChild(button);
+        });
+      }
+
+      function renderMiniCards() {
+        miniGrid.innerHTML = "";
+        directions.slice(0, 6).forEach((direction) => {
+          const card = document.createElement("article");
+          card.className = "mini-card";
+          card.innerHTML =
+            "<strong>" +
+            direction.id +
+            " · " +
+            direction.name +
+            "</strong><span>" +
+            direction.summary +
+            "</span>";
+          miniGrid.appendChild(card);
+        });
+      }
+
+      desktopBtn.addEventListener("click", () => {
+        canvas.classList.remove("mobile");
+        desktopBtn.dataset.active = "true";
+        mobileBtn.dataset.active = "false";
+      });
+
+      mobileBtn.addEventListener("click", () => {
+        canvas.classList.add("mobile");
+        desktopBtn.dataset.active = "false";
+        mobileBtn.dataset.active = "true";
+      });
+
+      renderDirectionButtons();
+      renderMiniCards();
+      applyDirection(directions.find((direction) => direction.id === activeDirectionId));
+    </script>
+  </body>
+</html>
