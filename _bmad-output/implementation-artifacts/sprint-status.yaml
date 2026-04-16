@@ -1,0 +1,78 @@
+# generated: 2026-04-16T20:16:47+02:00
+# last_updated: 2026-04-16T20:16:47+02:00
+# project: retro-party-dev
+# project_key: NOKEY
+# tracking_system: file-system
+# story_location: _bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog -> in-progress: Automatically when first story is created (via create-story)
+#   - in-progress -> done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - Developer typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+
+generated: 2026-04-16T20:16:47+02:00
+last_updated: 2026-04-16T20:16:47+02:00
+project: retro-party-dev
+project_key: NOKEY
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
+
+development_status:
+  epic-1: backlog
+  1-1-set-up-initial-project-from-starter-template: backlog
+  1-2-onboarding-profil-rapide-et-accessible-pseudo-avatar: backlog
+  1-3-creation-rejoindre-room-avec-roles-et-garde-fou-capacite: backlog
+  1-4-lobby-room-ready-avec-statut-session-invitation-et-readiness: backlog
+  1-5-reconnexion-recuperation-robuste-avec-banniere-de-recovery: backlog
+  1-6-baseline-ux-cross-modules-tokens-responsive-accessibilite-aa: backlog
+  epic-1-retrospective: optional
+  epic-2: backlog
+  2-1-lancement-retro-depuis-le-lobby-unifie: backlog
+  2-2-autorite-serveur-sur-transitions-et-actions-retro: backlog
+  2-3-synchronisation-temps-reel-retro-avec-reprise-en-cours-de-partie: backlog
+  2-4-conformite-ux-accessibilite-sur-les-surfaces-retro-critiques: backlog
+  epic-2-retrospective: optional
+  epic-3: backlog
+  3-1-entree-planning-poker-via-le-flux-unifie: backlog
+  3-2-cycle-d-estimation-complet-start-vote-reveal-reset-story-title: backlog
+  3-3-gestion-explicite-des-roles-joueur-spectateur: backlog
+  3-4-reconnexion-reprise-fiable-pour-sessions-poker: backlog
+  epic-3-retrospective: optional
+  epic-4: backlog
+  4-1-creation-de-session-radar-et-parametrage-hostparticipates: backlog
+  4-2-soumission-fiable-des-reponses-participants: backlog
+  4-3-calcul-et-restitution-radar-individuel-avec-insights: backlog
+  4-4-agregation-equipe-et-restitution-collective: backlog
+  4-5-vue-progression-temps-reel-des-participants-pour-le-host: backlog
+  epic-4-retrospective: optional
+  epic-5: backlog
+  5-1-auth-complete-dans-le-shell-agilesuite: backlog
+  5-2-reinitialisation-mot-de-passe-par-email: backlog
+  5-3-gestion-templates-crud-organisation: backlog
+  5-4-lancer-une-room-depuis-un-template: backlog
+  5-5-instrumentation-analytics-pour-kpi-v1: backlog
+  epic-5-retrospective: optional
