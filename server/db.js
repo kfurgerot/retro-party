@@ -7,6 +7,8 @@ import { Pool } from "pg";
 const DATABASE_URL = process.env.DATABASE_URL || "postgresql://retro:retro_pwd@localhost:5432/retro_party";
 const DEFAULT_MIGRATIONS_DIR = fileURLToPath(new URL("./migrations", import.meta.url));
 const MIGRATION_FILENAME_REGEX = /^(\d{4,})_([a-z0-9_]+)\.sql$/;
+const MIGRATIONS_LOCK_NAMESPACE = 4242;
+const MIGRATIONS_LOCK_KEY = 1;
 
 export const pool = new Pool({
   connectionString: DATABASE_URL,
@@ -24,11 +26,49 @@ function parseMigrationFilename(fileName) {
 
 async function listMigrationFiles(migrationsDir) {
   const entries = await fs.readdir(migrationsDir, { withFileTypes: true });
-  const migrations = entries
-    .filter((entry) => entry.isFile())
-    .map((entry) => parseMigrationFilename(entry.name))
-    .filter(Boolean)
-    .sort((a, b) => a.fileName.localeCompare(b.fileName));
+  const fileNames = entries.filter((entry) => entry.isFile()).map((entry) => entry.name);
+  const migrations = [];
+  const invalidFileNames = [];
+  for (const fileName of fileNames) {
+    const parsed = parseMigrationFilename(fileName);
+    if (!parsed) {
+      invalidFileNames.push(fileName);
+      continue;
+    }
+    migrations.push(parsed);
+  }
+
+  if (invalidFileNames.length > 0) {
+    throw new Error(
+      `[migrations] Fichier(s) invalide(s): ${invalidFileNames.join(
+        ", "
+      )}. Format attendu: NNNN_description.sql`
+    );
+  }
+
+  if (migrations.length === 0) {
+    throw new Error(`[migrations] Aucun fichier SQL valide trouvé dans ${migrationsDir}`);
+  }
+
+  const versions = new Map();
+  for (const migration of migrations) {
+    const existingFile = versions.get(migration.version);
+    if (existingFile) {
+      throw new Error(
+        `[migrations] Version dupliquée ${migration.version} détectée: ${existingFile} et ${migration.fileName}`
+      );
+    }
+    versions.set(migration.version, migration.fileName);
+  }
+
+  migrations.sort((a, b) => {
+    const left = BigInt(a.version);
+    const right = BigInt(b.version);
+    if (left === right) {
+      return a.fileName.localeCompare(b.fileName);
+    }
+    return left < right ? -1 : 1;
+  });
   return migrations;
 }
 
@@ -49,14 +89,17 @@ export async function runMigrations({
   logger = console,
 } = {}) {
   const migrations = await listMigrationFiles(migrationsDir);
-  if (migrations.length === 0) {
-    logger.warn?.(`[migrations] Aucun fichier SQL trouvé dans ${migrationsDir}`);
-    return [];
-  }
 
   const client = await poolInstance.connect();
+  let advisoryLockAcquired = false;
   const applied = [];
   try {
+    await client.query("SELECT pg_advisory_lock($1, $2);", [
+      MIGRATIONS_LOCK_NAMESPACE,
+      MIGRATIONS_LOCK_KEY,
+    ]);
+    advisoryLockAcquired = true;
+
     await ensureSchemaMigrationsTable(client);
 
     for (const migration of migrations) {
@@ -65,10 +108,16 @@ export async function runMigrations({
       const checksum = crypto.createHash("sha256").update(sql).digest("hex");
 
       const existing = await client.query(
-        "SELECT version FROM schema_migrations WHERE version = $1;",
+        "SELECT version, checksum_sha256 FROM schema_migrations WHERE version = $1;",
         [migration.version]
       );
       if (existing.rowCount > 0) {
+        const existingChecksum = existing.rows[0].checksum_sha256;
+        if (existingChecksum !== checksum) {
+          throw new Error(
+            `[migrations] Checksum incompatible pour ${migration.fileName}: attendu ${existingChecksum}, obtenu ${checksum}`
+          );
+        }
         continue;
       }
 
@@ -91,6 +140,18 @@ export async function runMigrations({
       applied.push(migration.fileName);
     }
   } finally {
+    if (advisoryLockAcquired) {
+      try {
+        await client.query("SELECT pg_advisory_unlock($1, $2);", [
+          MIGRATIONS_LOCK_NAMESPACE,
+          MIGRATIONS_LOCK_KEY,
+        ]);
+      } catch (unlockError) {
+        logger.warn?.(
+          `[migrations] Impossible de libérer le verrou advisory: ${unlockError.message}`
+        );
+      }
+    }
     client.release();
   }
 

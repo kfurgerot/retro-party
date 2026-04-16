@@ -1,6 +1,6 @@
 # Story 1.1: Set up initial project from starter template
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -44,6 +44,17 @@ so that les stories produit suivantes s'appuient sur un socle stable et versionn
 - [x] Subtask 3.1 - Documenter la stratégie d'évolution DB (règles de création, ordre, rollback minimal, usage en local/CI/prod).
 - [x] Subtask 3.2 - Ajouter un test de non-régression minimal sur le démarrage backend (migrations appliquées puis serveur opérationnel).
 - [x] Subtask 3.3 - Vérifier que les commandes standard (`lint`, `test`, `build`) restent vertes.
+
+### Review Findings
+
+- [x] [Review][Patch] Activer fail-fast si `server/migrations/` est vide (décision revue: strict partout) [server/db.js:52]
+- [x] [Review][Patch] Course critique sur l'application concurrente des migrations (absence de verrou global/atomique) [server/db.js:67]
+- [x] [Review][Patch] Intégrité des migrations incomplète: checksum calculé mais jamais vérifié pour les versions déjà appliquées [server/db.js:65]
+- [x] [Review][Patch] Fichiers SQL hors convention de nommage ignorés silencieusement au lieu d'échouer [server/db.js:15]
+- [x] [Review][Patch] Collision de versions de migration non détectée (deux fichiers peuvent partager la même version) [server/db.js:19]
+- [x] [Review][Patch] Ordonnancement des migrations par tri lexicographique de nom de fichier au lieu de la version numérique [server/db.js:31]
+- [x] [Review][Patch] Couverture de tests insuffisante sur les chemins d'échec critiques migrations/startup [server/db.migrations.test.js:8]
+- [x] [Review][Defer] Absence de borne temporelle explicite au démarrage (init DB/listen) [server/index.js:1974] — deferred, pre-existing
 
 ## Dev Notes
 

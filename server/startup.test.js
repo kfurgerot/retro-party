@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { EventEmitter } from "node:events";
 import test from "node:test";
 import { startServer } from "./index.js";
 
@@ -34,4 +35,48 @@ test("startServer applique les migrations puis expose /health", async () => {
       });
     });
   }
+});
+
+test("startServer échoue sans ouvrir de port si initializeDatabase échoue", async () => {
+  let listenCalled = false;
+  const fakeServer = {
+    listen() {
+      listenCalled = true;
+    },
+    once() {},
+    off() {},
+    address() {
+      return null;
+    },
+  };
+
+  await assert.rejects(
+    startServer({
+      initializeDatabase: async () => {
+        throw new Error("db init failed");
+      },
+      listenServer: fakeServer,
+      logger: { log() {} },
+    }),
+    /db init failed/
+  );
+
+  assert.equal(listenCalled, false);
+});
+
+test("startServer propage une erreur listen", async () => {
+  const fakeServer = new EventEmitter();
+  fakeServer.listen = () => {
+    fakeServer.emit("error", new Error("bind failed"));
+  };
+  fakeServer.address = () => null;
+
+  await assert.rejects(
+    startServer({
+      initializeDatabase: async () => {},
+      listenServer: fakeServer,
+      logger: { log() {} },
+    }),
+    /bind failed/
+  );
 });

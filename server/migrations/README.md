@@ -5,6 +5,8 @@
 - Format unique: `NNNN_description.sql`
 - `NNNN` est un numéro incrémental (ex: `0001`, `0002`).
 - `description` est en snake_case lisible.
+- Tout fichier hors convention fait échouer le runner (fail-fast).
+- Les versions de migration doivent être uniques (un seul fichier par version).
 
 Exemple: `0002_add_room_indexes.sql`.
 
@@ -17,6 +19,8 @@ Exemple: `0002_add_room_indexes.sql`.
 ## Exécution
 
 - Le backend applique les migrations au démarrage avant `listen()` via `initDatabase()`.
+- Le runner verrouille l'exécution avec un advisory lock PostgreSQL pour éviter les courses entre instances.
+- Le checksum SHA-256 des migrations appliquées est vérifié à chaque démarrage.
 - Exécution manuelle possible:
 
 ```bash
