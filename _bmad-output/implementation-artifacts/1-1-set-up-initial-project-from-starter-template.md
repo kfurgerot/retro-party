@@ -1,6 +1,6 @@
 # Story 1.1: Set up initial project from starter template
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -29,21 +29,21 @@ so that les stories produit suivantes s'appuient sur un socle stable et versionn
 
 ## Tasks / Subtasks
 
-- [ ] Task 1 - Verrouiller la baseline technique sans migration de framework (AC: 1)
-- [ ] Subtask 1.1 - Vérifier et conserver les foundations actuelles: React + TypeScript + Vite côté frontend, Express + Socket.IO côté backend.
-- [ ] Subtask 1.2 - Mettre à jour la documentation technique si nécessaire pour aligner les versions réellement utilisées (`README.md` vs `package.json` / `server/package.json`).
-- [ ] Subtask 1.3 - Confirmer que les flux Docker/Nginx restent inchangés et compatibles (`docker-compose.yml`, `nginx.conf`).
+- [x] Task 1 - Verrouiller la baseline technique sans migration de framework (AC: 1)
+- [x] Subtask 1.1 - Vérifier et conserver les foundations actuelles: React + TypeScript + Vite côté frontend, Express + Socket.IO côté backend.
+- [x] Subtask 1.2 - Mettre à jour la documentation technique si nécessaire pour aligner les versions réellement utilisées (`README.md` vs `package.json` / `server/package.json`).
+- [x] Subtask 1.3 - Confirmer que les flux Docker/Nginx restent inchangés et compatibles (`docker-compose.yml`, `nginx.conf`).
 
-- [ ] Task 2 - Introduire la fondation migrations SQL (AC: 2)
-- [ ] Subtask 2.1 - Créer `server/migrations/` avec convention de nommage explicite (ex: `YYYYMMDDHHMM__description.sql` ou `0001_description.sql`, convention unique et documentée).
-- [ ] Subtask 2.2 - Ajouter un mécanisme d'exécution idempotent des migrations (ex: table de suivi `schema_migrations` + runner Node ESM sans nouvelle dépendance).
-- [ ] Subtask 2.3 - Ajouter une migration initiale représentant l'état de schéma de référence pour les prochaines évolutions.
-- [ ] Subtask 2.4 - Connecter le démarrage backend pour exécuter les migrations avant exposition du service, sans casser le comportement local actuel.
+- [x] Task 2 - Introduire la fondation migrations SQL (AC: 2)
+- [x] Subtask 2.1 - Créer `server/migrations/` avec convention de nommage explicite (ex: `YYYYMMDDHHMM__description.sql` ou `0001_description.sql`, convention unique et documentée).
+- [x] Subtask 2.2 - Ajouter un mécanisme d'exécution idempotent des migrations (ex: table de suivi `schema_migrations` + runner Node ESM sans nouvelle dépendance).
+- [x] Subtask 2.3 - Ajouter une migration initiale représentant l'état de schéma de référence pour les prochaines évolutions.
+- [x] Subtask 2.4 - Connecter le démarrage backend pour exécuter les migrations avant exposition du service, sans casser le comportement local actuel.
 
-- [ ] Task 3 - Sécuriser la réversibilité et la qualité (AC: 1, 2)
-- [ ] Subtask 3.1 - Documenter la stratégie d'évolution DB (règles de création, ordre, rollback minimal, usage en local/CI/prod).
-- [ ] Subtask 3.2 - Ajouter un test de non-régression minimal sur le démarrage backend (migrations appliquées puis serveur opérationnel).
-- [ ] Subtask 3.3 - Vérifier que les commandes standard (`lint`, `test`, `build`) restent vertes.
+- [x] Task 3 - Sécuriser la réversibilité et la qualité (AC: 1, 2)
+- [x] Subtask 3.1 - Documenter la stratégie d'évolution DB (règles de création, ordre, rollback minimal, usage en local/CI/prod).
+- [x] Subtask 3.2 - Ajouter un test de non-régression minimal sur le démarrage backend (migrations appliquées puis serveur opérationnel).
+- [x] Subtask 3.3 - Vérifier que les commandes standard (`lint`, `test`, `build`) restent vertes.
 
 ## Dev Notes
 
@@ -141,13 +141,35 @@ gpt-5
 
 - Analyse exhaustive des artefacts: epics, PRD, architecture, UX, project-context, AGENTS.md.
 - Vérification du dépôt réel: `package.json`, `server/package.json`, `docker-compose.yml`, `nginx.conf`, `server/db.js`.
+- Validation backend: `cd server && npm test` (5 tests passés).
+- Validation frontend/repo: `npm run lint` (0 error), `npm run test` (9 tests passés), `npm run build` (OK).
+- Validation compose: `docker compose config` (OK).
 
 ### Completion Notes List
 
 - Story context créée avec guardrails techniques, contraintes d'architecture, stratégie migration et vérifications manuelles.
 - Story alignée sur le mode Delivery (simple, testable, réversible) tout en préparant les stories suivantes de l'Epic 1.
 - Ultimate context engine analysis completed - comprehensive developer guide created.
+- Baseline technique conservée (React + TypeScript + Vite, Express + Socket.IO + pg), aucun changement de framework.
+- Fondations migrations SQL ajoutées: runner idempotent Node ESM + table `schema_migrations` + migration initiale `0001_initial_schema.sql`.
+- Démarrage backend branché sur exécution migrations avant `listen()` avec `startServer` exporté et testable.
+- Stratégie d'évolution DB documentée (naming, forward-only, exécution local/CI/prod, rollback minimal).
+- Test non-régression ajouté pour garantir `migrations` puis disponibilité `GET /health`.
 
 ### File List
 
 - _bmad-output/implementation-artifacts/1-1-set-up-initial-project-from-starter-template.md
+- README.md
+- server/db.js
+- server/index.js
+- server/package.json
+- server/migrate.js
+- server/db.migrations.test.js
+- server/startup.test.js
+- server/migrations/0001_initial_schema.sql
+- server/migrations/README.md
+- src/pages/Index.tsx
+
+### Change Log
+
+- 2026-04-16: Implémentation complète Story 1.1 (baseline validée, migrations SQL introduites, tests de non-régression ajoutés, documentation mise à jour).

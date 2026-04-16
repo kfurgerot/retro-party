@@ -11,33 +11,23 @@ import { perfLog, perfMark, perfMeasure } from "@/lib/perf";
 import { fr } from "@/i18n/fr";
 import PlanningPokerPage from "@/pages/PlanningPoker";
 
-const Index: React.FC = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const initialParams = useMemo(() => {
-    const params = new URLSearchParams(location.search);
-    const mode = params.get("mode");
-    const code = params.get("code");
-    const name = params.get("name");
-    const avatar = Number(params.get("avatar"));
-    const auto = params.get("auto");
-    const from = params.get("from");
-    const experience = params.get("experience");
-    return {
-      mode: mode === "join" ? "join" : "host",
-      code: code ? code.toUpperCase() : "",
-      name: name ? name.trim() : "",
-      avatar: Number.isFinite(avatar) ? Math.max(0, Math.floor(avatar)) : 0,
-      autoSubmit: auto === "1",
-      direct: auto === "1" || !!code,
-      fromEntry: from === "entry",
-      experience: experience === "planning-poker" ? "planning-poker" : "retro-party",
-    };
-  }, [location.search]);
+type InitialParams = {
+  mode: "join" | "host";
+  code: string;
+  name: string;
+  avatar: number;
+  autoSubmit: boolean;
+  direct: boolean;
+  fromEntry: boolean;
+  experience: "planning-poker" | "retro-party";
+};
 
-  if (initialParams.experience === "planning-poker") {
-    return <PlanningPokerPage />;
-  }
+type RetroPartyIndexProps = {
+  initialParams: InitialParams;
+  navigate: ReturnType<typeof useNavigate>;
+};
+
+const RetroPartyIndex: React.FC<RetroPartyIndexProps> = ({ initialParams, navigate }) => {
 
   const isOnline = useMemo(() => {
     if (typeof window === 'undefined') return false;
@@ -263,6 +253,37 @@ const Index: React.FC = () => {
       }}
     />
   );
+};
+
+const Index: React.FC = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const initialParams = useMemo<InitialParams>(() => {
+    const params = new URLSearchParams(location.search);
+    const mode = params.get("mode");
+    const code = params.get("code");
+    const name = params.get("name");
+    const avatar = Number(params.get("avatar"));
+    const auto = params.get("auto");
+    const from = params.get("from");
+    const experience = params.get("experience");
+    return {
+      mode: mode === "join" ? "join" : "host",
+      code: code ? code.toUpperCase() : "",
+      name: name ? name.trim() : "",
+      avatar: Number.isFinite(avatar) ? Math.max(0, Math.floor(avatar)) : 0,
+      autoSubmit: auto === "1",
+      direct: auto === "1" || !!code,
+      fromEntry: from === "entry",
+      experience: experience === "planning-poker" ? "planning-poker" : "retro-party",
+    };
+  }, [location.search]);
+
+  if (initialParams.experience === "planning-poker") {
+    return <PlanningPokerPage />;
+  }
+
+  return <RetroPartyIndex initialParams={initialParams} navigate={navigate} />;
 };
 
 export default Index;

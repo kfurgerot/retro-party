@@ -1,4 +1,4 @@
-l# Retro Party
+# Retro Party
 
 Application web de retrospective d'equipe en mode jeu de plateau retro, jouable en ligne (temps reel via Socket.IO) et en local.
 
@@ -21,7 +21,7 @@ Fonctions principales:
 
 ## Stack technique
 
-- Frontend: React 18, TypeScript, Vite 5, TailwindCSS, shadcn/ui
+- Frontend: React 18, TypeScript, Vite 7, TailwindCSS, shadcn/ui
 - Realtime: Socket.IO (client + serveur)
 - Backend: Node.js 20, Express 4
 - Base de donnees: PostgreSQL 16
@@ -35,7 +35,7 @@ Fonctions principales:
 ```text
 .
 |- src/                    # Frontend React
-|- server/                 # Backend Express + Socket.IO + DB init
+|- server/                 # Backend Express + Socket.IO + migrations SQL
 |- public/                 # Assets statiques
 |- Dockerfile              # Build frontend + image Nginx
 |- server/Dockerfile       # Image backend Node
@@ -225,7 +225,8 @@ Dans `server/`:
 ```bash
 npm run dev
 npm run start
-node whoSaidItEngine.test.js
+npm run migrate
+npm run test
 ```
 
 ## Notes d'implementation
@@ -233,7 +234,26 @@ node whoSaidItEngine.test.js
 - Le mode online est actif par defaut dans le frontend.
 - Le mode local reste disponible via le parametre `?online=0`.
 - L'etat de jeu online est gere cote serveur (`server/gameLogic.js`).
-- La base est auto-initialisee au demarrage backend (`initDatabase()` dans `server/db.js`).
+- Les migrations SQL sont appliquees au demarrage backend (`runMigrations()` via `initDatabase()`).
+
+## Strategie migrations SQL
+
+- Dossier: `server/migrations/`
+- Convention de nommage: `NNNN_description.sql` (ex: `0001_initial_schema.sql`)
+- Regle: migrations forward-only (on ajoute une migration corrective, on ne modifie pas une migration deja executee)
+- Idempotence: table de suivi `schema_migrations` + SQL defensif (`IF NOT EXISTS` quand applicable)
+
+Execution manuelle:
+
+```bash
+cd server
+npm run migrate
+```
+
+Execution recommandee:
+- local: migration appliquee automatiquement au demarrage backend
+- CI: lancer `npm run migrate` avant tests backend/integration
+- production: lancer `npm run migrate` avant exposition du service
 
 ## Recommandations production
 

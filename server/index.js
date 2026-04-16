@@ -2,6 +2,7 @@ import express from "express";
 import http from "http";
 import cors from "cors";
 import crypto from "node:crypto";
+import { pathToFileURL } from "node:url";
 import { Server } from "socket.io";
 import { initDatabase, pool } from "./db.js";
 import { registerApiRoutes } from "./restApi.js";
@@ -1964,14 +1965,43 @@ io.on("connection", (socket) => {
   });
 });
 
-async function startServer() {
-  await initDatabase();
-  server.listen(PORT, () => {
-    console.log(`Retro Party backend listening on :${PORT}`);
+export async function startServer({
+  port = PORT,
+  initializeDatabase = initDatabase,
+  listenServer = server,
+  logger = console,
+} = {}) {
+  await initializeDatabase();
+
+  await new Promise((resolve, reject) => {
+    const onError = (error) => {
+      listenServer.off("listening", onListening);
+      reject(error);
+    };
+    const onListening = () => {
+      listenServer.off("error", onError);
+      resolve();
+    };
+
+    listenServer.once("error", onError);
+    listenServer.once("listening", onListening);
+    listenServer.listen(port);
   });
+
+  const address = listenServer.address();
+  const resolvedPort = typeof address === "object" && address ? address.port : port;
+  logger.log(`Retro Party backend listening on :${resolvedPort}`);
+  return listenServer;
 }
 
-startServer().catch((err) => {
-  console.error("Failed to start backend", err);
-  process.exit(1);
-});
+function isDirectExecution() {
+  if (!process.argv[1]) return false;
+  return import.meta.url === pathToFileURL(process.argv[1]).href;
+}
+
+if (isDirectExecution()) {
+  startServer().catch((err) => {
+    console.error("Failed to start backend", err);
+    process.exit(1);
+  });
+}
