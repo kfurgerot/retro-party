@@ -364,18 +364,19 @@ const QuickActionZone = ({
         )}
       </div>
 
-      <div className="flex items-center gap-2.5 rounded-xl border border-white/[0.07] bg-white/[0.03] px-4 py-3.5">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center rounded-xl border border-white/[0.07] bg-white/[0.03] px-4 py-3.5">
         <input
           value={code}
           onChange={(e) => setCode(e.target.value.toUpperCase().slice(0, 6))}
           placeholder="Code room (ex: AB12)"
-          className="flex-1 bg-transparent font-mono text-sm tracking-widest text-slate-100 outline-none placeholder:text-slate-600"
+          className="min-w-0 flex-1 bg-transparent font-mono text-sm tracking-widest text-slate-100 outline-none placeholder:text-slate-600"
         />
+        <div className="flex items-center gap-2">
         <button
           type="button"
           onClick={() => canJoin && onJoin(code)}
           className={cn(
-            "rounded-lg px-4 py-2 text-[13px] font-semibold transition-all",
+            "flex-1 sm:flex-none rounded-lg px-4 py-2 text-[13px] font-semibold transition-all",
             canJoin ? "cursor-pointer text-white" : "cursor-default bg-white/5 text-slate-600",
           )}
           style={canJoin ? { background: tool.color } : undefined}
@@ -386,7 +387,7 @@ const QuickActionZone = ({
         <button
           type="button"
           onClick={onHost}
-          className="rounded-lg px-4 py-2 text-[13px] font-semibold text-white transition-all"
+          className="flex-1 sm:flex-none rounded-lg px-4 py-2 text-[13px] font-semibold text-white transition-all"
           style={{
             background: `linear-gradient(135deg, ${tool.color}, ${tool.color}cc)`,
             boxShadow: `0 4px 12px ${tool.glow}`,
@@ -394,6 +395,7 @@ const QuickActionZone = ({
         >
           + Créer
         </button>
+        </div>
       </div>
     </div>
   );
