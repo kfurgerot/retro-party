@@ -23,25 +23,22 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
-import { RetroScreenBackground } from "./RetroScreenBackground";
 import { LaunchAnnouncement } from "../game/LaunchAnnouncement";
 import { ActionBadge, TurnBanner } from "../game/hud";
 import { SHOP_CATALOG } from "@/data/shopCatalog";
 import { fr } from "@/i18n/fr";
-import {
-  CTA_NEON_DANGER,
-  CTA_NEON_PRIMARY,
-  CTA_NEON_SECONDARY_SUBTLE,
-  GAME_DIALOG_CONTENT,
-  GAME_DRAWER_CLOSE_BUTTON,
-  GAME_DRAWER_CONTENT,
-  GAME_HUD_SURFACE,
-  GAME_MOBILE_ACTION_BUTTON,
-  GAME_PANEL_SURFACE,
-  GAME_SUBPANEL_SURFACE,
-  GAME_TAB_BUTTON,
-  GAME_TAB_BUTTON_ACTIVE,
-} from "@/lib/uiTokens";
+const CTA_NEON_PRIMARY = "border-pink-400/40 bg-pink-500 text-white shadow-[0_4px_16px_rgba(236,72,153,0.35)] hover:bg-pink-400";
+const CTA_NEON_SECONDARY_SUBTLE = "border-white/[0.06] bg-white/[0.03] text-slate-300 hover:bg-white/[0.06] hover:text-white";
+const CTA_NEON_DANGER = "border-rose-400/40 bg-rose-500/15 text-rose-300 hover:bg-rose-500/25";
+const GAME_DIALOG_CONTENT = "rounded-2xl border border-white/[0.08] bg-[#0d0d1a] p-5 text-slate-100 shadow-[0_14px_40px_rgba(0,0,0,0.65)] sm:p-6";
+const GAME_DRAWER_CLOSE_BUTTON = "h-10 text-slate-200 hover:bg-slate-800/60 hover:text-white";
+const GAME_DRAWER_CONTENT = "border-pink-400/25 bg-slate-950/95 pb-[env(safe-area-inset-bottom)] text-slate-100 lg:hidden";
+const GAME_HUD_SURFACE = "rounded-2xl border border-pink-400/28 bg-slate-950/72 text-slate-100 backdrop-blur shadow-[0_0_0_1px_rgba(236,72,153,0.11),0_10px_26px_rgba(2,6,23,0.45)]";
+const GAME_MOBILE_ACTION_BUTTON = "h-12 w-full rounded-xl";
+const GAME_PANEL_SURFACE = "rounded-xl border border-pink-400/20 bg-slate-900/55 text-slate-100 shadow-[0_0_0_1px_rgba(236,72,153,0.07),0_8px_24px_rgba(2,6,23,0.34)]";
+const GAME_SUBPANEL_SURFACE = "rounded-xl border border-pink-400/15 bg-slate-950/32";
+const GAME_TAB_BUTTON = "h-9 rounded-xl border border-pink-400/18 bg-slate-900/45 px-3 text-xs font-semibold text-slate-200 hover:bg-slate-900/65";
+const GAME_TAB_BUTTON_ACTIVE = "border-pink-400/50 bg-pink-500/18 text-pink-100 shadow-[0_0_0_1px_rgba(236,72,153,0.20)]";
 import { ENABLE_BOARD_V2 } from "@/lib/uiMode";
 import { perfLog, perfMark, perfMeasure } from "@/lib/perf";
 
@@ -831,8 +828,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const turnStatusClass = gameState.currentQuestion
     ? "border-amber-500/30 bg-amber-500/10 text-amber-200"
     : isMyTurn
-    ? "border-cyan-400/40 bg-cyan-500/15 text-cyan-100"
-    : "border-cyan-300/20 bg-slate-900/40 text-slate-300";
+    ? "border-pink-400/40 bg-pink-500/15 text-pink-100"
+    : "border-pink-400/20 bg-slate-900/40 text-slate-300";
 
   const neonCard = GAME_PANEL_SURFACE;
   const neonPanel = GAME_SUBPANEL_SURFACE;
@@ -958,15 +955,15 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   };
 
   return (
-    <div className="scanlines relative min-h-svh w-full overflow-hidden">
-      <RetroScreenBackground />
+    <div className="relative min-h-svh w-full overflow-hidden" style={{ background: "#0a0a14", fontFamily: "'DM Sans', sans-serif" }}>
+      <div className="pointer-events-none fixed inset-0 z-0" style={{ background: "radial-gradient(ellipse 70% 50% at 20% 0%, rgba(236,72,153,0.08) 0%, transparent 70%)" }} />
 
       <div className="relative z-10 flex h-svh w-full flex-col overflow-hidden p-2 sm:p-3">
         {isOnboardingOpen && activeOnboardingStep ? (
           <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/86 p-3 backdrop-blur-[2px] sm:p-5">
-            <Card className={cn(GAME_HUD_SURFACE, "w-full max-w-2xl rounded-2xl border-cyan-300/45 bg-slate-950/95 p-4 sm:p-6")}>
+            <Card className={cn(GAME_HUD_SURFACE, "w-full max-w-2xl rounded-2xl border-pink-400/40 bg-slate-950/95 p-4 sm:p-6")}>
               <div className="flex items-start justify-between gap-3">
-                <div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/35 bg-cyan-500/10 px-3 py-1 text-xs font-semibold text-cyan-100">
+                <div className="inline-flex items-center gap-2 rounded-full border border-pink-400/35 bg-pink-500/10 px-3 py-1 text-xs font-semibold text-pink-100">
                   <span>{activeOnboardingStep.icon}</span>
                   <span>Guide de partie</span>
                 </div>
@@ -975,7 +972,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 </div>
               </div>
 
-              <h2 className="mt-4 text-xl font-black text-cyan-50 sm:text-2xl">{activeOnboardingStep.title}</h2>
+              <h2 className="mt-4 text-xl font-black text-slate-100 sm:text-2xl">{activeOnboardingStep.title}</h2>
               <div className="mt-3 space-y-3 text-sm leading-relaxed text-slate-100 sm:text-base">
                 {activeOnboardingStep.body.map((paragraph, idx) => (
                   <p key={`${onboardingStepIndex}-${idx}`}>{paragraph}</p>
@@ -1163,18 +1160,18 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                     className={cn(
                       `px-2 py-2 text-xs ${GAME_SUBPANEL_SURFACE}`,
                       isMyTurn
-                        ? "border-cyan-300/45 bg-cyan-500/18 shadow-[0_0_0_1px_rgba(34,211,238,0.24)_inset]"
+                        ? "border-pink-400/45 bg-pink-500/18 shadow-[0_0_0_1px_rgba(236,72,153,0.22)_inset]"
                         : ""
                     )}
                   >
-                    <div className="flex items-center gap-2 text-cyan-100/80">
+                    <div className="flex items-center gap-2 text-pink-100/80">
                       <span
                         className={cn(
                           "inline-flex h-2 w-2 rounded-full",
-                          isMyTurn ? "bg-cyan-300 animate-pulse" : "bg-slate-500"
+                          isMyTurn ? "bg-pink-400 animate-pulse" : "bg-slate-500"
                         )}
                       />
-                      {fr.gameScreen.nowPlayingLabel} <span className="font-semibold text-cyan-100">{currentPlayer?.name ?? "-"}</span>
+                      {fr.gameScreen.nowPlayingLabel} <span className="font-semibold text-pink-100">{currentPlayer?.name ?? "-"}</span>
                     </div>
                     <div className="text-slate-300">
                       {fr.gameScreen.nextUpLabel} <span className="font-semibold text-slate-200">{nextPlayer?.name ?? "-"}</span>
@@ -1186,10 +1183,10 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                       className={cn(
                         "grid gap-1 rounded-xl border p-1.5 transition-colors",
                         entry.isCurrent
-                          ? "border-cyan-300/35 bg-cyan-500/10"
+                          ? "border-pink-400/35 bg-pink-500/10"
                           : entry.isNext
                           ? "border-emerald-300/30 bg-emerald-500/5"
-                          : "border-cyan-300/10 bg-slate-950/20"
+                          : "border-pink-400/10 bg-slate-950/20"
                       )}
                     >
                       <div className="flex items-center justify-between px-1 text-[11px]">
@@ -1197,10 +1194,10 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                           className={cn(
                             "inline-flex rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-[0.08em]",
                             entry.isCurrent
-                              ? "border-cyan-300/45 bg-cyan-500/15 text-cyan-100"
+                              ? "border-pink-400/45 bg-pink-500/15 text-pink-100"
                               : entry.isNext
                               ? "border-emerald-300/40 bg-emerald-500/10 text-emerald-100"
-                              : "border-cyan-300/20 bg-slate-900/40 text-slate-300"
+                              : "border-pink-400/20 bg-slate-900/40 text-slate-300"
                           )}
                         >
                           {getTurnOrderLabel(entry.turnDistance)}
@@ -1220,7 +1217,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                   ))}
                 </div>
               ) : (
-                <div className="mt-3 grid min-h-0 flex-1 gap-1.5 overflow-auto pr-1 text-xs text-cyan-50/90">
+                <div className="mt-3 grid min-h-0 flex-1 gap-1.5 overflow-auto pr-1 text-xs text-slate-100/90">
                   {activityFeed.length > 0 ? (
                     activityFeed.map((entry, index) => (
                       <div
@@ -1228,8 +1225,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                         className={cn(
                           "rounded-xl border px-2 py-1.5",
                           index === 0
-                            ? "border-cyan-300/30 bg-cyan-500/10 text-cyan-100"
-                            : "border-cyan-300/15 bg-slate-950/25 text-cyan-50/85"
+                            ? "border-pink-400/30 bg-pink-500/10 text-pink-100"
+                            : "border-pink-400/15 bg-slate-950/25 text-slate-100/85"
                         )}
                       >
                         <div className="mb-1">
@@ -1243,7 +1240,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                       </div>
                     ))
                   ) : (
-                    <div className="rounded-xl border border-cyan-300/15 bg-slate-950/25 px-2 py-1.5 text-slate-300">
+                    <div className="rounded-xl border border-pink-400/15 bg-slate-950/25 px-2 py-1.5 text-slate-300">
                       {fr.gameScreen.noRecentActivity}
                     </div>
                   )}
@@ -1317,17 +1314,17 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               className={cn(
                 "px-2 py-2 text-xs",
                 GAME_SUBPANEL_SURFACE,
-                isMyTurn ? "border-cyan-300/45 bg-cyan-500/18 shadow-[0_0_0_1px_rgba(34,211,238,0.24)_inset]" : ""
+                isMyTurn ? "border-pink-400/45 bg-pink-500/18 shadow-[0_0_0_1px_rgba(236,72,153,0.22)_inset]" : ""
               )}
             >
-              <div className="flex items-center gap-2 text-cyan-100/80">
+              <div className="flex items-center gap-2 text-pink-100/80">
                 <span
                   className={cn(
                     "inline-flex h-2 w-2 rounded-full",
-                    isMyTurn ? "bg-cyan-300 animate-pulse" : "bg-slate-500"
+                    isMyTurn ? "bg-pink-400 animate-pulse" : "bg-slate-500"
                   )}
                 />
-                {fr.gameScreen.nowPlayingLabel} <span className="font-semibold text-cyan-100">{currentPlayer?.name ?? "-"}</span>
+                {fr.gameScreen.nowPlayingLabel} <span className="font-semibold text-pink-100">{currentPlayer?.name ?? "-"}</span>
               </div>
               <div className="text-slate-300">
                 {fr.gameScreen.nextUpLabel} <span className="font-semibold text-slate-200">{nextPlayer?.name ?? "-"}</span>
@@ -1339,10 +1336,10 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 className={cn(
                   "grid gap-1 rounded-xl border p-1.5 transition-colors",
                   entry.isCurrent
-                    ? "border-cyan-300/35 bg-cyan-500/10"
+                    ? "border-pink-400/35 bg-pink-500/10"
                     : entry.isNext
                     ? "border-emerald-300/30 bg-emerald-500/5"
-                    : "border-cyan-300/10 bg-slate-950/20"
+                    : "border-pink-400/10 bg-slate-950/20"
                 )}
               >
                 <div className="flex items-center justify-between px-1 text-[11px]">
@@ -1350,10 +1347,10 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                     className={cn(
                       "inline-flex rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-[0.08em]",
                       entry.isCurrent
-                        ? "border-cyan-300/45 bg-cyan-500/15 text-cyan-100"
+                        ? "border-pink-400/45 bg-pink-500/15 text-pink-100"
                         : entry.isNext
                         ? "border-emerald-300/40 bg-emerald-500/10 text-emerald-100"
-                        : "border-cyan-300/20 bg-slate-900/40 text-slate-300"
+                        : "border-pink-400/20 bg-slate-900/40 text-slate-300"
                     )}
                   >
                     {getTurnOrderLabel(entry.turnDistance)}
@@ -1399,11 +1396,11 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               >
                 {gameState.currentQuestion ? fr.gameScreen.statusQuestion : isMyTurn ? fr.gameScreen.statusYourTurn : fr.gameScreen.statusWaiting}
               </div>
-              <div className="text-[10px] uppercase tracking-[0.1em] text-cyan-100/70">
+              <div className="text-[10px] uppercase tracking-[0.1em] text-pink-100/70">
                 {fr.gameScreen.primaryAction}
               </div>
-              <div className="text-sm font-semibold leading-snug text-cyan-100">{primaryAction}</div>
-              <div className="text-xs text-cyan-100/90">{infoTitle}</div>
+              <div className="text-sm font-semibold leading-snug text-pink-100">{primaryAction}</div>
+              <div className="text-xs text-pink-100/90">{infoTitle}</div>
               <div className="text-xs text-slate-300">{infoHint}</div>
             </div>
           </div>
@@ -1471,7 +1468,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
             </div>
           </DrawerHeader>
 
-          <div className="grid max-h-[62svh] gap-1.5 overflow-auto px-4 pb-4 text-xs text-cyan-50/90">
+          <div className="grid max-h-[62svh] gap-1.5 overflow-auto px-4 pb-4 text-xs text-slate-100/90">
             {activityFeed.length > 0 ? (
               activityFeed.map((entry, index) => (
                 <div
@@ -1479,8 +1476,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                   className={cn(
                     "rounded-xl border px-2 py-1.5",
                     index === 0
-                      ? "border-cyan-300/30 bg-cyan-500/10 text-cyan-100"
-                      : "border-cyan-300/15 bg-slate-950/25 text-cyan-50/85"
+                      ? "border-pink-400/30 bg-pink-500/10 text-pink-100"
+                      : "border-pink-400/15 bg-slate-950/25 text-slate-100/85"
                   )}
                 >
                   <div className="mb-1">
@@ -1494,7 +1491,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 </div>
               ))
             ) : (
-              <div className="rounded-xl border border-cyan-300/15 bg-slate-950/25 px-2 py-1.5 text-slate-300">
+              <div className="rounded-xl border border-pink-400/15 bg-slate-950/25 px-2 py-1.5 text-slate-300">
                 {fr.gameScreen.noRecentActivity}
               </div>
             )}
@@ -1514,7 +1511,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-1 grid grid-cols-1 gap-2 sm:grid-cols-2 sm:space-x-0">
-            <AlertDialogCancel className={cn(neutralSecondaryBtn, "h-11 w-full rounded-xl text-cyan-100")}>
+            <AlertDialogCancel className={cn(neutralSecondaryBtn, "h-11 w-full rounded-xl text-slate-200")}>
               {fr.gameScreen.cancel}
             </AlertDialogCancel>
             <AlertDialogAction className={cn(dangerLeaveBtn, "h-11 w-full rounded-xl")} onClick={confirmLeave}>
@@ -1550,19 +1547,19 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 : fr.gameScreen.cannotAffordKudo}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="grid grid-cols-2 gap-2 rounded-xl border border-cyan-300/20 bg-slate-950/30 p-2 text-center">
-            <div className="rounded-lg border border-cyan-300/20 bg-cyan-500/10 px-2 py-1.5">
-              <div className="text-[10px] uppercase tracking-[0.12em] text-cyan-200/80">Cout</div>
-              <div className="text-lg font-bold text-cyan-100">10 pts</div>
+          <div className="grid grid-cols-2 gap-2 rounded-xl border border-pink-400/20 bg-slate-950/30 p-2 text-center">
+            <div className="rounded-lg border border-pink-400/20 bg-pink-500/10 px-2 py-1.5">
+              <div className="text-[10px] uppercase tracking-[0.12em] text-pink-200/80">Cout</div>
+              <div className="text-lg font-bold text-pink-100">10 pts</div>
             </div>
-            <div className="rounded-lg border border-cyan-300/20 bg-cyan-500/10 px-2 py-1.5">
-              <div className="text-[10px] uppercase tracking-[0.12em] text-cyan-200/80">Mes points</div>
-              <div className="text-lg font-bold text-cyan-100">{myPoints}</div>
+            <div className="rounded-lg border border-pink-400/20 bg-pink-500/10 px-2 py-1.5">
+              <div className="text-[10px] uppercase tracking-[0.12em] text-pink-200/80">Mes points</div>
+              <div className="text-lg font-bold text-pink-100">{myPoints}</div>
             </div>
           </div>
           <AlertDialogFooter className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:space-x-0">
             <AlertDialogCancel
-              className={cn(neutralSecondaryBtn, "h-11 w-full rounded-xl text-cyan-100")}
+              className={cn(neutralSecondaryBtn, "h-11 w-full rounded-xl text-slate-200")}
               onClick={() => onResolveKudoPurchase?.(false)}
             >
               {fr.gameScreen.continue}
@@ -1656,7 +1653,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 
       <Suspense
         fallback={
-          <div className="fixed inset-0 z-[79] flex items-center justify-center bg-slate-950/55 text-sm font-semibold text-cyan-100">
+          <div className="fixed inset-0 z-[79] flex items-center justify-center bg-slate-950/55 text-sm font-semibold text-pink-100">
             {fr.gameScreen.waiting}
           </div>
         }

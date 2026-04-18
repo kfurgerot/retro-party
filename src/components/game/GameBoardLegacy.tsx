@@ -792,7 +792,7 @@ const GameBoardLegacyComponent: React.FC<GameBoardProps> = ({
                         key={`${p.id}-${k}`}
                         className={cn(
                           "flex h-8 w-8 items-center justify-center rounded-full border-2 bg-white text-base shadow-[0_0_0_2px_rgba(15,23,42,0.6)]",
-                          movingPlayerId === p.id && "animate-bounce ring-2 ring-cyan-300"
+                          movingPlayerId === p.id && "animate-bounce ring-2 ring-pink-400"
                         )}
                         style={{ borderColor: p.color }}
                         title={p.name}
@@ -921,7 +921,7 @@ const GameBoardLegacyComponent: React.FC<GameBoardProps> = ({
       )}
 
       {focusedPlayer && focusedPosition != null && (
-        <div className="pointer-events-none absolute bottom-2 left-2 z-20 rounded border border-cyan-300/35 bg-slate-900/75 px-2 py-1 text-[11px] text-cyan-100">
+        <div className="pointer-events-none absolute bottom-2 left-2 z-20 rounded border border-pink-400/35 bg-slate-900/75 px-2 py-1 text-[11px] text-pink-100">
           {focusedPlayer.name}
         </div>
       )}

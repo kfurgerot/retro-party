@@ -9,10 +9,10 @@ const toneClass: Record<ActionBadgeTone, string> = {
   question: "border-violet-300/35 bg-violet-500/12 text-violet-100",
   shop: "border-orange-300/35 bg-orange-500/12 text-orange-100",
   minigame: "border-emerald-300/35 bg-emerald-500/12 text-emerald-100",
-  system: "border-cyan-300/25 bg-slate-900/35 text-cyan-100/85",
-  active: "border-cyan-300/45 bg-cyan-500/15 text-cyan-100",
+  system: "border-pink-400/25 bg-slate-900/35 text-pink-100/85",
+  active: "border-pink-400/45 bg-pink-500/15 text-pink-100",
   next: "border-emerald-300/40 bg-emerald-500/12 text-emerald-100",
-  neutral: "border-cyan-300/20 bg-slate-900/35 text-slate-200",
+  neutral: "border-pink-400/20 bg-slate-900/35 text-slate-200",
 };
 
 interface ActionBadgeProps {

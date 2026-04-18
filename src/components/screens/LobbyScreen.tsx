@@ -2,8 +2,8 @@ import React, { useState } from "react";
 import { AVATARS } from "@/types/game";
 import { cn } from "@/lib/utils";
 import { fr } from "@/i18n/fr";
-import { RetroScreenBackground } from "./RetroScreenBackground";
-import { CTA_NEON_PRIMARY, CTA_NEON_SECONDARY } from "@/lib/uiTokens";
+const CTA_NEON_PRIMARY = "border-pink-400/40 bg-pink-500 text-white shadow-[0_4px_16px_rgba(236,72,153,0.35)] hover:bg-pink-400";
+const CTA_NEON_SECONDARY = "border-white/[0.06] bg-white/[0.03] text-slate-300 hover:bg-white/[0.06] hover:text-white";
 import { Card, Input, LobbyCard, PrimaryButton, SectionHeader } from "@/components/app-shell";
 
 interface LobbyScreenProps {
@@ -44,15 +44,16 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({ onStartGame }) => {
   return (
     <div
       className={cn(
-        "scanlines relative min-h-svh w-full overflow-hidden px-4 pt-6 sm:px-6 sm:pt-8",
+        "relative min-h-svh w-full overflow-hidden px-4 pt-6 sm:px-6 sm:pt-8",
         playerCount ? "pb-28 sm:pb-32" : "pb-6 sm:pb-8"
       )}
+      style={{ background: "#0a0a14", fontFamily: "'DM Sans', sans-serif" }}
     >
-      <RetroScreenBackground />
+      <div className="pointer-events-none fixed inset-0 z-0" style={{ background: "radial-gradient(ellipse 70% 50% at 20% 0%, rgba(236,72,153,0.08) 0%, transparent 70%)" }} />
       <div className="relative z-10 mx-auto flex w-full max-w-4xl flex-col gap-4 sm:gap-5">
         <LobbyCard title={fr.home.title} subtitle={fr.lobbyLocal.choosePlayersHint} className="p-5 text-center sm:p-6">
-          <div className="text-[10px] uppercase tracking-[0.2em] text-cyan-200/80">{fr.home.title}</div>
-          <h1 className="mt-2 text-xl font-bold text-cyan-100 sm:text-3xl">{fr.home.title}</h1>
+          <div className="text-[10px] uppercase tracking-[0.2em] text-pink-200/80">{fr.home.title}</div>
+          <h1 className="mt-2 text-xl font-bold text-pink-100 sm:text-3xl">{fr.home.title}</h1>
         </LobbyCard>
 
         <LobbyCard title={fr.lobbyLocal.playerCount}>
@@ -63,10 +64,10 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({ onStartGame }) => {
                 type="button"
                 onClick={() => handlePlayerCountSelect(n)}
                 className={cn(
-                  "h-10 rounded border text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
+                  "h-10 rounded border text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
                   playerCount === n
                     ? CTA_NEON_PRIMARY
-                    : `${CTA_NEON_SECONDARY} text-cyan-100`
+                    : `${CTA_NEON_SECONDARY} text-pink-100`
                 )}
                 aria-label={`${fr.lobbyLocal.playerCount} ${n}`}
               >
@@ -88,21 +89,21 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({ onStartGame }) => {
               {players.map((p, idx) => (
                 <div
                   key={idx}
-                  className="grid grid-cols-[auto_1fr_auto] items-center gap-2 rounded-md border border-cyan-300/20 bg-slate-900/40 p-2 sm:gap-3 sm:p-3"
+                  className="grid grid-cols-[auto_1fr_auto] items-center gap-2 rounded-md border border-pink-400/20 bg-slate-900/40 p-2 sm:gap-3 sm:p-3"
                 >
-                  <div className="flex h-10 w-10 items-center justify-center rounded border border-cyan-300/35 bg-slate-950/55 text-2xl">
+                  <div className="flex h-10 w-10 items-center justify-center rounded border border-pink-400/35 bg-slate-950/55 text-2xl">
                     {AVATARS[p.avatar] ?? ":)"}
                   </div>
                   <Input
                     aria-label={`${fr.terms.player} ${idx + 1}`}
                     value={p.name}
                     maxLength={16}
-                    className="h-10 border-cyan-300/20 bg-slate-900/50 text-cyan-50 placeholder:text-slate-400"
+                    className="h-10 border-pink-400/20 bg-slate-900/50 text-slate-100 placeholder:text-slate-400"
                     onChange={(e) => updatePlayer(idx, { name: e.target.value })}
                   />
                   <select
                     aria-label={`${fr.onlineLobby.profileAvatarLabel} ${idx + 1}`}
-                    className="h-10 rounded border border-cyan-300/25 bg-slate-900/50 px-2 text-sm text-cyan-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+                    className="h-10 rounded border border-pink-400/25 bg-slate-900/50 px-2 text-sm text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
                     value={p.avatar}
                     onChange={(e) => updatePlayer(idx, { avatar: Number(e.target.value) })}
                   >
@@ -127,7 +128,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({ onStartGame }) => {
 
       {playerCount && (
         <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:hidden">
-          <Card className="pointer-events-auto mx-auto w-full max-w-4xl border-cyan-300/40 bg-slate-950/92 p-3 shadow-[0_0_0_1px_rgba(34,211,238,0.2),0_8px_28px_rgba(2,6,23,0.55)]">
+          <Card className="pointer-events-auto mx-auto w-full max-w-4xl border-pink-400/35 bg-slate-950/92 p-3 shadow-[0_0_0_1px_rgba(236,72,153,0.15),0_8px_28px_rgba(2,6,23,0.55)]">
             <PrimaryButton
               onClick={start}
               className={cn("h-12 w-full font-semibold", CTA_NEON_PRIMARY)}

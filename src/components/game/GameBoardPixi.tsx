@@ -721,7 +721,7 @@ const GameBoardPixiComponent: React.FC<GameBoardProps> = ({
         className="pointer-events-none absolute inset-0 z-0"
         style={{
           backgroundImage: [
-            "radial-gradient(120% 90% at 50% 8%, rgba(34,211,238,0.24) 0%, rgba(15,23,42,0.06) 48%, rgba(2,6,23,0.72) 100%)",
+            "radial-gradient(120% 90% at 50% 8%, rgba(236,72,153,0.24) 0%, rgba(15,23,42,0.06) 48%, rgba(2,6,23,0.72) 100%)",
             "radial-gradient(55% 38% at 12% 78%, rgba(16,185,129,0.2) 0%, rgba(16,185,129,0) 100%)",
             "radial-gradient(48% 32% at 88% 22%, rgba(250,204,21,0.14) 0%, rgba(250,204,21,0) 100%)",
           ].join(","),
@@ -854,7 +854,7 @@ const GameBoardPixiComponent: React.FC<GameBoardProps> = ({
       )}
 
       {focusedPlayer && focusedPosition != null && (
-        <div className="pointer-events-none absolute bottom-2 left-2 z-20 rounded border border-cyan-300/35 bg-slate-900/75 px-2 py-1 text-[11px] text-cyan-100">
+        <div className="pointer-events-none absolute bottom-2 left-2 z-20 rounded border border-pink-400/35 bg-slate-900/75 px-2 py-1 text-[11px] text-pink-100">
           {focusedPlayer.name} {AVATARS[focusedPlayer.avatar] ?? ""}
         </div>
       )}

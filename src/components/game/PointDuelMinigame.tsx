@@ -55,13 +55,13 @@ export const PointDuelMinigame: React.FC<PointDuelMinigameProps> = ({ state, pla
           roleLabel={fr.pointDuel.attacker}
           name={attacker?.name ?? "-"}
           highlighted={rollingPlayerId === state.attackerId}
-          rightSlot={<div className="text-2xl font-bold text-cyan-100">{state.attackerRoll ?? "?"}</div>}
+          rightSlot={<div className="text-2xl font-bold text-pink-100">{state.attackerRoll ?? "?"}</div>}
         />
         <PlayerBadge
           roleLabel={fr.pointDuel.defender}
           name={defender?.name ?? "-"}
           highlighted={rollingPlayerId === state.defenderId}
-          rightSlot={<div className="text-2xl font-bold text-cyan-100">{state.defenderRoll ?? "?"}</div>}
+          rightSlot={<div className="text-2xl font-bold text-pink-100">{state.defenderRoll ?? "?"}</div>}
         />
       </div>
 
@@ -74,7 +74,7 @@ export const PointDuelMinigame: React.FC<PointDuelMinigameProps> = ({ state, pla
             className={cn(
               "rounded-xl border px-4 py-2.5 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
               canRollNow
-                ? "border-cyan-300 bg-cyan-500 text-slate-950 hover:bg-cyan-400"
+                ? "border-pink-400 bg-pink-500 text-slate-950 hover:bg-pink-400"
                 : "cursor-not-allowed border-slate-500 bg-slate-700/60 text-slate-300"
             )}
           >

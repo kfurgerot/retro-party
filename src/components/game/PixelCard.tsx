@@ -12,7 +12,7 @@ export const PixelCard: React.FC<PixelCardProps> = ({
   ...props
 }) => {
   const glowStyles = {
-    cyan: 'shadow-[4px_4px_0px_rgba(0,0,0,0.5),0_0_20px_rgba(0,255,255,0.3)]',
+    cyan: 'shadow-[4px_4px_0px_rgba(0,0,0,0.5),0_0_20px_rgba(236,72,153,0.3)]',
     magenta: 'shadow-[4px_4px_0px_rgba(0,0,0,0.5),0_0_20px_rgba(255,0,255,0.3)]',
     gold: 'shadow-[4px_4px_0px_rgba(0,0,0,0.5),0_0_20px_rgba(255,215,0,0.3)]',
     none: 'shadow-[4px_4px_0px_rgba(0,0,0,0.5)]',

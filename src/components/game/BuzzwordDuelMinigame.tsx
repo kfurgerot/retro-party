@@ -87,42 +87,42 @@ export const BuzzwordDuelMinigame: React.FC<BuzzwordDuelMinigameProps> = ({
   }, [canAnswer, onSubmit]);
 
   return (
-    <div className="absolute inset-0 z-50 h-full w-full overflow-hidden bg-slate-950 p-3 text-cyan-50 sm:p-6">
+    <div className="absolute inset-0 z-50 h-full w-full overflow-hidden bg-slate-950 p-3 text-slate-100 sm:p-6">
       <div className="mx-auto flex h-full w-full max-w-6xl flex-col gap-3 sm:gap-4">
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <Card className="border-cyan-300/35 bg-slate-900/80 px-3 py-2 text-center">
-            <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">{fr.buzzwordDuel.score}</div>
+          <Card className="border-pink-400/35 bg-slate-900/80 px-3 py-2 text-center">
+            <div className="text-[11px] uppercase tracking-[0.12em] text-pink-100/80">{fr.buzzwordDuel.score}</div>
             <div className="text-lg font-bold">{leftScore}</div>
-            <div className="truncate text-xs text-cyan-100/80">
+            <div className="truncate text-xs text-pink-100/80">
               {leftPlayer ? `${AVATARS[leftPlayer.avatar] ?? "?"} ${leftPlayer.name}` : "-"}
             </div>
           </Card>
 
-          <Card className="border-cyan-300/35 bg-slate-900/80 px-3 py-2 text-center">
-            <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">{fr.buzzwordDuel.score}</div>
+          <Card className="border-pink-400/35 bg-slate-900/80 px-3 py-2 text-center">
+            <div className="text-[11px] uppercase tracking-[0.12em] text-pink-100/80">{fr.buzzwordDuel.score}</div>
             <div className="text-lg font-bold">{rightScore}</div>
-            <div className="truncate text-xs text-cyan-100/80">
+            <div className="truncate text-xs text-pink-100/80">
               {rightPlayer ? `${AVATARS[rightPlayer.avatar] ?? "?"} ${rightPlayer.name}` : "-"}
             </div>
           </Card>
 
-          <Card className="border-cyan-300/35 bg-slate-900/80 px-3 py-2 text-center">
-            <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">{fr.buzzwordDuel.countdown}</div>
+          <Card className="border-pink-400/35 bg-slate-900/80 px-3 py-2 text-center">
+            <div className="text-[11px] uppercase tracking-[0.12em] text-pink-100/80">{fr.buzzwordDuel.countdown}</div>
             <div className="text-lg font-bold">{countdown}</div>
           </Card>
 
-          <Card className="border-cyan-300/35 bg-slate-900/80 px-3 py-2 text-center">
-            <div className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/80">{fr.buzzwordDuel.status}</div>
+          <Card className="border-pink-400/35 bg-slate-900/80 px-3 py-2 text-center">
+            <div className="text-[11px] uppercase tracking-[0.12em] text-pink-100/80">{fr.buzzwordDuel.status}</div>
             <div className="truncate text-sm font-semibold">{statusLabel}</div>
           </Card>
         </div>
 
-        <Card className="flex flex-1 flex-col items-center justify-center border-cyan-300/35 bg-slate-900/80 px-4 py-6 text-center">
+        <Card className="flex flex-1 flex-col items-center justify-center border-pink-400/35 bg-slate-900/80 px-4 py-6 text-center">
           {state.phase === "transfer" ? (
             <div className="w-full max-w-xl">
-              <div className="text-xs uppercase tracking-[0.18em] text-cyan-200/70">{fr.buzzwordDuel.transferInProgress}</div>
+              <div className="text-xs uppercase tracking-[0.18em] text-pink-200/70">{fr.buzzwordDuel.transferInProgress}</div>
               <div className="mt-3 text-2xl font-black sm:text-4xl">{state.transfer?.amount ?? 0} {fr.buzzwordDuel.stolenPoints}</div>
-              <div className="mt-4 rounded border border-cyan-300/35 bg-slate-950/55 px-4 py-3 text-sm text-cyan-50">
+              <div className="mt-4 rounded border border-pink-400/35 bg-slate-950/55 px-4 py-3 text-sm text-slate-100">
                 <div>
                   <span className="font-semibold">{transferWinner?.name ?? "?"}</span>
                   {" "}vole{" "}
@@ -137,12 +137,12 @@ export const BuzzwordDuelMinigame: React.FC<BuzzwordDuelMinigameProps> = ({
             </div>
           ) : state.phase === "between" ? (
             <div className="text-center">
-              <div className="text-xs uppercase tracking-[0.18em] text-cyan-200/70">{fr.buzzwordDuel.preparation}</div>
+              <div className="text-xs uppercase tracking-[0.18em] text-pink-200/70">{fr.buzzwordDuel.preparation}</div>
               <div className="mt-3 text-2xl font-black sm:text-5xl">{countdown}</div>
             </div>
           ) : (
             <>
-              <div className="text-xs uppercase tracking-[0.18em] text-cyan-200/70">{fr.buzzwordDuel.title}</div>
+              <div className="text-xs uppercase tracking-[0.18em] text-pink-200/70">{fr.buzzwordDuel.title}</div>
               {state.isDouble && state.roundType === "main" && (
                 <div className="mt-2 rounded-full border border-amber-300 bg-amber-500/20 px-4 py-1 text-xs font-bold text-amber-100">
                   {fr.buzzwordDuel.doubleCount}
@@ -193,7 +193,7 @@ export const BuzzwordDuelMinigame: React.FC<BuzzwordDuelMinigameProps> = ({
           />
         </div>
 
-        <div className="text-center text-sm text-cyan-100/85">
+        <div className="text-center text-sm text-pink-100/85">
           {isDuelist
             ? hasSubmitted
               ? fr.buzzwordDuel.sentAnswer

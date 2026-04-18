@@ -3,7 +3,6 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight, FileDown, Frown, Meh, Smile } from "lucide-react";
 import { OnlineLobbyScreen } from "@/components/screens/OnlineLobbyScreen";
 import { OnlineOnboardingScreen } from "@/components/screens/OnlineOnboardingScreen";
-import { RetroScreenBackground } from "@/components/screens/RetroScreenBackground";
 import { Card, SecondaryButton } from "@/components/app-shell";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
@@ -12,8 +11,9 @@ import {
   APP_SHELL_SURFACE_SOFT,
   CTA_NEON_DANGER,
   CTA_NEON_SECONDARY_SUBTLE,
-  GAME_DIALOG_CONTENT,
 } from "@/lib/uiTokens";
+
+const RADAR_DIALOG = "rounded-2xl border border-white/[0.08] bg-[#0d0d1a] p-5 text-slate-100 shadow-[0_14px_40px_rgba(0,0,0,0.65)] sm:p-6";
 import { RadarChartCard } from "@/components/radar-party/RadarChartCard";
 import { IndividualRecommendationsSection } from "@/components/radar-party/IndividualRecommendationsSection";
 import {
@@ -411,8 +411,8 @@ const RadarPartyPage = () => {
       options?.helperText ?? "Lecture rapide par theme avec tonalite visuelle, score et interpretation.";
 
     return (
-      <Card className="rounded-3xl border-cyan-300/30 bg-slate-950/45 p-4">
-        <h3 className="text-base font-semibold text-cyan-100">{title}</h3>
+      <Card className="rounded-3xl border-emerald-500/20 bg-slate-950/45 p-4">
+        <h3 className="text-base font-semibold text-emerald-200">{title}</h3>
         <p className="mt-1 text-xs text-slate-300">{helperText}</p>
         <div className="mt-3 grid gap-3 lg:grid-cols-2">
           {RADAR_DIMENSIONS.map((dimension) => {
@@ -1604,12 +1604,12 @@ const RadarPartyPage = () => {
 
   if (isRestoringSession) {
     return (
-      <div className="scanlines relative flex min-h-svh w-full items-start justify-center px-4 pb-12 pt-6">
-        <RetroScreenBackground />
+      <div className="relative flex min-h-svh w-full items-start justify-center px-4 pb-12 pt-6" style={{ background: "#0a0a14", fontFamily: "'DM Sans', sans-serif" }}>
+        <div className="pointer-events-none fixed inset-0 z-0" style={{ background: "radial-gradient(ellipse 70% 50% at 20% 0%, rgba(16,185,129,0.07) 0%, transparent 70%)" }} />
         <Card className="relative z-10 flex w-full max-w-xl flex-col gap-2 rounded-3xl p-6">
-          <p className="text-xs uppercase tracking-[0.12em] text-cyan-200/80">Radar Party</p>
-          <h2 className="text-lg font-semibold text-cyan-100">Reconnexion en cours</h2>
-          <p className="text-sm text-slate-200">Nous restaurons ta session pour reprendre la partie.</p>
+          <p className="text-xs uppercase tracking-[0.12em] text-emerald-300/80">Radar Party</p>
+          <h2 className="text-lg font-semibold text-slate-100">Reconnexion en cours</h2>
+          <p className="text-sm text-slate-400">Nous restaurons ta session pour reprendre la partie.</p>
         </Card>
       </div>
     );
@@ -1682,12 +1682,12 @@ const RadarPartyPage = () => {
           hostSetupPanel={
             roomCode && isHost ? (
               <div className="space-y-3">
-                <p className="text-xs uppercase tracking-[0.1em] text-cyan-100/90">
+                <p className="text-xs uppercase tracking-[0.1em] text-emerald-200/90">
                   Participation de l'hote
                 </p>
-                <div className="flex items-center justify-between gap-3 rounded-2xl border border-cyan-300/25 bg-slate-950/35 px-3 py-2">
+                <div className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-500/15 bg-slate-950/35 px-3 py-2">
                   <div className="min-w-0">
-                    <p className="text-sm text-cyan-50">
+                    <p className="text-sm text-slate-100">
                       {hostParticipates ? "L'hote repond au questionnaire" : "L'hote n'a pas besoin de repondre"}
                     </p>
                     <p className="mt-0.5 text-xs text-slate-300">
@@ -1700,7 +1700,7 @@ const RadarPartyPage = () => {
                     checked={hostParticipates}
                     onCheckedChange={setHostParticipates}
                     aria-label="L'hote participe au questionnaire"
-                    className="data-[state=checked]:bg-cyan-500 data-[state=unchecked]:bg-slate-700"
+                    className="data-[state=checked]:bg-emerald-500 data-[state=unchecked]:bg-slate-700"
                   />
                 </div>
               </div>
@@ -1723,11 +1723,12 @@ const RadarPartyPage = () => {
   return (
     <div
       className={cn(
-        "scanlines relative flex min-h-svh w-full items-start justify-center px-4 pt-4 sm:pt-6",
+        "relative flex min-h-svh w-full items-start justify-center px-4 pt-4 sm:pt-6",
         hasRadarStickyFooter ? "pb-28 sm:pb-32" : stage === "questionnaire" ? "pb-4 sm:pb-12" : "pb-12"
       )}
+      style={{ background: "#0a0a14", fontFamily: "'DM Sans', sans-serif" }}
     >
-      <RetroScreenBackground />
+      <div className="pointer-events-none fixed inset-0 z-0" style={{ background: "radial-gradient(ellipse 70% 50% at 20% 0%, rgba(16,185,129,0.07) 0%, transparent 70%)" }} />
 
       <Card
         className={cn(
@@ -1735,12 +1736,12 @@ const RadarPartyPage = () => {
           stage === "questionnaire" ? "gap-3 p-3 sm:gap-4 sm:p-8" : "gap-4 p-4 sm:p-8"
         )}
       >
-        <header className="text-xs uppercase tracking-[0.14em] text-cyan-200/80">
+        <header className="text-xs uppercase tracking-[0.14em] text-emerald-300/80">
           <div className="flex items-start justify-between gap-2 sm:hidden">
             <span className="min-w-0 truncate pr-2">Retro Party - Radar Party</span>
             {roomCode ? (
-              <div className="inline-flex shrink-0 items-center gap-1 rounded-full border border-cyan-300/40 bg-cyan-500/12 px-2.5 py-1 text-[11px] font-semibold tracking-[0.08em] text-cyan-50">
-                <span className="uppercase text-cyan-100/85">Code</span>
+              <div className="inline-flex shrink-0 items-center gap-1 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold tracking-[0.08em] text-emerald-100">
+                <span className="uppercase text-emerald-200/85">Code</span>
                 <span>{roomCode}</span>
               </div>
             ) : null}
@@ -1750,7 +1751,7 @@ const RadarPartyPage = () => {
               <SecondaryButton
                 onClick={() => void (canExportTeamPdf ? handleExportTeamPdf() : handleExportIndividualPdf())}
                 disabled={isExportingPdf}
-                className="h-8 rounded-full border-cyan-300/45 bg-cyan-500/18 px-3 text-[11px] font-semibold tracking-[0.08em] text-cyan-50 hover:bg-cyan-500/26"
+                className="h-8 rounded-full border-emerald-500/25 bg-emerald-500/10 px-3 text-[11px] font-semibold tracking-[0.08em] text-emerald-100 hover:bg-emerald-500/18"
               >
                 <span className="inline-flex items-center gap-1.5">
                   <FileDown className="h-3.5 w-3.5" />
@@ -1766,7 +1767,7 @@ const RadarPartyPage = () => {
                 <SecondaryButton
                   onClick={() => void (canExportTeamPdf ? handleExportTeamPdf() : handleExportIndividualPdf())}
                   disabled={isExportingPdf}
-                  className="h-8 rounded-full border-cyan-300/45 bg-cyan-500/18 px-3 text-[11px] font-semibold tracking-[0.08em] text-cyan-50 hover:bg-cyan-500/26"
+                  className="h-8 rounded-full border-emerald-500/25 bg-emerald-500/10 px-3 text-[11px] font-semibold tracking-[0.08em] text-emerald-100 hover:bg-emerald-500/18"
                 >
                   <span className="inline-flex items-center gap-1.5">
                     <FileDown className="h-3.5 w-3.5" />
@@ -1775,8 +1776,8 @@ const RadarPartyPage = () => {
                 </SecondaryButton>
               ) : null}
               {roomCode ? (
-                <div className="inline-flex max-w-full items-center gap-1 rounded-full border border-cyan-300/40 bg-cyan-500/12 px-2.5 py-1 text-[11px] font-semibold tracking-[0.08em] text-cyan-50">
-                  <span className="uppercase text-cyan-100/85">Code</span>
+                <div className="inline-flex max-w-full items-center gap-1 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold tracking-[0.08em] text-emerald-100">
+                  <span className="uppercase text-emerald-200/85">Code</span>
                   <span className="truncate">{roomCode}</span>
                 </div>
               ) : null}
@@ -1801,7 +1802,7 @@ const RadarPartyPage = () => {
                   onClick={goToPreviousQuestion}
                   disabled={questionIndex === 0}
                   aria-label="Question precedente"
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-cyan-300/35 bg-slate-900/70 text-cyan-100 transition disabled:opacity-40"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-emerald-500/20 bg-slate-900/70 text-emerald-200 transition disabled:opacity-40"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </button>
@@ -1809,7 +1810,7 @@ const RadarPartyPage = () => {
                   type="button"
                   onClick={goToNextQuestion}
                   aria-label="Question suivante"
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-cyan-300/35 bg-slate-900/70 text-cyan-100 transition"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-emerald-500/20 bg-slate-900/70 text-emerald-200 transition"
                 >
                   <ChevronRight className="h-4 w-4" />
                 </button>
@@ -1817,17 +1818,17 @@ const RadarPartyPage = () => {
             </div>
             <p className="mt-1 text-[11px] text-slate-300 sm:hidden">{completionCount} reponses enregistrees</p>
             <div className="mt-2 h-2 overflow-hidden rounded bg-slate-900/80">
-              <div className="h-full rounded bg-cyan-400/90 transition-all duration-300" style={{ width: `${progressPct}%` }} />
+              <div className="h-full rounded bg-emerald-400/90 transition-all duration-300" style={{ width: `${progressPct}%` }} />
             </div>
 
-            <div className="mt-4 rounded-3xl border border-cyan-300/25 bg-slate-950/45 p-4 sm:mt-6">
-              <p className="text-xs uppercase tracking-[0.12em] text-cyan-200/80">{AXIS_FR[currentQuestion.dimension]}</p>
+            <div className="mt-4 rounded-3xl border border-emerald-500/15 bg-slate-950/45 p-4 sm:mt-6">
+              <p className="text-xs uppercase tracking-[0.12em] text-emerald-300/80">{AXIS_FR[currentQuestion.dimension]}</p>
               <div className="mt-2 min-h-[5.5rem] max-h-[5.5rem] overflow-y-auto pr-1 sm:mt-3 sm:min-h-0 sm:max-h-none sm:overflow-visible sm:pr-0">
                 <p className="break-words text-lg text-slate-100">{currentQuestion.text}</p>
               </div>
             </div>
 
-            <div className="mt-4 rounded-3xl border border-cyan-300/20 bg-slate-950/45 px-3 py-3 sm:mt-6 sm:px-6 sm:py-4">
+            <div className="mt-4 rounded-3xl border border-emerald-500/15 bg-slate-950/45 px-3 py-3 sm:mt-6 sm:px-6 sm:py-4">
               <div className="flex items-center justify-between gap-3 text-sm">
                 <span className="font-medium text-red-300">Pas du tout d'accord</span>
                 <span className="font-medium text-emerald-300">Tout a fait d'accord</span>
@@ -1853,7 +1854,7 @@ const RadarPartyPage = () => {
                         item.size,
                         likertColorByScore[item.score],
                         currentAnswer === item.score
-                          ? "scale-105 ring-2 ring-cyan-200/80 ring-offset-2 ring-offset-slate-950 shadow-[0_0_14px_rgba(34,211,238,0.35)]"
+                          ? "scale-105 ring-2 ring-emerald-300/80 ring-offset-2 ring-offset-slate-950 shadow-[0_0_14px_rgba(16,185,129,0.3)]"
                           : "opacity-80"
                       )}
                     />
@@ -1864,7 +1865,7 @@ const RadarPartyPage = () => {
                 {likertScale.map((item) => (
                   <span
                     key={`${item.uiId}-label`}
-                    className={cn("block break-words", currentAnswer === item.score ? "font-semibold text-cyan-100" : undefined)}
+                    className={cn("block break-words", currentAnswer === item.score ? "font-semibold text-emerald-200" : undefined)}
                   >
                     {answerLabels[item.score - 1]}
                   </span>
@@ -1903,8 +1904,8 @@ const RadarPartyPage = () => {
 
         {stage === "individual" && resultToShow ? (
           <section className="grid min-w-0 gap-4">
-            <Card className="rounded-3xl border-cyan-300/30 bg-slate-950/45 p-4">
-              <h3 className="text-base font-semibold text-cyan-100">Resume individuel</h3>
+            <Card className="rounded-3xl border-emerald-500/20 bg-slate-950/45 p-4">
+              <h3 className="text-base font-semibold text-emerald-200">Resume individuel</h3>
               <p className="mt-2 break-words text-sm text-slate-200">{resultToShow.insights.summary}</p>
             </Card>
 
@@ -1922,24 +1923,24 @@ const RadarPartyPage = () => {
             <IndividualRecommendationsSection cards={individualRecommendations} />
 
             <div className="grid gap-4 lg:grid-cols-3">
-              <Card className="rounded-3xl border-cyan-300/30 bg-slate-950/45 p-4">
-                <h4 className="text-sm font-semibold text-cyan-100">Points forts potentiels</h4>
+              <Card className="rounded-3xl border-emerald-500/20 bg-slate-950/45 p-4">
+                <h4 className="text-sm font-semibold text-emerald-200">Points forts potentiels</h4>
                 <ul className="mt-3 space-y-2 text-sm text-slate-200">
                   {resultToShow.insights.strengths.map((item) => (
                     <li key={item} className="break-words">- {item}</li>
                   ))}
                 </ul>
               </Card>
-              <Card className="rounded-3xl border-cyan-300/30 bg-slate-950/45 p-4">
-                <h4 className="text-sm font-semibold text-cyan-100">Points de vigilance potentiels</h4>
+              <Card className="rounded-3xl border-emerald-500/20 bg-slate-950/45 p-4">
+                <h4 className="text-sm font-semibold text-emerald-200">Points de vigilance potentiels</h4>
                 <ul className="mt-3 space-y-2 text-sm text-slate-200">
                   {resultToShow.insights.watchouts.map((item) => (
                     <li key={item} className="break-words">- {item}</li>
                   ))}
                 </ul>
               </Card>
-              <Card className="rounded-3xl border-cyan-300/30 bg-slate-950/45 p-4">
-                <h4 className="text-sm font-semibold text-cyan-100">Questions a se poser</h4>
+              <Card className="rounded-3xl border-emerald-500/20 bg-slate-950/45 p-4">
+                <h4 className="text-sm font-semibold text-emerald-200">Questions a se poser</h4>
                 <ul className="mt-3 space-y-2 text-sm text-slate-200">
                   {resultToShow.insights.workshopQuestions.map((item) => (
                     <li key={item} className="break-words">- {item}</li>
@@ -1953,10 +1954,10 @@ const RadarPartyPage = () => {
 
         {stage === "team-radar" ? (
           <section className="grid min-w-0 gap-4">
-            <Card className="rounded-3xl border-cyan-300/30 bg-slate-950/45 p-4">
+            <Card className="rounded-3xl border-emerald-500/20 bg-slate-950/45 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <h3 className="text-base font-semibold text-cyan-100">Resume equipe</h3>
+                  <h3 className="text-base font-semibold text-emerald-200">Resume equipe</h3>
                   <p className="mt-1 break-words text-sm text-slate-200">{resolvedTeamInsights.summary}</p>
                 </div>
               </div>
@@ -1980,8 +1981,8 @@ const RadarPartyPage = () => {
               helperText: "Lecture par theme basee sur la moyenne des reponses de l'equipe.",
             })}
 
-            <Card className="rounded-3xl border-cyan-300/30 bg-slate-950/45 p-4">
-              <h4 className="text-sm font-semibold text-cyan-100">Axes homogenes et axes polarises</h4>
+            <Card className="rounded-3xl border-emerald-500/20 bg-slate-950/45 p-4">
+              <h4 className="text-sm font-semibold text-emerald-200">Axes homogenes et axes polarises</h4>
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
                 <div>
                   <p className="text-xs uppercase tracking-[0.12em] text-emerald-200">Homogenes</p>
@@ -2011,10 +2012,10 @@ const RadarPartyPage = () => {
 
         {stage === "team-progress" ? (
           <section className="grid min-w-0 gap-4">
-            <Card className="rounded-3xl border-cyan-300/30 bg-slate-950/45 p-4">
+            <Card className="rounded-3xl border-emerald-500/20 bg-slate-950/45 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <h3 className="text-base font-semibold text-cyan-100">Suivi d'avancement equipe</h3>
+                  <h3 className="text-base font-semibold text-emerald-200">Suivi d'avancement equipe</h3>
                   <p className="break-words text-sm text-slate-200">Code de session: {roomCode || "-"}</p>
                 </div>
               </div>
@@ -2026,7 +2027,7 @@ const RadarPartyPage = () => {
                   <span>{teamCompletionPct}%</span>
                 </div>
                 <div className="mt-2 h-2 overflow-hidden rounded bg-slate-900/80">
-                  <div className="h-full rounded bg-cyan-400/90 transition-all duration-300" style={{ width: `${teamCompletionPct}%` }} />
+                  <div className="h-full rounded bg-emerald-400/90 transition-all duration-300" style={{ width: `${teamCompletionPct}%` }} />
                 </div>
                 {!hostParticipates ? (
                   <p className="mt-2 text-xs text-amber-200">
@@ -2036,18 +2037,18 @@ const RadarPartyPage = () => {
               </div>
             </Card>
 
-            <Card className="rounded-3xl border-cyan-300/30 bg-slate-950/45 p-4">
-              <h4 className="text-sm font-semibold text-cyan-100">Progression par joueur</h4>
+            <Card className="rounded-3xl border-emerald-500/20 bg-slate-950/45 p-4">
+              <h4 className="text-sm font-semibold text-emerald-200">Progression par joueur</h4>
               <div className="mt-3 space-y-3">
                 {progressRows.map((row) => (
-                  <div key={row.participant.id} className="rounded-2xl border border-cyan-300/20 bg-slate-900/45 p-3">
+                  <div key={row.participant.id} className="rounded-2xl border border-emerald-500/15 bg-slate-900/45 p-3">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex min-w-0 items-center gap-2">
-                        <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-cyan-300/30 bg-slate-950/65 text-lg">
+                        <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-emerald-500/20 bg-slate-950/65 text-lg">
                           {AVATARS[row.participant.avatar] ?? "?"}
                         </span>
                         <div className="min-w-0">
-                          <p className="truncate text-sm text-cyan-50">
+                          <p className="truncate text-sm text-slate-100">
                             {row.participant.displayName}
                             {row.participant.isHost ? " (hote)" : ""}
                           </p>
@@ -2060,14 +2061,14 @@ const RadarPartyPage = () => {
                           </p>
                         </div>
                       </div>
-                      <span className="text-xs text-cyan-100">{row.exempted ? "N/A" : `${row.progressPct}%`}</span>
+                      <span className="text-xs text-emerald-200">{row.exempted ? "N/A" : `${row.progressPct}%`}</span>
                     </div>
 
                     <div className="mt-2 h-2 overflow-hidden rounded bg-slate-900/80">
                       <div
                         className={cn(
                           "h-full rounded transition-all duration-300",
-                          row.exempted ? "bg-slate-600/70" : row.participant.submittedAt ? "bg-emerald-400/90" : "bg-cyan-400/90"
+                          row.exempted ? "bg-slate-600/70" : row.participant.submittedAt ? "bg-emerald-400/90" : "bg-emerald-400/90"
                         )}
                         style={{ width: `${row.exempted ? 100 : row.progressPct}%` }}
                       />
@@ -2105,7 +2106,7 @@ const RadarPartyPage = () => {
       {hasRadarStickyFooter ? (
         <>
           <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 hidden px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:block">
-            <Card className="pointer-events-auto mx-auto w-full max-w-5xl border-cyan-300/40 bg-slate-950/92 p-3 shadow-[0_0_0_1px_rgba(34,211,238,0.2),0_8px_28px_rgba(2,6,23,0.55)]">
+            <Card className="pointer-events-auto mx-auto w-full max-w-5xl border-emerald-500/25 bg-slate-950/92 p-3 shadow-[0_0_0_1px_rgba(16,185,129,0.15),0_8px_28px_rgba(2,6,23,0.55)]">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex flex-wrap items-center gap-2">
                   {stage === "individual" ? (
@@ -2159,13 +2160,10 @@ const RadarPartyPage = () => {
 
       <AlertDialog open={leaveDialogOpen} onOpenChange={setLeaveDialogOpen}>
         <AlertDialogContent
-          className={cn(
-            GAME_DIALOG_CONTENT,
-            "max-w-md rounded-2xl border-cyan-300/40 p-5 sm:p-6 shadow-[0_0_0_1px_rgba(34,211,238,0.2),0_14px_40px_rgba(2,6,23,0.6)]"
-          )}
+          className={cn(RADAR_DIALOG, "max-w-md")}
         >
           <AlertDialogHeader className="space-y-3">
-            <AlertDialogTitle className="text-base uppercase tracking-[0.08em] text-cyan-100">
+            <AlertDialogTitle className="text-base uppercase tracking-[0.08em] text-emerald-200">
               Quitter Radar Party ?
             </AlertDialogTitle>
             <AlertDialogDescription className="text-sm text-slate-300">
@@ -2173,7 +2171,7 @@ const RadarPartyPage = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-1 grid grid-cols-1 gap-2 sm:grid-cols-2 sm:space-x-0">
-            <AlertDialogCancel className={cn(CTA_NEON_SECONDARY_SUBTLE, "h-11 w-full rounded-xl text-cyan-100")}>
+            <AlertDialogCancel className={cn(CTA_NEON_SECONDARY_SUBTLE, "h-11 w-full rounded-xl text-emerald-200")}>
               Annuler
             </AlertDialogCancel>
             <AlertDialogAction className={cn(CTA_NEON_DANGER, "h-11 w-full rounded-xl")} onClick={confirmQuitSession}>
@@ -2185,13 +2183,10 @@ const RadarPartyPage = () => {
 
       <AlertDialog open={submitDialogOpen} onOpenChange={setSubmitDialogOpen}>
         <AlertDialogContent
-          className={cn(
-            GAME_DIALOG_CONTENT,
-            "max-w-md rounded-2xl border-cyan-300/40 p-5 sm:p-6 shadow-[0_0_0_1px_rgba(34,211,238,0.2),0_14px_40px_rgba(2,6,23,0.6)]"
-          )}
+          className={cn(RADAR_DIALOG, "max-w-md")}
         >
           <AlertDialogHeader className="space-y-3">
-            <AlertDialogTitle className="text-base uppercase tracking-[0.08em] text-cyan-100">
+            <AlertDialogTitle className="text-base uppercase tracking-[0.08em] text-emerald-200">
               Valider le questionnaire ?
             </AlertDialogTitle>
             <AlertDialogDescription className="text-sm text-slate-300">
@@ -2199,7 +2194,7 @@ const RadarPartyPage = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-1 grid grid-cols-1 gap-2 sm:grid-cols-2 sm:space-x-0">
-            <AlertDialogCancel className={cn(CTA_NEON_SECONDARY_SUBTLE, "h-11 w-full rounded-xl text-cyan-100")}>
+            <AlertDialogCancel className={cn(CTA_NEON_SECONDARY_SUBTLE, "h-11 w-full rounded-xl text-emerald-200")}>
               Continuer a verifier
             </AlertDialogCancel>
             <AlertDialogAction className={cn("h-11 w-full rounded-xl")} onClick={finalizeQuestionnaire}>

@@ -149,9 +149,9 @@ export function RadarChartCard({
   );
 
   return (
-    <Card className="relative overflow-hidden rounded-3xl border border-cyan-300/30 bg-slate-950/60 p-3 sm:p-4 text-cyan-50 shadow-[0_0_0_1px_rgba(34,211,238,0.2),0_14px_36px_rgba(2,6,23,0.55)]">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(34,211,238,0.12),transparent_45%),radial-gradient(circle_at_80%_75%,rgba(59,130,246,0.08),transparent_42%)]" />
-      <h3 className="relative text-base font-semibold uppercase tracking-[0.12em] text-cyan-100">{title}</h3>
+    <Card className="relative overflow-hidden rounded-3xl border border-emerald-500/20 bg-slate-950/60 p-3 sm:p-4 text-slate-100 shadow-[0_0_0_1px_rgba(16,185,129,0.15),0_14px_36px_rgba(2,6,23,0.55)]">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(16,185,129,0.08),transparent_45%),radial-gradient(circle_at_80%_75%,rgba(16,185,129,0.04),transparent_42%)]" />
+      <h3 className="relative text-base font-semibold uppercase tracking-[0.12em] text-emerald-300">{title}</h3>
       {subtitle ? <p className="relative mt-1 text-xs text-slate-300">{subtitle}</p> : null}
 
       <div className="relative mt-3 h-[430px] w-full sm:mt-4 sm:h-[560px]">
@@ -163,7 +163,7 @@ export function RadarChartCard({
         >
           <defs>
             <filter id="radarGlow" x="-40%" y="-40%" width="180%" height="180%">
-              <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor="#22d3ee" floodOpacity="0.55" />
+              <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor="#10b981" floodOpacity="0.5" />
             </filter>
           </defs>
 
@@ -172,7 +172,7 @@ export function RadarChartCard({
               key={`ring-${ring.ring}`}
               points={ring.points}
               fill={ring.fill}
-              stroke="rgba(56,189,248,0.35)"
+              stroke="rgba(16,185,129,0.22)"
               strokeWidth={ring.ring === 100 ? 1.7 : 1.1}
               vectorEffect="non-scaling-stroke"
             />
@@ -185,14 +185,14 @@ export function RadarChartCard({
               y1={center}
               x2={point.axisX}
               y2={point.axisY}
-              stroke="rgba(125,211,252,0.34)"
+              stroke="rgba(16,185,129,0.22)"
               strokeWidth={1.2}
               vectorEffect="non-scaling-stroke"
             />
           ))}
 
           {guideDots.map((dot) => (
-            <circle key={dot.key} cx={dot.x} cy={dot.y} r={dot.size} fill="rgba(186,230,253,0.46)" />
+            <circle key={dot.key} cx={dot.x} cy={dot.y} r={dot.size} fill="rgba(167,243,208,0.40)" />
           ))}
 
           {rings.map((ring) => (
@@ -200,7 +200,7 @@ export function RadarChartCard({
               key={`pct-${ring}`}
               x={center + 11}
               y={center - (ring / 100) * maxRadius - 3}
-              fill="rgba(186,230,253,0.86)"
+              fill="rgba(167,243,208,0.80)"
               fontSize="11"
               fontWeight="600"
               style={{ fontFamily: "'Trebuchet MS', 'Segoe UI', sans-serif" }}
@@ -211,8 +211,8 @@ export function RadarChartCard({
 
           <polyline
             points={polygonPoints}
-            fill="rgba(34,211,238,0.18)"
-            stroke="#22d3ee"
+            fill="rgba(16,185,129,0.14)"
+            stroke="#10b981"
             strokeWidth={3.1}
             strokeLinejoin="round"
             strokeLinecap="round"
@@ -240,13 +240,13 @@ export function RadarChartCard({
                 cx={point.x}
                 cy={point.y}
                 r={5}
-                fill="#22d3ee"
-                stroke="#e0f2fe"
+                fill="#10b981"
+                stroke="#d1fae5"
                 strokeWidth={1.4}
                 vectorEffect="non-scaling-stroke"
               />
-              <rect x={point.x - 12} y={point.y - 22} width={24} height={12} rx={4} fill="#0891b2" opacity={0.95} />
-              <text x={point.x} y={point.y - 13} fill="#ecfeff" fontSize="8" fontWeight="700" textAnchor="middle">
+              <rect x={point.x - 12} y={point.y - 22} width={24} height={12} rx={4} fill="#059669" opacity={0.95} />
+              <text x={point.x} y={point.y - 13} fill="#ecfdf5" fontSize="8" fontWeight="700" textAnchor="middle">
                 {(point.score / 20).toFixed(1)}
               </text>
               <title>{`${point.label}: ${point.score}%`}</title>
@@ -276,7 +276,7 @@ export function RadarChartCard({
                 key={`lbl-d-${point.key}`}
                 x={point.labelX}
                 y={point.labelY}
-                fill="rgba(224,242,254,0.97)"
+                fill="rgba(209,250,229,0.97)"
                 fontSize="12"
                 fontWeight="700"
                 textAnchor={point.labelAnchor}
@@ -301,7 +301,7 @@ export function RadarChartCard({
                 key={`lbl-m-${point.key}`}
                 x={point.labelX}
                 y={point.labelY}
-                fill="rgba(186,230,253,0.98)"
+                fill="rgba(167,243,208,0.95)"
                 fontSize="10"
                 fontWeight="700"
                 textAnchor={point.labelAnchor}
@@ -317,14 +317,14 @@ export function RadarChartCard({
             ))}
           </g>
 
-          <circle cx={center} cy={center} r={7} fill="#0f172a" stroke="rgba(34,211,238,0.7)" strokeWidth="1.2" />
+          <circle cx={center} cy={center} r={7} fill="#0f172a" stroke="rgba(16,185,129,0.6)" strokeWidth="1.2" />
         </svg>
       </div>
 
       {comparisonPoints ? (
         <div className="mt-2 flex flex-wrap gap-3 text-xs text-slate-200">
           <span className="inline-flex items-center gap-1.5">
-            <span className="inline-block h-2.5 w-2.5 rounded-full bg-cyan-400" />
+            <span className="inline-block h-2.5 w-2.5 rounded-full bg-emerald-400" />
             {primaryLabel}
           </span>
           <span className="inline-flex items-center gap-1.5">

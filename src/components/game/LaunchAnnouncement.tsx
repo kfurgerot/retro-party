@@ -40,11 +40,11 @@ export const LaunchAnnouncement: React.FC<LaunchAnnouncementProps> = ({
   const skin =
     variant === "turn"
       ? {
-          glow: "shadow-[0_0_0_2px_rgba(34,211,238,0.2),0_0_44px_rgba(34,211,238,0.3)]",
-          border: "border-cyan-300/45",
-          panel: "from-slate-900/95 via-slate-900/90 to-cyan-950/85",
-          accent: "bg-cyan-400",
-          badge: "text-cyan-200 border-cyan-300/40 bg-cyan-500/15",
+          glow: "shadow-[0_0_0_2px_rgba(236,72,153,0.2),0_0_44px_rgba(236,72,153,0.3)]",
+          border: "border-pink-400/45",
+          panel: "from-slate-900/95 via-slate-900/90 to-pink-950/85",
+          accent: "bg-pink-400",
+          badge: "text-pink-200 border-pink-400/40 bg-pink-500/15",
           icon: "🎮",
           label: "Tour actif",
         }
@@ -91,7 +91,7 @@ export const LaunchAnnouncement: React.FC<LaunchAnnouncementProps> = ({
               className={
                 variant === "roll"
                   ? "inline-flex items-center rounded-xl border border-orange-200/70 bg-orange-500/22 px-4 py-2 text-xl font-black tracking-wide text-orange-50 shadow-[0_0_24px_rgba(251,146,60,0.35)] sm:text-2xl"
-                  : "inline-flex items-center rounded-xl border border-cyan-200/70 bg-cyan-500/20 px-4 py-2 text-xl font-black tracking-wide text-cyan-50 shadow-[0_0_24px_rgba(34,211,238,0.3)] sm:text-2xl"
+                  : "inline-flex items-center rounded-xl border border-pink-300/70 bg-pink-500/20 px-4 py-2 text-xl font-black tracking-wide text-slate-100 shadow-[0_0_24px_rgba(236,72,153,0.3)] sm:text-2xl"
               }
             >
               {emphasisText}
