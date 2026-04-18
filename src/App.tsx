@@ -15,6 +15,7 @@ import {
   loadTemplateEditorPage,
 } from "@/lib/routeLoaders";
 import { UI_MODE } from "@/lib/uiMode";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 const Portal = lazy(loadPortalPage);
 const Home = lazy(loadHomePage);
@@ -42,6 +43,7 @@ const App = () => {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <AuthProvider>
       <TooltipProvider>
         <Toaster />
         <Sonner />
@@ -61,6 +63,7 @@ const App = () => {
           </Suspense>
         </BrowserRouter>
       </TooltipProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 };

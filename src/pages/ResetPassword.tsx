@@ -1,18 +1,11 @@
 import { FormEvent, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { RetroScreenBackground } from "@/components/screens/RetroScreenBackground";
 import { api } from "@/net/api";
 import { fr } from "@/i18n/fr";
-import { CTA_NEON_PRIMARY, CTA_NEON_SECONDARY } from "@/lib/uiTokens";
+import { PageShell } from "@/components/app-shell";
 
-const neutralSecondaryBtn = CTA_NEON_SECONDARY;
-const activeCyanBtn = CTA_NEON_PRIMARY;
-const fieldClass =
-  "border-cyan-300/20 bg-slate-900/45 text-cyan-100 placeholder:text-cyan-200/55 hover:bg-slate-900/65 focus-visible:ring-cyan-300/45";
+const inputCls =
+  "w-full h-11 rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 text-sm text-slate-100 placeholder:text-slate-600 outline-none focus:border-white/20 focus:ring-1 focus:ring-indigo-400/50 transition";
 
 const ResetPasswordPage = () => {
   const [searchParams] = useSearchParams();
@@ -30,18 +23,9 @@ const ResetPasswordPage = () => {
     setError(null);
     setSuccess(null);
 
-    if (!token) {
-      setError(fr.resetPassword.missingToken);
-      return;
-    }
-    if (password.length < 8) {
-      setError(fr.resetPassword.passwordTooShort);
-      return;
-    }
-    if (password !== confirmPassword) {
-      setError(fr.resetPassword.passwordMismatch);
-      return;
-    }
+    if (!token) { setError(fr.resetPassword.missingToken); return; }
+    if (password.length < 8) { setError(fr.resetPassword.passwordTooShort); return; }
+    if (password !== confirmPassword) { setError(fr.resetPassword.passwordMismatch); return; }
 
     setLoading(true);
     try {
@@ -57,74 +41,82 @@ const ResetPasswordPage = () => {
   };
 
   return (
-    <div className="scanlines relative flex min-h-svh w-full items-center justify-center overflow-hidden px-4 py-8">
-      <RetroScreenBackground />
-      <Card className="relative z-10 w-full max-w-xl border-cyan-300/40 bg-slate-900/55 shadow-[0_0_0_1px_rgba(34,211,238,0.18),0_0_24px_rgba(34,211,238,0.12)] backdrop-blur">
-        <CardHeader className="space-y-2">
-          <p className="text-center text-[10px] uppercase tracking-[0.22em] text-cyan-200/75">Retro Party</p>
-          <CardTitle className="text-center text-base font-semibold uppercase tracking-[0.14em] text-cyan-100/90">
+    <PageShell accentColor="rgba(99,102,241,0.08)" accentGlow="rgba(99,102,241,0.04)" maxWidth="sm">
+      <div className="flex min-h-[calc(100svh-4rem)] items-center justify-center py-8">
+        <div className="w-full max-w-sm">
+          {/* Brand */}
+          <div className="mb-6 flex items-center justify-center gap-2">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 text-sm">
+              ⚡
+            </div>
+            <span className="text-xs font-bold uppercase tracking-[0.12em] text-indigo-400">
+              Agile Suite
+            </span>
+          </div>
+
+          <h1 className="mb-1.5 text-center text-2xl font-extrabold tracking-tight text-slate-50">
             {fr.resetPassword.title}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
+          </h1>
+          <p className="mb-6 text-center text-sm text-slate-500">
+            Choisis un nouveau mot de passe pour ton compte.
+          </p>
+
           {!token && (
-            <p className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+            <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
               {fr.resetPassword.invalidLink}
-            </p>
+            </div>
           )}
           {error && (
-            <p className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">{error}</p>
+            <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+              {error}
+            </div>
           )}
           {success && (
-            <p className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">
+            <div className="mb-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
               {success}
-            </p>
+            </div>
           )}
 
-          <form className="grid gap-3" onSubmit={onSubmit}>
-            <div className="grid gap-1">
-              <Label htmlFor="new-password" className="text-cyan-100">
-                {fr.resetPassword.newPassword}
-              </Label>
-              <Input
-                id="new-password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={loading || !token}
-                className={fieldClass}
-              />
-            </div>
-            <div className="grid gap-1">
-              <Label htmlFor="confirm-password" className="text-cyan-100">
-                {fr.resetPassword.confirmPassword}
-              </Label>
-              <Input
-                id="confirm-password"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                disabled={loading || !token}
-                className={fieldClass}
-              />
-            </div>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Button type="submit" variant="secondary" className={activeCyanBtn} disabled={loading || !token}>
-                {loading ? fr.resetPassword.sending : fr.resetPassword.validate}
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                className={neutralSecondaryBtn}
-                onClick={() => navigate("/prepare")}
-              >
-                {fr.resetPassword.backLogin}
-              </Button>
-            </div>
+          <form className="space-y-3" onSubmit={onSubmit}>
+            <input
+              id="new-password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder={fr.resetPassword.newPassword}
+              disabled={loading || !token}
+              className={inputCls}
+            />
+            <input
+              id="confirm-password"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder={fr.resetPassword.confirmPassword}
+              disabled={loading || !token}
+              className={inputCls}
+            />
+
+            <button
+              type="submit"
+              disabled={loading || !token}
+              className="h-11 w-full rounded-xl bg-indigo-500 text-sm font-bold text-white transition hover:bg-indigo-400 disabled:opacity-40"
+              style={{ boxShadow: "0 4px 16px rgba(99,102,241,0.35)" }}
+            >
+              {loading ? fr.resetPassword.sending : fr.resetPassword.validate}
+            </button>
           </form>
-        </CardContent>
-      </Card>
-    </div>
+
+          <button
+            type="button"
+            onClick={() => navigate("/prepare")}
+            className="mt-5 w-full text-center text-xs text-slate-600 transition hover:text-slate-400"
+          >
+            ← {fr.resetPassword.backLogin}
+          </button>
+        </div>
+      </div>
+    </PageShell>
   );
 };
 

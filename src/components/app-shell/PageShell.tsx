@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 interface PageShellProps extends React.HTMLAttributes<HTMLDivElement> {
   accentColor?: string;
   accentGlow?: string;
-  maxWidth?: "4xl" | "5xl" | "6xl";
+  maxWidth?: "sm" | "4xl" | "5xl" | "6xl";
   noPadding?: boolean;
 }
 
@@ -17,7 +17,7 @@ export const PageShell = ({
   noPadding = false,
   ...props
 }: PageShellProps) => {
-  const maxWidthClass = { "4xl": "max-w-4xl", "5xl": "max-w-5xl", "6xl": "max-w-6xl" }[maxWidth];
+  const maxWidthClass = { "sm": "max-w-sm", "4xl": "max-w-4xl", "5xl": "max-w-5xl", "6xl": "max-w-6xl" }[maxWidth];
 
   return (
     <div
