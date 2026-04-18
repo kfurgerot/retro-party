@@ -5,8 +5,12 @@ import { OnlineLobbyScreen } from "@/components/screens/OnlineLobbyScreen";
 import { PlanningPokerReadyScreen } from "@/components/screens/PlanningPokerReadyScreen";
 import { PlanningPokerGameScreen } from "@/components/screens/PlanningPokerGameScreen";
 import { usePlanningPokerOnlineState } from "@/hooks/usePlanningPokerOnlineState";
+import { useProfile } from "@/hooks/useProfile";
 import { PlanningPokerRole, PlanningPokerVoteSystem } from "@/types/planningPoker";
+import { TOOL_ACCENT } from "@/lib/uiTokens";
 import { fr } from "@/i18n/fr";
+
+const ACCENT = TOOL_ACCENT["planning-poker"];
 
 const PlanningPokerPage: React.FC = () => {
   const location = useLocation();
@@ -41,14 +45,14 @@ const PlanningPokerPage: React.FC = () => {
   }, [location.key, navigate, online.leaveRoom]);
 
   const [autoSubmitKey] = useState<number>(() => (initialParams.autoSubmit ? Date.now() : 0));
-  const [showOnboarding, setShowOnboarding] = useState<boolean>(() => !initialParams.name && !initialParams.direct);
-  const [onboardingInitialStep, setOnboardingInitialStep] = useState<1 | 2>(() =>
-    initialParams.name ? 2 : 1
+  const { profile, setProfile } = useProfile(
+    initialParams.name || undefined,
+    initialParams.avatar,
   );
-  const [profile, setProfile] = useState(() => ({
-    name: initialParams.name,
-    avatar: initialParams.avatar,
-  }));
+  const [showOnboarding, setShowOnboarding] = useState<boolean>(() => !profile.name && !initialParams.direct);
+  const [onboardingInitialStep, setOnboardingInitialStep] = useState<1 | 2>(() =>
+    profile.name ? 2 : 1
+  );
   const [voteSystem, setVoteSystem] = useState<PlanningPokerVoteSystem>("fibonacci");
   const [role, setRole] = useState<PlanningPokerRole>("player");
 
@@ -63,6 +67,8 @@ const PlanningPokerPage: React.FC = () => {
         <OnlineOnboardingScreen
           connected={online.connected}
           brandLabel={fr.planningPoker.gameTitle}
+          accentColor={ACCENT.color}
+          accentGlow={ACCENT.ambientGlow}
           initialName={profile.name || undefined}
           initialAvatar={profile.avatar}
           initialStep={onboardingInitialStep}
@@ -73,9 +79,7 @@ const PlanningPokerPage: React.FC = () => {
             setOnboardingInitialStep(1);
             setShowOnboarding(false);
           }}
-          onBack={() => {
-            navigate("/?stage=entry&experience=planning-poker");
-          }}
+          onBack={() => navigate("/")}
           />
       );
     }
@@ -86,6 +90,8 @@ const PlanningPokerPage: React.FC = () => {
           <OnlineLobbyScreen
             connected={online.connected}
             brandLabel={fr.planningPoker.gameTitle}
+            accentColor={ACCENT.color}
+            accentGlow={ACCENT.ambientGlow}
             roomCode={null}
             lobbyPlayers={[]}
             onHost={(name, avatar) => online.createRoom(name, avatar, "player", voteSystem)}
@@ -105,8 +111,7 @@ const PlanningPokerPage: React.FC = () => {
             stepLabel={`${fr.onlineOnboarding.step} 5/5`}
             stepCurrent={5}
             stepTotal={5}
-            shellStyle="transparent"
-            titleWhenNoRoomOverride={online.state.phase === "lobby" ? "Creer ou rejoindre une table" : undefined}
+            titleWhenNoRoomOverride="Créer ou rejoindre une table"
           />
         </div>
       );

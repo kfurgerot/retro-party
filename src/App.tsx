@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import {
+  loadPortalPage,
   loadHomePage,
   loadNotFoundPage,
   loadPlayPage,
@@ -15,6 +16,7 @@ import {
 } from "@/lib/routeLoaders";
 import { UI_MODE } from "@/lib/uiMode";
 
+const Portal = lazy(loadPortalPage);
 const Home = lazy(loadHomePage);
 const Index = lazy(loadPlayPage);
 const PreparePage = lazy(loadPreparePage);
@@ -46,7 +48,8 @@ const App = () => {
         <BrowserRouter>
           <Suspense fallback={<RouteFallback />}>
             <Routes>
-              <Route path="/" element={<Home />} />
+              <Route path="/" element={<Portal />} />
+              <Route path="/home" element={<Home />} />
               <Route path="/play" element={<Index />} />
               <Route path="/prepare" element={<PreparePage />} />
               <Route path="/radar-party" element={<RadarPartyPage />} />

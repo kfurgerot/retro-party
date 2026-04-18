@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useLocation, useNavigate } from "react-router-dom";
 import { useGameState } from '@/hooks/useGameState';
 import { useOnlineGameState } from '@/hooks/useOnlineGameState';
+import { useProfile } from '@/hooks/useProfile';
 import { LobbyScreen } from '@/components/screens/LobbyScreen';
 import { OnlineLobbyScreen } from '@/components/screens/OnlineLobbyScreen';
 import { OnlineOnboardingScreen } from '@/components/screens/OnlineOnboardingScreen';
@@ -9,6 +10,7 @@ import { GameScreen } from '@/components/screens/GameScreen';
 import { ResultsScreen } from '@/components/screens/ResultsScreen';
 import { perfLog, perfMark, perfMeasure } from "@/lib/perf";
 import { fr } from "@/i18n/fr";
+import { TOOL_ACCENT } from "@/lib/uiTokens";
 import PlanningPokerPage from "@/pages/PlanningPoker";
 
 const Index: React.FC = () => {
@@ -60,16 +62,17 @@ const Index: React.FC = () => {
   const online = useOnlineGameState();
   const [autoSubmitKey] = useState<number>(() => (initialParams.autoSubmit ? Date.now() : 0));
   const [screenTransitionStartMark] = useState(() => `screen-transition-start-${Date.now()}`);
-  const [onboardingProfile, setOnboardingProfile] = useState(() => ({
-    name: initialParams.name,
-    avatar: initialParams.avatar,
-  }));
+  const { profile: onboardingProfile, setProfile: setOnboardingProfile } = useProfile(
+    initialParams.name || undefined,
+    initialParams.avatar,
+  );
   const [showOnlineOnboarding, setShowOnlineOnboarding] = useState<boolean>(
-    () => !initialParams.name && !initialParams.direct
+    () => !onboardingProfile.name && !initialParams.direct
   );
   const [onboardingInitialStep, setOnboardingInitialStep] = useState<1 | 2>(() =>
-    initialParams.name ? 2 : 1
+    onboardingProfile.name ? 2 : 1
   );
+  const accent = TOOL_ACCENT["retro-party"];
 
   React.useEffect(() => {
     perfMark(screenTransitionStartMark);
@@ -96,6 +99,8 @@ const Index: React.FC = () => {
           <OnlineOnboardingScreen
             connected={online.connected}
             brandLabel={fr.home.title}
+            accentColor={accent.color}
+            accentGlow={accent.ambientGlow}
             initialName={onboardingProfile.name || undefined}
             initialAvatar={onboardingProfile.avatar}
             initialStep={onboardingInitialStep}
@@ -107,11 +112,7 @@ const Index: React.FC = () => {
               setShowOnlineOnboarding(false);
             }}
             onBack={() => {
-              if (initialParams.fromEntry) {
-                navigate("/?stage=entry&experience=retro-party");
-                return;
-              }
-              navigate("/?stage=select-experience");
+              navigate("/");
             }}
           />
         );
@@ -122,13 +123,13 @@ const Index: React.FC = () => {
           <OnlineLobbyScreen
             connected={online.connected}
             brandLabel={fr.home.title}
+            accentColor={accent.color}
+            accentGlow={accent.ambientGlow}
             roomCode={online.code}
             lobbyPlayers={online.lobby}
             onHost={online.createRoom}
             onJoin={online.joinRoom}
-            onLeave={() => {
-              leaveOnlineSession();
-            }}
+            onLeave={leaveOnlineSession}
             onEditProfile={() => {
               setOnboardingInitialStep(2);
               setShowOnlineOnboarding(true);
@@ -143,8 +144,7 @@ const Index: React.FC = () => {
             stepLabel={`${fr.onlineOnboarding.step} 5/5`}
             stepCurrent={5}
             stepTotal={5}
-            shellStyle="transparent"
-            titleWhenNoRoomOverride={"Creer ou rejoindre un plateau"}
+            titleWhenNoRoomOverride={"Créer ou rejoindre un plateau"}
           />
         </div>
       );
@@ -155,6 +155,7 @@ const Index: React.FC = () => {
         <ResultsScreen
           players={online.gameState.players}
           questionHistory={online.gameState.questionHistory}
+          accentColor={accent.color}
           onPlayAgain={online.resetGame}
         />
       );

@@ -1,3 +1,4 @@
+export const loadPortalPage = () => import("@/pages/Portal");
 export const loadHomePage = () => import("@/pages/Home");
 export const loadPlayPage = () => import("@/pages/Index");
 export const loadPreparePage = () => import("@/pages/Prepare");
