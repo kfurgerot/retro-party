@@ -13,6 +13,7 @@ import {
   loadRadarPartyPage,
   loadResetPasswordPage,
   loadTemplateEditorPage,
+  loadPokerTemplateEditorPage,
 } from "@/lib/routeLoaders";
 import { UI_MODE } from "@/lib/uiMode";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -23,6 +24,7 @@ const Index = lazy(loadPlayPage);
 const PreparePage = lazy(loadPreparePage);
 const RadarPartyPage = lazy(loadRadarPartyPage);
 const TemplateEditorPage = lazy(loadTemplateEditorPage);
+const PokerTemplateEditorPage = lazy(loadPokerTemplateEditorPage);
 const ResetPasswordPage = lazy(loadResetPasswordPage);
 const NotFound = lazy(loadNotFoundPage);
 
@@ -54,6 +56,7 @@ const App = () => {
                 <Route path="/prepare" element={<PreparePage />} />
                 <Route path="/radar-party" element={<RadarPartyPage />} />
                 <Route path="/prepare/templates/:templateId" element={<TemplateEditorPage />} />
+                <Route path="/prepare/poker/:templateId" element={<PokerTemplateEditorPage />} />
                 <Route path="/reset-password" element={<ResetPasswordPage />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />

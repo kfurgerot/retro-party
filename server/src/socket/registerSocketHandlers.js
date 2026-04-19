@@ -332,9 +332,44 @@ export function registerSocketHandlers(deps) {
       if (room.returnStoryTitle) {
         room.storyTitle = room.returnStoryTitle;
         room.returnStoryTitle = null;
+      } else if (
+        Array.isArray(room.preparedStories) &&
+        room.preparedStories.length > 0 &&
+        room.currentStoryIndex >= 0
+      ) {
+        const nextIdx = room.currentStoryIndex + 1;
+        if (nextIdx < room.preparedStories.length) {
+          room.currentStoryIndex = nextIdx;
+          room.storyTitle = room.preparedStories[nextIdx].title;
+        } else {
+          room.currentStoryIndex = -1;
+          room.storyTitle = `Story #${room.round}`;
+        }
       } else {
         room.storyTitle = `Story #${room.round}`;
       }
+      room.lobby = room.lobby.map((player) => ({
+        ...player,
+        hasVoted: false,
+        vote: null,
+      }));
+      broadcastPokerState(code);
+    });
+
+    socket.on(C2S_EVENTS.SELECT_POKER_STORY, ({ index }) => {
+      const code = socketToPokerRoom.get(socket.id);
+      if (!code) return;
+      const room = pokerRooms.get(code);
+      if (!room) return;
+      if (room.hostSocketId !== socket.id) return;
+      if (!Array.isArray(room.preparedStories)) return;
+      const idx = typeof index === "number" ? Math.floor(index) : -1;
+      if (idx < 0 || idx >= room.preparedStories.length) return;
+
+      room.currentStoryIndex = idx;
+      room.storyTitle = room.preparedStories[idx].title;
+      room.votesOpen = false;
+      room.revealed = false;
       room.lobby = room.lobby.map((player) => ({
         ...player,
         hasVoted: false,

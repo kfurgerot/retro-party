@@ -264,20 +264,26 @@ function createPokerRoom({
   avatar = 0,
   role = "player",
   voteSystem = "fibonacci",
+  preparedStories = [],
 } = {}) {
   if (pokerRooms.has(code)) return pokerRooms.get(code);
 
   const hasHost = Boolean(hostSocketId);
+  const stories = Array.isArray(preparedStories)
+    ? preparedStories.filter((s) => s && typeof s.title === "string" && s.title.trim())
+    : [];
   const room = {
     code,
     phase: "lobby",
-    storyTitle: "Story #1",
+    storyTitle: stories.length > 0 ? stories[0].title : "Story #1",
     voteSystem: normalizePokerVoteSystem(voteSystem),
     returnStoryTitle: null,
     votesOpen: false,
     round: 1,
     revealed: false,
     hostSocketId,
+    preparedStories: stories,
+    currentStoryIndex: stories.length > 0 ? 0 : -1,
     clients: hasHost ? new Set([hostSocketId]) : new Set(),
     disconnectTimers: new Map(),
     lobby: hasHost
@@ -329,6 +335,8 @@ function sanitizePokerState(room) {
     revealed: room.revealed,
     round: room.round,
     updatedAt: Date.now(),
+    preparedStories: room.preparedStories ?? [],
+    currentStoryIndex: room.currentStoryIndex ?? -1,
     players: room.lobby.map((player) => ({
       socketId: player.socketId,
       name: player.name,
@@ -529,6 +537,8 @@ registerApiRoutes({
   makeCode,
   isCodeReserved: (code) => pokerRooms.has(code),
   io,
+  createPokerRoom,
+  pokerRooms,
 });
 
 function setWhoSaidItTimer(room, callback, delayMs) {

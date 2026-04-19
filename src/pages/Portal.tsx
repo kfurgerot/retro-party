@@ -33,6 +33,7 @@ const TOOLS: Tool[] = [
     desc: "Votes synchronisés en temps réel, révélation simultanée, stats instantanées.",
     hostRoute: "/play?from=portal&experience=planning-poker",
     joinRoute: (code) => `/play?experience=planning-poker&code=${code}`,
+    hasPrepare: true,
   },
   {
     id: "retro-party",

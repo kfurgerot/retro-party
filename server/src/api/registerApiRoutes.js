@@ -298,6 +298,8 @@ export function registerApiRoutes({
   makeCode,
   isCodeReserved,
   io,
+  createPokerRoom,
+  pokerRooms,
 }) {
   app.use("/api", async (req, res, next) => {
     try {
@@ -393,6 +395,8 @@ export function registerApiRoutes({
     makeCode,
     isCodeReserved,
     createRuntimeRoom,
+    createPokerRoom,
+    pokerRooms,
   });
 
   registerRadarRoutes({

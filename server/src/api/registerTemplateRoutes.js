@@ -13,6 +13,8 @@ export function registerTemplateRoutes(context) {
     makeCode,
     isCodeReserved,
     createRuntimeRoom,
+    createPokerRoom,
+    pokerRooms,
   } = context;
 
   app.get("/api/templates", requireAuth, async (req, res, next) => {
@@ -404,6 +406,64 @@ export function registerTemplateRoutes(context) {
         roomCode: code,
         mode: "template",
         sourceTemplateId: template.id,
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.post("/api/templates/:templateId/launch-poker-room", requireAuth, async (req, res, next) => {
+    try {
+      const template = await getOwnedTemplate(pool, req.currentUser.id, req.params.templateId);
+      if (!template) return res.status(404).json({ error: "Not found" });
+
+      const questionsResult = await pool.query(
+        `
+          SELECT * FROM custom_questions
+          WHERE template_id = $1 AND is_active = true
+          ORDER BY sort_order ASC, created_at ASC
+        `,
+        [req.params.templateId],
+      );
+
+      const stories = questionsResult.rows.map((q) => ({
+        id: q.id,
+        title: q.text,
+        description: q.category || null,
+      }));
+
+      const voteSystem = template.base_config?.voteSystem || "fibonacci";
+      const code = await generateUniqueRoomCode({
+        pool,
+        rooms,
+        makeCode,
+        isCodeReserved: (c) => pokerRooms.has(c),
+      });
+      const roomId = crypto.randomUUID();
+
+      const configSnapshot = {
+        templateId: template.id,
+        templateName: template.name,
+        baseConfig: template.base_config || {},
+        preparedStories: stories,
+      };
+
+      await pool.query(
+        `
+          INSERT INTO rooms (id, room_code, created_by_user_id, source_template_id, mode, config_snapshot)
+          VALUES ($1, $2, $3, $4, 'template', $5::jsonb)
+        `,
+        [roomId, code, req.currentUser.id, template.id, JSON.stringify(configSnapshot)],
+      );
+
+      createPokerRoom({ code, voteSystem, preparedStories: stories });
+
+      return res.status(201).json({
+        roomId,
+        roomCode: code,
+        mode: "template",
+        sourceTemplateId: template.id,
+        voteSystem,
       });
     } catch (err) {
       next(err);

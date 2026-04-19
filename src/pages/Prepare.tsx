@@ -221,6 +221,9 @@ const PreparePage = () => {
   const [newTemplateName, setNewTemplateName] = useState("");
   const [newTemplateDescription, setNewTemplateDescription] = useState("");
   const [creatingTemplate, setCreatingTemplate] = useState(false);
+  const [newPokerName, setNewPokerName] = useState("");
+  const [newPokerDescription, setNewPokerDescription] = useState("");
+  const [creatingPoker, setCreatingPoker] = useState(false);
 
   const loadTemplates = useCallback(async () => {
     setLoadingTemplates(true);
@@ -263,6 +266,30 @@ const PreparePage = () => {
     }
   };
 
+  const submitCreatePokerTemplate = async () => {
+    if (!newPokerName.trim()) {
+      setError(fr.prepare.templateNameRequired);
+      return;
+    }
+    setCreatingPoker(true);
+    setError(null);
+    try {
+      const response = await api.createTemplate({
+        name: newPokerName.trim(),
+        description: newPokerDescription.trim() || null,
+        baseConfig: { module: "planning-poker", voteSystem: "fibonacci" },
+      });
+      setTemplates((prev) => [response.template, ...prev]);
+      setNewPokerName("");
+      setNewPokerDescription("");
+      navigate(`/prepare/poker/${response.template.id}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : fr.prepare.unknownError);
+    } finally {
+      setCreatingPoker(false);
+    }
+  };
+
   const launchTemplate = async (templateId: string) => {
     if (!user) return;
     setError(null);
@@ -270,6 +297,20 @@ const PreparePage = () => {
       const response = await api.launchTemplateRoom(templateId);
       const nextName = encodeURIComponent(user.displayName || fr.prepare.hostPlaceholder);
       navigate(`/play?mode=join&code=${response.roomCode}&name=${nextName}&avatar=0&auto=1`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : fr.prepare.unknownError);
+    }
+  };
+
+  const launchPokerTemplate = async (templateId: string) => {
+    if (!user) return;
+    setError(null);
+    try {
+      const response = await api.launchPokerTemplateRoom(templateId);
+      const nextName = encodeURIComponent(user.displayName || fr.prepare.hostPlaceholder);
+      navigate(
+        `/play?experience=planning-poker&mode=join&code=${response.roomCode}&name=${nextName}&avatar=0&auto=1`,
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : fr.prepare.unknownError);
     }
@@ -374,7 +415,7 @@ const PreparePage = () => {
         Mes templates
       </h1>
       <p className="mb-7 text-sm text-slate-500">
-        Prépare tes sessions Rétro Party à l'avance : questions personnalisées, catégories, ordre.
+        Prépare tes sessions à l'avance : questions Rétro Party ou stories Planning Poker.
       </p>
 
       {/* Errors */}
@@ -412,27 +453,102 @@ const PreparePage = () => {
         </div>
       </div>
 
-      {/* Templates list */}
       {loadingTemplates ? (
         <p className="py-8 text-center text-sm text-slate-500">{fr.prepare.loadingTemplates}</p>
-      ) : templates.length === 0 ? (
-        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] px-5 py-12 text-center">
-          <div className="mb-2 text-3xl">📋</div>
-          <p className="text-sm font-semibold text-slate-300">Aucun template pour l'instant</p>
-          <p className="mt-1 text-xs text-slate-500">{fr.prepare.noTemplates}</p>
-        </div>
       ) : (
-        <div className="space-y-2.5">
-          {templates.map((template) => (
-            <TemplateCard
-              key={template.id}
-              template={template}
-              onEdit={() => navigate(`/prepare/templates/${template.id}`)}
-              onLaunch={() => launchTemplate(template.id)}
-              onDelete={() => deleteTemplate(template.id)}
-            />
-          ))}
-        </div>
+        <>
+          {/* Retro Party templates */}
+          <div className="mb-8">
+            <div className="mb-3 flex items-center gap-2">
+              <span className="text-xs font-bold uppercase tracking-[0.12em] text-pink-400">
+                Rétro Party
+              </span>
+              <span className="rounded-full border border-pink-400/20 bg-pink-500/10 px-2 py-0.5 text-[10px] text-pink-300">
+                {templates.filter((t) => t.baseConfig?.module !== "planning-poker").length}
+              </span>
+            </div>
+            {templates.filter((t) => t.baseConfig?.module !== "planning-poker").length === 0 ? (
+              <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] px-5 py-8 text-center">
+                <p className="text-sm text-slate-500">{fr.prepare.noTemplates}</p>
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {templates
+                  .filter((t) => t.baseConfig?.module !== "planning-poker")
+                  .map((template) => (
+                    <TemplateCard
+                      key={template.id}
+                      template={template}
+                      onEdit={() => navigate(`/prepare/templates/${template.id}`)}
+                      onLaunch={() => launchTemplate(template.id)}
+                      onDelete={() => deleteTemplate(template.id)}
+                    />
+                  ))}
+              </div>
+            )}
+          </div>
+
+          {/* Planning Poker templates */}
+          <div className="mb-6 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+            <p className="mb-3 text-sm font-semibold text-slate-200">
+              Nouveau template Planning Poker
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <input
+                value={newPokerName}
+                onChange={(e) => setNewPokerName(e.target.value)}
+                placeholder="Nom du template (ex: Sprint 42)"
+                className={`${inputCls} min-w-[200px] flex-1`}
+              />
+              <input
+                value={newPokerDescription}
+                onChange={(e) => setNewPokerDescription(e.target.value)}
+                placeholder={`${fr.prepare.description} (${fr.prepare.optional})`}
+                className={`${inputCls} min-w-[200px] flex-1`}
+              />
+              <button
+                type="button"
+                onClick={submitCreatePokerTemplate}
+                disabled={creatingPoker}
+                className="h-11 rounded-xl bg-violet-500 px-6 text-sm font-bold text-white transition hover:bg-violet-400 disabled:opacity-50 whitespace-nowrap"
+                style={{ boxShadow: "0 4px 16px rgba(139,92,246,0.3)" }}
+              >
+                {creatingPoker ? fr.prepare.creating : `+ ${fr.prepare.create}`}
+              </button>
+            </div>
+          </div>
+
+          <div className="mb-3 flex items-center gap-2">
+            <span className="text-xs font-bold uppercase tracking-[0.12em] text-violet-400">
+              Planning Poker
+            </span>
+            <span className="rounded-full border border-violet-400/20 bg-violet-500/10 px-2 py-0.5 text-[10px] text-violet-300">
+              {templates.filter((t) => t.baseConfig?.module === "planning-poker").length}
+            </span>
+          </div>
+          {templates.filter((t) => t.baseConfig?.module === "planning-poker").length === 0 ? (
+            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] px-5 py-8 text-center">
+              <div className="mb-2 text-2xl">🃏</div>
+              <p className="text-sm text-slate-500">
+                Aucun template Planning Poker. Crée-en un ci-dessus.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              {templates
+                .filter((t) => t.baseConfig?.module === "planning-poker")
+                .map((template) => (
+                  <TemplateCard
+                    key={template.id}
+                    template={template}
+                    onEdit={() => navigate(`/prepare/poker/${template.id}`)}
+                    onLaunch={() => launchPokerTemplate(template.id)}
+                    onDelete={() => deleteTemplate(template.id)}
+                  />
+                ))}
+            </div>
+          )}
+        </>
       )}
     </PageShell>
   );

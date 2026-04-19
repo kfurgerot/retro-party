@@ -26,6 +26,8 @@ const EMPTY_STATE: PlanningPokerState = {
   revealed: false,
   round: 1,
   updatedAt: Date.now(),
+  preparedStories: [],
+  currentStoryIndex: -1,
 };
 
 const STORAGE_KEY = "retro-party:planning-poker:session";
@@ -406,6 +408,10 @@ export function usePlanningPokerOnlineState() {
     socket.emit(C2S_EVENTS.SET_STORY_TITLE, { storyTitle });
   }, []);
 
+  const selectPokerStory = useCallback((index: number) => {
+    socket.emit(C2S_EVENTS.SELECT_POKER_STORY, { index });
+  }, []);
+
   const isHost = useMemo(() => {
     if (!myPlayerId) return false;
     return state.players.some((player) => player.socketId === myPlayerId && player.isHost);
@@ -444,5 +450,6 @@ export function usePlanningPokerOnlineState() {
     setVoteSystem,
     setRole,
     setStoryTitle,
+    selectPokerStory,
   };
 }

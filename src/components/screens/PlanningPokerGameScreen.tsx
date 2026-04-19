@@ -61,6 +61,7 @@ type Props = {
   onRoleChange: (role: PlanningPokerRole) => void;
   onVoteSystemChange: (voteSystem: PlanningPokerState["voteSystem"]) => void;
   onStoryTitleChange: (storyTitle: string) => void;
+  onSelectPokerStory?: (index: number) => void;
 };
 
 type SessionEntry = {
@@ -124,13 +125,17 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
   onRoleChange,
   onVoteSystemChange,
   onStoryTitleChange,
+  onSelectPokerStory,
 }) => {
+  const hasPreparedStories = state.preparedStories.length > 0;
   const [mobileActionsOpen, setMobileActionsOpen] = useState(false);
   const [mobileMenuTab, setMobileMenuTab] = useState<"spectators" | "session">("session");
-  const [mobileSessionTab, setMobileSessionTab] = useState<"current" | "history" | "summary">(
-    "current",
+  const [mobileSessionTab, setMobileSessionTab] = useState<
+    "current" | "history" | "summary" | "stories"
+  >("current");
+  const [sidebarTab, setSidebarTab] = useState<"spectators" | "session" | "summary" | "stories">(
+    "session",
   );
-  const [sidebarTab, setSidebarTab] = useState<"spectators" | "session" | "summary">("session");
   const [sessionCursor, setSessionCursor] = useState(0);
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
@@ -765,8 +770,20 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
           {/* ── Desktop sidebar ── */}
           <div className={cn(PANEL, "hidden min-h-0 p-3 lg:flex lg:flex-col")}>
             {/* Sidebar tab bar */}
-            <div className="mb-2 grid w-full grid-cols-3 gap-1.5">
-              {(["spectators", "session", "summary"] as const).map((tab) => (
+            <div
+              className={cn(
+                "mb-2 grid w-full gap-1.5",
+                hasPreparedStories ? "grid-cols-4" : "grid-cols-3",
+              )}
+            >
+              {(
+                [
+                  ...(hasPreparedStories ? ["stories"] : []),
+                  "spectators",
+                  "session",
+                  "summary",
+                ] as const
+              ).map((tab) => (
                 <button
                   key={tab}
                   type="button"
@@ -775,18 +792,75 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                     TAB_BTN,
                     "w-full justify-center",
                     sidebarTab === tab ? TAB_ACTIVE : "",
+                    tab === "stories" ? "border-violet-400/30 text-violet-300" : "",
+                    tab === "stories" && sidebarTab === tab
+                      ? "bg-violet-500/20 border-violet-400/40 text-violet-200"
+                      : "",
                   )}
                 >
                   {tab === "spectators"
                     ? "Spectateurs"
                     : tab === "session"
                       ? "Session"
-                      : "Synthese"}
+                      : tab === "stories"
+                        ? `Stories (${state.preparedStories.length})`
+                        : "Synthese"}
                 </button>
               ))}
             </div>
 
-            {sidebarTab === "spectators" ? (
+            {sidebarTab === "stories" ? (
+              <div className="grid min-h-0 gap-1.5 overflow-auto pr-1">
+                {state.preparedStories.map((story, idx) => {
+                  const isCurrent = idx === state.currentStoryIndex;
+                  const isDone = state.currentStoryIndex >= 0 && idx < state.currentStoryIndex;
+                  return (
+                    <button
+                      key={story.id}
+                      type="button"
+                      disabled={!isHost || isCurrent}
+                      onClick={() => onSelectPokerStory?.(idx)}
+                      className={cn(
+                        "flex items-start gap-2 rounded-xl border px-3 py-2 text-left text-xs transition-all",
+                        isCurrent
+                          ? "border-violet-400/40 bg-violet-500/15 text-violet-100"
+                          : isDone
+                            ? "border-white/[0.04] bg-white/[0.01] text-slate-600 line-through"
+                            : isHost
+                              ? "border-white/[0.06] bg-white/[0.02] text-slate-300 hover:border-violet-400/30 hover:bg-violet-500/10 hover:text-violet-200"
+                              : "border-white/[0.06] bg-white/[0.02] text-slate-300",
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "mt-0.5 shrink-0 text-[10px] font-bold",
+                          isCurrent
+                            ? "text-violet-400"
+                            : isDone
+                              ? "text-slate-600"
+                              : "text-slate-500",
+                        )}
+                      >
+                        {String(idx + 1).padStart(2, "0")}
+                      </span>
+                      <div className="min-w-0">
+                        <div className="font-semibold leading-snug">{story.title}</div>
+                        {story.description && (
+                          <div className="mt-0.5 text-[10px] text-slate-500 line-clamp-2">
+                            {story.description}
+                          </div>
+                        )}
+                      </div>
+                      {isCurrent && (
+                        <span className="ml-auto shrink-0 rounded-full bg-violet-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-violet-300">
+                          En cours
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : sidebarTab === "spectators" ? (
               <div className="grid min-h-0 gap-2 overflow-auto pr-1">
                 {spectators.length > 0 ? (
                   spectators.map((player) => (
@@ -1153,8 +1227,20 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
           </DrawerHeader>
           {mobileMenuTab === "session" ? (
             <div className="px-4 pb-2">
-              <div className="grid grid-cols-3 gap-1 rounded-xl border border-white/[0.06] bg-slate-900/55 p-1">
-                {(["current", "history", "summary"] as const).map((tab) => (
+              <div
+                className={cn(
+                  "grid gap-1 rounded-xl border border-white/[0.06] bg-slate-900/55 p-1",
+                  hasPreparedStories ? "grid-cols-4" : "grid-cols-3",
+                )}
+              >
+                {(
+                  [
+                    ...(hasPreparedStories ? ["stories"] : []),
+                    "current",
+                    "history",
+                    "summary",
+                  ] as const
+                ).map((tab) => (
                   <button
                     key={tab}
                     type="button"
@@ -1162,7 +1248,9 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                     className={cn(
                       "h-8 rounded px-2 text-[11px] transition-colors",
                       mobileSessionTab === tab
-                        ? "bg-indigo-500 text-white"
+                        ? tab === "stories"
+                          ? "bg-violet-500 text-white"
+                          : "bg-indigo-500 text-white"
                         : "bg-transparent text-slate-300 hover:bg-white/[0.06]",
                     )}
                   >
@@ -1170,7 +1258,9 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                       ? "Vote en cours"
                       : tab === "history"
                         ? "Historique"
-                        : "Synthese"}
+                        : tab === "stories"
+                          ? "Stories"
+                          : "Synthese"}
                   </button>
                 ))}
               </div>
@@ -1197,6 +1287,56 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
               </>
             ) : (
               <>
+                {mobileSessionTab === "stories" ? (
+                  <div className="grid gap-1.5">
+                    {state.preparedStories.map((story, idx) => {
+                      const isCurrent = idx === state.currentStoryIndex;
+                      const isDone = state.currentStoryIndex >= 0 && idx < state.currentStoryIndex;
+                      return (
+                        <button
+                          key={story.id}
+                          type="button"
+                          disabled={!isHost || isCurrent}
+                          onClick={() => {
+                            onSelectPokerStory?.(idx);
+                            setMobileActionsOpen(false);
+                          }}
+                          className={cn(
+                            "flex items-start gap-2 rounded-xl border px-3 py-2 text-left text-xs",
+                            isCurrent
+                              ? "border-violet-400/40 bg-violet-500/15 text-violet-100"
+                              : isDone
+                                ? "border-white/[0.04] bg-white/[0.01] text-slate-600 line-through"
+                                : "border-white/[0.06] bg-white/[0.02] text-slate-300",
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              "mt-0.5 shrink-0 text-[10px] font-bold",
+                              isCurrent ? "text-violet-400" : "text-slate-500",
+                            )}
+                          >
+                            {String(idx + 1).padStart(2, "0")}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="font-semibold">{story.title}</div>
+                            {story.description && (
+                              <div className="mt-0.5 text-[10px] text-slate-500">
+                                {story.description}
+                              </div>
+                            )}
+                          </div>
+                          {isCurrent && (
+                            <span className="ml-auto shrink-0 rounded-full bg-violet-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase text-violet-300">
+                              En cours
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : null}
+
                 {mobileSessionTab === "current" ? (
                   <div className={cn("rounded-xl p-2 text-xs", SUBPANEL)}>
                     <div className="px-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-indigo-300/90">

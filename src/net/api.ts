@@ -246,6 +246,14 @@ export const api = {
       `/templates/${templateId}/launch-room`,
       { method: "POST" },
     ),
+  launchPokerTemplateRoom: (templateId: string) =>
+    request<{
+      roomId: string;
+      roomCode: string;
+      mode: "template";
+      sourceTemplateId: string;
+      voteSystem: string;
+    }>(`/templates/${templateId}/launch-poker-room`, { method: "POST" }),
   createQuickRoom: (baseConfig?: Record<string, unknown>) =>
     request<{ roomId: string; roomCode: string; mode: "quick" }>("/rooms/quick", {
       method: "POST",

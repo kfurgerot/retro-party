@@ -15,6 +15,7 @@ export const C2S_EVENTS: {
   readonly REOPEN_STORY_VOTE: "reopen_story_vote";
   readonly RESET_VOTES: "reset_votes";
   readonly SET_STORY_TITLE: "set_story_title";
+  readonly SELECT_POKER_STORY: "select_poker_story";
   readonly CREATE_ROOM: "create_room";
   readonly JOIN_ROOM: "join_room";
   readonly RECONNECT_ROOM: "reconnect_room";
