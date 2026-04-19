@@ -72,7 +72,7 @@ export const TOOL_ACCENT = {
     color: "#ec4899",
     glow: "rgba(236,72,153,0.3)",
     ambientColor: "rgba(236,72,153,0.08)",
-    ambientGlow: "rgba(99,102,241,0.04)",
+    ambientGlow: "rgba(236,72,153,0.04)",
   },
   "radar-party": {
     color: "#10b981",

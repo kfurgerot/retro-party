@@ -74,6 +74,7 @@ const Index: React.FC = () => {
   const [autoSubmitKey] = useState<number>(() => (initialParams.autoSubmit ? Date.now() : 0));
   const [screenTransitionStartMark] = useState(() => `screen-transition-start-${Date.now()}`);
   const { profile: onboardingProfile, setProfile: setOnboardingProfile } = useProfile(
+    "retro-party",
     initialParams.name || undefined,
     initialParams.avatar,
   );

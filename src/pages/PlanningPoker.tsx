@@ -55,7 +55,11 @@ const PlanningPokerPage: React.FC = () => {
   }, [location.key, navigate, online.leaveRoom]);
 
   const [autoSubmitKey] = useState<number>(() => (initialParams.autoSubmit ? Date.now() : 0));
-  const { profile, setProfile } = useProfile(initialParams.name || undefined, initialParams.avatar);
+  const { profile, setProfile } = useProfile(
+    "planning-poker",
+    initialParams.name || undefined,
+    initialParams.avatar,
+  );
   const [showOnboarding, setShowOnboarding] = useState<boolean>(
     () => !profile.name && !initialParams.direct,
   );

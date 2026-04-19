@@ -1,12 +1,14 @@
 import { useState } from "react";
 
-const STORAGE_KEY = "agile-suite-profile";
+type ProfileScope = "retro-party" | "planning-poker";
+const STORAGE_KEY_PREFIX = "agile-suite-profile";
+const getStorageKey = (scope: ProfileScope) => `${STORAGE_KEY_PREFIX}-${scope}`;
 
 type Profile = { name: string; avatar: number };
 
-const loadProfile = (): Profile => {
+const loadProfile = (scope: ProfileScope): Profile => {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(getStorageKey(scope));
     if (!raw) return { name: "", avatar: 0 };
     const parsed = JSON.parse(raw) as unknown;
     if (
@@ -25,17 +27,17 @@ const loadProfile = (): Profile => {
   return { name: "", avatar: 0 };
 };
 
-const saveProfile = (profile: Profile) => {
+const saveProfile = (scope: ProfileScope, profile: Profile) => {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
+    localStorage.setItem(getStorageKey(scope), JSON.stringify(profile));
   } catch {
     // ignore
   }
 };
 
-export const useProfile = (overrideName?: string, overrideAvatar?: number) => {
+export const useProfile = (scope: ProfileScope, overrideName?: string, overrideAvatar?: number) => {
   const [profile, setProfileState] = useState<Profile>(() => {
-    const stored = loadProfile();
+    const stored = loadProfile(scope);
     return {
       name: overrideName?.trim() || stored.name,
       avatar: typeof overrideAvatar === "number" ? overrideAvatar : stored.avatar,
@@ -44,7 +46,7 @@ export const useProfile = (overrideName?: string, overrideAvatar?: number) => {
 
   const setProfile = (next: Profile) => {
     setProfileState(next);
-    saveProfile(next);
+    saveProfile(scope, next);
   };
 
   const hasProfile = profile.name.trim().length >= 2;

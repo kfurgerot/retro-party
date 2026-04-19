@@ -7,10 +7,16 @@ import { Card, SecondaryButton } from "@/components/app-shell";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { AVATARS } from "@/types/game";
-import { APP_SHELL_SURFACE_SOFT, CTA_NEON_DANGER, CTA_NEON_SECONDARY_SUBTLE } from "@/lib/uiTokens";
+import {
+  APP_SHELL_SURFACE_SOFT,
+  CTA_NEON_DANGER,
+  CTA_NEON_SECONDARY_SUBTLE,
+  TOOL_ACCENT,
+} from "@/lib/uiTokens";
 
 const RADAR_DIALOG =
   "rounded-2xl border border-white/[0.08] bg-[#0d0d1a] p-5 text-slate-100 shadow-[0_14px_40px_rgba(0,0,0,0.65)] sm:p-6";
+const RADAR_ACCENT = TOOL_ACCENT["radar-party"];
 import { RadarChartCard } from "@/components/radar-party/RadarChartCard";
 import { IndividualRecommendationsSection } from "@/components/radar-party/IndividualRecommendationsSection";
 import {
@@ -1764,6 +1770,8 @@ const RadarPartyPage = () => {
         <OnlineOnboardingScreen
           connected={true}
           brandLabel="Radar Party"
+          accentColor={RADAR_ACCENT.color}
+          accentGlow={RADAR_ACCENT.ambientGlow}
           initialName={profile.name || undefined}
           initialAvatar={profile.avatar}
           initialStep={onboardingInitialStep}
@@ -1795,6 +1803,8 @@ const RadarPartyPage = () => {
         <OnlineLobbyScreen
           connected={true}
           brandLabel="Radar Party"
+          accentColor={RADAR_ACCENT.color}
+          accentGlow={RADAR_ACCENT.ambientGlow}
           roomCode={roomCode}
           lobbyPlayers={participants.map((participant) => ({
             name: participant.displayName,
