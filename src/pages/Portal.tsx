@@ -646,6 +646,33 @@ export default function Portal() {
                 <path d="m9 18 6-6-6-6" />
               </svg>
             </button>
+            <button
+              type="button"
+              onClick={() => navigate("/prepare")}
+              className="flex cursor-pointer items-center gap-3 rounded-xl border border-white/[0.05] bg-white/[0.02] px-3.5 py-3 text-left transition-all hover:border-white/[0.08] hover:bg-white/[0.035]"
+            >
+              <span className="text-lg leading-none">🃏</span>
+              <div className="min-w-0 flex-1">
+                <div className="text-[13px] font-semibold text-slate-200">
+                  Préparer un Planning Poker
+                </div>
+                <div className="text-[11px] text-slate-500">
+                  {user
+                    ? "Gérer tes templates de stories à estimer"
+                    : "Connexion requise · Prépare tes stories à l'avance"}
+                </div>
+              </div>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#475569"
+                strokeWidth="2"
+              >
+                <path d="m9 18 6-6-6-6" />
+              </svg>
+            </button>
           </div>
         </section>
       </div>
