@@ -78,11 +78,7 @@ export const PlanningPokerReadyScreen: React.FC<Props> = ({
   const hostPlayerName = sortedPlayers.find((p) => p.isHost)?.name ?? fr.terms.host;
 
   return (
-    <PageShell
-      accentColor="rgba(99,102,241,0.1)"
-      accentGlow="rgba(99,102,241,0.04)"
-      maxWidth="5xl"
-    >
+    <PageShell accentColor="rgba(99,102,241,0.1)" accentGlow="rgba(99,102,241,0.04)" maxWidth="5xl">
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div className="text-xs font-bold uppercase tracking-widest" style={{ color: ACCENT }}>
@@ -105,14 +101,18 @@ export const PlanningPokerReadyScreen: React.FC<Props> = ({
         {fr.onlineLobby.roomReady}
       </h1>
       <p className="mt-1.5 text-sm text-slate-500">
-        {isHost ? fr.onlineLobby.hostLaunchHint : fr.onlineLobby.waitingHostDescription.replace("{host}", hostPlayerName)}
+        {isHost
+          ? fr.onlineLobby.hostLaunchHint
+          : fr.onlineLobby.waitingHostDescription.replace("{host}", hostPlayerName)}
       </p>
 
       <div className="mt-7 grid gap-4 lg:grid-cols-[1fr_320px]">
         {/* Config */}
         <div className="space-y-4">
           <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
-            <p className="mb-4 text-sm font-semibold text-slate-200">{fr.planningPoker.myConfigTitle}</p>
+            <p className="mb-4 text-sm font-semibold text-slate-200">
+              {fr.planningPoker.myConfigTitle}
+            </p>
 
             {/* Role */}
             <div className="mb-4">
@@ -131,7 +131,11 @@ export const PlanningPokerReadyScreen: React.FC<Props> = ({
                     )}
                     style={
                       myRole === r
-                        ? { background: `${ACCENT}25`, boxShadow: `0 0 0 1px ${ACCENT}40`, color: ACCENT }
+                        ? {
+                            background: `${ACCENT}25`,
+                            boxShadow: `0 0 0 1px ${ACCENT}40`,
+                            color: ACCENT,
+                          }
                         : undefined
                     }
                   >
@@ -144,7 +148,12 @@ export const PlanningPokerReadyScreen: React.FC<Props> = ({
             {/* Vote system */}
             <div>
               <p className="mb-2 text-xs text-slate-500">{fr.planningPoker.voteSystem}</p>
-              <div className={cn("grid grid-cols-3 gap-1.5", !isHost && "opacity-50 pointer-events-none")}>
+              <div
+                className={cn(
+                  "grid grid-cols-3 gap-1.5",
+                  !isHost && "opacity-50 pointer-events-none",
+                )}
+              >
                 {VOTE_SYSTEM_OPTIONS.map((opt) => (
                   <button
                     key={opt.value}
@@ -159,7 +168,11 @@ export const PlanningPokerReadyScreen: React.FC<Props> = ({
                     )}
                     style={
                       voteSystem === opt.value
-                        ? { background: `${ACCENT}25`, boxShadow: `0 0 0 1px ${ACCENT}40`, color: ACCENT }
+                        ? {
+                            background: `${ACCENT}25`,
+                            boxShadow: `0 0 0 1px ${ACCENT}40`,
+                            color: ACCENT,
+                          }
                         : undefined
                     }
                   >
@@ -187,14 +200,12 @@ export const PlanningPokerReadyScreen: React.FC<Props> = ({
 
         {/* Right: code + players */}
         <div className="space-y-4">
-          <RoomCodeDisplay
-            code={roomCode}
-            accentColor={ACCENT}
-            hint={fr.onlineLobby.inviteHint}
-          />
+          <RoomCodeDisplay code={roomCode} accentColor={ACCENT} hint={fr.onlineLobby.inviteHint} />
           <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-slate-200">{fr.onlineLobby.playersTitle}</h2>
+              <h2 className="text-sm font-semibold text-slate-200">
+                {fr.onlineLobby.playersTitle}
+              </h2>
               <span className="text-xs text-slate-500">{sortedPlayers.length}</span>
             </div>
             <PlayerList
@@ -248,7 +259,10 @@ export const PlanningPokerReadyScreen: React.FC<Props> = ({
             </AlertDialogCancel>
             <AlertDialogAction
               className="h-11 rounded-xl border border-red-500/30 bg-red-500/15 text-red-400 hover:bg-red-500/25 hover:text-red-300"
-              onClick={() => { setLeaveDialogOpen(false); onLeave(); }}
+              onClick={() => {
+                setLeaveDialogOpen(false);
+                onLeave();
+              }}
             >
               {fr.onlineLobby.cancelParty}
             </AlertDialogAction>

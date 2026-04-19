@@ -40,7 +40,7 @@ export class TableBackground {
       this.centerGlow,
       this.topVignette,
       this.bottomVignette,
-      this.feltPattern
+      this.feltPattern,
     );
   }
 
@@ -60,10 +60,22 @@ export class TableBackground {
 
     this.frame.clear();
     this.frame.beginFill(POKER_THEME.bg.frame, 0.7);
-    this.frame.drawRoundedRect(8, 8, Math.max(20, viewportWidth - 16), Math.max(20, viewportHeight - 16), 18);
+    this.frame.drawRoundedRect(
+      8,
+      8,
+      Math.max(20, viewportWidth - 16),
+      Math.max(20, viewportHeight - 16),
+      18,
+    );
     this.frame.endFill();
     this.frame.lineStyle(2, POKER_THEME.bg.frameBorder, 0.28);
-    this.frame.drawRoundedRect(8, 8, Math.max(20, viewportWidth - 16), Math.max(20, viewportHeight - 16), 18);
+    this.frame.drawRoundedRect(
+      8,
+      8,
+      Math.max(20, viewportWidth - 16),
+      Math.max(20, viewportHeight - 16),
+      18,
+    );
 
     this.tableShadow.clear();
     this.tableShadow.beginFill(POKER_THEME.table.shadow, 0.38);

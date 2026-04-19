@@ -6,11 +6,7 @@ interface RoomCodeDisplayProps {
   hint?: string;
 }
 
-export const RoomCodeDisplay = ({
-  code,
-  accentColor = "#6366f1",
-  hint,
-}: RoomCodeDisplayProps) => {
+export const RoomCodeDisplay = ({ code, accentColor = "#6366f1", hint }: RoomCodeDisplayProps) => {
   const [copied, setCopied] = useState(false);
   const timerRef = useRef<number | null>(null);
 

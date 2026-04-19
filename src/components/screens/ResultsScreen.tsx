@@ -18,7 +18,9 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
   onPlayAgain,
   accentColor = "#ec4899",
 }) => {
-  const sorted = [...players].sort((a, b) => b.stars - a.stars || (b.points ?? 0) - (a.points ?? 0));
+  const sorted = [...players].sort(
+    (a, b) => b.stars - a.stars || (b.points ?? 0) - (a.points ?? 0),
+  );
   const winner = sorted[0] ?? null;
   const podium = sorted.slice(0, 3);
   const others = sorted.slice(3);
@@ -44,11 +46,7 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
   ];
 
   return (
-    <PageShell
-      accentColor={`${accentColor}10`}
-      accentGlow="rgba(99,102,241,0.04)"
-      maxWidth="6xl"
-    >
+    <PageShell accentColor={`${accentColor}10`} accentGlow="rgba(99,102,241,0.04)" maxWidth="6xl">
       {/* Winner banner */}
       {winner && (
         <div
@@ -69,8 +67,12 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
               {AVATARS[winner.avatar] ?? "?"}
             </div>
             <div>
-              <div className="text-[10px] uppercase tracking-widest text-slate-500">{fr.results.winner}</div>
-              <div className="mt-1 text-xl font-extrabold tracking-tight text-slate-50">{winner.name}</div>
+              <div className="text-[10px] uppercase tracking-widest text-slate-500">
+                {fr.results.winner}
+              </div>
+              <div className="mt-1 text-xl font-extrabold tracking-tight text-slate-50">
+                {winner.name}
+              </div>
             </div>
             <div className="text-sm text-slate-400">
               {fr.results.winnerAnnouncement.replace("{name}", winner.name)}
@@ -111,7 +113,10 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
                   style={
                     idx === 0
                       ? { borderColor: `${accentColor}35`, background: `${accentColor}0c` }
-                      : { borderColor: "rgba(255,255,255,0.05)", background: "rgba(255,255,255,0.02)" }
+                      : {
+                          borderColor: "rgba(255,255,255,0.05)",
+                          background: "rgba(255,255,255,0.02)",
+                        }
                   }
                 >
                   <span className="text-2xl leading-none">{MEDAL[idx] ?? `#${idx + 1}`}</span>
@@ -147,7 +152,9 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
                         {AVATARS[p.avatar] ?? "?"}
                       </div>
                       <span className="flex-1 truncate text-sm text-slate-300">{p.name}</span>
-                      <span className="text-xs text-slate-500">{p.stars}⭐ · {p.points ?? 0}pts</span>
+                      <span className="text-xs text-slate-500">
+                        {p.stars}⭐ · {p.points ?? 0}pts
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -164,11 +171,15 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
 
           <div className="mb-4 grid grid-cols-2 gap-2.5">
             <div className="rounded-xl border border-white/[0.05] bg-white/[0.02] px-4 py-3">
-              <div className="text-[10px] uppercase tracking-widest text-slate-500">{fr.results.usefulRate}</div>
+              <div className="text-[10px] uppercase tracking-widest text-slate-500">
+                {fr.results.usefulRate}
+              </div>
               <div className="mt-1 text-2xl font-extrabold text-slate-50">{usefulRatio}%</div>
             </div>
             <div className="rounded-xl border border-white/[0.05] bg-white/[0.02] px-4 py-3">
-              <div className="text-[10px] uppercase tracking-widest text-slate-500">{fr.results.totalVotes}</div>
+              <div className="text-[10px] uppercase tracking-widest text-slate-500">
+                {fr.results.totalVotes}
+              </div>
               <div className="mt-1 text-2xl font-extrabold text-slate-50">{totalVotes}</div>
             </div>
           </div>

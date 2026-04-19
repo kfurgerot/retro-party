@@ -1,8 +1,9 @@
 FROM node:20-alpine
-WORKDIR /app
-COPY package.json ./
+WORKDIR /app/server
+COPY server/package.json ./
 RUN npm install --omit=dev
-COPY . .
+COPY server/ ./
+COPY shared/ ../shared/
 ENV PORT=3001
 EXPOSE 3001
 CMD ["node","index.js"]

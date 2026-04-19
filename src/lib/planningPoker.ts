@@ -32,7 +32,10 @@ const toNumberVote = (value: string, voteSystem: PlanningPokerVoteSystem): numbe
   return Number.isFinite(asNumber) ? asNumber : null;
 };
 
-const toSortedNumericVotes = (players: PlanningPokerPlayer[], voteSystem: PlanningPokerVoteSystem) => {
+const toSortedNumericVotes = (
+  players: PlanningPokerPlayer[],
+  voteSystem: PlanningPokerVoteSystem,
+) => {
   const numbers = players
     .map((player) => (player.vote ? toNumberVote(player.vote, voteSystem) : null))
     .filter((value): value is number => value != null)
@@ -42,7 +45,7 @@ const toSortedNumericVotes = (players: PlanningPokerPlayer[], voteSystem: Planni
 
 export const computePlanningPokerStats = (
   players: PlanningPokerPlayer[],
-  voteSystem: PlanningPokerVoteSystem
+  voteSystem: PlanningPokerVoteSystem,
 ) => {
   const votedPlayers = players.filter((player) => player.role === "player" && player.vote != null);
   const numericVotes = toSortedNumericVotes(votedPlayers, voteSystem);
@@ -58,8 +61,8 @@ export const computePlanningPokerStats = (
     numericVotes.length === 0
       ? null
       : numericVotes.length % 2 === 1
-      ? numericVotes[Math.floor(numericVotes.length / 2)]
-      : (numericVotes[numericVotes.length / 2 - 1] + numericVotes[numericVotes.length / 2]) / 2;
+        ? numericVotes[Math.floor(numericVotes.length / 2)]
+        : (numericVotes[numericVotes.length / 2 - 1] + numericVotes[numericVotes.length / 2]) / 2;
 
   const distribution = votedPlayers.reduce<Record<string, number>>((acc, player) => {
     const value = player.vote ?? "?";
@@ -86,7 +89,7 @@ const clampToTshirtScale = (value: number) => Math.min(6, Math.max(1, value));
 
 export const formatPlanningValueForSystem = (
   value: number | null,
-  voteSystem: PlanningPokerVoteSystem
+  voteSystem: PlanningPokerVoteSystem,
 ) => {
   if (value == null) return "-";
 

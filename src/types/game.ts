@@ -18,16 +18,16 @@ export interface Player {
 }
 
 export type TileType =
-  | 'blue'
-  | 'red'
-  | 'green'
-  | 'purple'
-  | 'yellow'
-  | 'star'
-  | 'shop'
-  | 'start'
-  | 'violet'
-  | 'bonus';
+  | "blue"
+  | "red"
+  | "green"
+  | "purple"
+  | "yellow"
+  | "star"
+  | "shop"
+  | "start"
+  | "violet"
+  | "bonus";
 
 export type ShopItemType =
   | "double_roll"
@@ -69,7 +69,7 @@ export type PendingDoubleRoll = {
 export interface Tile {
   id: number;
   type: TileType;
-  color?: 'blue' | 'green' | 'purple' | 'red' | 'yellow';
+  color?: "blue" | "green" | "purple" | "red" | "yellow";
   label?: string;
   x: number;
   y: number;
@@ -109,11 +109,11 @@ export interface MoveTrace {
 
 export interface QuestionState {
   id: string;
-  type: 'blue' | 'red' | 'green' | 'purple' | 'violet' | 'bonus';
+  type: "blue" | "red" | "green" | "purple" | "violet" | "bonus";
   text: string;
   targetPlayerId: string;
   votes: { up: string[]; down: string[] };
-  status: 'pending' | 'open';
+  status: "pending" | "open";
   startAt?: number;
   endsAt?: number;
   durationMs?: number;
@@ -122,7 +122,7 @@ export interface QuestionState {
 
 export interface QuestionSummary {
   id: string;
-  type: 'blue' | 'red' | 'green' | 'purple' | 'violet' | 'bonus';
+  type: "blue" | "red" | "green" | "purple" | "violet" | "bonus";
   text: string;
   upVotes: number;
   downVotes: number;
@@ -185,7 +185,7 @@ export interface PointDuelState {
 export type ActiveMinigameState = BugSmashState | BuzzwordDuelState | PointDuelState;
 
 export interface GameState {
-  phase: 'lobby' | 'playing' | 'results';
+  phase: "lobby" | "playing" | "results";
   turnPhase?: TurnPhase;
   players: Player[];
   currentPlayerIndex: number;
@@ -214,12 +214,7 @@ export interface GameState {
   questionHistory: QuestionSummary[];
 }
 
-export type WhoSaidItRole =
-  | "MANAGER"
-  | "PO"
-  | "DEV"
-  | "SCRUM_MASTER"
-  | "QA_SUPPORT";
+export type WhoSaidItRole = "MANAGER" | "PO" | "DEV" | "SCRUM_MASTER" | "QA_SUPPORT";
 
 export interface WhoSaidItRoundStartPayload {
   roundIndex: number;
@@ -258,8 +253,22 @@ export interface WhoSaidItViewState {
 }
 
 export const AVATARS = [
-  "🧙", "🧝", "🧛", "🧟", "🧞",
-  "🧑‍🚀", "🧑‍🎤", "🧑‍🍳", "🧑‍🔧", "🧑‍🎨",
-  "🥷", "🤠", "👾", "🤖", "🐉",
-  "🦊", "🐼", "🐸",
+  "🧙",
+  "🧝",
+  "🧛",
+  "🧟",
+  "🧞",
+  "🧑‍🚀",
+  "🧑‍🎤",
+  "🧑‍🍳",
+  "🧑‍🔧",
+  "🧑‍🎨",
+  "🥷",
+  "🤠",
+  "👾",
+  "🤖",
+  "🐉",
+  "🦊",
+  "🐼",
+  "🐸",
 ] as const;

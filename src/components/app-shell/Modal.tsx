@@ -30,10 +30,14 @@ export const Modal: React.FC<ModalProps> = ({
 }) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={cn("rounded-xl border-cyan-300/30 bg-slate-950/95 text-cyan-50", className)}>
+      <DialogContent
+        className={cn("rounded-xl border-cyan-300/30 bg-slate-950/95 text-cyan-50", className)}
+      >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
-          {description ? <DialogDescription className="text-slate-300">{description}</DialogDescription> : null}
+          {description ? (
+            <DialogDescription className="text-slate-300">{description}</DialogDescription>
+          ) : null}
         </DialogHeader>
         {children}
         {footer ? <DialogFooter>{footer}</DialogFooter> : null}
@@ -41,4 +45,3 @@ export const Modal: React.FC<ModalProps> = ({
     </Dialog>
   );
 };
-

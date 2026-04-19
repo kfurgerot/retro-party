@@ -57,29 +57,35 @@ export const ShopModal: React.FC<ShopModalProps> = ({
             Articles disponibles
           </div>
           <div className="grid max-h-[52vh] gap-2 overflow-auto pr-1">
-          {items.map((item) => {
-            const canAfford = points >= item.cost;
-            return (
-              <ShopItemCard
-                key={item.type}
-                title={item.label}
-                description={item.description}
-                costLabel={`${item.cost} ${fr.shopModal.pointsUnit}`}
-                buyLabel={fr.shopModal.buy}
-                canBuy={canAfford}
-                canInteract={canInteract}
-                onBuy={() => onBuy(item.type)}
-                buyButtonClass={activeBtnClass}
-              />
-            );
-          })}
+            {items.map((item) => {
+              const canAfford = points >= item.cost;
+              return (
+                <ShopItemCard
+                  key={item.type}
+                  title={item.label}
+                  description={item.description}
+                  costLabel={`${item.cost} ${fr.shopModal.pointsUnit}`}
+                  buyLabel={fr.shopModal.buy}
+                  canBuy={canAfford}
+                  canInteract={canInteract}
+                  onBuy={() => onBuy(item.type)}
+                  buyButtonClass={activeBtnClass}
+                />
+              );
+            })}
           </div>
         </div>
         <AlertDialogFooter className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:space-x-0">
-          <AlertDialogCancel className={cn(neutralBtnClass, "h-11 w-full rounded-xl text-cyan-100")} onClick={onClose}>
+          <AlertDialogCancel
+            className={cn(neutralBtnClass, "h-11 w-full rounded-xl text-cyan-100")}
+            onClick={onClose}
+          >
             {fr.shopModal.continue}
           </AlertDialogCancel>
-          <AlertDialogAction className={cn(activeBtnClass, "h-11 w-full rounded-xl")} onClick={onClose}>
+          <AlertDialogAction
+            className={cn(activeBtnClass, "h-11 w-full rounded-xl")}
+            onClick={onClose}
+          >
             {fr.shopModal.close}
           </AlertDialogAction>
         </AlertDialogFooter>

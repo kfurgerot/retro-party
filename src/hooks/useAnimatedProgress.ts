@@ -17,4 +17,3 @@ export const useAnimatedProgress = (targetPct: number, fromPct: number) => {
 
   return progress;
 };
-

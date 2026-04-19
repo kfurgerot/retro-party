@@ -33,11 +33,19 @@ const AuthForm = ({ onSuccess }: { onSuccess: () => void }) => {
         await login(email.trim(), password);
         onSuccess();
       } else if (tab === "register") {
-        if (!displayName.trim()) { setError(fr.prepare.displayNameRequired); setLoading(false); return; }
+        if (!displayName.trim()) {
+          setError(fr.prepare.displayNameRequired);
+          setLoading(false);
+          return;
+        }
         await register(email.trim(), password, displayName.trim());
         onSuccess();
       } else {
-        if (!email.trim()) { setError(fr.prepare.forgotPasswordNeedEmail); setLoading(false); return; }
+        if (!email.trim()) {
+          setError(fr.prepare.forgotPasswordNeedEmail);
+          setLoading(false);
+          return;
+        }
         const res = await api.forgotPassword({ email: email.trim() });
         setInfo(res.message);
       }
@@ -52,7 +60,11 @@ const AuthForm = ({ onSuccess }: { onSuccess: () => void }) => {
     <div className="mx-auto w-full max-w-sm">
       <div className="mb-6 text-center">
         <h1 className="text-2xl font-extrabold tracking-tight text-slate-50">
-          {tab === "login" ? "Connexion" : tab === "register" ? "Créer un compte" : "Mot de passe oublié"}
+          {tab === "login"
+            ? "Connexion"
+            : tab === "register"
+              ? "Créer un compte"
+              : "Mot de passe oublié"}
         </h1>
         <p className="mt-1.5 text-sm text-slate-500">
           {tab === "forgot"
@@ -67,7 +79,11 @@ const AuthForm = ({ onSuccess }: { onSuccess: () => void }) => {
           <button
             key={t}
             type="button"
-            onClick={() => { setTab(t); setError(null); setInfo(null); }}
+            onClick={() => {
+              setTab(t);
+              setError(null);
+              setInfo(null);
+            }}
             className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-all ${
               tab === t
                 ? "bg-indigo-500 text-white shadow-sm"
@@ -125,7 +141,13 @@ const AuthForm = ({ onSuccess }: { onSuccess: () => void }) => {
           className="h-11 w-full rounded-xl bg-indigo-500 text-sm font-bold text-white transition hover:bg-indigo-400 disabled:opacity-50"
           style={{ boxShadow: "0 4px 16px rgba(99,102,241,0.35)" }}
         >
-          {loading ? "…" : tab === "login" ? fr.prepare.signIn : tab === "register" ? fr.prepare.createAccount : "Envoyer"}
+          {loading
+            ? "…"
+            : tab === "login"
+              ? fr.prepare.signIn
+              : tab === "register"
+                ? fr.prepare.createAccount
+                : "Envoyer"}
         </button>
       </form>
 
@@ -219,7 +241,10 @@ const PreparePage = () => {
   }, [user, loadTemplates]);
 
   const submitCreateTemplate = async () => {
-    if (!newTemplateName.trim()) { setError(fr.prepare.templateNameRequired); return; }
+    if (!newTemplateName.trim()) {
+      setError(fr.prepare.templateNameRequired);
+      return;
+    }
     setCreatingTemplate(true);
     setError(null);
     try {
@@ -271,7 +296,10 @@ const PreparePage = () => {
 
   if (authLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center" style={{ background: "#0a0a14" }}>
+      <div
+        className="flex min-h-screen items-center justify-center"
+        style={{ background: "#0a0a14" }}
+      >
         <div className="text-sm text-slate-500">{fr.prepare.loading}</div>
       </div>
     );
@@ -279,7 +307,11 @@ const PreparePage = () => {
 
   if (!user) {
     return (
-      <PageShell accentColor="rgba(99,102,241,0.08)" accentGlow="rgba(99,102,241,0.04)" maxWidth="sm">
+      <PageShell
+        accentColor="rgba(99,102,241,0.08)"
+        accentGlow="rgba(99,102,241,0.04)"
+        maxWidth="sm"
+      >
         <div className="flex min-h-[calc(100svh-4rem)] items-center justify-center py-8">
           <AuthForm onSuccess={() => {}} />
         </div>
@@ -295,7 +327,11 @@ const PreparePage = () => {
     .slice(0, 2);
 
   return (
-    <PageShell accentColor="rgba(236,72,153,0.08)" accentGlow="rgba(236,72,153,0.04)" maxWidth="4xl">
+    <PageShell
+      accentColor="rgba(236,72,153,0.08)"
+      accentGlow="rgba(236,72,153,0.04)"
+      maxWidth="4xl"
+    >
       {/* Header */}
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-2">

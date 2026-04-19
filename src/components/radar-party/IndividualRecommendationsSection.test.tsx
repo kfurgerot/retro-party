@@ -22,7 +22,8 @@ const buildCards = (): IndividualRecommendationCard[] => [
     axisLabel: "Vitesse",
     score: 31,
     title: "Prochain levier: Vitesse",
-    observation: "Score actuel: 31/100. C'est un levier secondaire a travailler apres la priorite principale.",
+    observation:
+      "Score actuel: 31/100. C'est un levier secondaire a travailler apres la priorite principale.",
     suggestionLabel: "Suggestion",
     suggestion: "Fluidifier le flux en traitant le principal point de ralentissement.",
     firstStep: "Identifier un goulot et lancer une action de debouchage cette semaine.",
@@ -54,7 +55,9 @@ describe("IndividualRecommendationsSection", () => {
 
     expect(screen.getByText("Recommandations suggerees (2 semaines)")).toBeInTheDocument();
     expect(screen.getByText("Suggestions automatiques (sans IA externe).")).toBeInTheDocument();
-    expect(screen.getByText("A adapter a ton contexte: ce sont des pistes, pas des obligations.")).toBeInTheDocument();
+    expect(
+      screen.getByText("A adapter a ton contexte: ce sont des pistes, pas des obligations."),
+    ).toBeInTheDocument();
 
     expect(screen.getAllByText("Constat:")).toHaveLength(3);
     expect(screen.getAllByText("Suggestion:")).toHaveLength(3);

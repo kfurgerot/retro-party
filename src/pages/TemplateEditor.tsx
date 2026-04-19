@@ -35,11 +35,36 @@ type ThemeKey = Exclude<ThemeTab, "all" | "other">;
 type StatusFilter = "all" | "active" | "inactive";
 
 const THEME_META: Record<ThemeKey, { label: string; color: string; bg: string; dot: string }> = {
-  blue:   { label: fr.templateEditor.understand, color: "#93c5fd", bg: "rgba(59,130,246,0.12)",  dot: "#3b82f6" },
-  green:  { label: fr.templateEditor.improve,    color: "#6ee7b7", bg: "rgba(16,185,129,0.12)",  dot: "#10b981" },
-  red:    { label: fr.templateEditor.frictions,  color: "#fca5a5", bg: "rgba(239,68,68,0.12)",   dot: "#ef4444" },
-  violet: { label: fr.templateEditor.vision,     color: "#c4b5fd", bg: "rgba(139,92,246,0.12)",  dot: "#8b5cf6" },
-  bonus:  { label: fr.templateEditor.kudobox,    color: "#fcd34d", bg: "rgba(245,158,11,0.12)",  dot: "#f59e0b" },
+  blue: {
+    label: fr.templateEditor.understand,
+    color: "#93c5fd",
+    bg: "rgba(59,130,246,0.12)",
+    dot: "#3b82f6",
+  },
+  green: {
+    label: fr.templateEditor.improve,
+    color: "#6ee7b7",
+    bg: "rgba(16,185,129,0.12)",
+    dot: "#10b981",
+  },
+  red: {
+    label: fr.templateEditor.frictions,
+    color: "#fca5a5",
+    bg: "rgba(239,68,68,0.12)",
+    dot: "#ef4444",
+  },
+  violet: {
+    label: fr.templateEditor.vision,
+    color: "#c4b5fd",
+    bg: "rgba(139,92,246,0.12)",
+    dot: "#8b5cf6",
+  },
+  bonus: {
+    label: fr.templateEditor.kudobox,
+    color: "#fcd34d",
+    bg: "rgba(245,158,11,0.12)",
+    dot: "#f59e0b",
+  },
 };
 const THEME_ORDER: ThemeKey[] = ["blue", "green", "red", "violet", "bonus"];
 
@@ -63,7 +88,13 @@ function normalizeCategory(value: string | null | undefined): ThemeTab {
 }
 
 function isThemeKey(value: ThemeTab): value is ThemeKey {
-  return value === "blue" || value === "green" || value === "red" || value === "violet" || value === "bonus";
+  return (
+    value === "blue" ||
+    value === "green" ||
+    value === "red" ||
+    value === "violet" ||
+    value === "bonus"
+  );
 }
 
 const CategoryChip = ({ category }: { category: ThemeTab }) => {
@@ -135,7 +166,9 @@ const TemplateEditorPage = () => {
     }
   }, [templateId, validTemplateId]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const saveTemplate = async () => {
     if (!templateId || !template) return;
@@ -163,7 +196,9 @@ const TemplateEditorPage = () => {
         text: newQuestionText.trim(),
         category: newQuestionCategory,
       });
-      setQuestions((prev) => [...prev, response.question].sort((a, b) => a.sortOrder - b.sortOrder));
+      setQuestions((prev) =>
+        [...prev, response.question].sort((a, b) => a.sortOrder - b.sortOrder),
+      );
       setNewQuestionText("");
     } catch (err) {
       setError(err instanceof Error ? err.message : fr.templateEditor.unknownError);
@@ -174,8 +209,12 @@ const TemplateEditorPage = () => {
     if (!templateId) return;
     setError(null);
     try {
-      const response = await api.patchTemplateQuestion(templateId, question.id, { isActive: !question.isActive });
-      setQuestions((prev) => prev.map((item) => (item.id === question.id ? response.question : item)));
+      const response = await api.patchTemplateQuestion(templateId, question.id, {
+        isActive: !question.isActive,
+      });
+      setQuestions((prev) =>
+        prev.map((item) => (item.id === question.id ? response.question : item)),
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : fr.templateEditor.unknownError);
     }
@@ -194,7 +233,9 @@ const TemplateEditorPage = () => {
       const response = await api.patchTemplateQuestion(templateId, editingQuestion.id, {
         text: editingQuestionText.trim(),
       });
-      setQuestions((prev) => prev.map((item) => (item.id === editingQuestion.id ? response.question : item)));
+      setQuestions((prev) =>
+        prev.map((item) => (item.id === editingQuestion.id ? response.question : item)),
+      );
       setEditingQuestion(null);
       setEditingQuestionText("");
     } catch (err) {
@@ -208,8 +249,12 @@ const TemplateEditorPage = () => {
     if (!templateId) return;
     setError(null);
     try {
-      const response = await api.patchTemplateQuestion(templateId, question.id, { category: nextCategory });
-      setQuestions((prev) => prev.map((item) => (item.id === question.id ? response.question : item)));
+      const response = await api.patchTemplateQuestion(templateId, question.id, {
+        category: nextCategory,
+      });
+      setQuestions((prev) =>
+        prev.map((item) => (item.id === question.id ? response.question : item)),
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : fr.templateEditor.unknownError);
     }
@@ -231,7 +276,10 @@ const TemplateEditorPage = () => {
     const idsToDelete = questions
       .filter((q) => normalizeCategory(q.category) === theme)
       .map((q) => q.id);
-    if (!idsToDelete.length) { setBulkDeleteTheme(null); return; }
+    if (!idsToDelete.length) {
+      setBulkDeleteTheme(null);
+      return;
+    }
     setDeletingThemeQuestions(true);
     setError(null);
     try {
@@ -252,10 +300,16 @@ const TemplateEditorPage = () => {
     const nextIndex = currentIndex + direction;
     if (nextIndex < 0 || nextIndex >= questions.length) return;
     const nextQuestions = [...questions];
-    [nextQuestions[currentIndex], nextQuestions[nextIndex]] = [nextQuestions[nextIndex], nextQuestions[currentIndex]];
+    [nextQuestions[currentIndex], nextQuestions[nextIndex]] = [
+      nextQuestions[nextIndex],
+      nextQuestions[currentIndex],
+    ];
     setQuestions(nextQuestions);
     try {
-      const response = await api.reorderTemplateQuestions(templateId, nextQuestions.map((item) => item.id));
+      const response = await api.reorderTemplateQuestions(
+        templateId,
+        nextQuestions.map((item) => item.id),
+      );
       setQuestions(response.items);
     } catch (err) {
       setError(err instanceof Error ? err.message : fr.templateEditor.unknownError);
@@ -268,7 +322,9 @@ const TemplateEditorPage = () => {
     setError(null);
     try {
       const response = await api.launchTemplateRoom(templateId);
-      navigate(`/play?mode=join&code=${response.roomCode}&name=${fr.prepare.hostPlaceholder}&avatar=0&auto=1`);
+      navigate(
+        `/play?mode=join&code=${response.roomCode}&name=${fr.prepare.hostPlaceholder}&avatar=0&auto=1`,
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : fr.templateEditor.unknownError);
     }
@@ -276,20 +332,28 @@ const TemplateEditorPage = () => {
 
   const canSave = useMemo(() => !!name.trim() && !saving, [name, saving]);
 
-  const counts = useMemo(() =>
-    questions.reduce(
-      (acc, q) => {
-        const cat = normalizeCategory(q.category);
-        acc[cat] = (acc[cat] ?? 0) + 1;
-        acc.all += 1;
-        return acc;
-      },
-      { all: 0, blue: 0, green: 0, red: 0, violet: 0, bonus: 0, other: 0 } as Record<ThemeTab, number>
-    ), [questions]);
+  const counts = useMemo(
+    () =>
+      questions.reduce(
+        (acc, q) => {
+          const cat = normalizeCategory(q.category);
+          acc[cat] = (acc[cat] ?? 0) + 1;
+          acc.all += 1;
+          return acc;
+        },
+        { all: 0, blue: 0, green: 0, red: 0, violet: 0, bonus: 0, other: 0 } as Record<
+          ThemeTab,
+          number
+        >,
+      ),
+    [questions],
+  );
 
   const filteredQuestions = useMemo(() => {
     const themeFiltered =
-      activeTab === "all" ? questions : questions.filter((q) => normalizeCategory(q.category) === activeTab);
+      activeTab === "all"
+        ? questions
+        : questions.filter((q) => normalizeCategory(q.category) === activeTab);
     if (statusFilter === "active") return themeFiltered.filter((q) => q.isActive);
     if (statusFilter === "inactive") return themeFiltered.filter((q) => !q.isActive);
     return themeFiltered;
@@ -302,14 +366,24 @@ const TemplateEditorPage = () => {
     "h-11 w-full rounded-xl border border-white/[0.08] bg-[#0d0d1a] px-3 text-sm text-slate-100 outline-none focus:border-white/20 focus:ring-1 focus:ring-indigo-400/50 transition";
 
   return (
-    <PageShell accentColor="rgba(236,72,153,0.08)" accentGlow="rgba(236,72,153,0.04)" maxWidth="5xl">
+    <PageShell
+      accentColor="rgba(236,72,153,0.08)"
+      accentGlow="rgba(236,72,153,0.04)"
+      maxWidth="5xl"
+    >
       {/* Header */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 text-sm">⚡</div>
-          <span className="text-xs font-bold uppercase tracking-[0.12em] text-indigo-400">Agile Suite</span>
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 text-sm">
+            ⚡
+          </div>
+          <span className="text-xs font-bold uppercase tracking-[0.12em] text-indigo-400">
+            Agile Suite
+          </span>
           <span className="text-slate-700">/</span>
-          <span className="text-xs font-bold uppercase tracking-[0.12em] text-pink-400">Préparer</span>
+          <span className="text-xs font-bold uppercase tracking-[0.12em] text-pink-400">
+            Préparer
+          </span>
           {template && (
             <>
               <span className="text-slate-700">/</span>
@@ -335,8 +409,12 @@ const TemplateEditorPage = () => {
         </div>
       </div>
 
-      {loading && <p className="py-8 text-center text-sm text-slate-500">{fr.templateEditor.loading}</p>}
-      {!validTemplateId && <p className="text-sm text-red-300">{fr.templateEditor.invalidTemplate}</p>}
+      {loading && (
+        <p className="py-8 text-center text-sm text-slate-500">{fr.templateEditor.loading}</p>
+      )}
+      {!validTemplateId && (
+        <p className="text-sm text-red-300">{fr.templateEditor.invalidTemplate}</p>
+      )}
       {error && (
         <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
           {error}
@@ -384,7 +462,9 @@ const TemplateEditorPage = () => {
 
           {/* Add question */}
           <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
-            <p className="mb-4 text-sm font-semibold text-slate-200">{fr.templateEditor.addQuestion}</p>
+            <p className="mb-4 text-sm font-semibold text-slate-200">
+              {fr.templateEditor.addQuestion}
+            </p>
             <div className="flex flex-wrap gap-3">
               <input
                 value={newQuestionText}
@@ -413,9 +493,11 @@ const TemplateEditorPage = () => {
                     onClick={() => setNewQuestionCategory(themeKey)}
                     className={cn(
                       "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-all",
-                      isActive ? "ring-1" : "border border-white/[0.07] bg-white/[0.02] text-slate-400 hover:bg-white/[0.06]",
+                      isActive
+                        ? "ring-1"
+                        : "border border-white/[0.07] bg-white/[0.02] text-slate-400 hover:bg-white/[0.06]",
                     )}
-                    style={isActive ? { background: meta.bg, color: meta.color, ringColor: meta.dot } : undefined}
+                    style={isActive ? { background: meta.bg, color: meta.color } : undefined}
                   >
                     <span className="h-2 w-2 rounded-full" style={{ background: meta.dot }} />
                     {meta.label}
@@ -428,7 +510,9 @@ const TemplateEditorPage = () => {
           {/* Question list */}
           <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <p className="text-sm font-semibold text-slate-200">{fr.templateEditor.existingQuestions}</p>
+              <p className="text-sm font-semibold text-slate-200">
+                {fr.templateEditor.existingQuestions}
+              </p>
               <div className="flex flex-wrap items-center gap-2">
                 {/* Theme filter */}
                 <select
@@ -436,11 +520,17 @@ const TemplateEditorPage = () => {
                   onChange={(e) => setActiveTab(e.target.value as ThemeTab)}
                   className={selectCls + " w-auto min-w-[140px]"}
                 >
-                  <option value="all">{fr.templateEditor.all} ({counts.all})</option>
+                  <option value="all">
+                    {fr.templateEditor.all} ({counts.all})
+                  </option>
                   {THEME_ORDER.map((k) => (
-                    <option key={k} value={k}>{THEME_META[k].label} ({counts[k]})</option>
+                    <option key={k} value={k}>
+                      {THEME_META[k].label} ({counts[k]})
+                    </option>
                   ))}
-                  <option value="other">{fr.templateEditor.others} ({counts.other})</option>
+                  <option value="other">
+                    {fr.templateEditor.others} ({counts.other})
+                  </option>
                 </select>
                 {/* Status filter */}
                 <select
@@ -482,7 +572,12 @@ const TemplateEditorPage = () => {
                       className="flex flex-wrap items-center gap-3 rounded-xl border border-white/[0.05] bg-white/[0.02] px-4 py-3 transition hover:border-white/[0.08]"
                     >
                       <div className="min-w-0 flex-1">
-                        <p className={cn("text-sm break-words", question.isActive ? "text-slate-100" : "text-slate-500 line-through")}>
+                        <p
+                          className={cn(
+                            "text-sm break-words",
+                            question.isActive ? "text-slate-100" : "text-slate-500 line-through",
+                          )}
+                        >
                           {question.text}
                         </p>
                         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
@@ -495,7 +590,9 @@ const TemplateEditorPage = () => {
                                 : "border border-white/[0.06] bg-white/[0.02] text-slate-600",
                             )}
                           >
-                            {question.isActive ? fr.templateEditor.active : fr.templateEditor.inactive}
+                            {question.isActive
+                              ? fr.templateEditor.active
+                              : fr.templateEditor.inactive}
                           </span>
                         </div>
                       </div>
@@ -513,14 +610,22 @@ const TemplateEditorPage = () => {
                           align="end"
                           className="w-[min(14rem,calc(100vw-2rem))] rounded-xl border border-white/[0.08] bg-[#0d0d1a] text-slate-200 shadow-xl"
                         >
-                          <DropdownMenuItem disabled={!canMoveUp} onClick={() => reorderQuestion(question.id, -1)}>
+                          <DropdownMenuItem
+                            disabled={!canMoveUp}
+                            onClick={() => reorderQuestion(question.id, -1)}
+                          >
                             {fr.templateEditor.up}
                           </DropdownMenuItem>
-                          <DropdownMenuItem disabled={!canMoveDown} onClick={() => reorderQuestion(question.id, 1)}>
+                          <DropdownMenuItem
+                            disabled={!canMoveDown}
+                            onClick={() => reorderQuestion(question.id, 1)}
+                          >
                             {fr.templateEditor.down}
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => toggleQuestion(question)}>
-                            {question.isActive ? fr.templateEditor.disable : fr.templateEditor.enable}
+                            {question.isActive
+                              ? fr.templateEditor.disable
+                              : fr.templateEditor.enable}
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => openEditQuestion(question)}>
                             {fr.templateEditor.edit}
@@ -535,7 +640,10 @@ const TemplateEditorPage = () => {
                               disabled={normalized === themeKey}
                               onClick={() => changeQuestionCategory(question, themeKey)}
                             >
-                              <span className="mr-2 h-2 w-2 rounded-full inline-block" style={{ background: THEME_META[themeKey].dot }} />
+                              <span
+                                className="mr-2 h-2 w-2 rounded-full inline-block"
+                                style={{ background: THEME_META[themeKey].dot }}
+                              />
                               {THEME_META[themeKey].label}
                             </DropdownMenuItem>
                           ))}
@@ -560,11 +668,18 @@ const TemplateEditorPage = () => {
       {/* Edit question dialog */}
       <Dialog
         open={!!editingQuestion}
-        onOpenChange={(open) => { if (!open) { setEditingQuestion(null); setEditingQuestionText(""); } }}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditingQuestion(null);
+            setEditingQuestionText("");
+          }
+        }}
       >
         <DialogContent className="max-w-lg rounded-2xl border border-white/[0.08] bg-[#0d0d1a] p-6 text-slate-100 shadow-2xl">
           <DialogHeader>
-            <DialogTitle className="text-base font-bold text-slate-50">{fr.templateEditor.editQuestion}</DialogTitle>
+            <DialogTitle className="text-base font-bold text-slate-50">
+              {fr.templateEditor.editQuestion}
+            </DialogTitle>
           </DialogHeader>
           <Textarea
             value={editingQuestionText}
@@ -574,7 +689,10 @@ const TemplateEditorPage = () => {
           <DialogFooter className="gap-2">
             <button
               type="button"
-              onClick={() => { setEditingQuestion(null); setEditingQuestionText(""); }}
+              onClick={() => {
+                setEditingQuestion(null);
+                setEditingQuestionText("");
+              }}
               className="h-10 rounded-xl border border-white/[0.08] bg-white/[0.03] px-5 text-sm font-semibold text-slate-300 transition hover:bg-white/[0.07]"
             >
               {fr.templateEditor.cancel}
@@ -592,7 +710,10 @@ const TemplateEditorPage = () => {
       </Dialog>
 
       {/* Bulk delete dialog */}
-      <AlertDialog open={!!bulkDeleteTheme} onOpenChange={(open) => !open && setBulkDeleteTheme(null)}>
+      <AlertDialog
+        open={!!bulkDeleteTheme}
+        onOpenChange={(open) => !open && setBulkDeleteTheme(null)}
+      >
         <AlertDialogContent className="max-w-sm rounded-2xl border border-white/[0.08] bg-[#0d0d1a] p-6 text-slate-100 shadow-2xl">
           <AlertDialogHeader className="space-y-2">
             <AlertDialogTitle className="text-base font-bold text-slate-50">
@@ -613,7 +734,10 @@ const TemplateEditorPage = () => {
             <AlertDialogAction
               className="h-11 rounded-xl border border-red-500/30 bg-red-500/15 text-red-400 hover:bg-red-500/25 hover:text-red-300"
               disabled={!bulkDeleteTheme || deletingThemeQuestions}
-              onClick={(e) => { e.preventDefault(); if (bulkDeleteTheme) void deleteQuestionsByTheme(bulkDeleteTheme); }}
+              onClick={(e) => {
+                e.preventDefault();
+                if (bulkDeleteTheme) void deleteQuestionsByTheme(bulkDeleteTheme);
+              }}
             >
               {deletingThemeQuestions ? fr.templateEditor.deleting : fr.templateEditor.delete}
             </AlertDialogAction>

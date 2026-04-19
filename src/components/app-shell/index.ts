@@ -11,4 +11,3 @@ export { StickyFooter } from "./StickyFooter";
 export { AvatarPicker } from "./AvatarPicker";
 export { RoomCodeDisplay } from "./RoomCodeDisplay";
 export { PlayerList } from "./PlayerList";
-

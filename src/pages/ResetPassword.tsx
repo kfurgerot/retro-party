@@ -23,9 +23,18 @@ const ResetPasswordPage = () => {
     setError(null);
     setSuccess(null);
 
-    if (!token) { setError(fr.resetPassword.missingToken); return; }
-    if (password.length < 8) { setError(fr.resetPassword.passwordTooShort); return; }
-    if (password !== confirmPassword) { setError(fr.resetPassword.passwordMismatch); return; }
+    if (!token) {
+      setError(fr.resetPassword.missingToken);
+      return;
+    }
+    if (password.length < 8) {
+      setError(fr.resetPassword.passwordTooShort);
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError(fr.resetPassword.passwordMismatch);
+      return;
+    }
 
     setLoading(true);
     try {

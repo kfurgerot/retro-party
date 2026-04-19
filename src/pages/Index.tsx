@@ -1,22 +1,33 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useGameState } from '@/hooks/useGameState';
-import { useOnlineGameState } from '@/hooks/useOnlineGameState';
-import { useProfile } from '@/hooks/useProfile';
-import { LobbyScreen } from '@/components/screens/LobbyScreen';
-import { OnlineLobbyScreen } from '@/components/screens/OnlineLobbyScreen';
-import { OnlineOnboardingScreen } from '@/components/screens/OnlineOnboardingScreen';
-import { GameScreen } from '@/components/screens/GameScreen';
-import { ResultsScreen } from '@/components/screens/ResultsScreen';
+import { useGameState } from "@/hooks/useGameState";
+import { useOnlineGameState } from "@/hooks/useOnlineGameState";
+import { useProfile } from "@/hooks/useProfile";
+import { LobbyScreen } from "@/components/screens/LobbyScreen";
+import { OnlineLobbyScreen } from "@/components/screens/OnlineLobbyScreen";
+import { OnlineOnboardingScreen } from "@/components/screens/OnlineOnboardingScreen";
+import { GameScreen } from "@/components/screens/GameScreen";
+import { ResultsScreen } from "@/components/screens/ResultsScreen";
 import { perfLog, perfMark, perfMeasure } from "@/lib/perf";
 import { fr } from "@/i18n/fr";
 import { TOOL_ACCENT } from "@/lib/uiTokens";
 import PlanningPokerPage from "@/pages/PlanningPoker";
 
+type InitialParams = {
+  mode: "host" | "join";
+  code: string;
+  name: string;
+  avatar: number;
+  autoSubmit: boolean;
+  direct: boolean;
+  fromEntry: boolean;
+  experience: "planning-poker" | "retro-party";
+};
+
 const Index: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const initialParams = useMemo(() => {
+  const initialParams = useMemo<InitialParams>(() => {
     const params = new URLSearchParams(location.search);
     const mode = params.get("mode");
     const code = params.get("code");
@@ -42,13 +53,13 @@ const Index: React.FC = () => {
   }
 
   const isOnline = useMemo(() => {
-    if (typeof window === 'undefined') return false;
+    if (typeof window === "undefined") return false;
 
     // Legacy override (optional): ?online=1 or ?online=0
     const params = new URLSearchParams(window.location.search);
-    const override = params.get('online');
-    if (override === '1') return true;
-    if (override === '0') return false;
+    const override = params.get("online");
+    if (override === "1") return true;
+    if (override === "0") return false;
 
     // Default to online on every platform (desktop + mobile).
     // Use ?online=0 when local mode is explicitly needed.
@@ -67,10 +78,10 @@ const Index: React.FC = () => {
     initialParams.avatar,
   );
   const [showOnlineOnboarding, setShowOnlineOnboarding] = useState<boolean>(
-    () => !onboardingProfile.name && !initialParams.direct
+    () => !onboardingProfile.name && !initialParams.direct,
   );
   const [onboardingInitialStep, setOnboardingInitialStep] = useState<1 | 2>(() =>
-    onboardingProfile.name ? 2 : 1
+    onboardingProfile.name ? 2 : 1,
   );
   const accent = TOOL_ACCENT["retro-party"];
 
@@ -83,7 +94,10 @@ const Index: React.FC = () => {
     const endMark = `screen-transition-end-${Date.now()}`;
     perfMark(endMark);
     const duration = perfMeasure(`screen-transition-${view}`, screenTransitionStartMark, endMark);
-    perfLog("screen-transition", { view, durationMs: duration != null ? Math.round(duration) : null });
+    perfLog("screen-transition", {
+      view,
+      durationMs: duration != null ? Math.round(duration) : null,
+    });
     perfMark(screenTransitionStartMark);
   }, [isOnline, online.gameState.phase, local.gameState.phase, screenTransitionStartMark]);
 
@@ -93,7 +107,7 @@ const Index: React.FC = () => {
   };
 
   if (isOnline) {
-    if (online.gameState.phase === 'lobby') {
+    if (online.gameState.phase === "lobby") {
       if (!online.code && showOnlineOnboarding) {
         return (
           <OnlineOnboardingScreen
@@ -150,7 +164,7 @@ const Index: React.FC = () => {
       );
     }
 
-    if (online.gameState.phase === 'results') {
+    if (online.gameState.phase === "results") {
       return (
         <ResultsScreen
           players={online.gameState.players}
@@ -168,10 +182,10 @@ const Index: React.FC = () => {
       return (
         <div className="scanlines relative flex min-h-svh items-center justify-center bg-slate-950 px-4">
           <div className="neon-surface w-full max-w-md p-5 text-center">
-            <div className="text-sm font-semibold text-cyan-100">{fr.onlineOnboarding.connecting}</div>
-            <div className="mt-2 text-xs text-slate-300">
-              Initialisation de la partie...
+            <div className="text-sm font-semibold text-cyan-100">
+              {fr.onlineOnboarding.connecting}
             </div>
+            <div className="mt-2 text-xs text-slate-300">Initialisation de la partie...</div>
           </div>
         </div>
       );
@@ -205,11 +219,11 @@ const Index: React.FC = () => {
   }
 
   // Local mode
-  if (local.gameState.phase === 'lobby') {
+  if (local.gameState.phase === "lobby") {
     return <LobbyScreen onStartGame={local.startGame} />;
   }
 
-  if (local.gameState.phase === 'results') {
+  if (local.gameState.phase === "results") {
     return (
       <ResultsScreen
         players={local.gameState.players}
@@ -226,10 +240,10 @@ const Index: React.FC = () => {
     return (
       <div className="scanlines relative flex min-h-svh items-center justify-center bg-slate-950 px-4">
         <div className="neon-surface w-full max-w-md p-5 text-center">
-          <div className="text-sm font-semibold text-cyan-100">{fr.onlineOnboarding.connecting}</div>
-          <div className="mt-2 text-xs text-slate-300">
-            Initialisation de la partie...
+          <div className="text-sm font-semibold text-cyan-100">
+            {fr.onlineOnboarding.connecting}
           </div>
+          <div className="mt-2 text-xs text-slate-300">Initialisation de la partie...</div>
         </div>
       </div>
     );
@@ -237,7 +251,7 @@ const Index: React.FC = () => {
 
   // In local mode we don't have per-player sockets; just let player 1 validate.
   const localCurrentPlayerId =
-    local.gameState.players[local.gameState.currentPlayerIndex]?.id ?? 'local-0';
+    local.gameState.players[local.gameState.currentPlayerIndex]?.id ?? "local-0";
   return (
     <GameScreen
       gameState={local.gameState}

@@ -21,14 +21,11 @@ export const GameModal: React.FC<GameModalProps> = ({
     <div
       className={cn(
         "game-modal-backdrop fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/80 px-4",
-        className
+        className,
       )}
     >
       <div
-        className={cn(
-          `game-modal-card w-full max-w-2xl ${GAME_DIALOG_CONTENT}`,
-          contentClassName
-        )}
+        className={cn(`game-modal-card w-full max-w-2xl ${GAME_DIALOG_CONTENT}`, contentClassName)}
         role="dialog"
         aria-modal="true"
       >

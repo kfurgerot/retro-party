@@ -98,5 +98,5 @@ export const BUZZWORD_DUEL_BANK = [
   { text: "Hypercontextual Prioritization", category: "BULLSHIT" },
   { text: "Decision Mesh Ritual", category: "BULLSHIT" },
   { text: "Roadmap Story Currency", category: "BULLSHIT" },
-  { text: "Strategic Async Presence", category: "BULLSHIT" }
+  { text: "Strategic Async Presence", category: "BULLSHIT" },
 ];

@@ -12,11 +12,21 @@ import { fr } from "@/i18n/fr";
 
 const ACCENT = TOOL_ACCENT["planning-poker"];
 
+type InitialParams = {
+  mode: "host" | "join";
+  code: string;
+  name: string;
+  avatar: number;
+  autoSubmit: boolean;
+  direct: boolean;
+  fromEntry: boolean;
+};
+
 const PlanningPokerPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const initialParams = useMemo(() => {
+  const initialParams = useMemo<InitialParams>(() => {
     const params = new URLSearchParams(location.search);
     const mode = params.get("mode");
     const code = params.get("code");
@@ -45,13 +55,12 @@ const PlanningPokerPage: React.FC = () => {
   }, [location.key, navigate, online.leaveRoom]);
 
   const [autoSubmitKey] = useState<number>(() => (initialParams.autoSubmit ? Date.now() : 0));
-  const { profile, setProfile } = useProfile(
-    initialParams.name || undefined,
-    initialParams.avatar,
+  const { profile, setProfile } = useProfile(initialParams.name || undefined, initialParams.avatar);
+  const [showOnboarding, setShowOnboarding] = useState<boolean>(
+    () => !profile.name && !initialParams.direct,
   );
-  const [showOnboarding, setShowOnboarding] = useState<boolean>(() => !profile.name && !initialParams.direct);
   const [onboardingInitialStep, setOnboardingInitialStep] = useState<1 | 2>(() =>
-    profile.name ? 2 : 1
+    profile.name ? 2 : 1,
   );
   const [voteSystem, setVoteSystem] = useState<PlanningPokerVoteSystem>("fibonacci");
   const [role, setRole] = useState<PlanningPokerRole>("player");
@@ -80,7 +89,7 @@ const PlanningPokerPage: React.FC = () => {
             setShowOnboarding(false);
           }}
           onBack={() => navigate("/")}
-          />
+        />
       );
     }
 

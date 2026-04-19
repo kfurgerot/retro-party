@@ -8,13 +8,16 @@ export const SecondaryButton = React.forwardRef<HTMLButtonElement, ButtonProps>(
     <Button
       ref={ref}
       variant="secondary"
-      className={cn("min-h-11 rounded-xl px-5 text-sm font-semibold disabled:opacity-40", CTA_NEON_SECONDARY, className)}
+      className={cn(
+        "min-h-11 rounded-xl px-5 text-sm font-semibold disabled:opacity-40",
+        CTA_NEON_SECONDARY,
+        className,
+      )}
       {...props}
     >
       {children}
     </Button>
-  )
+  ),
 );
 
 SecondaryButton.displayName = "SecondaryButton";
-

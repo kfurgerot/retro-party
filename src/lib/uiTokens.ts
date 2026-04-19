@@ -62,9 +62,24 @@ export const CTA_NEON_DANGER = GAME_UI_THEME.palette.danger;
 
 // Per-tool accent colors (shared between Portal and game screens)
 export const TOOL_ACCENT = {
-  "planning-poker": { color: "#6366f1", glow: "rgba(99,102,241,0.3)", ambientColor: "rgba(99,102,241,0.08)", ambientGlow: "rgba(99,102,241,0.04)" },
-  "retro-party":    { color: "#ec4899", glow: "rgba(236,72,153,0.3)",  ambientColor: "rgba(236,72,153,0.08)",  ambientGlow: "rgba(99,102,241,0.04)" },
-  "radar-party":    { color: "#10b981", glow: "rgba(16,185,129,0.3)",  ambientColor: "rgba(16,185,129,0.08)",  ambientGlow: "rgba(16,185,129,0.04)" },
+  "planning-poker": {
+    color: "#6366f1",
+    glow: "rgba(99,102,241,0.3)",
+    ambientColor: "rgba(99,102,241,0.08)",
+    ambientGlow: "rgba(99,102,241,0.04)",
+  },
+  "retro-party": {
+    color: "#ec4899",
+    glow: "rgba(236,72,153,0.3)",
+    ambientColor: "rgba(236,72,153,0.08)",
+    ambientGlow: "rgba(99,102,241,0.04)",
+  },
+  "radar-party": {
+    color: "#10b981",
+    glow: "rgba(16,185,129,0.3)",
+    ambientColor: "rgba(16,185,129,0.08)",
+    ambientGlow: "rgba(16,185,129,0.04)",
+  },
 } as const;
 
 export type ToolAccentKey = keyof typeof TOOL_ACCENT;
@@ -78,8 +93,7 @@ export const GAME_DRAWER_CLOSE_BUTTON =
 export const GAME_DIALOG_CONTENT =
   "rounded-2xl border-cyan-300/40 bg-slate-950/95 p-5 text-cyan-50 shadow-[0_0_0_1px_rgba(34,211,238,0.2),0_14px_40px_rgba(2,6,23,0.6)] sm:p-6";
 
-export const GAME_MOBILE_ACTION_BUTTON =
-  "h-12 w-full rounded-xl";
+export const GAME_MOBILE_ACTION_BUTTON = "h-12 w-full rounded-xl";
 
 export const GAME_HUD_SURFACE =
   "rounded-2xl border border-cyan-300/32 bg-slate-950/72 text-cyan-50 backdrop-blur shadow-[0_0_0_1px_rgba(34,211,238,0.14),0_10px_26px_rgba(2,6,23,0.45)]";
@@ -87,8 +101,7 @@ export const GAME_HUD_SURFACE =
 export const GAME_PANEL_SURFACE =
   "rounded-xl border border-cyan-300/25 bg-slate-900/58 text-cyan-50 shadow-[0_0_0_1px_rgba(34,211,238,0.1),0_8px_24px_rgba(2,6,23,0.34)]";
 
-export const GAME_SUBPANEL_SURFACE =
-  "rounded-xl border border-cyan-300/18 bg-slate-950/32";
+export const GAME_SUBPANEL_SURFACE = "rounded-xl border border-cyan-300/18 bg-slate-950/32";
 
 export const GAME_TAB_BUTTON =
   "h-9 rounded-xl border border-cyan-300/22 bg-slate-900/45 px-3 text-xs font-semibold text-cyan-100 hover:bg-slate-900/65";

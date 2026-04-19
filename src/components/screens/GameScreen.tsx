@@ -1,5 +1,11 @@
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { BuzzwordCategory, GameState, ShopItemType, WhoSaidItRole, WhoSaidItViewState } from "@/types/game";
+import {
+  BuzzwordCategory,
+  GameState,
+  ShopItemType,
+  WhoSaidItRole,
+  WhoSaidItViewState,
+} from "@/types/game";
 import { GameBoard } from "../game/GameBoard";
 import { BoardV2 } from "../game/BoardV2";
 import { PlayerCard } from "../game/PlayerCard";
@@ -27,18 +33,26 @@ import { LaunchAnnouncement } from "../game/LaunchAnnouncement";
 import { ActionBadge, TurnBanner } from "../game/hud";
 import { SHOP_CATALOG } from "@/data/shopCatalog";
 import { fr } from "@/i18n/fr";
-const CTA_NEON_PRIMARY = "border-pink-400/40 bg-pink-500 text-white shadow-[0_4px_16px_rgba(236,72,153,0.35)] hover:bg-pink-400";
-const CTA_NEON_SECONDARY_SUBTLE = "border-white/[0.06] bg-white/[0.03] text-slate-300 hover:bg-white/[0.06] hover:text-white";
+const CTA_NEON_PRIMARY =
+  "border-pink-400/40 bg-pink-500 text-white shadow-[0_4px_16px_rgba(236,72,153,0.35)] hover:bg-pink-400";
+const CTA_NEON_SECONDARY_SUBTLE =
+  "border-white/[0.06] bg-white/[0.03] text-slate-300 hover:bg-white/[0.06] hover:text-white";
 const CTA_NEON_DANGER = "border-rose-400/40 bg-rose-500/15 text-rose-300 hover:bg-rose-500/25";
-const GAME_DIALOG_CONTENT = "rounded-2xl border border-white/[0.08] bg-[#0d0d1a] p-5 text-slate-100 shadow-[0_14px_40px_rgba(0,0,0,0.65)] sm:p-6";
+const GAME_DIALOG_CONTENT =
+  "rounded-2xl border border-white/[0.08] bg-[#0d0d1a] p-5 text-slate-100 shadow-[0_14px_40px_rgba(0,0,0,0.65)] sm:p-6";
 const GAME_DRAWER_CLOSE_BUTTON = "h-10 text-slate-200 hover:bg-slate-800/60 hover:text-white";
-const GAME_DRAWER_CONTENT = "border-pink-400/25 bg-slate-950/95 pb-[env(safe-area-inset-bottom)] text-slate-100 lg:hidden";
-const GAME_HUD_SURFACE = "rounded-2xl border border-pink-400/28 bg-slate-950/72 text-slate-100 backdrop-blur shadow-[0_0_0_1px_rgba(236,72,153,0.11),0_10px_26px_rgba(2,6,23,0.45)]";
+const GAME_DRAWER_CONTENT =
+  "border-pink-400/25 bg-slate-950/95 pb-[env(safe-area-inset-bottom)] text-slate-100 lg:hidden";
+const GAME_HUD_SURFACE =
+  "rounded-2xl border border-pink-400/28 bg-slate-950/72 text-slate-100 backdrop-blur shadow-[0_0_0_1px_rgba(236,72,153,0.11),0_10px_26px_rgba(2,6,23,0.45)]";
 const GAME_MOBILE_ACTION_BUTTON = "h-12 w-full rounded-xl";
-const GAME_PANEL_SURFACE = "rounded-xl border border-pink-400/20 bg-slate-900/55 text-slate-100 shadow-[0_0_0_1px_rgba(236,72,153,0.07),0_8px_24px_rgba(2,6,23,0.34)]";
+const GAME_PANEL_SURFACE =
+  "rounded-xl border border-pink-400/20 bg-slate-900/55 text-slate-100 shadow-[0_0_0_1px_rgba(236,72,153,0.07),0_8px_24px_rgba(2,6,23,0.34)]";
 const GAME_SUBPANEL_SURFACE = "rounded-xl border border-pink-400/15 bg-slate-950/32";
-const GAME_TAB_BUTTON = "h-9 rounded-xl border border-pink-400/18 bg-slate-900/45 px-3 text-xs font-semibold text-slate-200 hover:bg-slate-900/65";
-const GAME_TAB_BUTTON_ACTIVE = "border-pink-400/50 bg-pink-500/18 text-pink-100 shadow-[0_0_0_1px_rgba(236,72,153,0.20)]";
+const GAME_TAB_BUTTON =
+  "h-9 rounded-xl border border-pink-400/18 bg-slate-900/45 px-3 text-xs font-semibold text-slate-200 hover:bg-slate-900/65";
+const GAME_TAB_BUTTON_ACTIVE =
+  "border-pink-400/50 bg-pink-500/18 text-pink-100 shadow-[0_0_0_1px_rgba(236,72,153,0.20)]";
 import { ENABLE_BOARD_V2 } from "@/lib/uiMode";
 import { perfLog, perfMark, perfMeasure } from "@/lib/perf";
 
@@ -88,25 +102,27 @@ function classifyActivityKind(log: string): ActivityKind {
   return "system";
 }
 const QuestionModal = lazy(() =>
-  import("../game/QuestionModal").then((module) => ({ default: module.QuestionModal }))
+  import("../game/QuestionModal").then((module) => ({ default: module.QuestionModal })),
 );
 const ShopModal = lazy(() =>
-  import("../game/ShopModal").then((module) => ({ default: module.ShopModal }))
+  import("../game/ShopModal").then((module) => ({ default: module.ShopModal })),
 );
 const PreRollChoiceModal = lazy(() =>
-  import("../game/PreRollChoiceModal").then((module) => ({ default: module.PreRollChoiceModal }))
+  import("../game/PreRollChoiceModal").then((module) => ({ default: module.PreRollChoiceModal })),
 );
 const WhoSaidItMinigame = lazy(() =>
-  import("../game/WhoSaidItMinigame").then((module) => ({ default: module.WhoSaidItMinigame }))
+  import("../game/WhoSaidItMinigame").then((module) => ({ default: module.WhoSaidItMinigame })),
 );
 const BugSmashMinigame = lazy(() =>
-  import("../game/BugSmashMinigame").then((module) => ({ default: module.BugSmashMinigame }))
+  import("../game/BugSmashMinigame").then((module) => ({ default: module.BugSmashMinigame })),
 );
 const BuzzwordDuelMinigame = lazy(() =>
-  import("../game/BuzzwordDuelMinigame").then((module) => ({ default: module.BuzzwordDuelMinigame }))
+  import("../game/BuzzwordDuelMinigame").then((module) => ({
+    default: module.BuzzwordDuelMinigame,
+  })),
 );
 const PointDuelMinigame = lazy(() =>
-  import("../game/PointDuelMinigame").then((module) => ({ default: module.PointDuelMinigame }))
+  import("../game/PointDuelMinigame").then((module) => ({ default: module.PointDuelMinigame })),
 );
 
 interface GameScreenProps {
@@ -169,7 +185,9 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const [rollIntroEndsAt, setRollIntroEndsAt] = useState<number | null>(null);
   const [rollAnnouncementValue, setRollAnnouncementValue] = useState<number | null>(null);
   const [bugIntroEndsAt, setBugIntroEndsAt] = useState<number | null>(null);
-  const [presenceNotice, setPresenceNotice] = useState<{ id: number; message: string } | null>(null);
+  const [presenceNotice, setPresenceNotice] = useState<{ id: number; message: string } | null>(
+    null,
+  );
   const [onboardingStepIndex, setOnboardingStepIndex] = useState<number | null>(null);
   const [selectedPreRollType, setSelectedPreRollType] = useState<ShopItemType | null>(null);
   const [isQuestionActionUnlocked, setIsQuestionActionUnlocked] = useState(true);
@@ -192,9 +210,12 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const hasMovedThisTurnRef = useRef(hasMovedThisTurn);
 
   const currentPlayer = gameState.players[gameState.currentPlayerIndex];
-  const bugSmashState = gameState.currentMinigame?.minigameId === "BUG_SMASH" ? gameState.currentMinigame : null;
-  const buzzwordState = gameState.currentMinigame?.minigameId === "BUZZWORD_DUEL" ? gameState.currentMinigame : null;
-  const pointDuelState = gameState.currentMinigame?.minigameId === "POINT_DUEL" ? gameState.currentMinigame : null;
+  const bugSmashState =
+    gameState.currentMinigame?.minigameId === "BUG_SMASH" ? gameState.currentMinigame : null;
+  const buzzwordState =
+    gameState.currentMinigame?.minigameId === "BUZZWORD_DUEL" ? gameState.currentMinigame : null;
+  const pointDuelState =
+    gameState.currentMinigame?.minigameId === "POINT_DUEL" ? gameState.currentMinigame : null;
   const onboardingScreens = useMemo(
     () => [
       {
@@ -238,7 +259,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         ],
       },
     ],
-    []
+    [],
   );
   const isOnboardingOpen = onboardingStepIndex != null;
   const activeOnboardingStep =
@@ -249,9 +270,9 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     buzzwordState.roundType === "main" &&
     buzzwordState.currentWordIndex === 1 &&
     !!buzzwordState.nextWordAt;
-  const isMinigameActive = !!whoSaidItState || !!bugSmashState || !!buzzwordState || !!pointDuelState;
-  const isMyTurn =
-    !!currentPlayer && !!myPlayerId && currentPlayer.id === myPlayerId;
+  const isMinigameActive =
+    !!whoSaidItState || !!bugSmashState || !!buzzwordState || !!pointDuelState;
+  const isMyTurn = !!currentPlayer && !!myPlayerId && currentPlayer.id === myPlayerId;
   const pendingPathChoice = gameState.pendingPathChoice;
   const pendingKudoPurchase = gameState.pendingKudoPurchase;
   const pendingShop = gameState.pendingShop ?? null;
@@ -275,7 +296,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     pendingKudoPurchase.playerId === myPlayerId &&
     !!onResolveKudoPurchase;
   const shouldShowKudoPurchaseModal = canResolveKudoPurchase && !isMoveAnimating;
-  const canInteractWithShop = !!myPlayerId && pendingShop?.playerId === myPlayerId && !!onBuyShopItem;
+  const canInteractWithShop =
+    !!myPlayerId && pendingShop?.playerId === myPlayerId && !!onBuyShopItem;
   const shouldShowShopModal = canInteractWithShop && !isMoveAnimating;
   const isTurnIntroActive = turnIntroEndsAt != null;
   const isBugIntroActive = bugIntroEndsAt != null;
@@ -285,17 +307,29 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const myStars = myPlayer?.stars ?? 0;
   const pendingDoubleRollFirstDie = gameState.pendingDoubleRoll?.firstDie ?? null;
   const beforeRollInventory = useMemo(
-    () => (myPlayer?.inventory ?? []).filter((item) => catalogByType[item.type]?.timing === "before_roll"),
-    [myPlayer?.inventory, catalogByType]
+    () =>
+      (myPlayer?.inventory ?? []).filter(
+        (item) => catalogByType[item.type]?.timing === "before_roll",
+      ),
+    [myPlayer?.inventory, catalogByType],
   );
   const preRollChoices = useMemo(() => {
-    const grouped = new Map<ShopItemType, { type: ShopItemType; count: number; label: string; description: string }>();
+    const grouped = new Map<
+      ShopItemType,
+      { type: ShopItemType; count: number; label: string; description: string }
+    >();
     for (const item of beforeRollInventory) {
       const def = catalogByType[item.type];
       if (!def) continue;
       const prev = grouped.get(item.type);
       if (prev) prev.count += 1;
-      else grouped.set(item.type, { type: item.type, count: 1, label: def.label, description: def.description });
+      else
+        grouped.set(item.type, {
+          type: item.type,
+          count: 1,
+          label: def.label,
+          description: def.description,
+        });
     }
     return [...grouped.values()];
   }, [beforeRollInventory, catalogByType]);
@@ -328,9 +362,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   }, [turnTransitionStartMark]);
 
   const myIndex = useMemo(() => {
-    const idx = gameState.players.findIndex(
-      (p) => !!myPlayerId && p.id === myPlayerId
-    );
+    const idx = gameState.players.findIndex((p) => !!myPlayerId && p.id === myPlayerId);
     return idx >= 0 ? idx : 0;
   }, [gameState.players, myPlayerId]);
   const nextPlayer = useMemo(() => {
@@ -343,7 +375,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     if (total === 0) return [];
     return gameState.players
       .map((player, index) => {
-        const turnDistance = ((index - gameState.currentPlayerIndex) + total) % total;
+        const turnDistance = (index - gameState.currentPlayerIndex + total) % total;
         return {
           player,
           index,
@@ -441,7 +473,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       setIsMoveAnimating(true);
       onMovePlayer(steps);
     },
-    [onMovePlayer]
+    [onMovePlayer],
   );
 
   useEffect(() => {
@@ -481,7 +513,12 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     });
     previousTurnKeyRef.current = turnKey;
     perfMark(turnTransitionStartMark);
-  }, [gameState.currentRound, gameState.currentPlayerIndex, gameState.turnPhase, turnTransitionStartMark]);
+  }, [
+    gameState.currentRound,
+    gameState.currentPlayerIndex,
+    gameState.turnPhase,
+    turnTransitionStartMark,
+  ]);
 
   useEffect(() => {
     const minigameKey = gameState.currentMinigame?.minigameId ?? "none";
@@ -564,11 +601,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   ]);
 
   useEffect(() => {
-    if (
-      gameState.isRolling ||
-      gameState.turnPhase !== "moving" ||
-      gameState.diceValue == null
-    ) {
+    if (gameState.isRolling || gameState.turnPhase !== "moving" || gameState.diceValue == null) {
       return;
     }
 
@@ -663,40 +696,40 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       ? fr.gameScreen.infoQuestionReady
       : fr.gameScreen.infoQuestionOpen
     : isPathChoiceActive
-    ? fr.gameScreen.infoIntersection
-    : isKudoPurchaseActive
-    ? fr.gameScreen.infoKudoboxTile
-    : isShopActive
-    ? fr.gameScreen.infoShop
-    : isMyTurn
-    ? fr.gameScreen.infoYourTurn
-    : fr.gameScreen.infoWaiting;
+      ? fr.gameScreen.infoIntersection
+      : isKudoPurchaseActive
+        ? fr.gameScreen.infoKudoboxTile
+        : isShopActive
+          ? fr.gameScreen.infoShop
+          : isMyTurn
+            ? fr.gameScreen.infoYourTurn
+            : fr.gameScreen.infoWaiting;
 
   const infoHint = isPathChoiceActive
     ? canChoosePath
       ? fr.gameScreen.hintChooseRoute
       : fr.gameScreen.hintWaitingChoice
     : isKudoPurchaseActive
-    ? canResolveKudoPurchase
-      ? fr.gameScreen.hintBuyKudo
-      : fr.gameScreen.hintWaitingDecision
-    : isShopActive
-    ? fr.gameScreen.hintBuyAction
-    : pendingDoubleRollFirstDie != null
-    ? fr.gameScreen.hintDoubleRoll.replace("{firstDie}", String(pendingDoubleRollFirstDie))
-    : gameState.pendingPreRollEffect?.type === "double_roll"
-    ? fr.gameScreen.hintEffectDoubleRoll
-    : gameState.pendingPreRollEffect?.type === "plus_two_roll"
-    ? fr.gameScreen.hintEffectPlusTwo
-    : canRoll
-    ? fr.gameScreen.hintRollDice
-    : isMoveAnimating
-    ? fr.gameScreen.hintMoving
-    : canMove
-    ? fr.gameScreen.hintAutoAdvance
-    : isMyTurn
-    ? fr.gameScreen.waiting
-    : fr.gameScreen.hintOpponentTurn;
+      ? canResolveKudoPurchase
+        ? fr.gameScreen.hintBuyKudo
+        : fr.gameScreen.hintWaitingDecision
+      : isShopActive
+        ? fr.gameScreen.hintBuyAction
+        : pendingDoubleRollFirstDie != null
+          ? fr.gameScreen.hintDoubleRoll.replace("{firstDie}", String(pendingDoubleRollFirstDie))
+          : gameState.pendingPreRollEffect?.type === "double_roll"
+            ? fr.gameScreen.hintEffectDoubleRoll
+            : gameState.pendingPreRollEffect?.type === "plus_two_roll"
+              ? fr.gameScreen.hintEffectPlusTwo
+              : canRoll
+                ? fr.gameScreen.hintRollDice
+                : isMoveAnimating
+                  ? fr.gameScreen.hintMoving
+                  : canMove
+                    ? fr.gameScreen.hintAutoAdvance
+                    : isMyTurn
+                      ? fr.gameScreen.waiting
+                      : fr.gameScreen.hintOpponentTurn;
 
   useEffect(() => {
     const q = gameState.currentQuestion;
@@ -720,9 +753,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       trace.playerId === myPlayerId &&
       Array.isArray(trace.path) &&
       trace.path.length > 1;
-    const delayMs = isMyMoveTrace
-      ? Math.max(260, (trace.path.length - 1) * MOVE_STEP_MS + 120)
-      : 0;
+    const delayMs = isMyMoveTrace ? Math.max(260, (trace.path.length - 1) * MOVE_STEP_MS + 120) : 0;
 
     if (questionActionUnlockTimerRef.current) {
       window.clearTimeout(questionActionUnlockTimerRef.current);
@@ -760,24 +791,24 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       ? fr.gameScreen.actionChooseRoute
       : fr.gameScreen.actionWaitRoute.replace("{name}", turnOwnerName)
     : isKudoPurchaseActive
-    ? canResolveKudoPurchase
-      ? fr.gameScreen.actionResolveKudo
-      : fr.gameScreen.actionWaitKudo.replace("{name}", turnOwnerName)
-    : isShopActive
-    ? pendingShop?.playerId === myPlayerId
-      ? fr.gameScreen.actionShopNow
-      : fr.gameScreen.actionWaitShop.replace("{name}", turnOwnerName)
-    : canOpenQuestionCard
-    ? fr.gameScreen.actionOpenQuestion
-    : canRoll
-    ? fr.gameScreen.actionRoll
-    : canMove
-    ? fr.gameScreen.actionMove
-    : isMoveAnimating
-    ? fr.gameScreen.actionMoving
-    : isMyTurn
-    ? fr.gameScreen.actionWaitTurn
-    : fr.gameScreen.actionObserve.replace("{name}", turnOwnerName);
+      ? canResolveKudoPurchase
+        ? fr.gameScreen.actionResolveKudo
+        : fr.gameScreen.actionWaitKudo.replace("{name}", turnOwnerName)
+      : isShopActive
+        ? pendingShop?.playerId === myPlayerId
+          ? fr.gameScreen.actionShopNow
+          : fr.gameScreen.actionWaitShop.replace("{name}", turnOwnerName)
+        : canOpenQuestionCard
+          ? fr.gameScreen.actionOpenQuestion
+          : canRoll
+            ? fr.gameScreen.actionRoll
+            : canMove
+              ? fr.gameScreen.actionMove
+              : isMoveAnimating
+                ? fr.gameScreen.actionMoving
+                : isMyTurn
+                  ? fr.gameScreen.actionWaitTurn
+                  : fr.gameScreen.actionObserve.replace("{name}", turnOwnerName);
   const activityFeedRaw = (gameState.actionLogs ?? [])
     .filter((entry) => entry != null)
     .map((entry) => (typeof entry === "string" ? entry : String(entry)))
@@ -789,7 +820,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         log,
         kind: classifyActivityKind(log),
       })),
-    [activityFeedRaw]
+    [activityFeedRaw],
   );
   const getTurnOrderLabel = useCallback((turnDistance: number) => {
     if (turnDistance === 0) return fr.gameScreen.nowPlaying;
@@ -822,14 +853,14 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         presenceNoticeTimerRef.current = null;
       }
     },
-    []
+    [],
   );
 
   const turnStatusClass = gameState.currentQuestion
     ? "border-amber-500/30 bg-amber-500/10 text-amber-200"
     : isMyTurn
-    ? "border-pink-400/40 bg-pink-500/15 text-pink-100"
-    : "border-pink-400/20 bg-slate-900/40 text-slate-300";
+      ? "border-pink-400/40 bg-pink-500/15 text-pink-100"
+      : "border-pink-400/20 bg-slate-900/40 text-slate-300";
 
   const neonCard = GAME_PANEL_SURFACE;
   const neonPanel = GAME_SUBPANEL_SURFACE;
@@ -838,13 +869,16 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const dangerLeaveBtn = CTA_NEON_DANGER;
   const desktopLeaveBtn = cn(
     GAME_TAB_BUTTON,
-    "border-rose-300/45 bg-rose-500/14 text-rose-100 hover:bg-rose-500/22 hover:text-rose-50"
+    "border-rose-300/45 bg-rose-500/14 text-rose-100 hover:bg-rose-500/22 hover:text-rose-50",
   );
   const roundProgressPct = Math.max(
     0,
-    Math.min(100, Math.round((gameState.currentRound / Math.max(1, gameState.maxRounds)) * 100))
+    Math.min(100, Math.round((gameState.currentRound / Math.max(1, gameState.maxRounds)) * 100)),
   );
-  const turnQueue = useMemo(() => playersByTurnOrder.slice(0, Math.min(playersByTurnOrder.length, 5)), [playersByTurnOrder]);
+  const turnQueue = useMemo(
+    () => playersByTurnOrder.slice(0, Math.min(playersByTurnOrder.length, 5)),
+    [playersByTurnOrder],
+  );
   const activityKindLabel: Record<ActivityKind, string> = {
     move: fr.gameScreen.activityTypeMove,
     decision: fr.gameScreen.activityTypeDecision,
@@ -853,7 +887,10 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     minigame: fr.gameScreen.activityTypeMinigame,
     system: fr.gameScreen.activityTypeSystem,
   };
-  const activityKindClass: Record<ActivityKind, "move" | "decision" | "question" | "shop" | "minigame" | "system"> = {
+  const activityKindClass: Record<
+    ActivityKind,
+    "move" | "decision" | "question" | "shop" | "minigame" | "system"
+  > = {
     move: "move",
     decision: "decision",
     question: "question",
@@ -955,13 +992,27 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   };
 
   return (
-    <div className="relative min-h-svh w-full overflow-hidden" style={{ background: "#0a0a14", fontFamily: "'DM Sans', sans-serif" }}>
-      <div className="pointer-events-none fixed inset-0 z-0" style={{ background: "radial-gradient(ellipse 70% 50% at 20% 0%, rgba(236,72,153,0.08) 0%, transparent 70%)" }} />
+    <div
+      className="relative min-h-svh w-full overflow-hidden"
+      style={{ background: "#0a0a14", fontFamily: "'DM Sans', sans-serif" }}
+    >
+      <div
+        className="pointer-events-none fixed inset-0 z-0"
+        style={{
+          background:
+            "radial-gradient(ellipse 70% 50% at 20% 0%, rgba(236,72,153,0.08) 0%, transparent 70%)",
+        }}
+      />
 
       <div className="relative z-10 flex h-svh w-full flex-col overflow-hidden p-2 sm:p-3">
         {isOnboardingOpen && activeOnboardingStep ? (
           <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/86 p-3 backdrop-blur-[2px] sm:p-5">
-            <Card className={cn(GAME_HUD_SURFACE, "w-full max-w-2xl rounded-2xl border-pink-400/40 bg-slate-950/95 p-4 sm:p-6")}>
+            <Card
+              className={cn(
+                GAME_HUD_SURFACE,
+                "w-full max-w-2xl rounded-2xl border-pink-400/40 bg-slate-950/95 p-4 sm:p-6",
+              )}
+            >
               <div className="flex items-start justify-between gap-3">
                 <div className="inline-flex items-center gap-2 rounded-full border border-pink-400/35 bg-pink-500/10 px-3 py-1 text-xs font-semibold text-pink-100">
                   <span>{activeOnboardingStep.icon}</span>
@@ -972,7 +1023,9 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 </div>
               </div>
 
-              <h2 className="mt-4 text-xl font-black text-slate-100 sm:text-2xl">{activeOnboardingStep.title}</h2>
+              <h2 className="mt-4 text-xl font-black text-slate-100 sm:text-2xl">
+                {activeOnboardingStep.title}
+              </h2>
               <div className="mt-3 space-y-3 text-sm leading-relaxed text-slate-100 sm:text-base">
                 {activeOnboardingStep.body.map((paragraph, idx) => (
                   <p key={`${onboardingStepIndex}-${idx}`}>{paragraph}</p>
@@ -994,7 +1047,9 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                   className={cn(CTA_NEON_PRIMARY, "h-11")}
                   onClick={goToNextOnboardingStep}
                 >
-                  {onboardingStepIndex === onboardingScreens.length - 1 ? "J'ai compris" : "Suivant"}
+                  {onboardingStepIndex === onboardingScreens.length - 1
+                    ? "J'ai compris"
+                    : "Suivant"}
                 </Button>
               </div>
             </Card>
@@ -1004,7 +1059,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
           <div className="pointer-events-none absolute left-1/2 top-16 z-30 w-[min(92vw,560px)] -translate-x-1/2 sm:top-20">
             <div
               className={cn(
-                "flex items-center gap-2 rounded-xl border border-amber-300/70 bg-slate-950/96 px-3 py-2 text-sm text-slate-50 shadow-[0_0_0_1px_rgba(251,191,36,0.45),0_12px_44px_rgba(0,0,0,0.6),0_0_28px_rgba(251,191,36,0.22)] backdrop-blur"
+                "flex items-center gap-2 rounded-xl border border-amber-300/70 bg-slate-950/96 px-3 py-2 text-sm text-slate-50 shadow-[0_0_0_1px_rgba(251,191,36,0.45),0_12px_44px_rgba(0,0,0,0.6),0_0_28px_rgba(251,191,36,0.22)] backdrop-blur",
               )}
             >
               <ActionBadge label="Info" tone="decision" />
@@ -1124,9 +1179,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
             <Card className={cn(neonCard, "flex min-h-0 flex-1 flex-col rounded-2xl px-3 py-3")}>
               <div className="flex items-center justify-between gap-2">
                 <div className="text-base font-bold">
-                  {sidebarTab === "players"
-                    ? fr.gameScreen.players
-                    : fr.gameScreen.activityFeed}
+                  {sidebarTab === "players" ? fr.gameScreen.players : fr.gameScreen.activityFeed}
                 </div>
                 <div className="flex gap-2">
                   <Button
@@ -1134,7 +1187,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                     size="sm"
                     className={cn(
                       GAME_TAB_BUTTON,
-                      sidebarTab === "players" ? GAME_TAB_BUTTON_ACTIVE : "opacity-95"
+                      sidebarTab === "players" ? GAME_TAB_BUTTON_ACTIVE : "opacity-95",
                     )}
                     onClick={() => setSidebarTab("players")}
                   >
@@ -1145,7 +1198,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                     size="sm"
                     className={cn(
                       GAME_TAB_BUTTON,
-                      sidebarTab === "activity" ? GAME_TAB_BUTTON_ACTIVE : "opacity-95"
+                      sidebarTab === "activity" ? GAME_TAB_BUTTON_ACTIVE : "opacity-95",
                     )}
                     onClick={() => setSidebarTab("activity")}
                   >
@@ -1161,20 +1214,26 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                       `px-2 py-2 text-xs ${GAME_SUBPANEL_SURFACE}`,
                       isMyTurn
                         ? "border-pink-400/45 bg-pink-500/18 shadow-[0_0_0_1px_rgba(236,72,153,0.22)_inset]"
-                        : ""
+                        : "",
                     )}
                   >
                     <div className="flex items-center gap-2 text-pink-100/80">
                       <span
                         className={cn(
                           "inline-flex h-2 w-2 rounded-full",
-                          isMyTurn ? "bg-pink-400 animate-pulse" : "bg-slate-500"
+                          isMyTurn ? "bg-pink-400 animate-pulse" : "bg-slate-500",
                         )}
                       />
-                      {fr.gameScreen.nowPlayingLabel} <span className="font-semibold text-pink-100">{currentPlayer?.name ?? "-"}</span>
+                      {fr.gameScreen.nowPlayingLabel}{" "}
+                      <span className="font-semibold text-pink-100">
+                        {currentPlayer?.name ?? "-"}
+                      </span>
                     </div>
                     <div className="text-slate-300">
-                      {fr.gameScreen.nextUpLabel} <span className="font-semibold text-slate-200">{nextPlayer?.name ?? "-"}</span>
+                      {fr.gameScreen.nextUpLabel}{" "}
+                      <span className="font-semibold text-slate-200">
+                        {nextPlayer?.name ?? "-"}
+                      </span>
                     </div>
                   </div>
                   {playersByTurnOrder.map((entry) => (
@@ -1185,8 +1244,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                         entry.isCurrent
                           ? "border-pink-400/35 bg-pink-500/10"
                           : entry.isNext
-                          ? "border-emerald-300/30 bg-emerald-500/5"
-                          : "border-pink-400/10 bg-slate-950/20"
+                            ? "border-emerald-300/30 bg-emerald-500/5"
+                            : "border-pink-400/10 bg-slate-950/20",
                       )}
                     >
                       <div className="flex items-center justify-between px-1 text-[11px]">
@@ -1196,8 +1255,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                             entry.isCurrent
                               ? "border-pink-400/45 bg-pink-500/15 text-pink-100"
                               : entry.isNext
-                              ? "border-emerald-300/40 bg-emerald-500/10 text-emerald-100"
-                              : "border-pink-400/20 bg-slate-900/40 text-slate-300"
+                                ? "border-emerald-300/40 bg-emerald-500/10 text-emerald-100"
+                                : "border-pink-400/20 bg-slate-900/40 text-slate-300",
                           )}
                         >
                           {getTurnOrderLabel(entry.turnDistance)}
@@ -1208,11 +1267,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                           </span>
                         )}
                       </div>
-                      <PlayerCard
-                        player={entry.player}
-                        isActive={entry.isCurrent}
-                        compact
-                      />
+                      <PlayerCard player={entry.player} isActive={entry.isCurrent} compact />
                     </div>
                   ))}
                 </div>
@@ -1226,7 +1281,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                           "rounded-xl border px-2 py-1.5",
                           index === 0
                             ? "border-pink-400/30 bg-pink-500/10 text-pink-100"
-                            : "border-pink-400/15 bg-slate-950/25 text-slate-100/85"
+                            : "border-pink-400/15 bg-slate-950/25 text-slate-100/85",
                         )}
                       >
                         <div className="mb-1">
@@ -1250,7 +1305,12 @@ export const GameScreen: React.FC<GameScreenProps> = ({
           </div>
         </div>
         <div className="sticky bottom-0 z-30 mt-1 pb-[calc(env(safe-area-inset-bottom)+4px)]">
-          <Card className={cn(GAME_HUD_SURFACE, "px-2 py-2 shadow-[0_-8px_24px_rgba(2,6,23,0.35)] xl:hidden")}>
+          <Card
+            className={cn(
+              GAME_HUD_SURFACE,
+              "px-2 py-2 shadow-[0_-8px_24px_rgba(2,6,23,0.35)] xl:hidden",
+            )}
+          >
             <div className="grid grid-cols-3 gap-2">
               <Button
                 className={cn(GAME_MOBILE_ACTION_BUTTON, neutralSecondaryBtn)}
@@ -1276,7 +1336,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 className={cn(
                   GAME_MOBILE_ACTION_BUTTON,
                   onLeave ? dangerLeaveBtn : neutralSecondaryBtn,
-                  !onLeave && "opacity-60"
+                  !onLeave && "opacity-60",
                 )}
                 size="sm"
                 variant="secondary"
@@ -1314,20 +1374,24 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               className={cn(
                 "px-2 py-2 text-xs",
                 GAME_SUBPANEL_SURFACE,
-                isMyTurn ? "border-pink-400/45 bg-pink-500/18 shadow-[0_0_0_1px_rgba(236,72,153,0.22)_inset]" : ""
+                isMyTurn
+                  ? "border-pink-400/45 bg-pink-500/18 shadow-[0_0_0_1px_rgba(236,72,153,0.22)_inset]"
+                  : "",
               )}
             >
               <div className="flex items-center gap-2 text-pink-100/80">
                 <span
                   className={cn(
                     "inline-flex h-2 w-2 rounded-full",
-                    isMyTurn ? "bg-pink-400 animate-pulse" : "bg-slate-500"
+                    isMyTurn ? "bg-pink-400 animate-pulse" : "bg-slate-500",
                   )}
                 />
-                {fr.gameScreen.nowPlayingLabel} <span className="font-semibold text-pink-100">{currentPlayer?.name ?? "-"}</span>
+                {fr.gameScreen.nowPlayingLabel}{" "}
+                <span className="font-semibold text-pink-100">{currentPlayer?.name ?? "-"}</span>
               </div>
               <div className="text-slate-300">
-                {fr.gameScreen.nextUpLabel} <span className="font-semibold text-slate-200">{nextPlayer?.name ?? "-"}</span>
+                {fr.gameScreen.nextUpLabel}{" "}
+                <span className="font-semibold text-slate-200">{nextPlayer?.name ?? "-"}</span>
               </div>
             </div>
             {playersByTurnOrder.map((entry) => (
@@ -1338,8 +1402,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                   entry.isCurrent
                     ? "border-pink-400/35 bg-pink-500/10"
                     : entry.isNext
-                    ? "border-emerald-300/30 bg-emerald-500/5"
-                    : "border-pink-400/10 bg-slate-950/20"
+                      ? "border-emerald-300/30 bg-emerald-500/5"
+                      : "border-pink-400/10 bg-slate-950/20",
                 )}
               >
                 <div className="flex items-center justify-between px-1 text-[11px]">
@@ -1349,8 +1413,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                       entry.isCurrent
                         ? "border-pink-400/45 bg-pink-500/15 text-pink-100"
                         : entry.isNext
-                        ? "border-emerald-300/40 bg-emerald-500/10 text-emerald-100"
-                        : "border-pink-400/20 bg-slate-900/40 text-slate-300"
+                          ? "border-emerald-300/40 bg-emerald-500/10 text-emerald-100"
+                          : "border-pink-400/20 bg-slate-900/40 text-slate-300",
                     )}
                   >
                     {getTurnOrderLabel(entry.turnDistance)}
@@ -1361,11 +1425,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                     </span>
                   )}
                 </div>
-                <PlayerCard
-                  player={entry.player}
-                  isActive={entry.isCurrent}
-                  compact
-                />
+                <PlayerCard player={entry.player} isActive={entry.isCurrent} compact />
               </div>
             ))}
           </div>
@@ -1378,11 +1438,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
             <div className="flex items-center justify-between gap-2">
               <DrawerTitle>{fr.gameScreen.mobileInfoTitle}</DrawerTitle>
               <DrawerClose asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={GAME_DRAWER_CLOSE_BUTTON}
-                >
+                <Button variant="ghost" size="sm" className={GAME_DRAWER_CLOSE_BUTTON}>
                   {fr.gameScreen.close}
                 </Button>
               </DrawerClose>
@@ -1394,12 +1450,18 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               <div
                 className={`mb-1 inline-flex rounded-full border px-2 py-1 text-[11px] ${turnStatusClass}`}
               >
-                {gameState.currentQuestion ? fr.gameScreen.statusQuestion : isMyTurn ? fr.gameScreen.statusYourTurn : fr.gameScreen.statusWaiting}
+                {gameState.currentQuestion
+                  ? fr.gameScreen.statusQuestion
+                  : isMyTurn
+                    ? fr.gameScreen.statusYourTurn
+                    : fr.gameScreen.statusWaiting}
               </div>
               <div className="text-[10px] uppercase tracking-[0.1em] text-pink-100/70">
                 {fr.gameScreen.primaryAction}
               </div>
-              <div className="text-sm font-semibold leading-snug text-pink-100">{primaryAction}</div>
+              <div className="text-sm font-semibold leading-snug text-pink-100">
+                {primaryAction}
+              </div>
               <div className="text-xs text-pink-100/90">{infoTitle}</div>
               <div className="text-xs text-slate-300">{infoHint}</div>
             </div>
@@ -1413,11 +1475,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
             <div className="flex items-center justify-between gap-2">
               <DrawerTitle>{fr.gameScreen.mobileMenuTitle}</DrawerTitle>
               <DrawerClose asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={GAME_DRAWER_CLOSE_BUTTON}
-                >
+                <Button variant="ghost" size="sm" className={GAME_DRAWER_CLOSE_BUTTON}>
                   {fr.gameScreen.close}
                 </Button>
               </DrawerClose>
@@ -1426,9 +1484,9 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 
           <div className="grid gap-2 px-4 pb-4">
             <Button
-                className={cn(GAME_MOBILE_ACTION_BUTTON, neutralSecondaryBtn)}
-                size="sm"
-                variant="secondary"
+              className={cn(GAME_MOBILE_ACTION_BUTTON, neutralSecondaryBtn)}
+              size="sm"
+              variant="secondary"
               onClick={() => {
                 setMobileMenuOpen(false);
                 openMobileInfo();
@@ -1437,9 +1495,9 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               {fr.gameScreen.mobileInfo}
             </Button>
             <Button
-                className={cn(GAME_MOBILE_ACTION_BUTTON, neutralSecondaryBtn)}
-                size="sm"
-                variant="secondary"
+              className={cn(GAME_MOBILE_ACTION_BUTTON, neutralSecondaryBtn)}
+              size="sm"
+              variant="secondary"
               onClick={() => {
                 setMobileMenuOpen(false);
                 openMobileActivity();
@@ -1457,11 +1515,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
             <div className="flex items-center justify-between gap-2">
               <DrawerTitle>{fr.gameScreen.activityFeed}</DrawerTitle>
               <DrawerClose asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={GAME_DRAWER_CLOSE_BUTTON}
-                >
+                <Button variant="ghost" size="sm" className={GAME_DRAWER_CLOSE_BUTTON}>
                   {fr.gameScreen.close}
                 </Button>
               </DrawerClose>
@@ -1477,7 +1531,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                     "rounded-xl border px-2 py-1.5",
                     index === 0
                       ? "border-pink-400/30 bg-pink-500/10 text-pink-100"
-                      : "border-pink-400/15 bg-slate-950/25 text-slate-100/85"
+                      : "border-pink-400/15 bg-slate-950/25 text-slate-100/85",
                   )}
                 >
                   <div className="mb-1">
@@ -1505,16 +1559,23 @@ export const GameScreen: React.FC<GameScreenProps> = ({
             <div className="mx-auto mb-2 inline-flex items-center gap-2 rounded-full border border-rose-300/45 bg-rose-500/15 px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-rose-100">
               <span>Quitter</span>
             </div>
-            <AlertDialogTitle className="text-center text-2xl">{fr.gameScreen.leaveQuestionTitle}</AlertDialogTitle>
+            <AlertDialogTitle className="text-center text-2xl">
+              {fr.gameScreen.leaveQuestionTitle}
+            </AlertDialogTitle>
             <AlertDialogDescription className="text-center text-slate-300">
               {fr.game.backToOnlineLobby}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-1 grid grid-cols-1 gap-2 sm:grid-cols-2 sm:space-x-0">
-            <AlertDialogCancel className={cn(neutralSecondaryBtn, "h-11 w-full rounded-xl text-slate-200")}>
+            <AlertDialogCancel
+              className={cn(neutralSecondaryBtn, "h-11 w-full rounded-xl text-slate-200")}
+            >
               {fr.gameScreen.cancel}
             </AlertDialogCancel>
-            <AlertDialogAction className={cn(dangerLeaveBtn, "h-11 w-full rounded-xl")} onClick={confirmLeave}>
+            <AlertDialogAction
+              className={cn(dangerLeaveBtn, "h-11 w-full rounded-xl")}
+              onClick={confirmLeave}
+            >
               {fr.gameScreen.leave}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -1522,15 +1583,19 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       </AlertDialog>
 
       <Suspense fallback={null}>
-        {gameState.currentQuestion?.status === "open" && !isMoveAnimating && !isMinigameActive && !isKudoPurchaseActive && !isShopActive && (
-          <QuestionModal
-            question={gameState.currentQuestion}
-            players={gameState.players}
-            myPlayerId={myPlayerId}
-            onVote={onVoteQuestion}
-            onValidate={onValidateQuestion}
-          />
-        )}
+        {gameState.currentQuestion?.status === "open" &&
+          !isMoveAnimating &&
+          !isMinigameActive &&
+          !isKudoPurchaseActive &&
+          !isShopActive && (
+            <QuestionModal
+              question={gameState.currentQuestion}
+              players={gameState.players}
+              myPlayerId={myPlayerId}
+              onVote={onVoteQuestion}
+              onValidate={onValidateQuestion}
+            />
+          )}
       </Suspense>
 
       <AlertDialog open={shouldShowKudoPurchaseModal} onOpenChange={() => {}}>
@@ -1540,7 +1605,9 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               <span className="text-base leading-none">🎁</span>
               <span>Kudobox</span>
             </div>
-            <AlertDialogTitle className="text-center text-2xl">{fr.gameScreen.buyKudoTitle}</AlertDialogTitle>
+            <AlertDialogTitle className="text-center text-2xl">
+              {fr.gameScreen.buyKudoTitle}
+            </AlertDialogTitle>
             <AlertDialogDescription className="text-center text-slate-300">
               {pendingKudoPurchase?.canAfford
                 ? fr.gameScreen.canConvertKudo
@@ -1553,7 +1620,9 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               <div className="text-lg font-bold text-pink-100">10 pts</div>
             </div>
             <div className="rounded-lg border border-pink-400/20 bg-pink-500/10 px-2 py-1.5">
-              <div className="text-[10px] uppercase tracking-[0.12em] text-pink-200/80">Mes points</div>
+              <div className="text-[10px] uppercase tracking-[0.12em] text-pink-200/80">
+                Mes points
+              </div>
               <div className="text-lg font-bold text-pink-100">{myPoints}</div>
             </div>
           </div>
@@ -1606,15 +1675,20 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         />
       </Suspense>
 
-      {isTurnIntroActive && !isPathChoiceActive && !isKudoPurchaseActive && !isShopActive && !gameState.currentQuestion && !isMinigameActive && (
-        <LaunchAnnouncement
-          title={isMyTurn ? "A ton tour" : "Au tour de"}
-          subtitle={isMyTurn ? fr.game.yourTurnLaunch : "Preparez-vous, un joueur va agir."}
-          emphasisText={!isMyTurn ? (currentPlayer?.name ?? fr.terms.player) : null}
-          startAt={turnIntroEndsAt ?? undefined}
-          variant="turn"
-        />
-      )}
+      {isTurnIntroActive &&
+        !isPathChoiceActive &&
+        !isKudoPurchaseActive &&
+        !isShopActive &&
+        !gameState.currentQuestion &&
+        !isMinigameActive && (
+          <LaunchAnnouncement
+            title={isMyTurn ? "A ton tour" : "Au tour de"}
+            subtitle={isMyTurn ? fr.game.yourTurnLaunch : "Preparez-vous, un joueur va agir."}
+            emphasisText={!isMyTurn ? (currentPlayer?.name ?? fr.terms.player) : null}
+            startAt={turnIntroEndsAt ?? undefined}
+            variant="turn"
+          />
+        )}
 
       {rollIntroEndsAt != null && rollAnnouncementValue != null && (
         <LaunchAnnouncement

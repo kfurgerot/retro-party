@@ -7,13 +7,10 @@ import { Card, SecondaryButton } from "@/components/app-shell";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { AVATARS } from "@/types/game";
-import {
-  APP_SHELL_SURFACE_SOFT,
-  CTA_NEON_DANGER,
-  CTA_NEON_SECONDARY_SUBTLE,
-} from "@/lib/uiTokens";
+import { APP_SHELL_SURFACE_SOFT, CTA_NEON_DANGER, CTA_NEON_SECONDARY_SUBTLE } from "@/lib/uiTokens";
 
-const RADAR_DIALOG = "rounded-2xl border border-white/[0.08] bg-[#0d0d1a] p-5 text-slate-100 shadow-[0_14px_40px_rgba(0,0,0,0.65)] sm:p-6";
+const RADAR_DIALOG =
+  "rounded-2xl border border-white/[0.08] bg-[#0d0d1a] p-5 text-slate-100 shadow-[0_14px_40px_rgba(0,0,0,0.65)] sm:p-6";
 import { RadarChartCard } from "@/components/radar-party/RadarChartCard";
 import { IndividualRecommendationsSection } from "@/components/radar-party/IndividualRecommendationsSection";
 import {
@@ -33,6 +30,7 @@ import {
 } from "@/features/radarParty/scoring";
 import { api, type RadarParticipant, type RadarTeamInsights } from "@/net/api";
 import { socket } from "@/net/socket";
+import { C2S_EVENTS, S2C_EVENTS } from "@shared/contracts/socketEvents.js";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -45,7 +43,13 @@ import {
 } from "@/components/ui/alert-dialog";
 
 type Stage = "lobby" | "questionnaire" | "individual" | "team-radar" | "team-progress";
-const RADAR_STAGES: Stage[] = ["lobby", "questionnaire", "individual", "team-radar", "team-progress"];
+const RADAR_STAGES: Stage[] = [
+  "lobby",
+  "questionnaire",
+  "individual",
+  "team-radar",
+  "team-progress",
+];
 const RADAR_SESSION_STORAGE_KEY = "retro-party:radar-party:session";
 
 type LocalResult = {
@@ -93,14 +97,17 @@ function loadPersistedRadarSession(): RadarPersistedSession | null {
     if (!isPlainObject(parsed)) return null;
 
     const code = typeof parsed.code === "string" ? parsed.code.trim().toUpperCase() : "";
-    const participantId = typeof parsed.participantId === "string" ? parsed.participantId.trim() : "";
+    const participantId =
+      typeof parsed.participantId === "string" ? parsed.participantId.trim() : "";
     if (!code || !participantId) return null;
 
     const profileRaw = isPlainObject(parsed.profile) ? parsed.profile : {};
     const stageRaw = typeof parsed.stage === "string" ? parsed.stage : "";
     const stage = RADAR_STAGES.includes(stageRaw as Stage) ? (stageRaw as Stage) : "lobby";
     const questionIndexRaw = Number(parsed.questionIndex);
-    const questionIndex = Number.isFinite(questionIndexRaw) ? Math.max(0, Math.round(questionIndexRaw)) : 0;
+    const questionIndex = Number.isFinite(questionIndexRaw)
+      ? Math.max(0, Math.round(questionIndexRaw))
+      : 0;
 
     return {
       code,
@@ -283,12 +290,15 @@ function getThemeTone(score: number) {
   };
 }
 
-function emptyTeamInsights(teamRadar: RadarAxisValues, participants: RadarParticipant[]): RadarTeamInsights {
+function emptyTeamInsights(
+  teamRadar: RadarAxisValues,
+  participants: RadarParticipant[],
+): RadarTeamInsights {
   return buildTeamInsights(
     teamRadar,
     participants
       .map((participant) => participant.result?.radar)
-      .filter((radar): radar is RadarAxisValues => Boolean(radar))
+      .filter((radar): radar is RadarAxisValues => Boolean(radar)),
   );
 }
 
@@ -333,7 +343,7 @@ const RadarPartyPage = () => {
 
   const completionCount = useMemo(
     () => RADAR_QUESTIONS.filter((question) => Number.isFinite(answers[question.id])).length,
-    [answers]
+    [answers],
   );
   const currentAnswer = answers[currentQuestion.id];
   const isCurrentAnswered = Number.isFinite(currentAnswer);
@@ -342,12 +352,13 @@ const RadarPartyPage = () => {
 
   const canPublish = Boolean(roomCode && participantId && localResult);
   const isHost = useMemo(
-    () => participants.some((participant) => participant.id === participantId && participant.isHost),
-    [participants, participantId]
+    () =>
+      participants.some((participant) => participant.id === participantId && participant.isHost),
+    [participants, participantId],
   );
   const selfParticipant = useMemo(
     () => participants.find((participant) => participant.id === participantId) ?? null,
-    [participants, participantId]
+    [participants, participantId],
   );
   const hostHasSubmitted = Boolean(selfParticipant?.submittedAt);
   const canResumeHostQuestionnaire = isHost && hostParticipates && !hostHasSubmitted;
@@ -371,13 +382,13 @@ const RadarPartyPage = () => {
       const answered = exempted
         ? 0
         : participant.submittedAt
-        ? total
-        : Math.max(0, Math.min(total, participant.progressAnswered ?? 0));
+          ? total
+          : Math.max(0, Math.min(total, participant.progressAnswered ?? 0));
       const progressPct = exempted
         ? 0
         : participant.submittedAt
-        ? 100
-        : Math.max(0, Math.min(100, Math.round((answered / total) * 100)));
+          ? 100
+          : Math.max(0, Math.min(100, Math.round((answered / total) * 100)));
 
       return {
         participant,
@@ -390,25 +401,27 @@ const RadarPartyPage = () => {
   }, [participants, hostParticipates]);
   const expectedResponders = useMemo(
     () => progressRows.filter((row) => !row.exempted).length,
-    [progressRows]
+    [progressRows],
   );
   const completedResponders = useMemo(
     () => progressRows.filter((row) => !row.exempted && row.participant.submittedAt).length,
-    [progressRows]
+    [progressRows],
   );
-  const teamCompletionPct = expectedResponders > 0 ? Math.round((completedResponders / expectedResponders) * 100) : 0;
+  const teamCompletionPct =
+    expectedResponders > 0 ? Math.round((completedResponders / expectedResponders) * 100) : 0;
   const resolvedTeamInsights = useMemo(
     () => teamInsights ?? emptyTeamInsights(teamRadar, participants),
-    [teamInsights, teamRadar, participants]
+    [teamInsights, teamRadar, participants],
   );
 
   const renderThemeCardsBlock = (
     radarValues: RadarAxisValues,
-    options?: { title?: string; helperText?: string }
+    options?: { title?: string; helperText?: string },
   ) => {
     const title = options?.title ?? "Cartes thematiques";
     const helperText =
-      options?.helperText ?? "Lecture rapide par theme avec tonalite visuelle, score et interpretation.";
+      options?.helperText ??
+      "Lecture rapide par theme avec tonalite visuelle, score et interpretation.";
 
     return (
       <Card className="rounded-3xl border-emerald-500/20 bg-slate-950/45 p-4">
@@ -432,7 +445,7 @@ const RadarPartyPage = () => {
                   <span
                     className={cn(
                       "inline-flex shrink-0 rounded-full border px-2.5 py-1 text-xs font-semibold",
-                      tone.badgeClass
+                      tone.badgeClass,
                     )}
                   >
                     {scoreOnFive}/5
@@ -441,7 +454,9 @@ const RadarPartyPage = () => {
                 <div className="mt-3 flex items-start gap-2">
                   <Icon className={cn("mt-0.5 h-5 w-5 shrink-0", tone.iconClass)} />
                   <div className="min-w-0">
-                    <p className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-100/90">{tone.level}</p>
+                    <p className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-100/90">
+                      {tone.level}
+                    </p>
                     <p className="mt-1 text-sm text-slate-100/90">{meta[tone.messageKey]}</p>
                   </div>
                 </div>
@@ -469,7 +484,13 @@ const RadarPartyPage = () => {
         value: "Valeur",
       };
       const color =
-        score >= 75 ? [16, 185, 129] : score >= 55 ? [132, 204, 22] : score >= 35 ? [245, 158, 11] : [239, 68, 68];
+        score >= 75
+          ? [16, 185, 129]
+          : score >= 55
+            ? [132, 204, 22]
+            : score >= 35
+              ? [245, 158, 11]
+              : [239, 68, 68];
       return {
         dimension,
         score,
@@ -491,7 +512,8 @@ const RadarPartyPage = () => {
       .map((participant) => participant.result?.radar)
       .filter((radar): radar is RadarAxisValues => Boolean(radar));
     const nextTeamRadar = response.team?.radar ?? computeTeamAverageRadar(memberRadars);
-    const nextTeamInsights = response.team?.insights ?? emptyTeamInsights(nextTeamRadar, response.participants);
+    const nextTeamInsights =
+      response.team?.insights ?? emptyTeamInsights(nextTeamRadar, response.participants);
     setTeamRadar(nextTeamRadar);
     setTeamInsights(nextTeamInsights);
     const self = response.participants.find((participant) => participant.id === participantId);
@@ -506,7 +528,8 @@ const RadarPartyPage = () => {
     }
 
     if (response.session.status === "started" && stage === "lobby") {
-      const shouldOpenProgressMenu = Boolean(self?.isHost) && response.session.hostParticipates === false;
+      const shouldOpenProgressMenu =
+        Boolean(self?.isHost) && response.session.hostParticipates === false;
       if (submitted) {
         setStage("individual");
       } else {
@@ -521,7 +544,7 @@ const RadarPartyPage = () => {
     if (!code) return;
 
     const canLiveSync = stage === "lobby" || stage === "team-progress" || stage === "team-radar";
-    const subscribe = () => socket.emit("join_radar_room", { code });
+    const subscribe = () => socket.emit(C2S_EVENTS.JOIN_RADAR_ROOM, { code });
 
     const onConnect = () => {
       subscribe();
@@ -530,7 +553,8 @@ const RadarPartyPage = () => {
       }
     };
     const onRadarSessionUpdate = (payload: { code?: string }) => {
-      const updatedCode = typeof payload?.code === "string" ? payload.code.trim().toUpperCase() : "";
+      const updatedCode =
+        typeof payload?.code === "string" ? payload.code.trim().toUpperCase() : "";
       if (!updatedCode || updatedCode !== code) return;
       if (!canLiveSync) return;
       void refreshSession(code);
@@ -555,23 +579,24 @@ const RadarPartyPage = () => {
       void refreshSession(code);
     }
     socket.on("connect", onConnect);
-    socket.on("radar_session_update", onRadarSessionUpdate);
+    socket.on(S2C_EVENTS.RADAR_SESSION_UPDATE, onRadarSessionUpdate);
     document.addEventListener("visibilitychange", onVisibilityChange);
     window.addEventListener("focus", onWindowFocus);
     window.addEventListener("online", onWindowFocus);
 
     return () => {
       socket.off("connect", onConnect);
-      socket.off("radar_session_update", onRadarSessionUpdate);
+      socket.off(S2C_EVENTS.RADAR_SESSION_UPDATE, onRadarSessionUpdate);
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.removeEventListener("focus", onWindowFocus);
       window.removeEventListener("online", onWindowFocus);
-      socket.emit("leave_radar_room", { code });
+      socket.emit(C2S_EVENTS.LEAVE_RADAR_ROOM, { code });
     };
   }, [roomCode, stage, participantId]);
 
   useEffect(() => {
-    if (!roomCode || (stage !== "lobby" && stage !== "team-progress" && stage !== "team-radar")) return;
+    if (!roomCode || (stage !== "lobby" && stage !== "team-progress" && stage !== "team-radar"))
+      return;
     const interval = window.setInterval(() => {
       void refreshSession(roomCode);
     }, RADAR_FALLBACK_SYNC_MS);
@@ -600,7 +625,9 @@ const RadarPartyPage = () => {
         const response = await api.radarGetSession(persisted.code);
         if (cancelled) return;
 
-        const self = response.participants.find((participant) => participant.id === persisted.participantId);
+        const self = response.participants.find(
+          (participant) => participant.id === persisted.participantId,
+        );
         if (!self) {
           persistRadarSession(null);
           if (!cancelled) setIsRestoringSession(false);
@@ -611,20 +638,26 @@ const RadarPartyPage = () => {
           .map((participant) => participant.result?.radar)
           .filter((radar): radar is RadarAxisValues => Boolean(radar));
         const nextTeamRadar = response.team?.radar ?? computeTeamAverageRadar(memberRadars);
-        const nextTeamInsights = response.team?.insights ?? emptyTeamInsights(nextTeamRadar, response.participants);
+        const nextTeamInsights =
+          response.team?.insights ?? emptyTeamInsights(nextTeamRadar, response.participants);
 
         const restoredAnswers = persisted.answers ?? {};
         const restoredCompletionCount = RADAR_QUESTIONS.filter((question) =>
-          Number.isFinite(restoredAnswers[question.id])
+          Number.isFinite(restoredAnswers[question.id]),
         ).length;
         const restoredAllAnswered = restoredCompletionCount === RADAR_QUESTIONS.length;
-        const boundedQuestionIndex = Math.max(0, Math.min(RADAR_QUESTIONS.length - 1, persisted.questionIndex));
+        const boundedQuestionIndex = Math.max(
+          0,
+          Math.min(RADAR_QUESTIONS.length - 1, persisted.questionIndex),
+        );
 
         setRoomCode(response.session.code);
         setParticipantId(self.id);
         setProfile({
           name: persisted.profile.name || self.displayName,
-          avatar: Number.isFinite(persisted.profile.avatar) ? persisted.profile.avatar : self.avatar,
+          avatar: Number.isFinite(persisted.profile.avatar)
+            ? persisted.profile.avatar
+            : self.avatar,
         });
         setShowOnlineOnboarding(false);
         setOnboardingInitialStep(1);
@@ -745,7 +778,9 @@ const RadarPartyPage = () => {
     }
     const firstUnanswered = findFirstUnansweredIndex(answers);
     if (firstUnanswered !== -1) {
-      setQuestionNavMessage("Il reste des questions sans reponse. Completons-les avant validation.");
+      setQuestionNavMessage(
+        "Il reste des questions sans reponse. Completons-les avant validation.",
+      );
       setQuestionIndex(firstUnanswered);
       return;
     }
@@ -754,7 +789,9 @@ const RadarPartyPage = () => {
 
   const pushProgressUpdate = async (nextAnswers: RadarAnswers) => {
     if (!roomCode || !participantId) return;
-    const answeredCount = RADAR_QUESTIONS.filter((question) => Number.isFinite(nextAnswers[question.id])).length;
+    const answeredCount = RADAR_QUESTIONS.filter((question) =>
+      Number.isFinite(nextAnswers[question.id]),
+    ).length;
     try {
       const updated = await api.radarUpdateProgress(roomCode, { participantId, answeredCount });
       setParticipants((previous) =>
@@ -766,15 +803,18 @@ const RadarPartyPage = () => {
                 progressTotal: updated.participant.progressTotal,
                 progressPct: updated.participant.progressPct,
               }
-            : participant
-        )
+            : participant,
+        ),
       );
     } catch {
       // Keep questionnaire flow resilient if progress sync fails transiently.
     }
   };
 
-  const publishAnswersToSession = async (answersToPublish: RadarAnswers, options?: { silent?: boolean }) => {
+  const publishAnswersToSession = async (
+    answersToPublish: RadarAnswers,
+    options?: { silent?: boolean },
+  ) => {
     if (!roomCode || !participantId) return false;
     if (publishInFlightRef.current) return false;
 
@@ -786,7 +826,10 @@ const RadarPartyPage = () => {
     }
 
     try {
-      const response = await api.radarSubmitAnswers(roomCode, { participantId, answers: answersToPublish });
+      const response = await api.radarSubmitAnswers(roomCode, {
+        participantId,
+        answers: answersToPublish,
+      });
       setTeamRadar(response.team.radar);
       setTeamInsights(response.team.insights);
       setResultPublished(true);
@@ -815,7 +858,9 @@ const RadarPartyPage = () => {
       if (firstUnanswered === -1) {
         setSubmitDialogOpen(true);
       } else {
-        setQuestionNavMessage("Il reste des questions sans reponse. Completons-les avant validation.");
+        setQuestionNavMessage(
+          "Il reste des questions sans reponse. Completons-les avant validation.",
+        );
         setQuestionIndex(firstUnanswered);
       }
       return;
@@ -886,7 +931,7 @@ const RadarPartyPage = () => {
   const handleLeaveLobby = () => {
     persistRadarSession(null);
     if (roomCode) {
-      socket.emit("leave_radar_room", { code: roomCode });
+      socket.emit(C2S_EVENTS.LEAVE_RADAR_ROOM, { code: roomCode });
       setRoomCode(null);
       setParticipants([]);
       setParticipantId("");
@@ -937,7 +982,10 @@ const RadarPartyPage = () => {
     setError(null);
 
     try {
-      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import("html2canvas"), import("jspdf")]);
+      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+        import("html2canvas"),
+        import("jspdf"),
+      ]);
       const screenshot = await html2canvas(captureElement, {
         scale: 2,
         useCORS: true,
@@ -950,7 +998,8 @@ const RadarPartyPage = () => {
       const pageHeight = pdf.internal.pageSize.getHeight();
       const margin = 12;
       const contentWidth = pageWidth - margin * 2;
-      const hostName = participants.find((participant) => participant.isHost)?.displayName ?? "Hote";
+      const hostName =
+        participants.find((participant) => participant.isHost)?.displayName ?? "Hote";
       const sessionCode = roomCode || "-";
       const generatedAt = new Date().toLocaleString("fr-FR", {
         dateStyle: "medium",
@@ -988,7 +1037,7 @@ const RadarPartyPage = () => {
         height: number,
         label: string,
         value: string,
-        color: [number, number, number]
+        color: [number, number, number],
       ) => {
         pdf.setFillColor(15, 23, 42);
         pdf.roundedRect(x, y, width, height, 2.5, 2.5, "F");
@@ -1011,7 +1060,15 @@ const RadarPartyPage = () => {
       const cardGap = 4;
       const halfCardWidth = (contentWidth - cardGap) / 2;
       drawMetaCard(margin, cursorY, halfCardWidth, 16, "CODE SESSION", sessionCode, [56, 189, 248]);
-      drawMetaCard(margin + halfCardWidth + cardGap, cursorY, halfCardWidth, 16, "HOTE", hostName, [34, 197, 94]);
+      drawMetaCard(
+        margin + halfCardWidth + cardGap,
+        cursorY,
+        halfCardWidth,
+        16,
+        "HOTE",
+        hostName,
+        [34, 197, 94],
+      );
       cursorY += 18;
       drawMetaCard(
         margin,
@@ -1020,7 +1077,7 @@ const RadarPartyPage = () => {
         16,
         "PARTICIPANTS",
         `${participants.length} (${completedResponders}/${expectedResponders} completes)`,
-        [14, 165, 233]
+        [14, 165, 233],
       );
       drawMetaCard(
         margin + halfCardWidth + cardGap,
@@ -1029,7 +1086,7 @@ const RadarPartyPage = () => {
         16,
         "PROGRESSION",
         `${teamCompletionPct}%`,
-        [250, 204, 21]
+        [250, 204, 21],
       );
       cursorY += 18;
       drawMetaCard(margin, cursorY, contentWidth, 13.5, "GENERE LE", generatedAt, [125, 211, 252]);
@@ -1101,7 +1158,13 @@ const RadarPartyPage = () => {
       pdf.setFont("helvetica", "normal");
       pdf.setFontSize(9.5);
       pdf.setTextColor(203, 213, 225);
-      cursorY = drawWrappedParagraph(resolvedTeamInsights.summary, margin + 4, cursorY + 13, contentWidth - 8) + 5;
+      cursorY =
+        drawWrappedParagraph(
+          resolvedTeamInsights.summary,
+          margin + 4,
+          cursorY + 13,
+          contentWidth - 8,
+        ) + 5;
 
       const homogeneousLines =
         resolvedTeamInsights.homogeneousAxes.length > 0
@@ -1112,7 +1175,11 @@ const RadarPartyPage = () => {
           ? resolvedTeamInsights.polarizedAxes
           : ["Aucun axe de divergence forte (> 25 points)."];
 
-      const drawBulletSection = (title: string, items: string[], tone: [number, number, number]) => {
+      const drawBulletSection = (
+        title: string,
+        items: string[],
+        tone: [number, number, number],
+      ) => {
         const estimatedHeight = 12 + items.length * 9;
         if (cursorY + estimatedHeight > pageHeight - margin) {
           pdf.addPage();
@@ -1139,7 +1206,10 @@ const RadarPartyPage = () => {
       drawBulletSection("Axes polarises", polarizedLines, [251, 191, 36]);
 
       const topThemes = themeRows.slice(0, 3).map((theme) => `${theme.title} (${theme.score}%)`);
-      const focusThemes = [...themeRows].reverse().slice(0, 3).map((theme) => `${theme.title} (${theme.score}%)`);
+      const focusThemes = [...themeRows]
+        .reverse()
+        .slice(0, 3)
+        .map((theme) => `${theme.title} (${theme.score}%)`);
       drawBulletSection("Themes les plus solides", topThemes, [34, 211, 238]);
       drawBulletSection("Themes a consolider", focusThemes, [248, 113, 113]);
 
@@ -1167,7 +1237,10 @@ const RadarPartyPage = () => {
     setError(null);
 
     try {
-      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import("html2canvas"), import("jspdf")]);
+      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+        import("html2canvas"),
+        import("jspdf"),
+      ]);
       const screenshot = await html2canvas(captureElement, {
         scale: 2,
         useCORS: true,
@@ -1239,7 +1312,7 @@ const RadarPartyPage = () => {
         height: number,
         label: string,
         value: string,
-        color: [number, number, number]
+        color: [number, number, number],
       ) => {
         pdf.setFillColor(15, 23, 42);
         pdf.roundedRect(x, y, width, height, 2.5, 2.5, "F");
@@ -1261,9 +1334,25 @@ const RadarPartyPage = () => {
       const cardGap = 4;
       const halfCardWidth = (contentWidth - cardGap) / 2;
       drawMetaCard(margin, cursorY, halfCardWidth, 16, "CODE SESSION", sessionCode, [56, 189, 248]);
-      drawMetaCard(margin + halfCardWidth + cardGap, cursorY, halfCardWidth, 16, "PROFIL", participantName, [34, 197, 94]);
+      drawMetaCard(
+        margin + halfCardWidth + cardGap,
+        cursorY,
+        halfCardWidth,
+        16,
+        "PROFIL",
+        participantName,
+        [34, 197, 94],
+      );
       cursorY += 18;
-      drawMetaCard(margin, cursorY, halfCardWidth, 16, "REPONSES", `${completionCount}/${TOTAL_QUESTIONS}`, [14, 165, 233]);
+      drawMetaCard(
+        margin,
+        cursorY,
+        halfCardWidth,
+        16,
+        "REPONSES",
+        `${completionCount}/${TOTAL_QUESTIONS}`,
+        [14, 165, 233],
+      );
       drawMetaCard(
         margin + halfCardWidth + cardGap,
         cursorY,
@@ -1271,7 +1360,7 @@ const RadarPartyPage = () => {
         16,
         "PROGRESSION",
         `${progressPercent}%`,
-        [250, 204, 21]
+        [250, 204, 21],
       );
       cursorY += 18;
       drawMetaCard(margin, cursorY, contentWidth, 13.5, "GENERE LE", generatedAt, [125, 211, 252]);
@@ -1343,9 +1432,19 @@ const RadarPartyPage = () => {
       pdf.setFont("helvetica", "normal");
       pdf.setFontSize(9.5);
       pdf.setTextColor(203, 213, 225);
-      cursorY = drawWrappedParagraph(localResult.insights.summary, margin + 4, cursorY + 13, contentWidth - 8) + 5;
+      cursorY =
+        drawWrappedParagraph(
+          localResult.insights.summary,
+          margin + 4,
+          cursorY + 13,
+          contentWidth - 8,
+        ) + 5;
 
-      const drawBulletSection = (title: string, items: string[], tone: [number, number, number]) => {
+      const drawBulletSection = (
+        title: string,
+        items: string[],
+        tone: [number, number, number],
+      ) => {
         const estimatedHeight = estimateBulletSectionHeight(items);
         if (cursorY + estimatedHeight > pageHeight - margin) {
           pdf.addPage();
@@ -1404,7 +1503,11 @@ const RadarPartyPage = () => {
         pdf.setFont("helvetica", "normal");
         pdf.setFontSize(8.6);
         pdf.setTextColor(186, 230, 253);
-        pdf.text("Suggestions automatiques (sans IA externe), a adapter a votre contexte.", margin + 4, cursorY + 12);
+        pdf.text(
+          "Suggestions automatiques (sans IA externe), a adapter a votre contexte.",
+          margin + 4,
+          cursorY + 12,
+        );
         cursorY += sectionHeight + 2;
 
         recommendationCards.forEach((card, index) => {
@@ -1424,7 +1527,11 @@ const RadarPartyPage = () => {
           pdf.roundedRect(margin, cursorY, contentWidth, cardHeight, 3, 3, "S");
 
           let textY = cursorY + 6;
-          const drawRecommendationField = (text: string, color: [number, number, number], font: "bold" | "normal") => {
+          const drawRecommendationField = (
+            text: string,
+            color: [number, number, number],
+            font: "bold" | "normal",
+          ) => {
             pdf.setFont("helvetica", font);
             pdf.setFontSize(9.2);
             pdf.setTextColor(color[0], color[1], color[2]);
@@ -1433,11 +1540,19 @@ const RadarPartyPage = () => {
             textY += lines.length * 4.8;
           };
 
-          drawRecommendationField(`${index + 1}. ${tone.label} - ${card.axisLabel} (${card.score}/100)`, tone.color, "bold");
+          drawRecommendationField(
+            `${index + 1}. ${tone.label} - ${card.axisLabel} (${card.score}/100)`,
+            tone.color,
+            "bold",
+          );
           drawRecommendationField(`Constat: ${card.observation}`, [226, 232, 240], "normal");
           drawRecommendationField(`Suggestion: ${card.suggestion}`, [186, 230, 253], "normal");
           drawRecommendationField(`Premier pas: ${card.firstStep}`, [226, 232, 240], "normal");
-          drawRecommendationField(`Indicateur (2 semaines): ${card.indicator}`, [226, 232, 240], "normal");
+          drawRecommendationField(
+            `Indicateur (2 semaines): ${card.indicator}`,
+            [226, 232, 240],
+            "normal",
+          );
 
           cursorY += cardHeight + 2;
         });
@@ -1452,11 +1567,14 @@ const RadarPartyPage = () => {
       const estimateWorkshopThemesSectionHeight = (
         questions: string[],
         strongestThemes: string[],
-        weakestThemes: string[]
+        weakestThemes: string[],
       ) => {
-        const questionItems = questions.length > 0 ? questions : ["Aucune question atelier generee."];
-        const strongestItems = strongestThemes.length > 0 ? strongestThemes : ["Aucun theme solide identifie."];
-        const weakestItems = weakestThemes.length > 0 ? weakestThemes : ["Aucun theme a consolider identifie."];
+        const questionItems =
+          questions.length > 0 ? questions : ["Aucune question atelier generee."];
+        const strongestItems =
+          strongestThemes.length > 0 ? strongestThemes : ["Aucun theme solide identifie."];
+        const weakestItems =
+          weakestThemes.length > 0 ? weakestThemes : ["Aucun theme a consolider identifie."];
         const availableWidth = contentWidth - 8;
         const columnGap = 4;
         const columnWidth = (availableWidth - columnGap) / 2;
@@ -1467,11 +1585,22 @@ const RadarPartyPage = () => {
         return 31 + questionLines * 4.8 + themeLines * 4.8;
       };
 
-      const drawWorkshopThemesSection = (questions: string[], strongestThemes: string[], weakestThemes: string[]) => {
-        const questionItems = questions.length > 0 ? questions : ["Aucune question atelier generee."];
-        const strongestItems = strongestThemes.length > 0 ? strongestThemes : ["Aucun theme solide identifie."];
-        const weakestItems = weakestThemes.length > 0 ? weakestThemes : ["Aucun theme a consolider identifie."];
-        const sectionHeight = estimateWorkshopThemesSectionHeight(questionItems, strongestItems, weakestItems);
+      const drawWorkshopThemesSection = (
+        questions: string[],
+        strongestThemes: string[],
+        weakestThemes: string[],
+      ) => {
+        const questionItems =
+          questions.length > 0 ? questions : ["Aucune question atelier generee."];
+        const strongestItems =
+          strongestThemes.length > 0 ? strongestThemes : ["Aucun theme solide identifie."];
+        const weakestItems =
+          weakestThemes.length > 0 ? weakestThemes : ["Aucun theme a consolider identifie."];
+        const sectionHeight = estimateWorkshopThemesSectionHeight(
+          questionItems,
+          strongestItems,
+          weakestItems,
+        );
 
         if (cursorY + sectionHeight > pageHeight - margin) {
           pdf.addPage();
@@ -1550,7 +1679,10 @@ const RadarPartyPage = () => {
       drawBulletSection("Points forts", localResult.insights.strengths, [52, 211, 153]);
       drawBulletSection("Points de vigilance", localResult.insights.watchouts, [251, 191, 36]);
       const topThemes = themeRows.slice(0, 3).map((theme) => `${theme.title} (${theme.score}%)`);
-      const focusThemes = [...themeRows].reverse().slice(0, 3).map((theme) => `${theme.title} (${theme.score}%)`);
+      const focusThemes = [...themeRows]
+        .reverse()
+        .slice(0, 3)
+        .map((theme) => `${theme.title} (${theme.score}%)`);
       drawWorkshopThemesSection(localResult.insights.workshopQuestions, topThemes, focusThemes);
 
       const stamp = `${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, "0")}${String(new Date().getDate()).padStart(2, "0")}-${String(new Date().getHours()).padStart(2, "0")}${String(new Date().getMinutes()).padStart(2, "0")}`;
@@ -1580,7 +1712,7 @@ const RadarPartyPage = () => {
   const confirmQuitSession = () => {
     persistRadarSession(null);
     if (roomCode) {
-      socket.emit("leave_radar_room", { code: roomCode });
+      socket.emit(C2S_EVENTS.LEAVE_RADAR_ROOM, { code: roomCode });
     }
     setLeaveDialogOpen(false);
     setSubmitDialogOpen(false);
@@ -1604,12 +1736,23 @@ const RadarPartyPage = () => {
 
   if (isRestoringSession) {
     return (
-      <div className="relative flex min-h-svh w-full items-start justify-center px-4 pb-12 pt-6" style={{ background: "#0a0a14", fontFamily: "'DM Sans', sans-serif" }}>
-        <div className="pointer-events-none fixed inset-0 z-0" style={{ background: "radial-gradient(ellipse 70% 50% at 20% 0%, rgba(16,185,129,0.07) 0%, transparent 70%)" }} />
+      <div
+        className="relative flex min-h-svh w-full items-start justify-center px-4 pb-12 pt-6"
+        style={{ background: "#0a0a14", fontFamily: "'DM Sans', sans-serif" }}
+      >
+        <div
+          className="pointer-events-none fixed inset-0 z-0"
+          style={{
+            background:
+              "radial-gradient(ellipse 70% 50% at 20% 0%, rgba(16,185,129,0.07) 0%, transparent 70%)",
+          }}
+        />
         <Card className="relative z-10 flex w-full max-w-xl flex-col gap-2 rounded-3xl p-6">
           <p className="text-xs uppercase tracking-[0.12em] text-emerald-300/80">Radar Party</p>
           <h2 className="text-lg font-semibold text-slate-100">Reconnexion en cours</h2>
-          <p className="text-sm text-slate-400">Nous restaurons ta session pour reprendre la partie.</p>
+          <p className="text-sm text-slate-400">
+            Nous restaurons ta session pour reprendre la partie.
+          </p>
         </Card>
       </div>
     );
@@ -1688,7 +1831,9 @@ const RadarPartyPage = () => {
                 <div className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-500/15 bg-slate-950/35 px-3 py-2">
                   <div className="min-w-0">
                     <p className="text-sm text-slate-100">
-                      {hostParticipates ? "L'hote repond au questionnaire" : "L'hote n'a pas besoin de repondre"}
+                      {hostParticipates
+                        ? "L'hote repond au questionnaire"
+                        : "L'hote n'a pas besoin de repondre"}
                     </p>
                     <p className="mt-0.5 text-xs text-slate-300">
                       {hostParticipates
@@ -1724,16 +1869,26 @@ const RadarPartyPage = () => {
     <div
       className={cn(
         "relative flex min-h-svh w-full items-start justify-center px-4 pt-4 sm:pt-6",
-        hasRadarStickyFooter ? "pb-28 sm:pb-32" : stage === "questionnaire" ? "pb-4 sm:pb-12" : "pb-12"
+        hasRadarStickyFooter
+          ? "pb-28 sm:pb-32"
+          : stage === "questionnaire"
+            ? "pb-4 sm:pb-12"
+            : "pb-12",
       )}
       style={{ background: "#0a0a14", fontFamily: "'DM Sans', sans-serif" }}
     >
-      <div className="pointer-events-none fixed inset-0 z-0" style={{ background: "radial-gradient(ellipse 70% 50% at 20% 0%, rgba(16,185,129,0.07) 0%, transparent 70%)" }} />
+      <div
+        className="pointer-events-none fixed inset-0 z-0"
+        style={{
+          background:
+            "radial-gradient(ellipse 70% 50% at 20% 0%, rgba(16,185,129,0.07) 0%, transparent 70%)",
+        }}
+      />
 
       <Card
         className={cn(
           "relative z-10 flex w-full max-w-5xl min-w-0 flex-col",
-          stage === "questionnaire" ? "gap-3 p-3 sm:gap-4 sm:p-8" : "gap-4 p-4 sm:p-8"
+          stage === "questionnaire" ? "gap-3 p-3 sm:gap-4 sm:p-8" : "gap-4 p-4 sm:p-8",
         )}
       >
         <header className="text-xs uppercase tracking-[0.14em] text-emerald-300/80">
@@ -1749,13 +1904,19 @@ const RadarPartyPage = () => {
           {canExportIndividualPdf || canExportTeamPdf ? (
             <div className="mt-2 flex justify-end sm:hidden">
               <SecondaryButton
-                onClick={() => void (canExportTeamPdf ? handleExportTeamPdf() : handleExportIndividualPdf())}
+                onClick={() =>
+                  void (canExportTeamPdf ? handleExportTeamPdf() : handleExportIndividualPdf())
+                }
                 disabled={isExportingPdf}
                 className="h-8 rounded-full border-emerald-500/25 bg-emerald-500/10 px-3 text-[11px] font-semibold tracking-[0.08em] text-emerald-100 hover:bg-emerald-500/18"
               >
                 <span className="inline-flex items-center gap-1.5">
                   <FileDown className="h-3.5 w-3.5" />
-                  {isExportingPdf ? "Export PDF..." : canExportTeamPdf ? "Exporter PDF equipe" : "Exporter PDF"}
+                  {isExportingPdf
+                    ? "Export PDF..."
+                    : canExportTeamPdf
+                      ? "Exporter PDF equipe"
+                      : "Exporter PDF"}
                 </span>
               </SecondaryButton>
             </div>
@@ -1765,13 +1926,19 @@ const RadarPartyPage = () => {
             <div className="flex flex-wrap items-center justify-end gap-2">
               {canExportIndividualPdf || canExportTeamPdf ? (
                 <SecondaryButton
-                  onClick={() => void (canExportTeamPdf ? handleExportTeamPdf() : handleExportIndividualPdf())}
+                  onClick={() =>
+                    void (canExportTeamPdf ? handleExportTeamPdf() : handleExportIndividualPdf())
+                  }
                   disabled={isExportingPdf}
                   className="h-8 rounded-full border-emerald-500/25 bg-emerald-500/10 px-3 text-[11px] font-semibold tracking-[0.08em] text-emerald-100 hover:bg-emerald-500/18"
                 >
                   <span className="inline-flex items-center gap-1.5">
                     <FileDown className="h-3.5 w-3.5" />
-                    {isExportingPdf ? "Export PDF..." : canExportTeamPdf ? "Exporter PDF equipe" : "Exporter PDF"}
+                    {isExportingPdf
+                      ? "Export PDF..."
+                      : canExportTeamPdf
+                        ? "Exporter PDF equipe"
+                        : "Exporter PDF"}
                   </span>
                 </SecondaryButton>
               ) : null}
@@ -1788,7 +1955,13 @@ const RadarPartyPage = () => {
         {error ? <p className="text-sm text-red-300">{error}</p> : null}
 
         {stage === "questionnaire" ? (
-          <section className={cn("min-w-0 rounded-3xl p-3 sm:p-5", APP_SHELL_SURFACE_SOFT, "flex min-h-0 flex-col")}>
+          <section
+            className={cn(
+              "min-w-0 rounded-3xl p-3 sm:p-5",
+              APP_SHELL_SURFACE_SOFT,
+              "flex min-h-0 flex-col",
+            )}
+          >
             <div className="flex items-center justify-between gap-2 text-xs text-slate-300">
               <span>
                 Question {questionIndex + 1} / {RADAR_QUESTIONS.length}
@@ -1816,13 +1989,20 @@ const RadarPartyPage = () => {
                 </button>
               </div>
             </div>
-            <p className="mt-1 text-[11px] text-slate-300 sm:hidden">{completionCount} reponses enregistrees</p>
+            <p className="mt-1 text-[11px] text-slate-300 sm:hidden">
+              {completionCount} reponses enregistrees
+            </p>
             <div className="mt-2 h-2 overflow-hidden rounded bg-slate-900/80">
-              <div className="h-full rounded bg-emerald-400/90 transition-all duration-300" style={{ width: `${progressPct}%` }} />
+              <div
+                className="h-full rounded bg-emerald-400/90 transition-all duration-300"
+                style={{ width: `${progressPct}%` }}
+              />
             </div>
 
             <div className="mt-4 rounded-3xl border border-emerald-500/15 bg-slate-950/45 p-4 sm:mt-6">
-              <p className="text-xs uppercase tracking-[0.12em] text-emerald-300/80">{AXIS_FR[currentQuestion.dimension]}</p>
+              <p className="text-xs uppercase tracking-[0.12em] text-emerald-300/80">
+                {AXIS_FR[currentQuestion.dimension]}
+              </p>
               <div className="mt-2 min-h-[5.5rem] max-h-[5.5rem] overflow-y-auto pr-1 sm:mt-3 sm:min-h-0 sm:max-h-none sm:overflow-visible sm:pr-0">
                 <p className="break-words text-lg text-slate-100">{currentQuestion.text}</p>
               </div>
@@ -1855,7 +2035,7 @@ const RadarPartyPage = () => {
                         likertColorByScore[item.score],
                         currentAnswer === item.score
                           ? "scale-105 ring-2 ring-emerald-300/80 ring-offset-2 ring-offset-slate-950 shadow-[0_0_14px_rgba(16,185,129,0.3)]"
-                          : "opacity-80"
+                          : "opacity-80",
                       )}
                     />
                   </button>
@@ -1865,7 +2045,10 @@ const RadarPartyPage = () => {
                 {likertScale.map((item) => (
                   <span
                     key={`${item.uiId}-label`}
-                    className={cn("block break-words", currentAnswer === item.score ? "font-semibold text-emerald-200" : undefined)}
+                    className={cn(
+                      "block break-words",
+                      currentAnswer === item.score ? "font-semibold text-emerald-200" : undefined,
+                    )}
                   >
                     {answerLabels[item.score - 1]}
                   </span>
@@ -1873,31 +2056,37 @@ const RadarPartyPage = () => {
               </div>
             </div>
 
-            <p className={cn("mt-3 min-h-4 text-xs", questionNavMessage ? "text-amber-200" : "text-transparent")}>
+            <p
+              className={cn(
+                "mt-3 min-h-4 text-xs",
+                questionNavMessage ? "text-amber-200" : "text-transparent",
+              )}
+            >
               {questionNavMessage ?? "."}
             </p>
 
             <div className="mt-2 flex items-center gap-2 sm:hidden">
               {isHost && roomCode && sessionStatus === "started" ? (
-                <SecondaryButton className="h-9 px-3 text-xs" onClick={() => setStage("team-progress")}>
+                <SecondaryButton
+                  className="h-9 px-3 text-xs"
+                  onClick={() => setStage("team-progress")}
+                >
                   Progression
                 </SecondaryButton>
               ) : null}
-              <SecondaryButton className={cn("ml-auto h-9 px-3 text-xs", CTA_NEON_DANGER)} onClick={() => setLeaveDialogOpen(true)}>
+              <SecondaryButton
+                className={cn("ml-auto h-9 px-3 text-xs", CTA_NEON_DANGER)}
+                onClick={() => setLeaveDialogOpen(true)}
+              >
                 Quitter
               </SecondaryButton>
             </div>
 
             <div className="mt-6 hidden flex-wrap justify-between gap-2 sm:flex">
-              <SecondaryButton
-                disabled={questionIndex === 0}
-                onClick={goToPreviousQuestion}
-              >
+              <SecondaryButton disabled={questionIndex === 0} onClick={goToPreviousQuestion}>
                 Precedent
               </SecondaryButton>
-              <SecondaryButton onClick={goToNextQuestion}>
-                Suivante
-              </SecondaryButton>
+              <SecondaryButton onClick={goToNextQuestion}>Suivante</SecondaryButton>
             </div>
           </section>
         ) : null}
@@ -1906,7 +2095,9 @@ const RadarPartyPage = () => {
           <section className="grid min-w-0 gap-4">
             <Card className="rounded-3xl border-emerald-500/20 bg-slate-950/45 p-4">
               <h3 className="text-base font-semibold text-emerald-200">Resume individuel</h3>
-              <p className="mt-2 break-words text-sm text-slate-200">{resultToShow.insights.summary}</p>
+              <p className="mt-2 break-words text-sm text-slate-200">
+                {resultToShow.insights.summary}
+              </p>
             </Card>
 
             <div ref={individualRadarCaptureRef} className="min-w-0">
@@ -1927,15 +2118,21 @@ const RadarPartyPage = () => {
                 <h4 className="text-sm font-semibold text-emerald-200">Points forts potentiels</h4>
                 <ul className="mt-3 space-y-2 text-sm text-slate-200">
                   {resultToShow.insights.strengths.map((item) => (
-                    <li key={item} className="break-words">- {item}</li>
+                    <li key={item} className="break-words">
+                      - {item}
+                    </li>
                   ))}
                 </ul>
               </Card>
               <Card className="rounded-3xl border-emerald-500/20 bg-slate-950/45 p-4">
-                <h4 className="text-sm font-semibold text-emerald-200">Points de vigilance potentiels</h4>
+                <h4 className="text-sm font-semibold text-emerald-200">
+                  Points de vigilance potentiels
+                </h4>
                 <ul className="mt-3 space-y-2 text-sm text-slate-200">
                   {resultToShow.insights.watchouts.map((item) => (
-                    <li key={item} className="break-words">- {item}</li>
+                    <li key={item} className="break-words">
+                      - {item}
+                    </li>
                   ))}
                 </ul>
               </Card>
@@ -1943,12 +2140,13 @@ const RadarPartyPage = () => {
                 <h4 className="text-sm font-semibold text-emerald-200">Questions a se poser</h4>
                 <ul className="mt-3 space-y-2 text-sm text-slate-200">
                   {resultToShow.insights.workshopQuestions.map((item) => (
-                    <li key={item} className="break-words">- {item}</li>
+                    <li key={item} className="break-words">
+                      - {item}
+                    </li>
                   ))}
                 </ul>
               </Card>
             </div>
-
           </section>
         ) : null}
 
@@ -1958,7 +2156,9 @@ const RadarPartyPage = () => {
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <h3 className="text-base font-semibold text-emerald-200">Resume equipe</h3>
-                  <p className="mt-1 break-words text-sm text-slate-200">{resolvedTeamInsights.summary}</p>
+                  <p className="mt-1 break-words text-sm text-slate-200">
+                    {resolvedTeamInsights.summary}
+                  </p>
                 </div>
               </div>
             </Card>
@@ -1982,13 +2182,19 @@ const RadarPartyPage = () => {
             })}
 
             <Card className="rounded-3xl border-emerald-500/20 bg-slate-950/45 p-4">
-              <h4 className="text-sm font-semibold text-emerald-200">Axes homogenes et axes polarises</h4>
+              <h4 className="text-sm font-semibold text-emerald-200">
+                Axes homogenes et axes polarises
+              </h4>
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
                 <div>
                   <p className="text-xs uppercase tracking-[0.12em] text-emerald-200">Homogenes</p>
                   <ul className="mt-2 space-y-1 text-sm text-slate-200">
                     {(teamInsights?.homogeneousAxes ?? []).length > 0 ? (
-                      (teamInsights?.homogeneousAxes ?? []).map((item) => <li key={item} className="break-words">- {item}</li>)
+                      (teamInsights?.homogeneousAxes ?? []).map((item) => (
+                        <li key={item} className="break-words">
+                          - {item}
+                        </li>
+                      ))
                     ) : (
                       <li>Aucun axe fortement homogene pour le moment.</li>
                     )}
@@ -1998,7 +2204,11 @@ const RadarPartyPage = () => {
                   <p className="text-xs uppercase tracking-[0.12em] text-amber-200">Polarises</p>
                   <ul className="mt-2 space-y-1 text-sm text-slate-200">
                     {(teamInsights?.polarizedAxes ?? []).length > 0 ? (
-                      (teamInsights?.polarizedAxes ?? []).map((item) => <li key={item} className="break-words">- {item}</li>)
+                      (teamInsights?.polarizedAxes ?? []).map((item) => (
+                        <li key={item} className="break-words">
+                          - {item}
+                        </li>
+                      ))
                     ) : (
                       <li>Aucun axe de divergence forte (&gt; 25 points).</li>
                     )}
@@ -2006,7 +2216,6 @@ const RadarPartyPage = () => {
                 </div>
               </div>
             </Card>
-
           </section>
         ) : null}
 
@@ -2015,19 +2224,27 @@ const RadarPartyPage = () => {
             <Card className="rounded-3xl border-emerald-500/20 bg-slate-950/45 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <h3 className="text-base font-semibold text-emerald-200">Suivi d'avancement equipe</h3>
-                  <p className="break-words text-sm text-slate-200">Code de session: {roomCode || "-"}</p>
+                  <h3 className="text-base font-semibold text-emerald-200">
+                    Suivi d'avancement equipe
+                  </h3>
+                  <p className="break-words text-sm text-slate-200">
+                    Code de session: {roomCode || "-"}
+                  </p>
                 </div>
               </div>
               <div className="mt-4">
                 <div className="flex items-center justify-between gap-2 text-xs text-slate-300">
                   <span>
-                    Progression globale ({completedResponders}/{expectedResponders} participants attendus)
+                    Progression globale ({completedResponders}/{expectedResponders} participants
+                    attendus)
                   </span>
                   <span>{teamCompletionPct}%</span>
                 </div>
                 <div className="mt-2 h-2 overflow-hidden rounded bg-slate-900/80">
-                  <div className="h-full rounded bg-emerald-400/90 transition-all duration-300" style={{ width: `${teamCompletionPct}%` }} />
+                  <div
+                    className="h-full rounded bg-emerald-400/90 transition-all duration-300"
+                    style={{ width: `${teamCompletionPct}%` }}
+                  />
                 </div>
                 {!hostParticipates ? (
                   <p className="mt-2 text-xs text-amber-200">
@@ -2041,7 +2258,10 @@ const RadarPartyPage = () => {
               <h4 className="text-sm font-semibold text-emerald-200">Progression par joueur</h4>
               <div className="mt-3 space-y-3">
                 {progressRows.map((row) => (
-                  <div key={row.participant.id} className="rounded-2xl border border-emerald-500/15 bg-slate-900/45 p-3">
+                  <div
+                    key={row.participant.id}
+                    className="rounded-2xl border border-emerald-500/15 bg-slate-900/45 p-3"
+                  >
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex min-w-0 items-center gap-2">
                         <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-emerald-500/20 bg-slate-950/65 text-lg">
@@ -2056,19 +2276,25 @@ const RadarPartyPage = () => {
                             {row.exempted
                               ? "Ne participe pas au questionnaire"
                               : row.participant.submittedAt
-                              ? "Questionnaire termine"
-                              : `${row.answered}/${row.total} reponses`}
+                                ? "Questionnaire termine"
+                                : `${row.answered}/${row.total} reponses`}
                           </p>
                         </div>
                       </div>
-                      <span className="text-xs text-emerald-200">{row.exempted ? "N/A" : `${row.progressPct}%`}</span>
+                      <span className="text-xs text-emerald-200">
+                        {row.exempted ? "N/A" : `${row.progressPct}%`}
+                      </span>
                     </div>
 
                     <div className="mt-2 h-2 overflow-hidden rounded bg-slate-900/80">
                       <div
                         className={cn(
                           "h-full rounded transition-all duration-300",
-                          row.exempted ? "bg-slate-600/70" : row.participant.submittedAt ? "bg-emerald-400/90" : "bg-emerald-400/90"
+                          row.exempted
+                            ? "bg-slate-600/70"
+                            : row.participant.submittedAt
+                              ? "bg-emerald-400/90"
+                              : "bg-emerald-400/90",
                         )}
                         style={{ width: `${row.exempted ? 100 : row.progressPct}%` }}
                       />
@@ -2080,9 +2306,13 @@ const RadarPartyPage = () => {
 
             <div className="flex w-full justify-start">
               <div className="flex flex-wrap items-center gap-2">
-                <SecondaryButton onClick={() => setStage("team-radar")}>Radar equipe</SecondaryButton>
+                <SecondaryButton onClick={() => setStage("team-radar")}>
+                  Radar equipe
+                </SecondaryButton>
                 {canResumeHostQuestionnaire ? (
-                  <SecondaryButton onClick={() => setStage("questionnaire")}>Reprendre le questionnaire</SecondaryButton>
+                  <SecondaryButton onClick={() => setStage("questionnaire")}>
+                    Reprendre le questionnaire
+                  </SecondaryButton>
                 ) : null}
               </div>
             </div>
@@ -2093,10 +2323,15 @@ const RadarPartyPage = () => {
           <div className="hidden w-full flex-wrap items-center justify-between gap-2 sm:flex">
             <div className="flex flex-wrap gap-2">
               {isHost && roomCode && sessionStatus === "started" ? (
-                <SecondaryButton onClick={() => setStage("team-progress")}>Progression</SecondaryButton>
+                <SecondaryButton onClick={() => setStage("team-progress")}>
+                  Progression
+                </SecondaryButton>
               ) : null}
             </div>
-            <SecondaryButton className={cn(CTA_NEON_DANGER)} onClick={() => setLeaveDialogOpen(true)}>
+            <SecondaryButton
+              className={cn(CTA_NEON_DANGER)}
+              onClick={() => setLeaveDialogOpen(true)}
+            >
               Quitter
             </SecondaryButton>
           </div>
@@ -2115,13 +2350,20 @@ const RadarPartyPage = () => {
                     </SecondaryButton>
                   ) : null}
                   {stage === "team-radar" && resultToShow ? (
-                    <SecondaryButton onClick={() => setStage("individual")}>Mon radar</SecondaryButton>
+                    <SecondaryButton onClick={() => setStage("individual")}>
+                      Mon radar
+                    </SecondaryButton>
                   ) : null}
                   {isHost && roomCode && sessionStatus === "started" ? (
-                    <SecondaryButton onClick={() => setStage("team-progress")}>Progression</SecondaryButton>
+                    <SecondaryButton onClick={() => setStage("team-progress")}>
+                      Progression
+                    </SecondaryButton>
                   ) : null}
                 </div>
-                <SecondaryButton className={cn(CTA_NEON_DANGER)} onClick={() => setLeaveDialogOpen(true)}>
+                <SecondaryButton
+                  className={cn(CTA_NEON_DANGER)}
+                  onClick={() => setLeaveDialogOpen(true)}
+                >
                   Quitter
                 </SecondaryButton>
               </div>
@@ -2132,24 +2374,41 @@ const RadarPartyPage = () => {
             <Card className="pointer-events-auto mx-auto w-full max-w-5xl border-cyan-300/40 bg-slate-950/92 p-2.5 shadow-[0_0_0_1px_rgba(34,211,238,0.2),0_8px_28px_rgba(2,6,23,0.55)]">
               <div className="grid grid-cols-3 gap-2">
                 {stage === "individual" ? (
-                  <SecondaryButton className="h-10 px-2 text-[11px]" onClick={submitToSession} disabled={!canPublish || loading}>
+                  <SecondaryButton
+                    className="h-10 px-2 text-[11px]"
+                    onClick={submitToSession}
+                    disabled={!canPublish || loading}
+                  >
                     Radar equipe
                   </SecondaryButton>
                 ) : (
-                  <SecondaryButton className="h-10 px-2 text-[11px]" onClick={() => setStage("individual")} disabled={!resultToShow}>
+                  <SecondaryButton
+                    className="h-10 px-2 text-[11px]"
+                    onClick={() => setStage("individual")}
+                    disabled={!resultToShow}
+                  >
                     Mon radar
                   </SecondaryButton>
                 )}
                 {isHost && roomCode && sessionStatus === "started" ? (
-                  <SecondaryButton className="h-10 px-2 text-[11px]" onClick={() => setStage("team-progress")}>
+                  <SecondaryButton
+                    className="h-10 px-2 text-[11px]"
+                    onClick={() => setStage("team-progress")}
+                  >
                     Progression
                   </SecondaryButton>
                 ) : (
-                  <SecondaryButton className="h-10 px-2 text-[11px] opacity-0 pointer-events-none" aria-hidden>
+                  <SecondaryButton
+                    className="h-10 px-2 text-[11px] opacity-0 pointer-events-none"
+                    aria-hidden
+                  >
                     Progression
                   </SecondaryButton>
                 )}
-                <SecondaryButton className={cn("h-10 px-2 text-[11px]", CTA_NEON_DANGER)} onClick={() => setLeaveDialogOpen(true)}>
+                <SecondaryButton
+                  className={cn("h-10 px-2 text-[11px]", CTA_NEON_DANGER)}
+                  onClick={() => setLeaveDialogOpen(true)}
+                >
                   Quitter
                 </SecondaryButton>
               </div>
@@ -2159,9 +2418,7 @@ const RadarPartyPage = () => {
       ) : null}
 
       <AlertDialog open={leaveDialogOpen} onOpenChange={setLeaveDialogOpen}>
-        <AlertDialogContent
-          className={cn(RADAR_DIALOG, "max-w-md")}
-        >
+        <AlertDialogContent className={cn(RADAR_DIALOG, "max-w-md")}>
           <AlertDialogHeader className="space-y-3">
             <AlertDialogTitle className="text-base uppercase tracking-[0.08em] text-emerald-200">
               Quitter Radar Party ?
@@ -2171,10 +2428,15 @@ const RadarPartyPage = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-1 grid grid-cols-1 gap-2 sm:grid-cols-2 sm:space-x-0">
-            <AlertDialogCancel className={cn(CTA_NEON_SECONDARY_SUBTLE, "h-11 w-full rounded-xl text-emerald-200")}>
+            <AlertDialogCancel
+              className={cn(CTA_NEON_SECONDARY_SUBTLE, "h-11 w-full rounded-xl text-emerald-200")}
+            >
               Annuler
             </AlertDialogCancel>
-            <AlertDialogAction className={cn(CTA_NEON_DANGER, "h-11 w-full rounded-xl")} onClick={confirmQuitSession}>
+            <AlertDialogAction
+              className={cn(CTA_NEON_DANGER, "h-11 w-full rounded-xl")}
+              onClick={confirmQuitSession}
+            >
               Quitter
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -2182,9 +2444,7 @@ const RadarPartyPage = () => {
       </AlertDialog>
 
       <AlertDialog open={submitDialogOpen} onOpenChange={setSubmitDialogOpen}>
-        <AlertDialogContent
-          className={cn(RADAR_DIALOG, "max-w-md")}
-        >
+        <AlertDialogContent className={cn(RADAR_DIALOG, "max-w-md")}>
           <AlertDialogHeader className="space-y-3">
             <AlertDialogTitle className="text-base uppercase tracking-[0.08em] text-emerald-200">
               Valider le questionnaire ?
@@ -2194,10 +2454,15 @@ const RadarPartyPage = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-1 grid grid-cols-1 gap-2 sm:grid-cols-2 sm:space-x-0">
-            <AlertDialogCancel className={cn(CTA_NEON_SECONDARY_SUBTLE, "h-11 w-full rounded-xl text-emerald-200")}>
+            <AlertDialogCancel
+              className={cn(CTA_NEON_SECONDARY_SUBTLE, "h-11 w-full rounded-xl text-emerald-200")}
+            >
               Continuer a verifier
             </AlertDialogCancel>
-            <AlertDialogAction className={cn("h-11 w-full rounded-xl")} onClick={finalizeQuestionnaire}>
+            <AlertDialogAction
+              className={cn("h-11 w-full rounded-xl")}
+              onClick={finalizeQuestionnaire}
+            >
               Valider
             </AlertDialogAction>
           </AlertDialogFooter>

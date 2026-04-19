@@ -67,7 +67,9 @@ export function RadarChartCard({
   primaryLabel = "Equipe",
 }: RadarChartCardProps) {
   const themeScores = buildThemeScores(radar, detailScores);
-  const comparisonScores = compareRadar ? buildThemeScores(compareRadar, compareDetailScores) : null;
+  const comparisonScores = compareRadar
+    ? buildThemeScores(compareRadar, compareDetailScores)
+    : null;
 
   const size = 600;
   const center = size / 2;
@@ -89,7 +91,12 @@ export function RadarChartCard({
       axisY: axisPoint.y,
       labelX: labelPoint.x,
       labelY: labelPoint.y,
-      labelAnchor: cosine > 0.35 ? ("start" as const) : cosine < -0.35 ? ("end" as const) : ("middle" as const),
+      labelAnchor:
+        cosine > 0.35
+          ? ("start" as const)
+          : cosine < -0.35
+            ? ("end" as const)
+            : ("middle" as const),
       labelDy: sine > 0.35 ? 10 : sine < -0.35 ? -7 : 2,
     };
   });
@@ -134,7 +141,9 @@ export function RadarChartCard({
     };
   });
 
-  const polygonPoints = [...points, points[0]].map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(" ");
+  const polygonPoints = [...points, points[0]]
+    .map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`)
+    .join(" ");
 
   const guideDots = points.flatMap((point, axisIndex) =>
     rings.map((ring, ringIndex) => {
@@ -145,13 +154,15 @@ export function RadarChartCard({
         y: p.y,
         size: ringIndex === rings.length - 1 ? 1.8 : 1.3,
       };
-    })
+    }),
   );
 
   return (
     <Card className="relative overflow-hidden rounded-3xl border border-emerald-500/20 bg-slate-950/60 p-3 sm:p-4 text-slate-100 shadow-[0_0_0_1px_rgba(16,185,129,0.15),0_14px_36px_rgba(2,6,23,0.55)]">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(16,185,129,0.08),transparent_45%),radial-gradient(circle_at_80%_75%,rgba(16,185,129,0.04),transparent_42%)]" />
-      <h3 className="relative text-base font-semibold uppercase tracking-[0.12em] text-emerald-300">{title}</h3>
+      <h3 className="relative text-base font-semibold uppercase tracking-[0.12em] text-emerald-300">
+        {title}
+      </h3>
       {subtitle ? <p className="relative mt-1 text-xs text-slate-300">{subtitle}</p> : null}
 
       <div className="relative mt-3 h-[430px] w-full sm:mt-4 sm:h-[560px]">
@@ -163,7 +174,13 @@ export function RadarChartCard({
         >
           <defs>
             <filter id="radarGlow" x="-40%" y="-40%" width="180%" height="180%">
-              <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor="#10b981" floodOpacity="0.5" />
+              <feDropShadow
+                dx="0"
+                dy="0"
+                stdDeviation="3"
+                floodColor="#10b981"
+                floodOpacity="0.5"
+              />
             </filter>
           </defs>
 
@@ -192,7 +209,13 @@ export function RadarChartCard({
           ))}
 
           {guideDots.map((dot) => (
-            <circle key={dot.key} cx={dot.x} cy={dot.y} r={dot.size} fill="rgba(167,243,208,0.40)" />
+            <circle
+              key={dot.key}
+              cx={dot.x}
+              cy={dot.y}
+              r={dot.size}
+              fill="rgba(167,243,208,0.40)"
+            />
           ))}
 
           {rings.map((ring) => (
@@ -245,8 +268,23 @@ export function RadarChartCard({
                 strokeWidth={1.4}
                 vectorEffect="non-scaling-stroke"
               />
-              <rect x={point.x - 12} y={point.y - 22} width={24} height={12} rx={4} fill="#059669" opacity={0.95} />
-              <text x={point.x} y={point.y - 13} fill="#ecfdf5" fontSize="8" fontWeight="700" textAnchor="middle">
+              <rect
+                x={point.x - 12}
+                y={point.y - 22}
+                width={24}
+                height={12}
+                rx={4}
+                fill="#059669"
+                opacity={0.95}
+              />
+              <text
+                x={point.x}
+                y={point.y - 13}
+                fill="#ecfdf5"
+                fontSize="8"
+                fontWeight="700"
+                textAnchor="middle"
+              >
                 {(point.score / 20).toFixed(1)}
               </text>
               <title>{`${point.label}: ${point.score}%`}</title>
@@ -310,14 +348,24 @@ export function RadarChartCard({
                 stroke="rgba(2,6,23,0.95)"
                 strokeWidth="1.1"
                 paintOrder="stroke"
-                style={{ letterSpacing: "0.2px", fontFamily: "'Trebuchet MS', 'Segoe UI', sans-serif" }}
+                style={{
+                  letterSpacing: "0.2px",
+                  fontFamily: "'Trebuchet MS', 'Segoe UI', sans-serif",
+                }}
               >
                 {point.short}
               </text>
             ))}
           </g>
 
-          <circle cx={center} cy={center} r={7} fill="#0f172a" stroke="rgba(16,185,129,0.6)" strokeWidth="1.2" />
+          <circle
+            cx={center}
+            cy={center}
+            r={7}
+            fill="#0f172a"
+            stroke="rgba(16,185,129,0.6)"
+            strokeWidth="1.2"
+          />
         </svg>
       </div>
 

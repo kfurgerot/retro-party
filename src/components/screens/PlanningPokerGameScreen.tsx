@@ -12,23 +12,36 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { AVATARS } from "@/types/game";
-import { PlanningPokerRole, PlanningPokerRoundSummary, PlanningPokerState } from "@/types/planningPoker";
+import {
+  PlanningPokerRole,
+  PlanningPokerRoundSummary,
+  PlanningPokerState,
+} from "@/types/planningPoker";
 import { fr } from "@/i18n/fr";
 import { cn } from "@/lib/utils";
 import { PlanningPokerRoundBoard } from "@/components/planning-poker/PlanningPokerRoundBoard";
-import { computePlanningPokerStats, formatPlanningValueForSystem, PLANNING_POKER_DECKS } from "@/lib/planningPoker";
+import {
+  computePlanningPokerStats,
+  formatPlanningValueForSystem,
+  PLANNING_POKER_DECKS,
+} from "@/lib/planningPoker";
 
 // Portal-aligned local tokens
 const HUD = "rounded-2xl border border-white/[0.06] bg-[#0d0d1a]/90 backdrop-blur";
 const PANEL = "rounded-2xl border border-white/[0.06] bg-white/[0.02]";
 const SUBPANEL = "rounded-xl border border-white/[0.05] bg-white/[0.015]";
-const TAB_BTN = "h-8 rounded-lg border border-white/[0.07] bg-white/[0.02] px-3 text-xs font-semibold text-slate-400 hover:bg-white/[0.05] hover:text-slate-200 transition-colors";
+const TAB_BTN =
+  "h-8 rounded-lg border border-white/[0.07] bg-white/[0.02] px-3 text-xs font-semibold text-slate-400 hover:bg-white/[0.05] hover:text-slate-200 transition-colors";
 const TAB_ACTIVE = "bg-indigo-500/20 border-indigo-400/40 text-indigo-200";
 const MOBILE_BTN = "h-11 w-full rounded-xl";
-const DRAWER_CLS = "bg-[#0d0d1a] border-t border-white/[0.08] pb-[env(safe-area-inset-bottom)] text-slate-100 lg:hidden";
-const DIALOG_CLS = "rounded-2xl border border-white/[0.08] bg-[#0d0d1a] p-5 text-slate-100 shadow-[0_14px_40px_rgba(0,0,0,0.65)] sm:p-6";
-const CTA_PRIMARY = "border-indigo-400/40 bg-indigo-500 text-white shadow-[0_4px_16px_rgba(99,102,241,0.35)] hover:bg-indigo-400";
-const CTA_SUBTLE = "border-white/[0.06] bg-white/[0.03] text-slate-300 hover:bg-white/[0.06] hover:text-white";
+const DRAWER_CLS =
+  "bg-[#0d0d1a] border-t border-white/[0.08] pb-[env(safe-area-inset-bottom)] text-slate-100 lg:hidden";
+const DIALOG_CLS =
+  "rounded-2xl border border-white/[0.08] bg-[#0d0d1a] p-5 text-slate-100 shadow-[0_14px_40px_rgba(0,0,0,0.65)] sm:p-6";
+const CTA_PRIMARY =
+  "border-indigo-400/40 bg-indigo-500 text-white shadow-[0_4px_16px_rgba(99,102,241,0.35)] hover:bg-indigo-400";
+const CTA_SUBTLE =
+  "border-white/[0.06] bg-white/[0.03] text-slate-300 hover:bg-white/[0.06] hover:text-white";
 const CTA_DANGER = "border-rose-400/40 bg-rose-500/15 text-rose-300 hover:bg-rose-500/25";
 
 type Props = {
@@ -82,7 +95,7 @@ const isInteractiveElement = (target: EventTarget | null) => {
 const getDeckCardStyle = (
   _index: number,
   _total: number,
-  selected: boolean
+  selected: boolean,
 ): React.CSSProperties => {
   if (selected) {
     return {
@@ -114,7 +127,9 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
 }) => {
   const [mobileActionsOpen, setMobileActionsOpen] = useState(false);
   const [mobileMenuTab, setMobileMenuTab] = useState<"spectators" | "session">("session");
-  const [mobileSessionTab, setMobileSessionTab] = useState<"current" | "history" | "summary">("current");
+  const [mobileSessionTab, setMobileSessionTab] = useState<"current" | "history" | "summary">(
+    "current",
+  );
   const [sidebarTab, setSidebarTab] = useState<"spectators" | "session" | "summary">("session");
   const [sessionCursor, setSessionCursor] = useState(0);
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
@@ -124,36 +139,50 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
   const [mobileStoryEditorDraft, setMobileStoryEditorDraft] = useState(state.storyTitle);
   const mobileStoryEditorInputRef = React.useRef<HTMLInputElement | null>(null);
 
-  const votingPlayers = useMemo(() => state.players.filter((player) => player.role === "player"), [state.players]);
-  const spectators = useMemo(() => state.players.filter((player) => player.role === "spectator"), [state.players]);
+  const votingPlayers = useMemo(
+    () => state.players.filter((player) => player.role === "player"),
+    [state.players],
+  );
+  const spectators = useMemo(
+    () => state.players.filter((player) => player.role === "spectator"),
+    [state.players],
+  );
   const activeDeck = PLANNING_POKER_DECKS[state.voteSystem] ?? PLANNING_POKER_DECKS.fibonacci;
-  const stats = useMemo(() => computePlanningPokerStats(state.players, state.voteSystem), [state.players, state.voteSystem]);
+  const stats = useMemo(
+    () => computePlanningPokerStats(state.players, state.voteSystem),
+    [state.players, state.voteSystem],
+  );
   const votedCount = useMemo(
     () => votingPlayers.filter((player) => player.hasVoted).length,
-    [votingPlayers]
+    [votingPlayers],
   );
   const totalVoters = votingPlayers.length;
   const voteProgressLabel = `${votedCount}/${totalVoters}`;
   const voteProgressPct = totalVoters > 0 ? Math.round((votedCount / totalVoters) * 100) : 0;
   const voteEntries = useMemo(
     () => Object.entries(stats.distribution).sort(([, a], [, b]) => b - a),
-    [stats.distribution]
+    [stats.distribution],
   );
   const leadVote = voteEntries[0] ?? null;
-  const consensusPct = leadVote && stats.totalVotes > 0 ? Math.round((leadVote[1] / stats.totalVotes) * 100) : 0;
+  const consensusPct =
+    leadVote && stats.totalVotes > 0 ? Math.round((leadVote[1] / stats.totalVotes) * 100) : 0;
   const consensusLabel = !state.votesOpen
     ? "Votes non lances"
     : !state.revealed
-    ? "En attente de revelation"
-    : !leadVote
-    ? "Pas de vote"
-    : consensusPct >= 80
-    ? "Consensus fort"
-    : consensusPct >= 60
-    ? "Consensus modere"
-    : "Consensus faible";
-  const averageLabel = state.revealed ? formatPlanningValueForSystem(stats.average, state.voteSystem) : "-";
-  const medianLabel = state.revealed ? formatPlanningValueForSystem(stats.median, state.voteSystem) : "-";
+      ? "En attente de revelation"
+      : !leadVote
+        ? "Pas de vote"
+        : consensusPct >= 80
+          ? "Consensus fort"
+          : consensusPct >= 60
+            ? "Consensus modere"
+            : "Consensus faible";
+  const averageLabel = state.revealed
+    ? formatPlanningValueForSystem(stats.average, state.voteSystem)
+    : "-";
+  const medianLabel = state.revealed
+    ? formatPlanningValueForSystem(stats.median, state.voteSystem)
+    : "-";
   const historyEntries = useMemo(() => {
     const byStory = new Map<string, PlanningPokerRoundSummary>();
     for (const entry of history) {
@@ -212,12 +241,14 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
         isCurrent: false,
       })),
     ],
-    [historyEntries, state.round, state.storyTitle, state.voteSystem, stats, votingPlayers]
+    [historyEntries, state.round, state.storyTitle, state.voteSystem, stats, votingPlayers],
   );
-  const selectedSession = sessionEntries[Math.min(sessionCursor, Math.max(0, sessionEntries.length - 1))] ?? sessionEntries[0];
+  const selectedSession =
+    sessionEntries[Math.min(sessionCursor, Math.max(0, sessionEntries.length - 1))] ??
+    sessionEntries[0];
   const selectedVoteEntries = useMemo(
     () => Object.entries(selectedSession?.distribution ?? {}).sort(([, a], [, b]) => b - a),
-    [selectedSession]
+    [selectedSession],
   );
   const selectedLeadVote = selectedVoteEntries[0] ?? null;
   const selectedConsensusPct =
@@ -242,7 +273,8 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
 
     const distributionEntries = Object.entries(distribution).sort(([, a], [, b]) => b - a);
     const leadVote = distributionEntries[0] ?? null;
-    const consensusPct = leadVote && totalVotes > 0 ? Math.round((leadVote[1] / totalVotes) * 100) : 0;
+    const consensusPct =
+      leadVote && totalVotes > 0 ? Math.round((leadVote[1] / totalVotes) * 100) : 0;
     const voteSystemsLabel = Object.entries(voteSystems)
       .sort(([, a], [, b]) => b - a)
       .map(([system, count]) => `${system} (${count})`)
@@ -261,12 +293,15 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
     ? state.revealed
       ? "Revele"
       : state.votesOpen
-      ? "Vote en cours"
-      : "Votes non lances"
+        ? "Vote en cours"
+        : "Votes non lances"
     : "Question archivee";
-  const selectedProgressLabel = selectedSession?.isCurrent ? voteProgressLabel : `${selectedSession?.totalVotes ?? 0} votes`;
+  const selectedProgressLabel = selectedSession?.isCurrent
+    ? voteProgressLabel
+    : `${selectedSession?.totalVotes ?? 0} votes`;
   const mobileSessionActionLabel = selectedSession?.isCurrent ? "🔓 Revoter" : "🔓 Réouvrir";
-  const mobileSessionActionDisabled = !isHost || (selectedSession?.isCurrent ? !state.revealed : false);
+  const mobileSessionActionDisabled =
+    !isHost || (selectedSession?.isCurrent ? !state.revealed : false);
   const summaryRows = useMemo(() => {
     const orderedHistory = [...historyEntries].sort((a, b) => {
       if (a.round !== b.round) return a.round - b.round;
@@ -274,9 +309,12 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
     });
 
     const archivedRows = orderedHistory.map((entry) => {
-      const voteEntriesForRow = Object.entries(entry.distribution ?? {}).sort(([, a], [, b]) => b - a);
+      const voteEntriesForRow = Object.entries(entry.distribution ?? {}).sort(
+        ([, a], [, b]) => b - a,
+      );
       const lead = voteEntriesForRow[0] ?? null;
-      const consensus = lead && entry.totalVotes > 0 ? Math.round((lead[1] / entry.totalVotes) * 100) : 0;
+      const consensus =
+        lead && entry.totalVotes > 0 ? Math.round((lead[1] / entry.totalVotes) * 100) : 0;
       return {
         id: entry.id,
         roundLabel: `Vote #${entry.round}`,
@@ -302,7 +340,17 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
     };
 
     return [...archivedRows, currentRow];
-  }, [averageLabel, consensusPct, historyEntries, leadVote, medianLabel, state.revealed, state.round, state.storyTitle, stats.totalVotes]);
+  }, [
+    averageLabel,
+    consensusPct,
+    historyEntries,
+    leadVote,
+    medianLabel,
+    state.revealed,
+    state.round,
+    state.storyTitle,
+    stats.totalVotes,
+  ]);
 
   const requestLeave = () => {
     setMobileActionsOpen(false);
@@ -350,14 +398,18 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
   const hostMainActionLabel = state.revealed
     ? "Vote suivant"
     : !state.votesOpen
-    ? "Lancer les votes"
-    : fr.planningPoker.revealVotes;
+      ? "Lancer les votes"
+      : fr.planningPoker.revealVotes;
   const hostMainActionShortLabel = state.revealed
     ? "Suivant"
     : !state.votesOpen
-    ? "Lancer"
-    : "Reveler";
-  const handleHostMainAction = state.revealed ? requestResetVotes : state.votesOpen ? onRevealVotes : onOpenVotes;
+      ? "Lancer"
+      : "Reveler";
+  const handleHostMainAction = state.revealed
+    ? requestResetVotes
+    : state.votesOpen
+      ? onRevealVotes
+      : onOpenVotes;
 
   const submitStoryTitle = React.useCallback(() => {
     if (!isHost) return;
@@ -392,7 +444,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
       if (state.revealed || !state.votesOpen) return;
       onVoteCard(myVote === value ? "" : value);
     },
-    [myVote, onVoteCard, state.revealed, state.votesOpen]
+    [myVote, onVoteCard, state.revealed, state.votesOpen],
   );
 
   React.useEffect(() => {
@@ -439,7 +491,16 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [activeDeck, handleDeckVote, isHost, myRole, onResetVotes, onRevealVotes, state.revealed, state.votesOpen]);
+  }, [
+    activeDeck,
+    handleDeckVote,
+    isHost,
+    myRole,
+    onResetVotes,
+    onRevealVotes,
+    state.revealed,
+    state.votesOpen,
+  ]);
 
   return (
     <div
@@ -448,7 +509,10 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
     >
       <div
         className="pointer-events-none fixed inset-0 z-0"
-        style={{ background: "radial-gradient(ellipse 70% 50% at 20% 0%, rgba(99,102,241,0.09) 0%, transparent 70%)" }}
+        style={{
+          background:
+            "radial-gradient(ellipse 70% 50% at 20% 0%, rgba(99,102,241,0.09) 0%, transparent 70%)",
+        }}
       />
 
       <div className="relative z-10 mx-auto flex h-full w-full flex-col gap-2 sm:gap-3">
@@ -482,7 +546,10 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                 </div>
               </div>
               <div className="h-1.5 overflow-hidden rounded bg-slate-900/60">
-                <div className="h-full rounded bg-indigo-400/90 transition-all duration-300" style={{ width: `${voteProgressPct}%` }} />
+                <div
+                  className="h-full rounded bg-indigo-400/90 transition-all duration-300"
+                  style={{ width: `${voteProgressPct}%` }}
+                />
               </div>
             </div>
           </div>
@@ -506,11 +573,17 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
 
             <div className="ml-2 grid grid-cols-2 gap-2">
               <div className="rounded-xl border border-indigo-400/30 bg-indigo-500/10 px-4 py-2.5">
-                <div className="text-[11px] uppercase tracking-[0.12em] text-indigo-300/85">Moyenne</div>
-                <div className="text-2xl font-black leading-none text-slate-100">{averageLabel}</div>
+                <div className="text-[11px] uppercase tracking-[0.12em] text-indigo-300/85">
+                  Moyenne
+                </div>
+                <div className="text-2xl font-black leading-none text-slate-100">
+                  {averageLabel}
+                </div>
               </div>
               <div className="rounded-xl border border-indigo-400/30 bg-indigo-500/10 px-4 py-2.5">
-                <div className="text-[11px] uppercase tracking-[0.12em] text-indigo-300/85">Mediane</div>
+                <div className="text-[11px] uppercase tracking-[0.12em] text-indigo-300/85">
+                  Mediane
+                </div>
                 <div className="text-2xl font-black leading-none text-slate-100">{medianLabel}</div>
               </div>
             </div>
@@ -523,7 +596,9 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                 </div>
               ) : null}
               <Button
-                className={cn("hidden xl:inline-flex h-9 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 text-xs font-semibold text-rose-300 hover:bg-rose-500/20 hover:text-rose-200")}
+                className={cn(
+                  "hidden xl:inline-flex h-9 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 text-xs font-semibold text-rose-300 hover:bg-rose-500/20 hover:text-rose-200",
+                )}
                 variant="secondary"
                 onClick={requestLeave}
               >
@@ -536,7 +611,12 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
         {/* ── Main content grid ── */}
         <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(280px,22vw)]">
           {/* ── Game panel ── */}
-          <div className={cn(PANEL, "grid min-h-0 grid-rows-[minmax(150px,1fr)_auto] gap-2 p-2.5 sm:grid-rows-[minmax(340px,1fr)_auto_auto] sm:gap-3 sm:p-4 lg:gap-4 lg:p-5")}>
+          <div
+            className={cn(
+              PANEL,
+              "grid min-h-0 grid-rows-[minmax(150px,1fr)_auto] gap-2 p-2.5 sm:grid-rows-[minmax(340px,1fr)_auto_auto] sm:gap-3 sm:p-4 lg:gap-4 lg:p-5",
+            )}
+          >
             <PlanningPokerRoundBoard
               players={votingPlayers}
               revealed={state.revealed}
@@ -568,7 +648,9 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                                 "mt-2 h-[58px] w-[38px] shrink-0 snap-start rounded-xl border text-sm font-semibold transition-all duration-150",
                                 "bg-gradient-to-b from-slate-900/82 to-slate-950/82",
                                 "disabled:cursor-not-allowed disabled:opacity-50",
-                                selected ? "mt-0 text-indigo-100" : "border-white/[0.08] text-slate-300"
+                                selected
+                                  ? "mt-0 text-indigo-100"
+                                  : "border-white/[0.08] text-slate-300",
                               )}
                             >
                               {displayVoteValue(value)}
@@ -597,7 +679,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                             "disabled:cursor-not-allowed disabled:opacity-50",
                             selected
                               ? "-translate-y-3 text-indigo-100"
-                              : "border-white/[0.08] text-slate-300 hover:-translate-y-0.5 hover:bg-slate-900/92"
+                              : "border-white/[0.08] text-slate-300 hover:-translate-y-0.5 hover:bg-slate-900/92",
                           )}
                         >
                           {displayVoteValue(value)}
@@ -626,7 +708,9 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                   className={cn("h-9 min-w-0 rounded-xl border text-xs font-semibold", CTA_SUBTLE)}
                   onClick={() => onRoleChange(myRole === "player" ? "spectator" : "player")}
                 >
-                  {myRole === "player" ? fr.planningPoker.switchSpectator : fr.planningPoker.switchPlayer}
+                  {myRole === "player"
+                    ? fr.planningPoker.switchSpectator
+                    : fr.planningPoker.switchPlayer}
                 </Button>
                 {isHost ? (
                   <div className="flex min-w-0 items-center gap-1 rounded-xl border border-white/[0.06] bg-slate-900/55 p-1">
@@ -639,7 +723,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                           "h-7 min-w-0 rounded px-2 text-[11px] transition-colors",
                           state.voteSystem === option.value
                             ? "bg-indigo-500 text-white"
-                            : "bg-transparent text-slate-300 hover:bg-white/[0.06]"
+                            : "bg-transparent text-slate-300 hover:bg-white/[0.06]",
                         )}
                       >
                         {option.label}
@@ -653,7 +737,10 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                 {isHost && state.revealed ? (
                   <Button
                     variant="secondary"
-                    className={cn("h-9 min-w-0 w-full rounded-xl border text-[11px] font-semibold sm:w-auto sm:text-xs", CTA_SUBTLE)}
+                    className={cn(
+                      "h-9 min-w-0 w-full rounded-xl border text-[11px] font-semibold sm:w-auto sm:text-xs",
+                      CTA_SUBTLE,
+                    )}
                     onClick={onRevoteCurrentStory}
                   >
                     Revoter cette story
@@ -661,7 +748,10 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                 ) : null}
                 <Button
                   variant="secondary"
-                  className={cn("h-9 min-w-0 w-full rounded-xl border text-[11px] font-semibold sm:w-auto sm:text-xs", CTA_PRIMARY)}
+                  className={cn(
+                    "h-9 min-w-0 w-full rounded-xl border text-[11px] font-semibold sm:w-auto sm:text-xs",
+                    CTA_PRIMARY,
+                  )}
                   disabled={!isHost}
                   onClick={handleHostMainAction}
                 >
@@ -681,9 +771,17 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                   key={tab}
                   type="button"
                   onClick={() => setSidebarTab(tab)}
-                  className={cn(TAB_BTN, "w-full justify-center", sidebarTab === tab ? TAB_ACTIVE : "")}
+                  className={cn(
+                    TAB_BTN,
+                    "w-full justify-center",
+                    sidebarTab === tab ? TAB_ACTIVE : "",
+                  )}
                 >
-                  {tab === "spectators" ? "Spectateurs" : tab === "session" ? "Session" : "Synthese"}
+                  {tab === "spectators"
+                    ? "Spectateurs"
+                    : tab === "session"
+                      ? "Session"
+                      : "Synthese"}
                 </button>
               ))}
             </div>
@@ -692,7 +790,10 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
               <div className="grid min-h-0 gap-2 overflow-auto pr-1">
                 {spectators.length > 0 ? (
                   spectators.map((player) => (
-                    <div key={player.socketId} className="flex items-center gap-2 rounded-xl border border-white/[0.05] bg-white/[0.015] px-2 py-1.5">
+                    <div
+                      key={player.socketId}
+                      className="flex items-center gap-2 rounded-xl border border-white/[0.05] bg-white/[0.015] px-2 py-1.5"
+                    >
                       <span className="text-base">{AVATARS[player.avatar] ?? ":)"}</span>
                       <span className="truncate text-xs text-slate-200">{player.name}</span>
                     </div>
@@ -744,16 +845,26 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                       <Button
                         variant="secondary"
                         size="sm"
-                        className={cn(TAB_BTN, "h-8 w-8 px-0 text-base font-semibold disabled:opacity-45")}
+                        className={cn(
+                          TAB_BTN,
+                          "h-8 w-8 px-0 text-base font-semibold disabled:opacity-45",
+                        )}
                         disabled={sessionCursor >= sessionEntries.length - 1}
-                        onClick={() => setSessionCursor((value) => Math.min(value + 1, sessionEntries.length - 1))}
+                        onClick={() =>
+                          setSessionCursor((value) =>
+                            Math.min(value + 1, sessionEntries.length - 1),
+                          )
+                        }
                       >
                         ‹
                       </Button>
                       <Button
                         variant="secondary"
                         size="sm"
-                        className={cn(TAB_BTN, "h-8 w-8 px-0 text-base font-semibold disabled:opacity-45")}
+                        className={cn(
+                          TAB_BTN,
+                          "h-8 w-8 px-0 text-base font-semibold disabled:opacity-45",
+                        )}
                         disabled={sessionCursor <= 0}
                         onClick={() => setSessionCursor((value) => Math.max(value - 1, 0))}
                       >
@@ -761,16 +872,20 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                       </Button>
                     </div>
                   </div>
-                  <div className="truncate text-slate-100">{selectedSession?.storyTitle || "-"}</div>
-                  <div className="text-[11px] text-slate-400">{selectedSession?.roundLabel ?? "-"}</div>
+                  <div className="truncate text-slate-100">
+                    {selectedSession?.storyTitle || "-"}
+                  </div>
+                  <div className="text-[11px] text-slate-400">
+                    {selectedSession?.roundLabel ?? "-"}
+                  </div>
                   <div className="mt-1 text-slate-400">Statut</div>
                   <div className="text-slate-100">
                     {selectedSession?.isCurrent
                       ? state.revealed
                         ? "Revele"
                         : state.votesOpen
-                        ? "Vote en cours"
-                        : "Votes non lances"
+                          ? "Vote en cours"
+                          : "Votes non lances"
                       : "Question archivee"}
                   </div>
                 </div>
@@ -795,7 +910,10 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                     <div className="font-semibold text-slate-100">
                       {selectedSession?.isCurrent
                         ? averageLabel
-                        : formatPlanningValueForSystem(selectedSession?.average ?? null, selectedSession?.voteSystem ?? state.voteSystem)}
+                        : formatPlanningValueForSystem(
+                            selectedSession?.average ?? null,
+                            selectedSession?.voteSystem ?? state.voteSystem,
+                          )}
                     </div>
                   </div>
                   <div>
@@ -803,7 +921,10 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                     <div className="font-semibold text-slate-100">
                       {selectedSession?.isCurrent
                         ? medianLabel
-                        : formatPlanningValueForSystem(selectedSession?.median ?? null, selectedSession?.voteSystem ?? state.voteSystem)}
+                        : formatPlanningValueForSystem(
+                            selectedSession?.median ?? null,
+                            selectedSession?.voteSystem ?? state.voteSystem,
+                          )}
                     </div>
                   </div>
                 </div>
@@ -812,8 +933,8 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                     <div className="text-slate-400">Min</div>
                     <div className="font-semibold text-slate-100">
                       {formatPlanningValueForSystem(
-                        selectedSession?.isCurrent ? stats.min : selectedSession?.min ?? null,
-                        selectedSession?.voteSystem ?? state.voteSystem
+                        selectedSession?.isCurrent ? stats.min : (selectedSession?.min ?? null),
+                        selectedSession?.voteSystem ?? state.voteSystem,
                       )}
                     </div>
                   </div>
@@ -821,8 +942,8 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                     <div className="text-slate-400">Max</div>
                     <div className="font-semibold text-slate-100">
                       {formatPlanningValueForSystem(
-                        selectedSession?.isCurrent ? stats.max : selectedSession?.max ?? null,
-                        selectedSession?.voteSystem ?? state.voteSystem
+                        selectedSession?.isCurrent ? stats.max : (selectedSession?.max ?? null),
+                        selectedSession?.voteSystem ?? state.voteSystem,
                       )}
                     </div>
                   </div>
@@ -832,7 +953,9 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                     <div className="flex items-center justify-between">
                       <span className="text-slate-400">Consensus</span>
                       <span className="font-semibold text-slate-100">
-                        {selectedLeadVote ? `${displayVoteValue(selectedLeadVote[0])} (${selectedConsensusPct}%)` : "-"}
+                        {selectedLeadVote
+                          ? `${displayVoteValue(selectedLeadVote[0])} (${selectedConsensusPct}%)`
+                          : "-"}
                       </span>
                     </div>
                     {selectedVoteEntries.map(([value, count]) => {
@@ -845,7 +968,10 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                             <span className="text-slate-400">{count}</span>
                           </div>
                           <div className="h-1.5 overflow-hidden rounded bg-slate-900/55">
-                            <div className="h-full rounded bg-indigo-400/80" style={{ width: `${barPct}%` }} />
+                            <div
+                              className="h-full rounded bg-indigo-400/80"
+                              style={{ width: `${barPct}%` }}
+                            />
                           </div>
                         </div>
                       );
@@ -858,11 +984,15 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                     <div className="grid grid-cols-2 gap-2">
                       <div>
                         <div className="text-slate-400">Stories estimees</div>
-                        <div className="font-semibold text-slate-100">{globalSummary.storiesCount}</div>
+                        <div className="font-semibold text-slate-100">
+                          {globalSummary.storiesCount}
+                        </div>
                       </div>
                       <div>
                         <div className="text-slate-400">Votes exprimes</div>
-                        <div className="font-semibold text-slate-100">{globalSummary.totalVotes}</div>
+                        <div className="font-semibold text-slate-100">
+                          {globalSummary.totalVotes}
+                        </div>
                       </div>
                     </div>
                     <div className="flex items-center justify-between">
@@ -873,9 +1003,14 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                           : "-"}
                       </span>
                     </div>
-                    <div className="text-[11px] text-slate-400">Types de vote: {globalSummary.voteSystemsLabel || "-"}</div>
+                    <div className="text-[11px] text-slate-400">
+                      Types de vote: {globalSummary.voteSystemsLabel || "-"}
+                    </div>
                     {globalSummary.distributionEntries.slice(0, 5).map(([value, count]) => {
-                      const barPct = globalSummary.totalVotes > 0 ? Math.round((count / globalSummary.totalVotes) * 100) : 0;
+                      const barPct =
+                        globalSummary.totalVotes > 0
+                          ? Math.round((count / globalSummary.totalVotes) * 100)
+                          : 0;
                       return (
                         <div key={`desktop-global-distribution-${value}`} className="grid gap-1">
                           <div className="flex items-center justify-between text-[11px]">
@@ -883,7 +1018,10 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                             <span className="text-slate-400">{count}</span>
                           </div>
                           <div className="h-1.5 overflow-hidden rounded bg-slate-900/55">
-                            <div className="h-full rounded bg-indigo-400/80" style={{ width: `${barPct}%` }} />
+                            <div
+                              className="h-full rounded bg-indigo-400/80"
+                              style={{ width: `${barPct}%` }}
+                            />
                           </div>
                         </div>
                       );
@@ -914,7 +1052,9 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                 className={cn(MOBILE_BTN, "rounded-xl border text-xs font-semibold", CTA_SUBTLE)}
                 onClick={() => onRoleChange(myRole === "player" ? "spectator" : "player")}
               >
-                {myRole === "player" ? fr.planningPoker.switchSpectator : fr.planningPoker.switchPlayer}
+                {myRole === "player"
+                  ? fr.planningPoker.switchSpectator
+                  : fr.planningPoker.switchPlayer}
               </Button>
             </div>
             <div className={cn("grid gap-2", "grid-cols-3")}>
@@ -922,7 +1062,11 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                 <>
                   <Button
                     variant="secondary"
-                    className={cn(MOBILE_BTN, "rounded-xl border text-xs font-semibold", CTA_SUBTLE)}
+                    className={cn(
+                      MOBILE_BTN,
+                      "rounded-xl border text-xs font-semibold",
+                      CTA_SUBTLE,
+                    )}
                     onClick={() => {
                       setMobileMenuTab("session");
                       setMobileSessionTab("current");
@@ -940,7 +1084,11 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                   </Button>
                   <Button
                     variant="secondary"
-                    className={cn(MOBILE_BTN, "rounded-xl border text-xs font-semibold", CTA_DANGER)}
+                    className={cn(
+                      MOBILE_BTN,
+                      "rounded-xl border text-xs font-semibold",
+                      CTA_DANGER,
+                    )}
                     onClick={requestLeave}
                   >
                     {fr.onlineLobby.leaveParty}
@@ -950,7 +1098,11 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                 <>
                   <Button
                     variant="secondary"
-                    className={cn(MOBILE_BTN, "rounded-xl border text-xs font-semibold", CTA_SUBTLE)}
+                    className={cn(
+                      MOBILE_BTN,
+                      "rounded-xl border text-xs font-semibold",
+                      CTA_SUBTLE,
+                    )}
                     onClick={() => {
                       setMobileMenuTab("spectators");
                       setMobileActionsOpen(true);
@@ -960,7 +1112,11 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                   </Button>
                   <Button
                     variant="secondary"
-                    className={cn(MOBILE_BTN, "rounded-xl border text-xs font-semibold", CTA_SUBTLE)}
+                    className={cn(
+                      MOBILE_BTN,
+                      "rounded-xl border text-xs font-semibold",
+                      CTA_SUBTLE,
+                    )}
                     onClick={() => {
                       setMobileMenuTab("session");
                       setMobileSessionTab("current");
@@ -971,7 +1127,11 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                   </Button>
                   <Button
                     variant="secondary"
-                    className={cn(MOBILE_BTN, "rounded-xl border text-xs font-semibold", CTA_DANGER)}
+                    className={cn(
+                      MOBILE_BTN,
+                      "rounded-xl border text-xs font-semibold",
+                      CTA_DANGER,
+                    )}
                     onClick={requestLeave}
                   >
                     {fr.onlineLobby.leaveParty}
@@ -987,7 +1147,9 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
       <Drawer open={mobileActionsOpen} onOpenChange={setMobileActionsOpen}>
         <DrawerContent className={DRAWER_CLS}>
           <DrawerHeader>
-            <DrawerTitle className="text-slate-100">{mobileMenuTab === "spectators" ? "Spectateurs" : "Session"}</DrawerTitle>
+            <DrawerTitle className="text-slate-100">
+              {mobileMenuTab === "spectators" ? "Spectateurs" : "Session"}
+            </DrawerTitle>
           </DrawerHeader>
           {mobileMenuTab === "session" ? (
             <div className="px-4 pb-2">
@@ -1001,10 +1163,14 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                       "h-8 rounded px-2 text-[11px] transition-colors",
                       mobileSessionTab === tab
                         ? "bg-indigo-500 text-white"
-                        : "bg-transparent text-slate-300 hover:bg-white/[0.06]"
+                        : "bg-transparent text-slate-300 hover:bg-white/[0.06]",
                     )}
                   >
-                    {tab === "current" ? "Vote en cours" : tab === "history" ? "Historique" : "Synthese"}
+                    {tab === "current"
+                      ? "Vote en cours"
+                      : tab === "history"
+                        ? "Historique"
+                        : "Synthese"}
                   </button>
                 ))}
               </div>
@@ -1015,13 +1181,18 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
               <>
                 {spectators.length > 0 ? (
                   spectators.map((player) => (
-                    <div key={player.socketId} className="flex items-center gap-2 rounded-xl border border-white/[0.05] bg-white/[0.015] px-2 py-1.5">
+                    <div
+                      key={player.socketId}
+                      className="flex items-center gap-2 rounded-xl border border-white/[0.05] bg-white/[0.015] px-2 py-1.5"
+                    >
                       <span className="text-base">{AVATARS[player.avatar] ?? ":)"}</span>
                       <span className="truncate text-xs text-slate-200">{player.name}</span>
                     </div>
                   ))
                 ) : (
-                  <div className="rounded-xl border border-white/[0.05] bg-white/[0.015] px-2 py-1.5 text-xs text-slate-400">Aucun spectateur.</div>
+                  <div className="rounded-xl border border-white/[0.05] bg-white/[0.015] px-2 py-1.5 text-xs text-slate-400">
+                    Aucun spectateur.
+                  </div>
                 )}
               </>
             ) : (
@@ -1042,7 +1213,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                             "h-8 rounded px-2 text-[11px] transition-colors disabled:cursor-not-allowed disabled:opacity-70",
                             state.voteSystem === option.value
                               ? "bg-indigo-500 text-white"
-                              : "bg-transparent text-slate-300 hover:bg-white/[0.06]"
+                              : "bg-transparent text-slate-300 hover:bg-white/[0.06]",
                           )}
                         >
                           {option.label}
@@ -1055,13 +1226,21 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                         onClick={openMobileStoryEditor}
                         className="mt-2 w-full rounded-xl border border-white/[0.06] bg-slate-950/55 px-2 py-2 text-left transition-colors hover:bg-slate-900/70"
                       >
-                        <div className="text-[10px] uppercase tracking-[0.08em] text-slate-400">Nom de la story</div>
-                        <div className="truncate text-xs text-slate-100">{state.storyTitle || storyDraft || "Story en cours"}</div>
+                        <div className="text-[10px] uppercase tracking-[0.08em] text-slate-400">
+                          Nom de la story
+                        </div>
+                        <div className="truncate text-xs text-slate-100">
+                          {state.storyTitle || storyDraft || "Story en cours"}
+                        </div>
                       </button>
                     ) : (
                       <div className="mt-2 rounded-xl border border-white/[0.06] bg-slate-950/55 px-2 py-2 text-left">
-                        <div className="text-[10px] uppercase tracking-[0.08em] text-slate-400">Nom de la story</div>
-                        <div className="truncate text-xs text-slate-100">{state.storyTitle || "Story en cours"}</div>
+                        <div className="text-[10px] uppercase tracking-[0.08em] text-slate-400">
+                          Nom de la story
+                        </div>
+                        <div className="truncate text-xs text-slate-100">
+                          {state.storyTitle || "Story en cours"}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -1074,21 +1253,33 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                     </div>
                     <div className="rounded-xl border border-white/[0.05] bg-white/[0.015] px-2 py-1.5 text-xs text-slate-100">
                       <div className="mb-1 flex items-center justify-between gap-2">
-                        <span className="font-semibold">{selectedSession?.roundLabel ?? "Session"}</span>
+                        <span className="font-semibold">
+                          {selectedSession?.roundLabel ?? "Session"}
+                        </span>
                         <div className="flex items-center gap-1">
                           <Button
                             variant="secondary"
                             size="sm"
-                            className={cn(TAB_BTN, "h-8 w-8 px-0 text-base font-semibold disabled:opacity-45")}
+                            className={cn(
+                              TAB_BTN,
+                              "h-8 w-8 px-0 text-base font-semibold disabled:opacity-45",
+                            )}
                             disabled={sessionCursor >= sessionEntries.length - 1}
-                            onClick={() => setSessionCursor((value) => Math.min(value + 1, sessionEntries.length - 1))}
+                            onClick={() =>
+                              setSessionCursor((value) =>
+                                Math.min(value + 1, sessionEntries.length - 1),
+                              )
+                            }
                           >
                             ‹
                           </Button>
                           <Button
                             variant="secondary"
                             size="sm"
-                            className={cn(TAB_BTN, "h-8 w-8 px-0 text-base font-semibold disabled:opacity-45")}
+                            className={cn(
+                              TAB_BTN,
+                              "h-8 w-8 px-0 text-base font-semibold disabled:opacity-45",
+                            )}
                             disabled={sessionCursor <= 0}
                             onClick={() => setSessionCursor((value) => Math.max(value - 1, 0))}
                           >
@@ -1096,7 +1287,9 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                           </Button>
                         </div>
                       </div>
-                      <div className="truncate text-sm font-semibold">{selectedSession?.storyTitle || "-"}</div>
+                      <div className="truncate text-sm font-semibold">
+                        {selectedSession?.storyTitle || "-"}
+                      </div>
                       <div className="mt-2 grid grid-cols-2 gap-2">
                         <div className="rounded-xl border border-white/[0.05] bg-white/[0.015] px-2 py-1">
                           <div className="text-[10px] text-slate-400">Statut</div>
@@ -1104,7 +1297,9 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                         </div>
                         <div className="rounded-xl border border-white/[0.05] bg-white/[0.015] px-2 py-1">
                           <div className="text-[10px] text-slate-400">Nombre de votes</div>
-                          <div className="font-semibold text-slate-100">{selectedProgressLabel}</div>
+                          <div className="font-semibold text-slate-100">
+                            {selectedProgressLabel}
+                          </div>
                         </div>
                       </div>
                       {isHost ? (
@@ -1112,7 +1307,10 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                           <Button
                             variant="secondary"
                             size="sm"
-                            className={cn(TAB_BTN, "h-7 min-w-[92px] px-2 text-[11px] disabled:opacity-45")}
+                            className={cn(
+                              TAB_BTN,
+                              "h-7 min-w-[92px] px-2 text-[11px] disabled:opacity-45",
+                            )}
                             disabled={mobileSessionActionDisabled}
                             onClick={handleMobileSessionAction}
                           >
@@ -1122,14 +1320,19 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                       ) : null}
                     </div>
                     <div className="grid max-h-[44vh] gap-2 overflow-y-auto pr-1">
-                      <div className={cn("grid grid-cols-2 gap-2 rounded-xl p-2 text-xs", SUBPANEL)}>
+                      <div
+                        className={cn("grid grid-cols-2 gap-2 rounded-xl p-2 text-xs", SUBPANEL)}
+                      >
                         <div className="col-span-2 text-slate-400">Statistiques</div>
                         <div>
                           <div className="text-slate-400">Moyenne</div>
                           <div className="font-semibold text-slate-100">
                             {selectedSession?.isCurrent
                               ? averageLabel
-                              : formatPlanningValueForSystem(selectedSession?.average ?? null, selectedSession?.voteSystem ?? state.voteSystem)}
+                              : formatPlanningValueForSystem(
+                                  selectedSession?.average ?? null,
+                                  selectedSession?.voteSystem ?? state.voteSystem,
+                                )}
                           </div>
                         </div>
                         <div>
@@ -1137,17 +1340,24 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                           <div className="font-semibold text-slate-100">
                             {selectedSession?.isCurrent
                               ? medianLabel
-                              : formatPlanningValueForSystem(selectedSession?.median ?? null, selectedSession?.voteSystem ?? state.voteSystem)}
+                              : formatPlanningValueForSystem(
+                                  selectedSession?.median ?? null,
+                                  selectedSession?.voteSystem ?? state.voteSystem,
+                                )}
                           </div>
                         </div>
                       </div>
-                      <div className={cn("grid grid-cols-2 gap-2 rounded-xl p-2 text-xs", SUBPANEL)}>
+                      <div
+                        className={cn("grid grid-cols-2 gap-2 rounded-xl p-2 text-xs", SUBPANEL)}
+                      >
                         <div>
                           <div className="text-slate-400">Min</div>
                           <div className="font-semibold text-slate-100">
                             {formatPlanningValueForSystem(
-                              selectedSession?.isCurrent ? stats.min : selectedSession?.min ?? null,
-                              selectedSession?.voteSystem ?? state.voteSystem
+                              selectedSession?.isCurrent
+                                ? stats.min
+                                : (selectedSession?.min ?? null),
+                              selectedSession?.voteSystem ?? state.voteSystem,
                             )}
                           </div>
                         </div>
@@ -1155,8 +1365,10 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                           <div className="text-slate-400">Max</div>
                           <div className="font-semibold text-slate-100">
                             {formatPlanningValueForSystem(
-                              selectedSession?.isCurrent ? stats.max : selectedSession?.max ?? null,
-                              selectedSession?.voteSystem ?? state.voteSystem
+                              selectedSession?.isCurrent
+                                ? stats.max
+                                : (selectedSession?.max ?? null),
+                              selectedSession?.voteSystem ?? state.voteSystem,
                             )}
                           </div>
                         </div>
@@ -1167,20 +1379,29 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                           <div className="flex items-center justify-between">
                             <span className="text-slate-400">Consensus</span>
                             <span className="font-semibold text-slate-100">
-                              {selectedLeadVote ? `${displayVoteValue(selectedLeadVote[0])} (${selectedConsensusPct}%)` : "-"}
+                              {selectedLeadVote
+                                ? `${displayVoteValue(selectedLeadVote[0])} (${selectedConsensusPct}%)`
+                                : "-"}
                             </span>
                           </div>
                           {selectedVoteEntries.map(([value, count]) => {
                             const totalVotes = selectedSession?.totalVotes ?? 0;
-                            const barPct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
+                            const barPct =
+                              totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
                             return (
-                              <div key={`mobile-session-distribution-${value}`} className="grid gap-1">
+                              <div
+                                key={`mobile-session-distribution-${value}`}
+                                className="grid gap-1"
+                              >
                                 <div className="flex items-center justify-between text-[11px]">
                                   <span className="text-slate-200">{displayVoteValue(value)}</span>
                                   <span className="text-slate-400">{count}</span>
                                 </div>
                                 <div className="h-1.5 overflow-hidden rounded bg-slate-900/55">
-                                  <div className="h-full rounded bg-indigo-400/80" style={{ width: `${barPct}%` }} />
+                                  <div
+                                    className="h-full rounded bg-indigo-400/80"
+                                    style={{ width: `${barPct}%` }}
+                                  />
                                 </div>
                               </div>
                             );
@@ -1195,7 +1416,9 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                   <div className={cn("grid gap-2 rounded-xl p-2 text-xs", SUBPANEL)}>
                     <div className="flex items-center justify-between">
                       <span className="text-slate-400">Synthese des votes</span>
-                      <span className="text-[11px] text-slate-500">{summaryRows.length} lignes</span>
+                      <span className="text-[11px] text-slate-500">
+                        {summaryRows.length} lignes
+                      </span>
                     </div>
                     {summaryRows.length === 0 ? (
                       <div className="rounded-xl border border-white/[0.05] bg-white/[0.015] px-2 py-1.5 text-xs text-slate-400">
@@ -1204,12 +1427,19 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                     ) : (
                       <div className="grid max-h-[52vh] gap-1 overflow-y-auto pr-1">
                         {summaryRows.map((row) => (
-                          <div key={`mobile-summary-row-${row.id}`} className="rounded-xl border border-white/[0.04] bg-white/[0.01] px-2 py-1.5">
+                          <div
+                            key={`mobile-summary-row-${row.id}`}
+                            className="rounded-xl border border-white/[0.04] bg-white/[0.01] px-2 py-1.5"
+                          >
                             <div className="flex items-center justify-between gap-2">
                               <span className="text-[10px] text-slate-400">{row.roundLabel}</span>
-                              <span className="text-[10px] text-slate-400">{row.totalVotes} votes</span>
+                              <span className="text-[10px] text-slate-400">
+                                {row.totalVotes} votes
+                              </span>
                             </div>
-                            <div className="truncate text-sm font-semibold text-slate-100">{row.title}</div>
+                            <div className="truncate text-sm font-semibold text-slate-100">
+                              {row.title}
+                            </div>
                             <div className="mt-1 grid grid-cols-3 gap-2 text-[11px]">
                               <div>
                                 <div className="text-slate-400">Moy.</div>
@@ -1249,7 +1479,9 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
             <AlertDialogTitle className="text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-indigo-300/90">
               Configuration du vote en cours
             </AlertDialogTitle>
-            <AlertDialogDescription className="sr-only">Edition du nom de la story</AlertDialogDescription>
+            <AlertDialogDescription className="sr-only">
+              Edition du nom de la story
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="rounded-xl border border-white/[0.06] bg-slate-950 p-3">
             <div className="text-sm font-semibold text-slate-100">Renommer la story</div>
@@ -1291,16 +1523,23 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
             <div className="mx-auto mb-2 inline-flex items-center gap-2 rounded-full border border-rose-400/40 bg-rose-500/12 px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-rose-300">
               <span>Quitter</span>
             </div>
-            <AlertDialogTitle className="text-center text-2xl text-slate-100">{fr.gameScreen.leaveQuestionTitle}</AlertDialogTitle>
+            <AlertDialogTitle className="text-center text-2xl text-slate-100">
+              {fr.gameScreen.leaveQuestionTitle}
+            </AlertDialogTitle>
             <AlertDialogDescription className="text-center text-slate-400">
               {fr.game.backToOnlineLobby}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-1 grid grid-cols-1 gap-2 sm:grid-cols-2 sm:space-x-0">
-            <AlertDialogCancel className={cn("h-11 w-full rounded-xl border text-sm font-semibold", CTA_SUBTLE)}>
+            <AlertDialogCancel
+              className={cn("h-11 w-full rounded-xl border text-sm font-semibold", CTA_SUBTLE)}
+            >
               {fr.gameScreen.cancel}
             </AlertDialogCancel>
-            <AlertDialogAction className={cn("h-11 w-full rounded-xl border text-sm font-semibold", CTA_DANGER)} onClick={confirmLeave}>
+            <AlertDialogAction
+              className={cn("h-11 w-full rounded-xl border text-sm font-semibold", CTA_DANGER)}
+              onClick={confirmLeave}
+            >
               {fr.gameScreen.leave}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -1311,16 +1550,23 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
       <AlertDialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
         <AlertDialogContent className={cn(DIALOG_CLS, "max-w-md")}>
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-center text-xl text-slate-100">Reset des votes ?</AlertDialogTitle>
+            <AlertDialogTitle className="text-center text-xl text-slate-100">
+              Reset des votes ?
+            </AlertDialogTitle>
             <AlertDialogDescription className="text-center text-slate-400">
               Des joueurs ont deja vote. Cette action effacera les votes en cours.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-1 grid grid-cols-1 gap-2 sm:grid-cols-2 sm:space-x-0">
-            <AlertDialogCancel className={cn("h-11 w-full rounded-xl border text-sm font-semibold", CTA_SUBTLE)}>
+            <AlertDialogCancel
+              className={cn("h-11 w-full rounded-xl border text-sm font-semibold", CTA_SUBTLE)}
+            >
               {fr.gameScreen.cancel}
             </AlertDialogCancel>
-            <AlertDialogAction className={cn("h-11 w-full rounded-xl border text-sm font-semibold", CTA_DANGER)} onClick={confirmResetVotes}>
+            <AlertDialogAction
+              className={cn("h-11 w-full rounded-xl border text-sm font-semibold", CTA_DANGER)}
+              onClick={confirmResetVotes}
+            >
               {fr.planningPoker.resetVotes}
             </AlertDialogAction>
           </AlertDialogFooter>

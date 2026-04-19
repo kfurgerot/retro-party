@@ -2,7 +2,10 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { PressStartScreen } from "@/components/screens/PressStartScreen";
 import { RetroScreenBackground } from "@/components/screens/RetroScreenBackground";
-import { SelectExperienceScreen, type ExperienceId } from "@/components/screens/SelectExperienceScreen";
+import {
+  SelectExperienceScreen,
+  type ExperienceId,
+} from "@/components/screens/SelectExperienceScreen";
 import { fr } from "@/i18n/fr";
 import { Card, PrimaryButton, SecondaryButton } from "@/components/app-shell";
 import { cn } from "@/lib/utils";
@@ -32,14 +35,14 @@ const Home = () => {
     selectedExperience === "planning-poker"
       ? fr.planningPoker.gameTitle
       : selectedExperience === "agile-radar"
-      ? "Radar Party"
-      : fr.home.title;
+        ? "Radar Party"
+        : fr.home.title;
   const selectedExperienceTitle =
     selectedExperience === "planning-poker"
       ? fr.planningPoker.gameTitle
       : selectedExperience === "agile-radar"
-      ? "Radar Party"
-      : fr.home.title;
+        ? "Radar Party"
+        : fr.home.title;
 
   const prefetchPlayRoute = () => {
     if (playPrefetchedRef.current) return;
@@ -54,9 +57,14 @@ const Home = () => {
   useEffect(() => {
     if (stage === "press-start") return;
 
-    if ("requestIdleCallback" in window) {
-      const idleId = window.requestIdleCallback(() => prefetchPlayRoute(), { timeout: 1200 });
-      return () => window.cancelIdleCallback(idleId);
+    const idleWindow = window as Window & {
+      requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number;
+      cancelIdleCallback?: (handle: number) => void;
+    };
+
+    if (idleWindow.requestIdleCallback && idleWindow.cancelIdleCallback) {
+      const idleId = idleWindow.requestIdleCallback(() => prefetchPlayRoute(), { timeout: 1200 });
+      return () => idleWindow.cancelIdleCallback?.(idleId);
     }
 
     const timeoutId = window.setTimeout(() => prefetchPlayRoute(), 400);
@@ -88,7 +96,12 @@ const Home = () => {
         stepTotal={5}
         onBack={() => setStage("press-start")}
         onSelect={(experience: ExperienceId) => {
-          if (experience !== "retro-party" && experience !== "planning-poker" && experience !== "agile-radar") return;
+          if (
+            experience !== "retro-party" &&
+            experience !== "planning-poker" &&
+            experience !== "agile-radar"
+          )
+            return;
           setSelectedExperience(experience);
           setProgressPct(20);
           setEntryChoice("play");
@@ -122,7 +135,12 @@ const Home = () => {
         </div>
 
         <Card className="mt-6 rounded-md p-4 sm:p-5">
-          <div className={cn("grid flex-1 content-start grid-cols-1 gap-3", selectedExperience !== "planning-poker" ? "sm:grid-cols-2" : "")}>
+          <div
+            className={cn(
+              "grid flex-1 content-start grid-cols-1 gap-3",
+              selectedExperience !== "planning-poker" ? "sm:grid-cols-2" : "",
+            )}
+          >
             <button
               type="button"
               onClick={() => setEntryChoice("play")}
@@ -131,8 +149,8 @@ const Home = () => {
                   selectedExperience === "planning-poker"
                     ? "/play?from=entry&experience=planning-poker"
                     : selectedExperience === "agile-radar"
-                    ? "/radar-party?from=entry&mode=host"
-                    : "/play?from=entry"
+                      ? "/radar-party?from=entry&mode=host"
+                      : "/play?from=entry",
                 )
               }
               onMouseEnter={prefetchPlayRoute}
@@ -142,7 +160,7 @@ const Home = () => {
                 `${APP_SHELL_SURFACE_SOFT} p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900`,
                 entryChoice === "play"
                   ? "border-cyan-300/50 bg-cyan-500/10"
-                  : "hover:border-cyan-300/45 hover:bg-slate-900/70"
+                  : "hover:border-cyan-300/45 hover:bg-slate-900/70",
               )}
             >
               <div className="text-sm font-semibold text-cyan-100">{fr.home.playNow}</div>
@@ -153,14 +171,18 @@ const Home = () => {
                 type="button"
                 onClick={() => setEntryChoice("prepare")}
                 onDoubleClick={() =>
-                  navigate(selectedExperience === "agile-radar" ? "/radar-party?from=entry&mode=join" : "/prepare")
+                  navigate(
+                    selectedExperience === "agile-radar"
+                      ? "/radar-party?from=entry&mode=join"
+                      : "/prepare",
+                  )
                 }
                 title={fr.home.preparePartyTitle}
                 className={cn(
                   `${APP_SHELL_SURFACE_SOFT} p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900`,
                   entryChoice === "prepare"
                     ? "border-cyan-300/50 bg-cyan-500/10"
-                    : "hover:border-cyan-300/45 hover:bg-slate-900/70"
+                    : "hover:border-cyan-300/45 hover:bg-slate-900/70",
                 )}
               >
                 <div className="text-sm font-semibold text-cyan-100">{fr.home.prepareParty}</div>
@@ -169,7 +191,6 @@ const Home = () => {
             ) : null}
           </div>
         </Card>
-
       </Card>
 
       <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 hidden px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:block">
@@ -186,8 +207,8 @@ const Home = () => {
                     selectedExperience === "planning-poker"
                       ? "/play?from=entry&experience=planning-poker"
                       : selectedExperience === "agile-radar"
-                      ? "/radar-party?from=entry&mode=host"
-                      : "/play?from=entry"
+                        ? "/radar-party?from=entry&mode=host"
+                        : "/play?from=entry",
                   );
                   return;
                 }
@@ -218,8 +239,8 @@ const Home = () => {
                     selectedExperience === "planning-poker"
                       ? "/play?from=entry&experience=planning-poker"
                       : selectedExperience === "agile-radar"
-                      ? "/radar-party?from=entry&mode=host"
-                      : "/play?from=entry"
+                        ? "/radar-party?from=entry&mode=host"
+                        : "/play?from=entry",
                   );
                   return;
                 }

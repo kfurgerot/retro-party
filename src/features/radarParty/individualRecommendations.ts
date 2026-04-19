@@ -31,11 +31,14 @@ type AxisCopy = {
 
 const AXIS_COPY: Record<RadarDimension, AxisCopy> = {
   collaboration: {
-    reinforceSuggestion: "Rendre la collaboration plus visible avec un rituel court de coordination.",
-    reinforceFirstStep: "Tester un point de synchro de 10 minutes sur les blocages pendant 2 semaines.",
+    reinforceSuggestion:
+      "Rendre la collaboration plus visible avec un rituel court de coordination.",
+    reinforceFirstStep:
+      "Tester un point de synchro de 10 minutes sur les blocages pendant 2 semaines.",
     reinforceIndicator: "Nombre de blocages leves en moins de 48h.",
     preserveSuggestion: "Conserver les pratiques d'entraide qui fonctionnent deja dans l'equipe.",
-    preserveFirstStep: "Identifier un rituel de collaboration efficace et le garder dans le prochain sprint.",
+    preserveFirstStep:
+      "Identifier un rituel de collaboration efficace et le garder dans le prochain sprint.",
     preserveIndicator: "Maintien du score collaboration et feedback positif sur la coordination.",
   },
   fun: {
@@ -80,9 +83,11 @@ const AXIS_COPY: Record<RadarDimension, AxisCopy> = {
   },
   resources: {
     reinforceSuggestion: "Traiter les contraintes de moyens qui freinent le delivery.",
-    reinforceFirstStep: "Lister les 3 blocages ressources prioritaires et choisir le premier a lever.",
+    reinforceFirstStep:
+      "Lister les 3 blocages ressources prioritaires et choisir le premier a lever.",
     reinforceIndicator: "Nombre de blocages ressources leves en 2 semaines.",
-    preserveSuggestion: "Preserver les conditions de travail qui facilitent actuellement la livraison.",
+    preserveSuggestion:
+      "Preserver les conditions de travail qui facilitent actuellement la livraison.",
     preserveFirstStep: "Documenter les ressources critiques a securiser sur la periode.",
     preserveIndicator: "Maintien du score resources et baisse des interruptions.",
   },
@@ -117,7 +122,7 @@ const DIMENSION_INDEX = RADAR_DIMENSIONS.reduce(
     acc[dimension] = index;
     return acc;
   },
-  {} as Record<RadarDimension, number>
+  {} as Record<RadarDimension, number>,
 );
 
 function toAxisScores(radar: RadarAxisValues) {
@@ -142,7 +147,11 @@ function sortDescendingStable(radar: RadarAxisValues) {
   });
 }
 
-function buildCard(kind: IndividualRecommendationKind, axis: RadarDimension, score: number): IndividualRecommendationCard {
+function buildCard(
+  kind: IndividualRecommendationKind,
+  axis: RadarDimension,
+  score: number,
+): IndividualRecommendationCard {
   const axisLabel = RADAR_DIMENSION_LABELS[axis];
   const copy = AXIS_COPY[axis];
 
@@ -206,4 +215,3 @@ export function buildIndividualRecommendations(radar: RadarAxisValues): Individu
     cards: cards.slice(0, 3),
   };
 }
-

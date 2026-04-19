@@ -1,11 +1,10 @@
-
 // server/boardGenerator.js
 // Deterministic random board generator (shared by all clients in a room via server state).
 // Generates a loop board with branching intersections.
 
 function mulberry32(seed) {
   return function () {
-    let t = (seed += 0x6D2B79F5);
+    let t = (seed += 0x6d2b79f5);
     t = Math.imul(t ^ (t >>> 15), t | 1);
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
@@ -87,28 +86,46 @@ export function generateRandomBoard(seed, opts = {}) {
   };
 
   // Main directed loop (clockwise).
-  pathByWaypoints([[2, 2], [18, 2], [18, 10], [2, 10], [2, 2]]);
+  pathByWaypoints([
+    [2, 2],
+    [18, 2],
+    [18, 10],
+    [2, 10],
+    [2, 2],
+  ]);
   const stableMainPathIds = new Set(mainPathIds);
   mainPathIds.clear();
 
   // Branch 1: top lane detour.
   pathByWaypoints([
-    [8, 2], [8, 6], [14, 6], [14, 2],
+    [8, 2],
+    [8, 6],
+    [14, 6],
+    [14, 2],
   ]);
 
   // Branch 2: right-side middle detour.
   pathByWaypoints([
-    [18, 5], [15, 5], [15, 8], [18, 8],
+    [18, 5],
+    [15, 5],
+    [15, 8],
+    [18, 8],
   ]);
 
   // Branch 3: bottom-middle detour.
   pathByWaypoints([
-    [12, 10], [12, 7], [10, 7], [10, 10],
+    [12, 10],
+    [12, 7],
+    [10, 7],
+    [10, 10],
   ]);
 
   // Branch 4: left-side shortcut.
   pathByWaypoints([
-    [2, 7], [5, 7], [5, 4], [2, 4],
+    [2, 7],
+    [5, 7],
+    [5, 4],
+    [2, 4],
   ]);
   validateBoardGraph(tiles);
 
@@ -147,7 +164,9 @@ function validateBoardGraph(tiles) {
   const directedEdges = new Set();
 
   for (const tile of tiles) {
-    const next = (tile.nextTileIds ?? []).filter((id) => Number.isInteger(id) && id >= 0 && id < tiles.length && id !== tile.id);
+    const next = (tile.nextTileIds ?? []).filter(
+      (id) => Number.isInteger(id) && id >= 0 && id < tiles.length && id !== tile.id,
+    );
     if (next.length < 1) throw new Error(`Tile ${tile.id} has no outgoing edge`);
     if (next.length >= 2) branchCount += 1;
     tile.nextTileIds = next;
@@ -237,7 +256,7 @@ function validateBoardShopsInternal(tiles) {
   }
 
   const starIds = new Set(
-    tiles.filter((tile) => String(tile.type).toLowerCase() === "bonus").map((tile) => tile.id)
+    tiles.filter((tile) => String(tile.type).toLowerCase() === "bonus").map((tile) => tile.id),
   );
   for (const tile of shopTiles) {
     const next = Array.isArray(tile.nextTileIds) ? tile.nextTileIds : [];
@@ -286,14 +305,17 @@ function paintTileTypes(tiles, rng, mainPathIds = new Set()) {
   const bonusCount = 2;
   const bonusIdGap = Math.max(8, Math.floor(tiles.length * 0.16));
   const bonusGridGap = 6;
-  const bonusCandidates = tiles.map((tile) => tile.id).filter((id) => id >= minIdx && !used.has(id));
+  const bonusCandidates = tiles
+    .map((tile) => tile.id)
+    .filter((id) => id >= minIdx && !used.has(id));
   const pickBonusWithGap = (gapById, gapByGrid, selected) => {
     const shuffled = [...bonusCandidates].sort(() => (rng() < 0.5 ? -1 : 1));
     for (const candidate of shuffled) {
       if (used.has(candidate)) continue;
-      const tooClose = selected.some((otherId) =>
-        Math.abs(otherId - candidate) < gapById
-        || manhattanTileDistance(tiles[otherId], tiles[candidate]) < gapByGrid
+      const tooClose = selected.some(
+        (otherId) =>
+          Math.abs(otherId - candidate) < gapById ||
+          manhattanTileDistance(tiles[otherId], tiles[candidate]) < gapByGrid,
       );
       if (tooClose) continue;
       used.add(candidate);
@@ -306,17 +328,22 @@ function paintTileTypes(tiles, rng, mainPathIds = new Set()) {
   const bonusSelected = [];
   while (bonusSelected.length < bonusCount) {
     if (pickBonusWithGap(bonusIdGap, bonusGridGap, bonusSelected)) continue;
-    if (pickBonusWithGap(Math.max(6, bonusIdGap - 2), Math.max(4, bonusGridGap - 2), bonusSelected)) continue;
+    if (pickBonusWithGap(Math.max(6, bonusIdGap - 2), Math.max(4, bonusGridGap - 2), bonusSelected))
+      continue;
     if (pickBonusWithGap(4, 2, bonusSelected)) continue;
     if (place("bonus") == null) break;
     const placed = tiles
-      .filter((tile) => String(tile.type).toLowerCase() === "bonus" && !bonusSelected.includes(tile.id))
+      .filter(
+        (tile) => String(tile.type).toLowerCase() === "bonus" && !bonusSelected.includes(tile.id),
+      )
       .map((tile) => tile.id)
       .sort((a, b) => b - a)[0];
     if (Number.isInteger(placed)) bonusSelected.push(placed);
   }
   if (bonusSelected.length < bonusCount) {
-    const fallbackCandidates = tiles.map((tile) => tile.id).filter((id) => id >= minIdx && !bonusSelected.includes(id));
+    const fallbackCandidates = tiles
+      .map((tile) => tile.id)
+      .filter((id) => id >= minIdx && !bonusSelected.includes(id));
     for (const candidate of fallbackCandidates) {
       if (bonusSelected.length >= bonusCount) break;
       if (used.has(candidate)) continue;
@@ -352,7 +379,9 @@ function paintTileTypes(tiles, rng, mainPathIds = new Set()) {
       if (used.has(id)) return false;
       if (mainPathIds.has(id)) return false;
       const incomingCount = (incoming.get(id) ?? []).length;
-      const outgoingCount = Array.isArray(tiles[id]?.nextTileIds) ? tiles[id].nextTileIds.length : 0;
+      const outgoingCount = Array.isArray(tiles[id]?.nextTileIds)
+        ? tiles[id].nextTileIds.length
+        : 0;
       return incomingCount >= 1 && outgoingCount >= 1;
     });
 
@@ -365,9 +394,7 @@ function paintTileTypes(tiles, rng, mainPathIds = new Set()) {
     }
   });
 
-  const fallback = tiles
-    .map((tile) => tile.id)
-    .filter((id) => id >= minIdx && !used.has(id));
+  const fallback = tiles.map((tile) => tile.id).filter((id) => id >= minIdx && !used.has(id));
   while (selected.length < count) {
     const chosen = chooseShopCandidate(fallback, selected, starIds, tiles, minGap, rng);
     if (chosen == null) break;
@@ -384,4 +411,3 @@ function paintTileTypes(tiles, rng, mainPathIds = new Set()) {
     throw new Error(`Invalid shop layout: ${JSON.stringify(violations[0])}`);
   }
 }
-

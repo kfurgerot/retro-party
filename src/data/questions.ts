@@ -105,7 +105,7 @@ export function pickQuestion(type: QuestionType): string {
 
 export function pickUniqueQuestion(type: QuestionType, usedQuestionTexts: string[] = []): string {
   const usedSet = new Set(
-    usedQuestionTexts.filter((entry) => typeof entry === "string" && entry.length > 0)
+    usedQuestionTexts.filter((entry) => typeof entry === "string" && entry.length > 0),
   );
   const sameTypePool = getPoolForType(type);
   const sameTypeAvailable = (sameTypePool ?? []).filter((text) => !usedSet.has(text));

@@ -50,28 +50,34 @@ export class PokerCard {
     this.isSelected = !!options.selected;
     this.isInteractive = options.interactive !== false;
 
-    this.titleText = new Text(this.value, new TextStyle({
-      fontFamily: "'Trebuchet MS', 'Segoe UI', Arial, sans-serif",
-      fill: 0x0f172a,
-      fontSize: Math.max(16, Math.round(this.height * 0.32)),
-      fontWeight: "700",
-      stroke: 0xffffff,
-      strokeThickness: 1.2,
-      lineJoin: "round",
-      miterLimit: 2,
-    }));
+    this.titleText = new Text(
+      this.value,
+      new TextStyle({
+        fontFamily: "'Trebuchet MS', 'Segoe UI', Arial, sans-serif",
+        fill: 0x0f172a,
+        fontSize: Math.max(16, Math.round(this.height * 0.32)),
+        fontWeight: "700",
+        stroke: 0xffffff,
+        strokeThickness: 1.2,
+        lineJoin: "round",
+        miterLimit: 2,
+      }),
+    );
     this.titleText.resolution = 2;
     this.titleText.anchor.set(0.5);
 
-    this.backText = new Text("VOTE", new TextStyle({
-      fontFamily: "'Trebuchet MS', 'Segoe UI', Arial, sans-serif",
-      fill: 0x67e8f9,
-      fontSize: Math.max(10, Math.round(this.height * 0.15)),
-      letterSpacing: 1.2,
-      fontWeight: "700",
-      lineJoin: "round",
-      miterLimit: 2,
-    }));
+    this.backText = new Text(
+      "VOTE",
+      new TextStyle({
+        fontFamily: "'Trebuchet MS', 'Segoe UI', Arial, sans-serif",
+        fill: 0x67e8f9,
+        fontSize: Math.max(10, Math.round(this.height * 0.15)),
+        letterSpacing: 1.2,
+        fontWeight: "700",
+        lineJoin: "round",
+        miterLimit: 2,
+      }),
+    );
     this.backText.resolution = 2;
     this.backText.anchor.set(0.5);
 
@@ -181,10 +187,10 @@ export class PokerCard {
     const borderColor = this.isSelected
       ? SELECTED_BORDER
       : this.isHover
-      ? HOVER_BORDER
-      : this.isHidden
-      ? BACK_BORDER
-      : FACE_BORDER;
+        ? HOVER_BORDER
+        : this.isHidden
+          ? BACK_BORDER
+          : FACE_BORDER;
 
     const borderThickness = this.isSelected ? 4 : this.isHover ? 3 : 2;
 
@@ -195,7 +201,13 @@ export class PokerCard {
 
     if (this.isHover || this.isSelected) {
       this.face.lineStyle(2, borderColor, this.isSelected ? 0.9 : 0.5);
-      this.face.drawRoundedRect(-this.width / 2 - 3, -this.height / 2 - 3, this.width + 6, this.height + 6, 14);
+      this.face.drawRoundedRect(
+        -this.width / 2 - 3,
+        -this.height / 2 - 3,
+        this.width + 6,
+        this.height + 6,
+        14,
+      );
     }
 
     this.titleText.visible = !this.isHidden;

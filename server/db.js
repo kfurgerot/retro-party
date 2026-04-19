@@ -1,6 +1,7 @@
 import { Pool } from "pg";
 
-const DATABASE_URL = process.env.DATABASE_URL || "postgresql://retro:retro_pwd@localhost:5432/retro_party";
+const DATABASE_URL =
+  process.env.DATABASE_URL || "postgresql://retro:retro_pwd@localhost:5432/retro_party";
 
 export const pool = new Pool({
   connectionString: DATABASE_URL,
@@ -32,10 +33,10 @@ export async function initDatabase() {
     );
   `);
   await pool.query(
-    "CREATE INDEX IF NOT EXISTS idx_game_templates_user_id ON game_templates(user_id);"
+    "CREATE INDEX IF NOT EXISTS idx_game_templates_user_id ON game_templates(user_id);",
   );
   await pool.query(
-    "CREATE INDEX IF NOT EXISTS idx_game_templates_user_updated ON game_templates(user_id, updated_at DESC);"
+    "CREATE INDEX IF NOT EXISTS idx_game_templates_user_updated ON game_templates(user_id, updated_at DESC);",
   );
 
   await pool.query(`
@@ -51,10 +52,10 @@ export async function initDatabase() {
     );
   `);
   await pool.query(
-    "CREATE INDEX IF NOT EXISTS idx_custom_questions_template_id ON custom_questions(template_id);"
+    "CREATE INDEX IF NOT EXISTS idx_custom_questions_template_id ON custom_questions(template_id);",
   );
   await pool.query(
-    "CREATE UNIQUE INDEX IF NOT EXISTS uniq_template_question_order ON custom_questions(template_id, sort_order);"
+    "CREATE UNIQUE INDEX IF NOT EXISTS uniq_template_question_order ON custom_questions(template_id, sort_order);",
   );
 
   await pool.query(`
@@ -71,9 +72,11 @@ export async function initDatabase() {
       ended_at TIMESTAMPTZ NULL
     );
   `);
-  await pool.query("CREATE INDEX IF NOT EXISTS idx_rooms_created_by_user_id ON rooms(created_by_user_id);");
   await pool.query(
-    "CREATE INDEX IF NOT EXISTS idx_rooms_source_template_id ON rooms(source_template_id);"
+    "CREATE INDEX IF NOT EXISTS idx_rooms_created_by_user_id ON rooms(created_by_user_id);",
+  );
+  await pool.query(
+    "CREATE INDEX IF NOT EXISTS idx_rooms_source_template_id ON rooms(source_template_id);",
   );
 
   await pool.query(`
@@ -89,10 +92,10 @@ export async function initDatabase() {
     );
   `);
   await pool.query(
-    "CREATE INDEX IF NOT EXISTS idx_auth_sessions_user_id ON auth_sessions(user_id);"
+    "CREATE INDEX IF NOT EXISTS idx_auth_sessions_user_id ON auth_sessions(user_id);",
   );
   await pool.query(
-    "CREATE INDEX IF NOT EXISTS idx_auth_sessions_expires_at ON auth_sessions(expires_at);"
+    "CREATE INDEX IF NOT EXISTS idx_auth_sessions_expires_at ON auth_sessions(expires_at);",
   );
 
   await pool.query(`
@@ -106,10 +109,10 @@ export async function initDatabase() {
     );
   `);
   await pool.query(
-    "CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user_id ON password_reset_tokens(user_id);"
+    "CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user_id ON password_reset_tokens(user_id);",
   );
   await pool.query(
-    "CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_expires_at ON password_reset_tokens(expires_at);"
+    "CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_expires_at ON password_reset_tokens(expires_at);",
   );
 
   await pool.query(`
@@ -126,16 +129,16 @@ export async function initDatabase() {
     );
   `);
   await pool.query(
-    "ALTER TABLE radar_sessions ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'lobby';"
+    "ALTER TABLE radar_sessions ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'lobby';",
   );
   await pool.query(
-    "ALTER TABLE radar_sessions ADD COLUMN IF NOT EXISTS started_at TIMESTAMPTZ NULL;"
+    "ALTER TABLE radar_sessions ADD COLUMN IF NOT EXISTS started_at TIMESTAMPTZ NULL;",
   );
   await pool.query(
-    "ALTER TABLE radar_sessions ADD COLUMN IF NOT EXISTS host_participates BOOLEAN NOT NULL DEFAULT true;"
+    "ALTER TABLE radar_sessions ADD COLUMN IF NOT EXISTS host_participates BOOLEAN NOT NULL DEFAULT true;",
   );
   await pool.query(
-    "CREATE INDEX IF NOT EXISTS idx_radar_sessions_created_by_user_id ON radar_sessions(created_by_user_id);"
+    "CREATE INDEX IF NOT EXISTS idx_radar_sessions_created_by_user_id ON radar_sessions(created_by_user_id);",
   );
 
   await pool.query(`
@@ -151,19 +154,19 @@ export async function initDatabase() {
     );
   `);
   await pool.query(
-    "ALTER TABLE radar_participants ADD COLUMN IF NOT EXISTS avatar INT NOT NULL DEFAULT 0;"
+    "ALTER TABLE radar_participants ADD COLUMN IF NOT EXISTS avatar INT NOT NULL DEFAULT 0;",
   );
   await pool.query(
-    "ALTER TABLE radar_participants ADD COLUMN IF NOT EXISTS is_host BOOLEAN NOT NULL DEFAULT false;"
+    "ALTER TABLE radar_participants ADD COLUMN IF NOT EXISTS is_host BOOLEAN NOT NULL DEFAULT false;",
   );
   await pool.query(
-    "ALTER TABLE radar_participants ADD COLUMN IF NOT EXISTS progress_answered INT NOT NULL DEFAULT 0;"
+    "ALTER TABLE radar_participants ADD COLUMN IF NOT EXISTS progress_answered INT NOT NULL DEFAULT 0;",
   );
   await pool.query(
-    "ALTER TABLE radar_participants ADD COLUMN IF NOT EXISTS progress_total INT NOT NULL DEFAULT 50;"
+    "ALTER TABLE radar_participants ADD COLUMN IF NOT EXISTS progress_total INT NOT NULL DEFAULT 50;",
   );
   await pool.query(
-    "CREATE INDEX IF NOT EXISTS idx_radar_participants_session_id ON radar_participants(session_id);"
+    "CREATE INDEX IF NOT EXISTS idx_radar_participants_session_id ON radar_participants(session_id);",
   );
 
   await pool.query(`
@@ -183,7 +186,7 @@ export async function initDatabase() {
     );
   `);
   await pool.query(
-    "CREATE INDEX IF NOT EXISTS idx_radar_responses_session_id ON radar_responses(session_id);"
+    "CREATE INDEX IF NOT EXISTS idx_radar_responses_session_id ON radar_responses(session_id);",
   );
 
   await pool.query(`

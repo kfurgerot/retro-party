@@ -20,10 +20,14 @@ export const SpectatorsPanel: React.FC<Props> = ({ spectators, compact = false }
               className="flex items-center justify-between rounded border border-cyan-300/20 bg-slate-950/55 px-2 py-1.5"
             >
               <div className="flex min-w-0 items-center gap-2">
-                <span className={compact ? "text-base" : "text-lg"}>{AVATARS[spectator.avatar] ?? ":)"}</span>
+                <span className={compact ? "text-base" : "text-lg"}>
+                  {AVATARS[spectator.avatar] ?? ":)"}
+                </span>
                 <span className="truncate text-xs text-cyan-50">{spectator.name}</span>
               </div>
-              <div className="text-[10px] text-slate-300">{spectator.connected ? "ONLINE" : "OFF"}</div>
+              <div className="text-[10px] text-slate-300">
+                {spectator.connected ? "ONLINE" : "OFF"}
+              </div>
             </div>
           ))
         ) : (
@@ -35,4 +39,3 @@ export const SpectatorsPanel: React.FC<Props> = ({ spectators, compact = false }
     </Card>
   );
 };
-

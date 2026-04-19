@@ -18,7 +18,7 @@ const PlayerCardComponent: React.FC<PlayerCardProps> = ({ player, isActive, comp
           "flex items-center gap-2 rounded-xl border px-3 py-2.5 transition",
           isActive
             ? "border-pink-400/55 bg-pink-500/18 shadow-[0_0_0_1px_rgba(236,72,153,0.22)]"
-            : "border-pink-400/20 bg-slate-900/52"
+            : "border-pink-400/20 bg-slate-900/52",
         )}
         style={{ borderColor: isActive ? player.color : undefined }}
       >
@@ -50,7 +50,9 @@ const PlayerCardComponent: React.FC<PlayerCardProps> = ({ player, isActive, comp
         </div>
         <div className="flex-1">
           <div className="font-pixel text-sm">{player.name}</div>
-          <div className="mt-1 text-xs opacity-80">{player.isHost ? fr.terms.host : fr.terms.player}</div>
+          <div className="mt-1 text-xs opacity-80">
+            {player.isHost ? fr.terms.host : fr.terms.player}
+          </div>
         </div>
         <div className="text-right">
           <div className="font-pixel text-xs">PTS {player.points ?? 0}</div>

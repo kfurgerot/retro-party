@@ -3,10 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/net/api";
-import {
-  Dialog,
-  DialogContent,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 type ToolId = "planning-poker" | "retro-party" | "radar-party" | "draw-duel" | "retro-generator";
 
@@ -132,12 +129,20 @@ const AuthModal = ({
         onSuccess();
         onOpenChange(false);
       } else if (tab === "register") {
-        if (!displayName.trim()) { setError("Le nom d'affichage est requis."); setLoading(false); return; }
+        if (!displayName.trim()) {
+          setError("Le nom d'affichage est requis.");
+          setLoading(false);
+          return;
+        }
         await register(email.trim(), password, displayName.trim());
         onSuccess();
         onOpenChange(false);
       } else {
-        if (!email.trim()) { setError("Saisis ton adresse e-mail."); setLoading(false); return; }
+        if (!email.trim()) {
+          setError("Saisis ton adresse e-mail.");
+          setLoading(false);
+          return;
+        }
         const res = await api.forgotPassword({ email: email.trim() });
         setInfo(res.message);
       }
@@ -278,8 +283,7 @@ const ToolCard = ({
             ? `linear-gradient(135deg, ${tool.color}12, ${tool.color}06)`
             : "rgba(255,255,255,0.02)",
         borderColor: active && isLive ? `${tool.color}55` : "rgba(255,255,255,0.06)",
-        boxShadow:
-          active && isLive ? `0 0 0 1px ${tool.color}30, 0 8px 32px ${tool.glow}` : "none",
+        boxShadow: active && isLive ? `0 0 0 1px ${tool.color}30, 0 8px 32px ${tool.glow}` : "none",
       }}
     >
       {isSelected && isLive && (
@@ -346,16 +350,35 @@ const QuickActionZone = ({
             type="button"
             onClick={isLoggedIn ? onPrepare : onLoginRequired}
             className="flex items-center gap-1.5 rounded-lg border border-white/[0.07] bg-white/[0.03] px-3 py-1.5 text-xs font-semibold text-slate-400 transition hover:border-white/[0.12] hover:bg-white/[0.06] hover:text-slate-200"
-            title={isLoggedIn ? "Gérer mes templates de questions" : "Connectez-vous pour préparer une session"}
+            title={
+              isLoggedIn
+                ? "Gérer mes templates de questions"
+                : "Connectez-vous pour préparer une session"
+            }
           >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg
+              width="13"
+              height="13"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
               <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
               <rect x="9" y="3" width="6" height="4" rx="1" />
               <path d="M9 12h6M9 16h4" />
             </svg>
             Préparer
             {!isLoggedIn && (
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="ml-0.5 text-slate-600">
+              <svg
+                width="11"
+                height="11"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                className="ml-0.5 text-slate-600"
+              >
                 <rect x="3" y="11" width="18" height="11" rx="2" />
                 <path d="M7 11V7a5 5 0 0 1 10 0v4" />
               </svg>
@@ -372,29 +395,29 @@ const QuickActionZone = ({
           className="min-w-0 flex-1 bg-transparent font-mono text-sm tracking-widest text-slate-100 outline-none placeholder:text-slate-600"
         />
         <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={() => canJoin && onJoin(code)}
-          className={cn(
-            "flex-1 sm:flex-none rounded-lg px-4 py-2 text-[13px] font-semibold transition-all",
-            canJoin ? "cursor-pointer text-white" : "cursor-default bg-white/5 text-slate-600",
-          )}
-          style={canJoin ? { background: tool.color } : undefined}
-        >
-          Rejoindre
-        </button>
-        <div className="h-5 w-px bg-white/[0.08]" />
-        <button
-          type="button"
-          onClick={onHost}
-          className="flex-1 sm:flex-none rounded-lg px-4 py-2 text-[13px] font-semibold text-white transition-all"
-          style={{
-            background: `linear-gradient(135deg, ${tool.color}, ${tool.color}cc)`,
-            boxShadow: `0 4px 12px ${tool.glow}`,
-          }}
-        >
-          + Créer
-        </button>
+          <button
+            type="button"
+            onClick={() => canJoin && onJoin(code)}
+            className={cn(
+              "flex-1 sm:flex-none rounded-lg px-4 py-2 text-[13px] font-semibold transition-all",
+              canJoin ? "cursor-pointer text-white" : "cursor-default bg-white/5 text-slate-600",
+            )}
+            style={canJoin ? { background: tool.color } : undefined}
+          >
+            Rejoindre
+          </button>
+          <div className="h-5 w-px bg-white/[0.08]" />
+          <button
+            type="button"
+            onClick={onHost}
+            className="flex-1 sm:flex-none rounded-lg px-4 py-2 text-[13px] font-semibold text-white transition-all"
+            style={{
+              background: `linear-gradient(135deg, ${tool.color}, ${tool.color}cc)`,
+              boxShadow: `0 4px 12px ${tool.glow}`,
+            }}
+          >
+            + Créer
+          </button>
         </div>
       </div>
     </div>
@@ -502,8 +525,8 @@ export default function Portal() {
             </div>
 
             {/* User badge / login button */}
-            {!authLoading && (
-              user ? (
+            {!authLoading &&
+              (user ? (
                 <div className="flex items-center gap-2">
                   <div className="flex items-center gap-2.5 rounded-full border border-white/[0.07] bg-white/[0.03] px-3.5 py-2">
                     <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-pink-500 text-xs font-bold">
@@ -517,7 +540,14 @@ export default function Portal() {
                     className="rounded-full border border-white/[0.07] bg-white/[0.03] px-3.5 py-2 text-[13px] text-slate-500 transition hover:bg-white/[0.06] hover:text-slate-300"
                     title="Se déconnecter"
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
                       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
                       <polyline points="16 17 21 12 16 7" />
                       <line x1="21" y1="12" x2="9" y2="12" />
@@ -527,17 +557,26 @@ export default function Portal() {
               ) : (
                 <button
                   type="button"
-                  onClick={() => { setPendingPrepare(false); setLoginOpen(true); }}
+                  onClick={() => {
+                    setPendingPrepare(false);
+                    setLoginOpen(true);
+                  }}
                   className="flex items-center gap-2 rounded-full border border-indigo-500/40 bg-indigo-500/10 px-4 py-2 text-[13px] font-semibold text-indigo-300 transition hover:bg-indigo-500/20 hover:text-indigo-200"
                 >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                     <circle cx="12" cy="7" r="4" />
                   </svg>
                   Se connecter
                 </button>
-              )
-            )}
+              ))}
           </div>
         </header>
 
@@ -586,12 +625,23 @@ export default function Portal() {
             >
               <span className="text-lg leading-none">📋</span>
               <div className="min-w-0 flex-1">
-                <div className="text-[13px] font-semibold text-slate-200">Préparer une Rétro Party</div>
+                <div className="text-[13px] font-semibold text-slate-200">
+                  Préparer une Rétro Party
+                </div>
                 <div className="text-[11px] text-slate-500">
-                  {user ? "Gérer tes templates et questions personnalisées" : "Connexion requise · Crée tes questions Agile à l'avance"}
+                  {user
+                    ? "Gérer tes templates et questions personnalisées"
+                    : "Connexion requise · Crée tes questions Agile à l'avance"}
                 </div>
               </div>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#475569"
+                strokeWidth="2"
+              >
                 <path d="m9 18 6-6-6-6" />
               </svg>
             </button>

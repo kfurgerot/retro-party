@@ -16,7 +16,8 @@ export const fr = {
     prepareParty: "Preparer une partie",
     quickPartyTitle: "Creer ou rejoindre une partie rapide",
     preparePartyTitle: "Configurer une session avancee pour plus tard",
-    modeDescription: "Choisis ton mode : lance une partie immediatement ou prepare une session personnalisee pour plus tard.",
+    modeDescription:
+      "Choisis ton mode : lance une partie immediatement ou prepare une session personnalisee pour plus tard.",
   },
   pressStart: {
     brand: "Retro Party Online",
@@ -516,7 +517,8 @@ export const fr = {
     saveButton: "Enregistrer",
     deleteThemeConfirmTitle: "Supprimer toutes les questions du theme ?",
     deleteThemeConfirmWithCount: "Cette action supprimera {count} question(s) du theme {theme}.",
-    deleteThemeConfirmFallback: "Cette action supprimera toutes les questions du theme selectionne.",
+    deleteThemeConfirmFallback:
+      "Cette action supprimera toutes les questions du theme selectionne.",
     deleting: "Suppression...",
     comingSoon: "Bientot disponible",
     backToTools: "Retour aux outils",
@@ -541,4 +543,3 @@ export const fr = {
     backHome: "Retour a l'accueil",
   },
 } as const;
-

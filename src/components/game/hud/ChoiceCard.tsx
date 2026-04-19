@@ -25,9 +25,11 @@ export const ChoiceCard: React.FC<ChoiceCardProps> = ({
       disabled={onClick ? disabled : undefined}
       className={cn(
         "w-full rounded-xl border p-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
-        selected ? "border-pink-400 bg-pink-500/20 shadow-[0_0_0_1px_rgba(236,72,153,0.24)]" : "border-pink-400/25 bg-slate-900/55",
+        selected
+          ? "border-pink-400 bg-pink-500/20 shadow-[0_0_0_1px_rgba(236,72,153,0.24)]"
+          : "border-pink-400/25 bg-slate-900/55",
         disabled && "cursor-not-allowed opacity-60",
-        !disabled && "hover:border-pink-400/40 hover:bg-slate-900/75"
+        !disabled && "hover:border-pink-400/40 hover:bg-slate-900/75",
       )}
       onClick={onClick}
     >
@@ -36,7 +38,9 @@ export const ChoiceCard: React.FC<ChoiceCardProps> = ({
           <div className="text-sm font-semibold text-slate-100">{title}</div>
           <div className="mt-1 text-xs text-slate-300">{description}</div>
         </div>
-        {quantityLabel ? <div className="text-sm font-bold text-pink-200">{quantityLabel}</div> : null}
+        {quantityLabel ? (
+          <div className="text-sm font-bold text-pink-200">{quantityLabel}</div>
+        ) : null}
       </div>
     </Comp>
   );

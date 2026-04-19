@@ -1,7 +1,16 @@
 import React from "react";
 import { cn } from "@/lib/utils";
 
-type ActionBadgeTone = "move" | "decision" | "question" | "shop" | "minigame" | "system" | "active" | "next" | "neutral";
+type ActionBadgeTone =
+  | "move"
+  | "decision"
+  | "question"
+  | "shop"
+  | "minigame"
+  | "system"
+  | "active"
+  | "next"
+  | "neutral";
 
 const toneClass: Record<ActionBadgeTone, string> = {
   move: "border-sky-300/35 bg-sky-500/12 text-sky-100",
@@ -27,11 +36,10 @@ export const ActionBadge: React.FC<ActionBadgeProps> = ({ label, tone, className
       className={cn(
         "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-[0.08em]",
         toneClass[tone],
-        className
+        className,
       )}
     >
       {label}
     </span>
   );
 };
-

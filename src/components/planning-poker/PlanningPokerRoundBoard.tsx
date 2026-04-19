@@ -44,7 +44,7 @@ const normalizeVoteValue = (value: string | null) => {
 
 const getVoteBorderStyle = (
   vote: string | null,
-  voteSystem: PlanningPokerVoteSystem
+  voteSystem: PlanningPokerVoteSystem,
 ): React.CSSProperties | undefined => {
   const normalizedVote = normalizeVoteValue(vote);
   if (!normalizedVote) return undefined;
@@ -79,7 +79,7 @@ const SeatVoteCard: React.FC<{
   const valueLabel = normalizedVote ?? "-";
   const revealedCardStyle = useMemo(
     () => (revealed ? getVoteBorderStyle(normalizedVote, voteSystem) : undefined),
-    [normalizedVote, revealed, voteSystem]
+    [normalizedVote, revealed, voteSystem],
   );
 
   useEffect(() => {
@@ -157,9 +157,15 @@ export const PlanningPokerRoundBoard: React.FC<Props> = ({
 
         {/* Story card */}
         <div className="absolute left-1/2 top-1/2 z-10 w-[74%] max-w-[460px] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-indigo-500/30 bg-indigo-500/8 px-3 py-2 text-center sm:w-[66%] sm:px-4 sm:py-3">
-          <p className="mb-1 truncate text-[10px] font-semibold uppercase tracking-[0.08em] text-indigo-200/80 sm:text-[11px]">{displayedStory}</p>
+          <p className="mb-1 truncate text-[10px] font-semibold uppercase tracking-[0.08em] text-indigo-200/80 sm:text-[11px]">
+            {displayedStory}
+          </p>
           <p className="text-xs font-medium text-slate-200 sm:text-sm">
-            {revealed ? "Revelation des votes" : votesOpen ? "En attente des votes..." : "En attente du lancement des votes"}
+            {revealed
+              ? "Revelation des votes"
+              : votesOpen
+                ? "En attente des votes..."
+                : "En attente du lancement des votes"}
           </p>
         </div>
 
@@ -175,7 +181,9 @@ export const PlanningPokerRoundBoard: React.FC<Props> = ({
               <div className="flex h-8 w-8 items-center justify-center rounded-full border border-white/[0.12] bg-slate-900/85 text-base shadow-[0_0_0_1px_rgba(99,102,241,0.1)] sm:h-10 sm:w-10 sm:text-lg">
                 {AVATARS[player.avatar] ?? ":)"}
               </div>
-              <div className="max-w-[78px] truncate text-center text-[10px] text-slate-300 sm:max-w-[90px] sm:text-[11px]">{player.name}</div>
+              <div className="max-w-[78px] truncate text-center text-[10px] text-slate-300 sm:max-w-[90px] sm:text-[11px]">
+                {player.name}
+              </div>
               {player.isHost ? <div className="text-[10px] text-indigo-400">Host</div> : null}
             </div>
           </div>

@@ -12,7 +12,9 @@ export function createGameButton({ label, onPress, labelFontSize }: GameButtonOp
   const compactLabel = label.length > 11;
   const resolvedFontSize =
     labelFontSize ??
-    (compactLabel ? Math.max(6, PIXI_GAME_THEME.text.actionSize - 1) : PIXI_GAME_THEME.text.actionSize);
+    (compactLabel
+      ? Math.max(6, PIXI_GAME_THEME.text.actionSize - 1)
+      : PIXI_GAME_THEME.text.actionSize);
   const defaultView = new Graphics();
   defaultView.lineStyle(2, PIXI_GAME_THEME.panel.border, 0.55, 0.5, true);
   defaultView.beginFill(PIXI_GAME_THEME.colors.cyan, 0.92);
@@ -21,7 +23,7 @@ export function createGameButton({ label, onPress, labelFontSize }: GameButtonOp
     0,
     PIXI_GAME_THEME.button.width,
     PIXI_GAME_THEME.button.height,
-    PIXI_GAME_THEME.button.radius
+    PIXI_GAME_THEME.button.radius,
   );
   defaultView.endFill();
 
@@ -33,7 +35,7 @@ export function createGameButton({ label, onPress, labelFontSize }: GameButtonOp
     0,
     PIXI_GAME_THEME.button.width,
     PIXI_GAME_THEME.button.height,
-    PIXI_GAME_THEME.button.radius
+    PIXI_GAME_THEME.button.radius,
   );
   hoverView.endFill();
 
@@ -45,7 +47,7 @@ export function createGameButton({ label, onPress, labelFontSize }: GameButtonOp
     0,
     PIXI_GAME_THEME.button.width,
     PIXI_GAME_THEME.button.height,
-    PIXI_GAME_THEME.button.radius
+    PIXI_GAME_THEME.button.radius,
   );
   pressedView.endFill();
 
@@ -66,7 +68,7 @@ export function createGameButton({ label, onPress, labelFontSize }: GameButtonOp
         fontSize: resolvedFontSize,
         align: "center",
         padding: 1,
-      })
+      }),
     ),
     anchor: 0.5,
     animations: {

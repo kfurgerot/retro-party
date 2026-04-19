@@ -7,7 +7,11 @@ interface DiceResultCardOptions {
   resolvedRollValue: number | string | null;
 }
 
-export function createDiceResultCard({ isCardMode, isRolling, resolvedRollValue }: DiceResultCardOptions) {
+export function createDiceResultCard({
+  isCardMode,
+  isRolling,
+  resolvedRollValue,
+}: DiceResultCardOptions) {
   const face = new Graphics();
   face.lineStyle(2, PIXI_GAME_THEME.colors.ink, 0.95, 0.5, true);
   face.beginFill(0xf8fafc, 1);
@@ -16,13 +20,16 @@ export function createDiceResultCard({ isCardMode, isRolling, resolvedRollValue 
     PIXI_GAME_THEME.face.y,
     PIXI_GAME_THEME.face.width,
     PIXI_GAME_THEME.face.height,
-    PIXI_GAME_THEME.face.radius
+    PIXI_GAME_THEME.face.radius,
   );
   face.endFill();
 
   if (!isCardMode) {
     const rollLabel = isRolling ? "?" : String(resolvedRollValue ?? "?");
-    const baseFontSize = rollLabel.length > 1 ? PIXI_GAME_THEME.text.diceSizeDouble : PIXI_GAME_THEME.text.diceSizeSingle;
+    const baseFontSize =
+      rollLabel.length > 1
+        ? PIXI_GAME_THEME.text.diceSizeDouble
+        : PIXI_GAME_THEME.text.diceSizeSingle;
     const fontSize = baseFontSize + 2;
     const valueText = new Text(
       rollLabel,
@@ -37,7 +44,7 @@ export function createDiceResultCard({ isCardMode, isRolling, resolvedRollValue 
         fontSize,
         align: "center",
         padding: 2,
-      })
+      }),
     );
     valueText.resolution = 2;
     valueText.anchor.set(0.5);

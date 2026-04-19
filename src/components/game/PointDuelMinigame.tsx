@@ -11,9 +11,17 @@ interface PointDuelMinigameProps {
   onRoll?: () => void;
 }
 
-export const PointDuelMinigame: React.FC<PointDuelMinigameProps> = ({ state, players, myPlayerId, onRoll }) => {
+export const PointDuelMinigame: React.FC<PointDuelMinigameProps> = ({
+  state,
+  players,
+  myPlayerId,
+  onRoll,
+}) => {
   const tr = (template: string, params: Record<string, string | number>) =>
-    Object.entries(params).reduce((acc, [key, value]) => acc.replace(`{${key}}`, String(value)), template);
+    Object.entries(params).reduce(
+      (acc, [key, value]) => acc.replace(`{${key}}`, String(value)),
+      template,
+    );
 
   const attacker = players.find((p) => p.id === state.attackerId);
   const defender = players.find((p) => p.id === state.defenderId);
@@ -23,27 +31,38 @@ export const PointDuelMinigame: React.FC<PointDuelMinigameProps> = ({ state, pla
     state.phase === "waiting_attacker_roll"
       ? state.attackerId
       : state.phase === "waiting_defender_roll"
-      ? state.defenderId
-      : null;
+        ? state.defenderId
+        : null;
   const rollingPlayerName = players.find((p) => p.id === rollingPlayerId)?.name ?? null;
-  const canRollNow = !!onRoll && !!rollingPlayerId && !!myPlayerId && rollingPlayerId === myPlayerId;
+  const canRollNow =
+    !!onRoll && !!rollingPlayerId && !!myPlayerId && rollingPlayerId === myPlayerId;
 
   const title =
     state.phase === "announce"
       ? fr.pointDuel.duelTitle
       : state.phase === "waiting_attacker_roll" || state.phase === "show_attacker_roll"
-      ? fr.pointDuel.roll1
-      : state.phase === "waiting_defender_roll" || state.phase === "show_defender_roll"
-      ? fr.pointDuel.roll2
-      : fr.pointDuel.duelResult;
+        ? fr.pointDuel.roll1
+        : state.phase === "waiting_defender_roll" || state.phase === "show_defender_roll"
+          ? fr.pointDuel.roll2
+          : fr.pointDuel.duelResult;
 
   const subtitle = (() => {
     if (state.phase === "announce") return fr.pointDuel.collisionDetected;
     if (state.phase === "waiting_attacker_roll" || state.phase === "waiting_defender_roll") {
-      return tr(fr.pointDuel.turnToRoll, { name: rollingPlayerName ?? fr.pointDuel.playerFallback });
+      return tr(fr.pointDuel.turnToRoll, {
+        name: rollingPlayerName ?? fr.pointDuel.playerFallback,
+      });
     }
-    if (state.phase === "show_attacker_roll") return tr(fr.pointDuel.rolledValue, { name: attacker?.name ?? fr.pointDuel.attackerFallback, value: state.attackerRoll ?? "?" });
-    if (state.phase === "show_defender_roll") return tr(fr.pointDuel.rolledValue, { name: defender?.name ?? fr.pointDuel.defenderFallback, value: state.defenderRoll ?? "?" });
+    if (state.phase === "show_attacker_roll")
+      return tr(fr.pointDuel.rolledValue, {
+        name: attacker?.name ?? fr.pointDuel.attackerFallback,
+        value: state.attackerRoll ?? "?",
+      });
+    if (state.phase === "show_defender_roll")
+      return tr(fr.pointDuel.rolledValue, {
+        name: defender?.name ?? fr.pointDuel.defenderFallback,
+        value: state.defenderRoll ?? "?",
+      });
     if (!winner) return fr.pointDuel.tieNoSteal;
     return tr(fr.pointDuel.winsDuel, { name: winner.name });
   })();
@@ -55,13 +74,17 @@ export const PointDuelMinigame: React.FC<PointDuelMinigameProps> = ({ state, pla
           roleLabel={fr.pointDuel.attacker}
           name={attacker?.name ?? "-"}
           highlighted={rollingPlayerId === state.attackerId}
-          rightSlot={<div className="text-2xl font-bold text-pink-100">{state.attackerRoll ?? "?"}</div>}
+          rightSlot={
+            <div className="text-2xl font-bold text-pink-100">{state.attackerRoll ?? "?"}</div>
+          }
         />
         <PlayerBadge
           roleLabel={fr.pointDuel.defender}
           name={defender?.name ?? "-"}
           highlighted={rollingPlayerId === state.defenderId}
-          rightSlot={<div className="text-2xl font-bold text-pink-100">{state.defenderRoll ?? "?"}</div>}
+          rightSlot={
+            <div className="text-2xl font-bold text-pink-100">{state.defenderRoll ?? "?"}</div>
+          }
         />
       </div>
 
@@ -75,7 +98,7 @@ export const PointDuelMinigame: React.FC<PointDuelMinigameProps> = ({ state, pla
               "rounded-xl border px-4 py-2.5 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
               canRollNow
                 ? "border-pink-400 bg-pink-500 text-slate-950 hover:bg-pink-400"
-                : "cursor-not-allowed border-slate-500 bg-slate-700/60 text-slate-300"
+                : "cursor-not-allowed border-slate-500 bg-slate-700/60 text-slate-300",
             )}
           >
             {fr.pointDuel.rollDice}
@@ -88,7 +111,9 @@ export const PointDuelMinigame: React.FC<PointDuelMinigameProps> = ({ state, pla
           <div className="mb-2">
             <ActionBadge tone="decision" label={fr.pointDuel.duelResult} />
           </div>
-          {winner ? tr(fr.pointDuel.stealsPoints, { name: winner.name, points: state.stolenPoints }) : fr.pointDuel.noPointSteal}
+          {winner
+            ? tr(fr.pointDuel.stealsPoints, { name: winner.name, points: state.stolenPoints })
+            : fr.pointDuel.noPointSteal}
         </div>
       ) : null}
     </GameModal>

@@ -19,10 +19,10 @@ export const LaunchAnnouncement: React.FC<LaunchAnnouncementProps> = ({
   emphasisText = null,
 }) => {
   const [initialDurationMs, setInitialDurationMs] = useState(() =>
-    startAt ? Math.max(1, startAt - Date.now()) : 1
+    startAt ? Math.max(1, startAt - Date.now()) : 1,
   );
   const [remainingMs, setRemainingMs] = useState(() =>
-    startAt ? Math.max(0, startAt - Date.now()) : 0
+    startAt ? Math.max(0, startAt - Date.now()) : 0,
   );
 
   useEffect(() => {
@@ -49,24 +49,24 @@ export const LaunchAnnouncement: React.FC<LaunchAnnouncementProps> = ({
           label: "Tour actif",
         }
       : variant === "roll"
-      ? {
-          glow: "shadow-[0_0_0_2px_rgba(251,146,60,0.24),0_0_44px_rgba(251,146,60,0.35)]",
-          border: "border-orange-300/50",
-          panel: "from-slate-900/95 via-slate-900/90 to-orange-950/85",
-          accent: "bg-orange-400",
-          badge: "text-orange-200 border-orange-300/45 bg-orange-500/15",
-          icon: "🎲",
-          label: "Lancer valide",
-        }
-      : {
-          glow: "shadow-[0_0_0_2px_rgba(163,230,53,0.2),0_0_44px_rgba(163,230,53,0.28)]",
-          border: "border-lime-300/40",
-          panel: "from-slate-900/95 via-slate-900/90 to-lime-950/80",
-          accent: "bg-lime-400",
-          badge: "text-lime-200 border-lime-300/45 bg-lime-500/15",
-          icon: "✨",
-          label: fr.launchAnnouncement.preparation,
-        };
+        ? {
+            glow: "shadow-[0_0_0_2px_rgba(251,146,60,0.24),0_0_44px_rgba(251,146,60,0.35)]",
+            border: "border-orange-300/50",
+            panel: "from-slate-900/95 via-slate-900/90 to-orange-950/85",
+            accent: "bg-orange-400",
+            badge: "text-orange-200 border-orange-300/45 bg-orange-500/15",
+            icon: "🎲",
+            label: "Lancer valide",
+          }
+        : {
+            glow: "shadow-[0_0_0_2px_rgba(163,230,53,0.2),0_0_44px_rgba(163,230,53,0.28)]",
+            border: "border-lime-300/40",
+            panel: "from-slate-900/95 via-slate-900/90 to-lime-950/80",
+            accent: "bg-lime-400",
+            badge: "text-lime-200 border-lime-300/45 bg-lime-500/15",
+            icon: "✨",
+            label: fr.launchAnnouncement.preparation,
+          };
 
   return (
     <div
@@ -114,7 +114,9 @@ export const LaunchAnnouncement: React.FC<LaunchAnnouncementProps> = ({
           />
         </div>
 
-        <div className={`mt-4 inline-flex rounded-lg border px-3 py-1 text-lg font-semibold ${skin.badge}`}>
+        <div
+          className={`mt-4 inline-flex rounded-lg border px-3 py-1 text-lg font-semibold ${skin.badge}`}
+        >
           {countdown}s
         </div>
       </div>

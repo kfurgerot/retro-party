@@ -200,7 +200,7 @@ export const api = {
       description: string | null;
       baseConfig: Record<string, unknown>;
       isArchived: boolean;
-    }>
+    }>,
   ) =>
     request<{ template: TemplateItem }>(`/templates/${templateId}`, {
       method: "PATCH",
@@ -213,7 +213,7 @@ export const api = {
     request<{ items: TemplateQuestion[] }>(`/templates/${templateId}/questions`, { method: "GET" }),
   createTemplateQuestion: (
     templateId: string,
-    payload: { text: string; category?: string | null; sortOrder?: number }
+    payload: { text: string; category?: string | null; sortOrder?: number },
   ) =>
     request<{ question: TemplateQuestion }>(`/templates/${templateId}/questions`, {
       method: "POST",
@@ -227,7 +227,7 @@ export const api = {
       category: string | null;
       sortOrder: number;
       isActive: boolean;
-    }>
+    }>,
   ) =>
     request<{ question: TemplateQuestion }>(`/templates/${templateId}/questions/${questionId}`, {
       method: "PATCH",
@@ -244,7 +244,7 @@ export const api = {
   launchTemplateRoom: (templateId: string) =>
     request<{ roomId: string; roomCode: string; mode: "template"; sourceTemplateId: string }>(
       `/templates/${templateId}/launch-room`,
-      { method: "POST" }
+      { method: "POST" },
     ),
   createQuickRoom: (baseConfig?: Record<string, unknown>) =>
     request<{ roomId: string; roomCode: string; mode: "quick" }>("/rooms/quick", {
@@ -252,7 +252,11 @@ export const api = {
       body: JSON.stringify({ baseConfig: baseConfig ?? {} }),
     }),
 
-  radarCreateSession: (payload: { title?: string; facilitatorName?: string; hostParticipates?: boolean }) =>
+  radarCreateSession: (payload: {
+    title?: string;
+    facilitatorName?: string;
+    hostParticipates?: boolean;
+  }) =>
     request<{ session: RadarSessionInfo }>("/radar/sessions", {
       method: "POST",
       body: JSON.stringify(payload),
@@ -263,14 +267,14 @@ export const api = {
       {
         method: "POST",
         body: JSON.stringify(payload),
-      }
+      },
     ),
   radarUpdateProgress: (
     code: string,
     payload: {
       participantId: string;
       answeredCount: number;
-    }
+    },
   ) =>
     request<{
       participant: {
@@ -289,7 +293,7 @@ export const api = {
     payload: {
       participantId: string;
       answers: Record<number, number>;
-    }
+    },
   ) =>
     request<{
       participant: Pick<RadarParticipant, "id" | "displayName">;
@@ -314,13 +318,12 @@ export const api = {
     }),
   radarStartSession: (
     code: string,
-    payload: { participantId: string; hostParticipates?: boolean }
+    payload: { participantId: string; hostParticipates?: boolean },
   ) =>
-    request<{ session: Pick<RadarSessionInfo, "id" | "code" | "status" | "startedAt" | "hostParticipates"> }>(
-      `/radar/sessions/${encodeURIComponent(code)}/start`,
-      {
-        method: "POST",
-        body: JSON.stringify(payload),
-      }
-    ),
+    request<{
+      session: Pick<RadarSessionInfo, "id" | "code" | "status" | "startedAt" | "hostParticipates">;
+    }>(`/radar/sessions/${encodeURIComponent(code)}/start`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
 };

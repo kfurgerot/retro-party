@@ -53,7 +53,11 @@ type Pending = "idle" | "hosting" | "joining" | "starting";
 const MAX_PLAYERS = 20;
 
 const cleanName = (v: string) => v.replace(/\s+/g, " ").trim().slice(0, 16);
-const cleanCode = (v: string) => v.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
+const cleanCode = (v: string) =>
+  v
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "")
+    .slice(0, 6);
 
 export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
   connected,
@@ -161,7 +165,10 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
   const submitLeave = () => {
     if (pending !== "idle") return;
     if (!roomCode) {
-      if (onEditProfile) { onEditProfile(); return; }
+      if (onEditProfile) {
+        onEditProfile();
+        return;
+      }
       onLeave();
       return;
     }
@@ -181,14 +188,19 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
   }, [autoSubmitKey, roomCode, pending, mode, canCreate, canJoin, submitHost, submitJoin]);
 
   const primaryLabel = roomCode
-    ? pending === "starting" ? fr.onlineLobby.launching : fr.onlineLobby.launchParty
+    ? pending === "starting"
+      ? fr.onlineLobby.launching
+      : fr.onlineLobby.launchParty
     : mode === "host"
-      ? pending === "hosting" ? fr.onlineLobby.createLoading : fr.onlineLobby.createParty
-      : pending === "joining" ? fr.onlineLobby.joining : fr.onlineLobby.joinAction;
+      ? pending === "hosting"
+        ? fr.onlineLobby.createLoading
+        : fr.onlineLobby.createParty
+      : pending === "joining"
+        ? fr.onlineLobby.joining
+        : fr.onlineLobby.joinAction;
 
   const primaryDisabled =
-    pending !== "idle" ||
-    (roomCode ? !canLaunch : mode === "host" ? !canCreate : !canJoin);
+    pending !== "idle" || (roomCode ? !canLaunch : mode === "host" ? !canCreate : !canJoin);
 
   return (
     <PageShell accentColor={`${accentColor}12`} accentGlow={accentGlow} maxWidth="5xl">
@@ -218,7 +230,9 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
       </div>
 
       <h1 className="text-2xl font-extrabold tracking-tight text-slate-50 sm:text-3xl">
-        {roomCode ? fr.onlineLobby.roomReady : (titleWhenNoRoomOverride ?? fr.onlineLobby.quickConfig)}
+        {roomCode
+          ? fr.onlineLobby.roomReady
+          : (titleWhenNoRoomOverride ?? fr.onlineLobby.quickConfig)}
       </h1>
       {roomCode && (
         <p className="mt-1.5 text-sm text-slate-500">
@@ -250,7 +264,11 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
                 </div>
                 <div>
                   <div className="text-sm font-semibold text-slate-100">
-                    {name || <span className="text-slate-600">{fr.onlineOnboarding.displayNamePlaceholder}</span>}
+                    {name || (
+                      <span className="text-slate-600">
+                        {fr.onlineOnboarding.displayNamePlaceholder}
+                      </span>
+                    )}
                   </div>
                   <div
                     className="mt-0.5 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold"
@@ -318,7 +336,9 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
                 placeholder={fr.onlineLobby.roomCodePlaceholder}
                 disabled={pending !== "idle"}
                 onChange={(e) => setCode(cleanCode(e.target.value))}
-                onKeyDown={(e) => { if (e.key === "Enter" && canJoin) submitJoin(); }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && canJoin) submitJoin();
+                }}
                 className="h-11 w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 font-mono text-sm tracking-widest text-slate-100 outline-none placeholder:text-slate-600 transition focus:border-white/20 disabled:opacity-40"
               />
               {!validCode && code.length > 0 && (
@@ -354,16 +374,20 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
                       </span>
                     </div>
                     <Slider
-                      min={1} max={30} step={1}
+                      min={1}
+                      max={30}
+                      step={1}
                       value={[maxRounds]}
                       onValueChange={(vals) => {
                         const n = vals[0];
-                        if (Number.isFinite(n)) setMaxRounds(Math.max(1, Math.min(30, Math.round(n))));
+                        if (Number.isFinite(n))
+                          setMaxRounds(Math.max(1, Math.min(30, Math.round(n))));
                       }}
                       aria-label={fr.onlineLobby.roundsLabel}
                     />
                     <div className="mt-2 flex justify-between text-[10px] text-slate-600">
-                      <span>1</span><span>30</span>
+                      <span>1</span>
+                      <span>30</span>
                     </div>
                   </div>
                 )}
@@ -398,8 +422,12 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
 
             <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
               <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-slate-200">{fr.onlineLobby.playersTitle}</h2>
-                <span className="text-xs text-slate-500">{lobbyPlayers.length} / {MAX_PLAYERS}</span>
+                <h2 className="text-sm font-semibold text-slate-200">
+                  {fr.onlineLobby.playersTitle}
+                </h2>
+                <span className="text-xs text-slate-500">
+                  {lobbyPlayers.length} / {MAX_PLAYERS}
+                </span>
               </div>
               <PlayerList
                 players={sortedPlayers}
@@ -489,7 +517,10 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
             </AlertDialogCancel>
             <AlertDialogAction
               className="h-11 rounded-xl border border-red-500/30 bg-red-500/15 text-red-400 hover:bg-red-500/25 hover:text-red-300"
-              onClick={() => { setLeaveDialogOpen(false); onLeave(); }}
+              onClick={() => {
+                setLeaveDialogOpen(false);
+                onLeave();
+              }}
             >
               {canStart ? fr.onlineLobby.cancelParty : fr.onlineLobby.leaveParty}
             </AlertDialogAction>

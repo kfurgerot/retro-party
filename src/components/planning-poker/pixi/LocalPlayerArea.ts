@@ -24,29 +24,44 @@ export class LocalPlayerArea {
     this.avatarBubble.tint = 0x164e63;
     this.avatarBubble.alpha = 0.95;
 
-    this.avatarText = new Text(":)", new TextStyle({
-      fontFamily: "Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif",
-      fontSize: 24,
-    }));
+    this.avatarText = new Text(
+      ":)",
+      new TextStyle({
+        fontFamily: "Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif",
+        fontSize: 24,
+      }),
+    );
     this.avatarText.anchor.set(0.5);
 
-    this.nameText = new Text("", new TextStyle({
-      fontFamily: "'Press Start 2P', monospace",
-      fontSize: 8,
-      fill: 0xe2e8f0,
-      align: "left",
-    }));
+    this.nameText = new Text(
+      "",
+      new TextStyle({
+        fontFamily: "'Press Start 2P', monospace",
+        fontSize: 8,
+        fill: 0xe2e8f0,
+        align: "left",
+      }),
+    );
     this.nameText.anchor.set(0, 0.5);
 
-    this.voteText = new Text("", new TextStyle({
-      fontFamily: "'Press Start 2P', monospace",
-      fontSize: 8,
-      fill: 0x99f6e4,
-      align: "left",
-    }));
+    this.voteText = new Text(
+      "",
+      new TextStyle({
+        fontFamily: "'Press Start 2P', monospace",
+        fontSize: 8,
+        fill: 0x99f6e4,
+        align: "left",
+      }),
+    );
     this.voteText.anchor.set(0, 0.5);
 
-    this.view.addChild(this.panel, this.avatarBubble, this.avatarText, this.nameText, this.voteText);
+    this.view.addChild(
+      this.panel,
+      this.avatarBubble,
+      this.avatarText,
+      this.nameText,
+      this.voteText,
+    );
     this.view.visible = false;
   }
 
@@ -84,9 +99,12 @@ export class LocalPlayerArea {
     this.nameText.text = player.name;
     this.nameText.position.set(-this.panel.width * 0.29, -8);
 
-    const voteLabel = revealed ? (player.vote ?? "-") : myVote ? "VOTE ENREGISTRE" : "A TOI DE VOTER";
+    const voteLabel = revealed
+      ? (player.vote ?? "-")
+      : myVote
+        ? "VOTE ENREGISTRE"
+        : "A TOI DE VOTER";
     this.voteText.text = voteLabel;
     this.voteText.position.set(-this.panel.width * 0.29, 10);
   }
 }
-

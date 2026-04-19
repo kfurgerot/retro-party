@@ -174,7 +174,7 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
         strokeThickness: 2,
       }),
     }),
-    []
+    [],
   );
 
   useEffect(() => {
@@ -253,7 +253,13 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
           edges.lineStyle(12, 0x0f172a, 0.75, 0.5, true);
           edges.moveTo(fromX, fromY);
           edges.lineTo(toX, toY);
-          edges.lineStyle(isHighlighted ? 7 : 5, isHighlighted ? 0xfacc15 : 0x7dd3fc, isHighlighted ? 0.95 : 0.6, 0.5, true);
+          edges.lineStyle(
+            isHighlighted ? 7 : 5,
+            isHighlighted ? 0xfacc15 : 0x7dd3fc,
+            isHighlighted ? 0.95 : 0.6,
+            0.5,
+            true,
+          );
           edges.moveTo(fromX, fromY);
           edges.lineTo(toX, toY);
         });
@@ -310,8 +316,10 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
         const centerY = p.y + tileHalfHeight;
         return { tile, p, centerX, centerY };
       })
-      .filter((entry): entry is { tile: Tile; p: Point; centerX: number; centerY: number } => !!entry)
-      .sort((a, b) => (a.centerY - b.centerY) || (a.centerX - b.centerX));
+      .filter(
+        (entry): entry is { tile: Tile; p: Point; centerX: number; centerY: number } => !!entry,
+      )
+      .sort((a, b) => a.centerY - b.centerY || a.centerX - b.centerX);
 
     tilesInDepthOrder.forEach(({ tile, p, centerX, centerY }) => {
       const tileColor = TILE_HEX_COLORS[tile.type] ?? 0x1e293b;
@@ -329,27 +337,35 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
         centerX + drawHalfWidth * 0.18,
         bottomY + TILE_ELEVATION + 3,
         drawHalfWidth * 0.86,
-        drawHalfHeight * 0.42
+        drawHalfHeight * 0.42,
       );
       tileShadows.endFill();
 
       tileSides.lineStyle(1, shadeColor(tileColorLeft, -0.08), 1, 0.5, true);
       tileSides.beginFill(tileColorLeft, 1);
       tileSides.drawPolygon([
-        leftX, centerY,
-        centerX, bottomY,
-        centerX, bottomY + TILE_ELEVATION + 1,
-        leftX, centerY + TILE_ELEVATION + 1,
+        leftX,
+        centerY,
+        centerX,
+        bottomY,
+        centerX,
+        bottomY + TILE_ELEVATION + 1,
+        leftX,
+        centerY + TILE_ELEVATION + 1,
       ]);
       tileSides.endFill();
 
       tileSides.lineStyle(1, shadeColor(tileColorRight, -0.08), 1, 0.5, true);
       tileSides.beginFill(tileColorRight, 1);
       tileSides.drawPolygon([
-        rightX, centerY,
-        centerX, bottomY,
-        centerX, bottomY + TILE_ELEVATION + 1,
-        rightX, centerY + TILE_ELEVATION + 1,
+        rightX,
+        centerY,
+        centerX,
+        bottomY,
+        centerX,
+        bottomY + TILE_ELEVATION + 1,
+        rightX,
+        centerY + TILE_ELEVATION + 1,
       ]);
       tileSides.endFill();
 
@@ -377,7 +393,7 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
         tileTopTexture.drawCircle(
           centerX + u * drawHalfWidth * 0.75,
           centerY + v * drawHalfHeight * 0.75,
-          1.4
+          1.4,
         );
         tileTopTexture.endFill();
       }
@@ -389,7 +405,6 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
         icon.y = centerY - TILE_ELEVATION * 0.24 + 1;
         tilesLayer.addChild(icon);
       }
-
     });
     tilesLayer.addChildAt(tileShadows, 0);
     tilesLayer.addChildAt(tileSides, 1);
@@ -514,7 +529,7 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
       if (!p) return;
       const tilePlayers = playersByTile.get(tile.id) ?? [];
       tilePlayers.slice(0, 3).forEach((player, index) => {
-        const px = p.x + tileHalfWidth - ((Math.min(tilePlayers.length, 3) - 1) * 10) + index * 20;
+        const px = p.x + tileHalfWidth - (Math.min(tilePlayers.length, 3) - 1) * 10 + index * 20;
         const groundY = p.y + tileHalfHeight + 1;
         const py = groundY - PAWN_LIFT;
 
@@ -531,7 +546,13 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
         playersLayer.addChild(stem);
 
         const chip = new Graphics();
-        chip.lineStyle(2, Number.parseInt(player.color.replace("#", "0x"), 16) || 0xffffff, 1, 0.5, true);
+        chip.lineStyle(
+          2,
+          Number.parseInt(player.color.replace("#", "0x"), 16) || 0xffffff,
+          1,
+          0.5,
+          true,
+        );
         chip.beginFill(0xffffff, 1);
         chip.drawCircle(px, py, 14);
         chip.endFill();
@@ -598,7 +619,7 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
 
       const text = new Text(
         delta.text,
-        delta.positive ? sharedStyles.floatingDeltaPositive : sharedStyles.floatingDeltaNegative
+        delta.positive ? sharedStyles.floatingDeltaPositive : sharedStyles.floatingDeltaNegative,
       );
       text.anchor.set(0.5);
       text.x = delta.x;
@@ -608,7 +629,10 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
     world.addChild(floatLayer);
 
     let tickerFn: ((delta: number) => void) | null = null;
-    if ((activeAvatarNodes.length > 0 || kudoboxNodes.length > 0 || shopNodes.length > 0) && app?.ticker) {
+    if (
+      (activeAvatarNodes.length > 0 || kudoboxNodes.length > 0 || shopNodes.length > 0) &&
+      app?.ticker
+    ) {
       let elapsed = 0;
       tickerFn = (delta) => {
         elapsed += delta;
@@ -796,12 +820,15 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
 
     const toggleBg = new Graphics();
     toggleButton.addChild(toggleBg);
-    const toggleText = new Text("i", new TextStyle({
-      fontFamily: "Press Start 2P, monospace",
-      fill: 0xe2e8f0,
-      fontSize: 7,
-      align: "center",
-    }));
+    const toggleText = new Text(
+      "i",
+      new TextStyle({
+        fontFamily: "Press Start 2P, monospace",
+        fill: 0xe2e8f0,
+        fontSize: 7,
+        align: "center",
+      }),
+    );
     toggleText.anchor.set(0.5);
     toggleButton.addChild(toggleText);
 
@@ -872,7 +899,7 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
 
           let avatarX = p.x + tileHalfWidth;
           if (playerIndex >= 0 && playerIndex < 3) {
-            avatarX = p.x + tileHalfWidth - ((shownCount - 1) * 10) + playerIndex * 20;
+            avatarX = p.x + tileHalfWidth - (shownCount - 1) * 10 + playerIndex * 20;
           } else if (playerIndex >= 3) {
             avatarX = p.x + tileHalfWidth + 22;
           }
@@ -891,7 +918,13 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
       avatarScreenY >= -20 &&
       avatarScreenY <= viewHeight + 20;
 
-    if (activePlayerHint && !movingPlayerId && isAvatarInViewport && avatarScreenX != null && avatarScreenY != null) {
+    if (
+      activePlayerHint &&
+      !movingPlayerId &&
+      isAvatarInViewport &&
+      avatarScreenX != null &&
+      avatarScreenY != null
+    ) {
       const bubbleMaxWidth = Math.min(220, Math.max(140, viewWidth * 0.34));
       const bubbleTextStyle = new TextStyle({
         fontFamily: "Nunito, Poppins, Arial, sans-serif",
@@ -906,7 +939,10 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
       const bubbleText = new Text(activePlayerHint, bubbleTextStyle);
       const bubblePaddingX = 10;
       const bubblePaddingY = 8;
-      const bubbleWidth = Math.max(110, Math.min(bubbleMaxWidth, bubbleText.width + bubblePaddingX * 2));
+      const bubbleWidth = Math.max(
+        110,
+        Math.min(bubbleMaxWidth, bubbleText.width + bubblePaddingX * 2),
+      );
       const bubbleHeight = Math.max(32, bubbleText.height + bubblePaddingY * 2);
 
       const horizontalGap = 14 + Math.min(12, Math.max(0, scale * 6));
@@ -933,9 +969,12 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
       const tailBaseY = bubbleHeight;
       bubble.beginFill(0xf8fafc, 0.96);
       bubble.drawPolygon([
-        tailBaseX - 10, tailBaseY - 1,
-        tailBaseX + 4, tailBaseY - 1,
-        tailBaseX - 6, tailBaseY + 12,
+        tailBaseX - 10,
+        tailBaseY - 1,
+        tailBaseX + 4,
+        tailBaseY - 1,
+        tailBaseX - 6,
+        tailBaseY + 12,
       ]);
       bubble.endFill();
       bubble.lineStyle(2, 0x0f172a, 0.86, 0.5, true);
@@ -953,7 +992,10 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
     const shouldShowActionPanel =
       !!focusPlayerId &&
       !!actionOverlay &&
-      (actionOverlay.canRoll || actionOverlay.canMove || actionOverlay.canOpenQuestionCard || actionOverlay.isRolling);
+      (actionOverlay.canRoll ||
+        actionOverlay.canMove ||
+        actionOverlay.canOpenQuestionCard ||
+        actionOverlay.isRolling);
     if (!shouldShowActionPanel) {
       return cleanupLegend;
     }
@@ -1083,4 +1125,3 @@ export const PixiBoardCanvas: React.FC<PixiBoardCanvasProps> = ({
     </div>
   );
 };
-

@@ -63,9 +63,7 @@ Ces classes sont definies dans `src/index.css`:
 ```
 
 ```tsx
-<div className="neon-surface-soft p-2">
-  ...
-</div>
+<div className="neon-surface-soft p-2">...</div>
 ```
 
 ```tsx

@@ -106,14 +106,14 @@ const BoardV2Component: React.FC<BoardV2Props> = ({
 
   const optionSet = useMemo(
     () => new Set(pendingPathChoice?.options ?? []),
-    [pendingPathChoice?.options]
+    [pendingPathChoice?.options],
   );
 
   return (
     <div
       className={cn(
         "h-full w-full overflow-auto rounded-lg border border-pink-400/20 bg-slate-950/45 p-2 sm:p-3",
-        eventOverlayActive && "ring-2 ring-pink-400/25"
+        eventOverlayActive && "ring-2 ring-pink-400/25",
       )}
     >
       <div className="grid gap-2">
@@ -137,7 +137,7 @@ const BoardV2Component: React.FC<BoardV2Props> = ({
                       "rounded border px-2 py-2",
                       isPathOrigin
                         ? "border-amber-300/55 bg-amber-500/10"
-                        : "border-pink-400/20 bg-slate-950/35"
+                        : "border-pink-400/20 bg-slate-950/35",
                     )}
                   >
                     <div className="flex items-start justify-between gap-2">
@@ -154,7 +154,8 @@ const BoardV2Component: React.FC<BoardV2Props> = ({
                       <span
                         className={cn(
                           "inline-flex h-7 w-7 items-center justify-center rounded border text-xs font-bold",
-                          TILE_BADGE_CLASS[tile.type] ?? "border-pink-400/45 bg-pink-500/15 text-pink-100"
+                          TILE_BADGE_CLASS[tile.type] ??
+                            "border-pink-400/45 bg-pink-500/15 text-pink-100",
                         )}
                       >
                         {TILE_ICON[tile.type] ?? "?"}
@@ -163,7 +164,9 @@ const BoardV2Component: React.FC<BoardV2Props> = ({
 
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {tilePlayers.length === 0 ? (
-                        <span className="text-[11px] text-slate-400">{fr.gameScreen.boardV2NoPlayer}</span>
+                        <span className="text-[11px] text-slate-400">
+                          {fr.gameScreen.boardV2NoPlayer}
+                        </span>
                       ) : (
                         tilePlayers.map((player) => (
                           <span
@@ -195,7 +198,7 @@ const BoardV2Component: React.FC<BoardV2Props> = ({
                           "mt-2 inline-flex h-8 items-center rounded border px-3 text-xs font-semibold",
                           canChoosePath
                             ? "border-pink-400 bg-pink-500 text-slate-950 hover:bg-pink-400"
-                            : "cursor-not-allowed border-slate-500 bg-slate-700 text-slate-300"
+                            : "cursor-not-allowed border-slate-500 bg-slate-700 text-slate-300",
                         )}
                       >
                         {fr.gameScreen.boardV2ChoosePath}

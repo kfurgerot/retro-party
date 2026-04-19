@@ -38,7 +38,8 @@ const AXIS_GUIDANCE: Record<RadarDimension, AxisGuidance> = {
     high: "la coopération est fluide et l’entraide soutient la performance collective.",
     medium: "la collaboration existe mais peut encore gagner en régularité.",
     low: "le risque de travail en silo est réel sans rituels de synchronisation renforcés.",
-    workshopPrompt: "Quel rituel simple peut améliorer la circulation d’information cette semaine ?",
+    workshopPrompt:
+      "Quel rituel simple peut améliorer la circulation d’information cette semaine ?",
   },
   fun: {
     high: "l’ambiance d’équipe renforce l’engagement au quotidien.",
@@ -50,13 +51,15 @@ const AXIS_GUIDANCE: Record<RadarDimension, AxisGuidance> = {
     high: "l’équipe apprend activement et transforme les retours en progrès.",
     medium: "les apprentissages existent mais sont encore peu systématisés.",
     low: "le risque est de répéter les mêmes problèmes sans boucle d’amélioration claire.",
-    workshopPrompt: "Quelle action d’amélioration continue allons-nous ancrer dès le prochain sprint ?",
+    workshopPrompt:
+      "Quelle action d’amélioration continue allons-nous ancrer dès le prochain sprint ?",
   },
   alignment: {
     high: "les priorités sont claires et alignées avec les objectifs business.",
     medium: "la direction est globalement comprise mais parfois ambiguë.",
     low: "le manque d’alignement peut créer de la dispersion et des arbitrages incohérents.",
-    workshopPrompt: "Quelle priorité devons-nous clarifier immédiatement pour réduire les ambiguïtés ?",
+    workshopPrompt:
+      "Quelle priorité devons-nous clarifier immédiatement pour réduire les ambiguïtés ?",
   },
   ownership: {
     high: "la responsabilité collective est forte et l’équipe agit avec autonomie.",
@@ -92,14 +95,13 @@ const AXIS_GUIDANCE: Record<RadarDimension, AxisGuidance> = {
     high: "la valeur livrée est lisible et orientée impact utilisateur.",
     medium: "la valeur est présente mais pas toujours mesurée ou explicitée.",
     low: "la priorisation risque de se déconnecter des besoins réels des utilisateurs.",
-    workshopPrompt: "Quel indicateur de valeur allons-nous suivre pour guider les prochaines décisions ?",
+    workshopPrompt:
+      "Quel indicateur de valeur allons-nous suivre pour guider les prochaines décisions ?",
   },
 };
 
 const sortByScore = (radar: RadarAxisValues) =>
-  RADAR_DIMENSIONS
-    .map((axis) => ({ axis, value: radar[axis] }))
-    .sort((a, b) => b.value - a.value);
+  RADAR_DIMENSIONS.map((axis) => ({ axis, value: radar[axis] })).sort((a, b) => b.value - a.value);
 
 const messageForAxis = (axis: RadarDimension, value: number) => {
   if (value >= 75) return AXIS_GUIDANCE[axis].high;
@@ -119,14 +121,15 @@ export function buildIndividualInsights(radar: RadarAxisValues): IndividualInsig
     scoreGap > 25
       ? `Profil dominant: ${RADAR_DIMENSION_LABELS[dominant.axis]} (${dominant.value}/100). ${messageForAxis(
           dominant.axis,
-          dominant.value
+          dominant.value,
         )} Axe à consolider en priorité: ${RADAR_DIMENSION_LABELS[fragile.axis]} (${fragile.value}/100).`
       : `Profil globalement équilibré. Point d’appui principal: ${RADAR_DIMENSION_LABELS[dominant.axis]} (${dominant.value}/100). Point de progression principal: ${RADAR_DIMENSION_LABELS[fragile.axis]} (${fragile.value}/100).`;
 
   return {
     summary,
     strengths: topThree.map(
-      ({ axis, value }) => `${RADAR_DIMENSION_LABELS[axis]} (${value}/100): ${messageForAxis(axis, value)}`
+      ({ axis, value }) =>
+        `${RADAR_DIMENSION_LABELS[axis]} (${value}/100): ${messageForAxis(axis, value)}`,
     ),
     watchouts: lowThree.map(({ axis, value }) => {
       const severity = value < 40 ? "Vigilance élevée" : "Point de vigilance";
@@ -140,9 +143,14 @@ export function buildIndividualInsights(radar: RadarAxisValues): IndividualInsig
   };
 }
 
-export function buildTeamInsights(teamRadar: RadarAxisValues, memberRadars: RadarAxisValues[]): TeamInsights {
+export function buildTeamInsights(
+  teamRadar: RadarAxisValues,
+  memberRadars: RadarAxisValues[],
+): TeamInsights {
   const spreads: TeamAxisSpread[] = RADAR_DIMENSIONS.map((axis) => {
-    const values = memberRadars.map((radar) => radar[axis]).filter((value) => Number.isFinite(value));
+    const values = memberRadars
+      .map((radar) => radar[axis])
+      .filter((value) => Number.isFinite(value));
     const min = values.length > 0 ? Math.min(...values) : teamRadar[axis];
     const max = values.length > 0 ? Math.max(...values) : teamRadar[axis];
     const spread = max - min;
@@ -157,8 +165,12 @@ export function buildTeamInsights(teamRadar: RadarAxisValues, memberRadars: Rada
     };
   });
 
-  const homogeneousAxes = spreads.filter((item) => item.homogeneous).map((item) => RADAR_DIMENSION_LABELS[item.axis]);
-  const polarizedAxes = spreads.filter((item) => item.polarized).map((item) => RADAR_DIMENSION_LABELS[item.axis]);
+  const homogeneousAxes = spreads
+    .filter((item) => item.homogeneous)
+    .map((item) => RADAR_DIMENSION_LABELS[item.axis]);
+  const polarizedAxes = spreads
+    .filter((item) => item.polarized)
+    .map((item) => RADAR_DIMENSION_LABELS[item.axis]);
 
   const rankedTeamAxes = sortByScore(teamRadar);
   const topAxis = rankedTeamAxes[0];

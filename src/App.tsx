@@ -30,9 +30,7 @@ const queryClient = new QueryClient();
 
 const RouteFallback = () => (
   <div className="scanlines relative flex min-h-svh items-center justify-center bg-slate-950 px-4">
-    <div className="neon-surface px-4 py-3 text-sm font-semibold text-cyan-100">
-      Chargement...
-    </div>
+    <div className="neon-surface px-4 py-3 text-sm font-semibold text-cyan-100">Chargement...</div>
   </div>
 );
 
@@ -44,25 +42,25 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Suspense fallback={<RouteFallback />}>
-            <Routes>
-              <Route path="/" element={<Portal />} />
-              <Route path="/home" element={<Home />} />
-              <Route path="/play" element={<Index />} />
-              <Route path="/prepare" element={<PreparePage />} />
-              <Route path="/radar-party" element={<RadarPartyPage />} />
-              <Route path="/prepare/templates/:templateId" element={<TemplateEditorPage />} />
-              <Route path="/reset-password" element={<ResetPasswordPage />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
-        </BrowserRouter>
-      </TooltipProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Suspense fallback={<RouteFallback />}>
+              <Routes>
+                <Route path="/" element={<Portal />} />
+                <Route path="/home" element={<Home />} />
+                <Route path="/play" element={<Index />} />
+                <Route path="/prepare" element={<PreparePage />} />
+                <Route path="/radar-party" element={<RadarPartyPage />} />
+                <Route path="/prepare/templates/:templateId" element={<TemplateEditorPage />} />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
+          </BrowserRouter>
+        </TooltipProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

@@ -29,7 +29,11 @@ export const whoSaidItBank = [
   { id: "26", text: "On fera les tests automatises plus tard.", answer: "MANAGER" },
   { id: "27", text: "On peut re-prioriser en cours de sprint ?", answer: "PO" },
   { id: "28", text: "La dette technique commence a piquer.", answer: "DEV" },
-  { id: "29", text: "Le sprint est un engagement, pas une promesse magique.", answer: "SCRUM_MASTER" },
+  {
+    id: "29",
+    text: "Le sprint est un engagement, pas une promesse magique.",
+    answer: "SCRUM_MASTER",
+  },
   { id: "30", text: "Je valide la recette sous reserve d'un correctif.", answer: "QA_SUPPORT" },
   { id: "31", text: "Pourquoi ca prend autant de temps ?", answer: "MANAGER" },
   { id: "32", text: "On pourrait faire un spike technique avant.", answer: "PO" },

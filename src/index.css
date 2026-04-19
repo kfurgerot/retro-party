@@ -1,4 +1,4 @@
-@import '@fontsource/press-start-2p';
+@import "@fontsource/press-start-2p";
 
 @tailwind base;
 @tailwind components;
@@ -80,7 +80,12 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-family:
+      ui-sans-serif,
+      system-ui,
+      -apple-system,
+      "Segoe UI",
+      sans-serif;
 
     /* Keep horizontal lock, allow vertical scrolling on mobile screens like lobby */
     overflow-x: hidden;
@@ -88,7 +93,8 @@
     overscroll-behavior-y: contain;
   }
 
-  html, body {
+  html,
+  body {
     height: 100%;
     width: 100%;
   }
@@ -103,7 +109,7 @@
   /* Pixel art button styles */
   .pixel-btn {
     @apply relative px-6 py-3 font-bold uppercase tracking-wider transition-all duration-100;
-    font-family: 'Press Start 2P', monospace;
+    font-family: "Press Start 2P", monospace;
     font-size: 0.75rem;
     box-shadow: var(--pixel-shadow);
     border: 4px solid;
@@ -143,22 +149,28 @@
   /* Shared neon surfaces for lobby/game panels */
   .neon-card {
     @apply border border-cyan-300/30 bg-slate-900/55 text-cyan-50 backdrop-blur;
-    box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.18), 0 0 24px rgba(34, 211, 238, 0.12);
+    box-shadow:
+      0 0 0 1px rgba(34, 211, 238, 0.18),
+      0 0 24px rgba(34, 211, 238, 0.12);
   }
 
   .neon-surface {
     @apply rounded-lg border border-cyan-300/25 bg-slate-900/40 backdrop-blur;
-    box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.12), 0 0 24px rgba(34, 211, 238, 0.08);
+    box-shadow:
+      0 0 0 1px rgba(34, 211, 238, 0.12),
+      0 0 24px rgba(34, 211, 238, 0.08);
   }
 
   .neon-surface-soft {
     @apply rounded-lg border border-cyan-300/20 bg-slate-950/25 backdrop-blur-sm;
-    box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.1), 0 0 20px rgba(34, 211, 238, 0.06);
+    box-shadow:
+      0 0 0 1px rgba(34, 211, 238, 0.1),
+      0 0 20px rgba(34, 211, 238, 0.06);
   }
 
   /* Scanline effect */
   .scanlines::after {
-    content: '';
+    content: "";
     @apply absolute inset-0 pointer-events-none;
     background: repeating-linear-gradient(
       0deg,
@@ -184,7 +196,7 @@
 
   /* Pixel text styles */
   .pixel-text {
-    font-family: 'Press Start 2P', monospace;
+    font-family: "Press Start 2P", monospace;
     text-shadow: 2px 2px 0px hsl(0 0% 0%);
   }
 
@@ -226,52 +238,96 @@
 @layer utilities {
   /* Animations */
   @keyframes pixel-bounce {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-8px); }
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-8px);
+    }
   }
 
   @keyframes pixel-shake {
-    0%, 100% { transform: translateX(0); }
-    25% { transform: translateX(-4px); }
-    75% { transform: translateX(4px); }
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    25% {
+      transform: translateX(-4px);
+    }
+    75% {
+      transform: translateX(4px);
+    }
   }
 
   @keyframes pixel-pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
   }
 
   @keyframes dice-roll {
-    0% { transform: rotate(0deg) scale(1); }
-    25% { transform: rotate(90deg) scale(1.1); }
-    50% { transform: rotate(180deg) scale(1); }
-    75% { transform: rotate(270deg) scale(1.1); }
-    100% { transform: rotate(360deg) scale(1); }
+    0% {
+      transform: rotate(0deg) scale(1);
+    }
+    25% {
+      transform: rotate(90deg) scale(1.1);
+    }
+    50% {
+      transform: rotate(180deg) scale(1);
+    }
+    75% {
+      transform: rotate(270deg) scale(1.1);
+    }
+    100% {
+      transform: rotate(360deg) scale(1);
+    }
   }
 
   @keyframes star-sparkle {
-    0%, 100% { 
+    0%,
+    100% {
       filter: brightness(1) drop-shadow(0 0 8px hsl(45 100% 55%));
     }
-    50% { 
+    50% {
       filter: brightness(1.3) drop-shadow(0 0 16px hsl(45 100% 70%));
     }
   }
 
   @keyframes move-step {
-    0% { transform: translateY(0); }
-    50% { transform: translateY(-12px); }
-    100% { transform: translateY(0); }
+    0% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-12px);
+    }
+    100% {
+      transform: translateY(0);
+    }
   }
 
   @keyframes game-modal-fade-in {
-    0% { opacity: 0; }
-    100% { opacity: 1; }
+    0% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+    }
   }
 
   @keyframes game-modal-pop-in {
-    0% { opacity: 0; transform: translateY(12px) scale(0.97); }
-    100% { opacity: 1; transform: translateY(0) scale(1); }
+    0% {
+      opacity: 0;
+      transform: translateY(12px) scale(0.97);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
   }
 
   .animate-pixel-bounce {
@@ -306,4 +362,3 @@
     animation: game-modal-pop-in 210ms cubic-bezier(0.2, 0.9, 0.2, 1);
   }
 }
-

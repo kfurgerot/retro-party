@@ -1,6 +1,10 @@
 ﻿import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Application, Container, Text, TextStyle } from "pixi.js";
-import { PlanningPokerPlayer, PlanningPokerRole, PlanningPokerVoteSystem } from "@/types/planningPoker";
+import {
+  PlanningPokerPlayer,
+  PlanningPokerRole,
+  PlanningPokerVoteSystem,
+} from "@/types/planningPoker";
 import { PokerDeck } from "./PokerDeck";
 import { PokerTableScene } from "./PokerTableScene";
 import { POKER_WORLD, clamp } from "./sceneTheme";
@@ -24,7 +28,15 @@ type PlayerSnapshot = {
   vote: string | null;
 };
 
-function getSessionStatus({ revealed, voted, active }: { revealed: boolean; voted: number; active: number }) {
+function getSessionStatus({
+  revealed,
+  voted,
+  active,
+}: {
+  revealed: boolean;
+  voted: number;
+  active: number;
+}) {
   if (revealed) return "REVELE";
   if (active > 0 && voted >= active) return "EN ATTENTE DE REVEAL";
   return "VOTE EN COURS";
@@ -67,7 +79,7 @@ export const PokerScene: React.FC<PokerSceneProps> = ({
         if (a.connected !== b.connected) return Number(b.connected) - Number(a.connected);
         return a.name.localeCompare(b.name, "fr");
       }),
-    [players]
+    [players],
   );
 
   useEffect(() => {
@@ -145,7 +157,9 @@ export const PokerScene: React.FC<PokerSceneProps> = ({
     const isMobile = width < 760;
 
     const votingPlayers = sortedPlayers.filter((player) => player.role === "player").slice(0, 8);
-    const localPlayer = myPlayerId ? votingPlayers.find((player) => player.socketId === myPlayerId) ?? null : null;
+    const localPlayer = myPlayerId
+      ? (votingPlayers.find((player) => player.socketId === myPlayerId) ?? null)
+      : null;
     const aroundPlayers = localPlayer
       ? votingPlayers.filter((player) => player.socketId !== localPlayer.socketId)
       : votingPlayers;
@@ -184,7 +198,9 @@ export const PokerScene: React.FC<PokerSceneProps> = ({
     tableScene.cleanupSeats(activeIds);
 
     const playerCount = players.filter((player) => player.role === "player").length;
-    const votedCount = players.filter((player) => player.role === "player" && player.hasVoted).length;
+    const votedCount = players.filter(
+      (player) => player.role === "player" && player.hasVoted,
+    ).length;
     const shouldAnimateReveal = revealed && !prevRevealedRef.current;
     const status = getSessionStatus({ revealed, voted: votedCount, active: playerCount });
 
@@ -197,7 +213,10 @@ export const PokerScene: React.FC<PokerSceneProps> = ({
 
       aroundPlayers.forEach((player, index) => {
         const seat = tableScene.ensureSeat(player, isMobile, false);
-        const angle = aroundPlayers.length <= 1 ? -Math.PI / 2 : start + (span * index) / (aroundPlayers.length - 1);
+        const angle =
+          aroundPlayers.length <= 1
+            ? -Math.PI / 2
+            : start + (span * index) / (aroundPlayers.length - 1);
 
         const seatX = centerX + Math.cos(angle) * radiusX;
         const seatY = centerY + Math.sin(angle) * radiusY;
@@ -227,13 +246,19 @@ export const PokerScene: React.FC<PokerSceneProps> = ({
 
         seat.renderPlayer(player, { isMe: player.socketId === myPlayerId, revealed });
 
-        const valueToShow = revealed ? player.vote ?? "-" : player.hasVoted ? "" : "...";
+        const valueToShow = revealed ? (player.vote ?? "-") : player.hasVoted ? "" : "...";
         const selected = player.socketId === myPlayerId && !!player.hasVoted && !revealed;
         const hidden = !revealed && player.hasVoted;
         const previous = prevPlayersRef.current.get(player.socketId);
 
         if (shouldAnimateReveal) {
-          seat.setCardState({ value: valueToShow, selected, hidden: false, animateFlip: true, flipDelay: index * 95 });
+          seat.setCardState({
+            value: valueToShow,
+            selected,
+            hidden: false,
+            animateFlip: true,
+            flipDelay: index * 95,
+          });
         } else if (!revealed && previous && !previous.hasVoted && player.hasVoted) {
           seat.pulseVoteFeedback();
           seat.setCardState({ value: valueToShow, selected, hidden: true, animateFlip: true });
@@ -270,7 +295,7 @@ export const PokerScene: React.FC<PokerSceneProps> = ({
       }
       seat.renderPlayer(localPlayer, { isMe: true, revealed });
 
-      const valueToShow = revealed ? localPlayer.vote ?? "-" : localPlayer.hasVoted ? "" : "...";
+      const valueToShow = revealed ? (localPlayer.vote ?? "-") : localPlayer.hasVoted ? "" : "...";
       const hidden = !revealed && localPlayer.hasVoted;
       const previous = prevPlayersRef.current.get(localPlayer.socketId);
 
@@ -286,7 +311,11 @@ export const PokerScene: React.FC<PokerSceneProps> = ({
         seat.pulseVoteFeedback();
         seat.setCardState({ value: valueToShow, selected: true, hidden: true, animateFlip: true });
       } else {
-        seat.setCardState({ value: valueToShow, selected: !!localPlayer.hasVoted && !revealed, hidden });
+        seat.setCardState({
+          value: valueToShow,
+          selected: !!localPlayer.hasVoted && !revealed,
+          hidden,
+        });
       }
 
       seatAnchors.set(localPlayer.socketId, { x: localX, y: localY });
@@ -332,12 +361,15 @@ export const PokerScene: React.FC<PokerSceneProps> = ({
         deckTitleRef.current = null;
       }
 
-      const title = new Text("", new TextStyle({
-        fontFamily: "'Press Start 2P', monospace",
-        fill: 0xcffafe,
-        fontSize: isMobile ? 9 : 10,
-        align: "center",
-      }));
+      const title = new Text(
+        "",
+        new TextStyle({
+          fontFamily: "'Press Start 2P', monospace",
+          fill: 0xcffafe,
+          fontSize: isMobile ? 9 : 10,
+          align: "center",
+        }),
+      );
       title.anchor.set(0.5);
       deckTitleRef.current = title;
       overlay.addChild(title);
@@ -387,7 +419,7 @@ export const PokerScene: React.FC<PokerSceneProps> = ({
           hasVoted: player.hasVoted,
           vote: player.vote,
         },
-      ])
+      ]),
     );
     prevRevealedRef.current = revealed;
     prevMyVoteRef.current = myVote;
@@ -408,4 +440,3 @@ export const PokerScene: React.FC<PokerSceneProps> = ({
 
   return <div ref={hostRef} className="h-full w-full" />;
 };
-

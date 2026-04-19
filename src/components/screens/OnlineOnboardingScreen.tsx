@@ -63,10 +63,7 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
     typeof overallStepStart === "number" && typeof overallStepTotal === "number";
 
   return (
-    <PageShell
-      accentColor={`${accentColor}12`}
-      accentGlow={accentGlow}
-    >
+    <PageShell accentColor={`${accentColor}12`} accentGlow={accentGlow}>
       {/* Top nav */}
       <div className="mb-6 flex items-center justify-between">
         <button
@@ -74,7 +71,14 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
           onClick={onBack}
           className="flex items-center gap-1.5 text-sm text-slate-500 transition hover:text-slate-200"
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
             <path d="m15 18-6-6 6-6" />
           </svg>
           {fr.onlineOnboarding.back}
@@ -87,7 +91,10 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
       </div>
 
       {/* Heading */}
-      <div className="mb-1 text-xs font-bold uppercase tracking-widest" style={{ color: accentColor }}>
+      <div
+        className="mb-1 text-xs font-bold uppercase tracking-widest"
+        style={{ color: accentColor }}
+      >
         {brandLabel ?? "Agile Suite"}
       </div>
       <h1 className="text-2xl font-extrabold tracking-tight text-slate-50 sm:text-3xl">
@@ -122,7 +129,10 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
           </div>
 
           {/* Avatar */}
-          <div ref={avatarRef} className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+          <div
+            ref={avatarRef}
+            className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5"
+          >
             <p className="mb-4 text-sm font-semibold text-slate-200">
               {fr.onlineOnboarding.avatarLabel}
             </p>
@@ -132,9 +142,7 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
 
         {/* Profile preview */}
         <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
-          <p className="mb-5 text-xs font-bold uppercase tracking-widest text-slate-500">
-            Aperçu
-          </p>
+          <p className="mb-5 text-xs font-bold uppercase tracking-widest text-slate-500">Aperçu</p>
           <div className="flex flex-col items-center gap-4">
             <div
               className="flex h-20 w-20 items-center justify-center rounded-2xl border text-4xl"
@@ -144,8 +152,12 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
             </div>
             <div className="text-center">
               <div className="text-base font-bold text-slate-100">
-                {validName ? name : (
-                  <span className="text-slate-600">{fr.onlineOnboarding.displayNamePlaceholder}</span>
+                {validName ? (
+                  name
+                ) : (
+                  <span className="text-slate-600">
+                    {fr.onlineOnboarding.displayNamePlaceholder}
+                  </span>
                 )}
               </div>
               <div

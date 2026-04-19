@@ -17,7 +17,18 @@ const getBugSmashStars = (score: number) => {
 };
 
 const makePlayers = (names: string[], avatars: number[]): Player[] => {
-  const colors = ["#3b82f6", "#ef4444", "#22c55e", "#a855f7", "#f97316", "#14b8a6", "#eab308", "#ec4899", "#0ea5e9", "#84cc16"];
+  const colors = [
+    "#3b82f6",
+    "#ef4444",
+    "#22c55e",
+    "#a855f7",
+    "#f97316",
+    "#14b8a6",
+    "#eab308",
+    "#ec4899",
+    "#0ea5e9",
+    "#84cc16",
+  ];
   return names.map((name, idx) => ({
     id: `local-${idx}`,
     name,
@@ -51,19 +62,31 @@ const normalizeTileType = (type: string) => {
 const getTilePointDelta = (tileType: string) => {
   const normalized = normalizeTileType(tileType);
   if (normalized === "red") return -2;
-  if (normalized === "blue" || normalized === "green" || normalized === "violet" || normalized === "yellow") return 2;
+  if (
+    normalized === "blue" ||
+    normalized === "green" ||
+    normalized === "violet" ||
+    normalized === "yellow"
+  )
+    return 2;
   return 0;
 };
 
 const toQuestionType = (tileType: string): QuestionState["type"] => {
   const normalized = normalizeTileType(tileType);
-  if (normalized === "blue" || normalized === "green" || normalized === "red" || normalized === "violet" || normalized === "bonus") {
+  if (
+    normalized === "blue" ||
+    normalized === "green" ||
+    normalized === "red" ||
+    normalized === "violet" ||
+    normalized === "bonus"
+  ) {
     return normalized;
   }
   return "blue";
 };
 
-const shuffleInPlace = <T,>(list: T[]) => {
+const shuffleInPlace = <T>(list: T[]) => {
   for (let i = list.length - 1; i > 0; i -= 1) {
     const j = Math.floor(Math.random() * (i + 1));
     [list[i], list[j]] = [list[j], list[i]];
@@ -95,7 +118,7 @@ const pickReplacementColor = (tiles: GameState["tiles"], tileId: number) => {
   });
 
   const ordered = shuffleInPlace([...BOARD_COLORS]);
-  return (ordered.find((color) => !blocked.has(color)) ?? ordered[0] ?? "blue");
+  return ordered.find((color) => !blocked.has(color)) ?? ordered[0] ?? "blue";
 };
 
 const relocatePurchasedStar = (tiles: GameState["tiles"], purchasedStarTileId: number) => {
@@ -106,7 +129,7 @@ const relocatePurchasedStar = (tiles: GameState["tiles"], purchasedStarTileId: n
     (tile) =>
       tile.id !== purchasedStarTileId &&
       normalizeTileType(tile.type ?? "") !== "bonus" &&
-      normalizeTileType(tile.type ?? "") !== "start"
+      normalizeTileType(tile.type ?? "") !== "start",
   );
   if (!candidates.length) return;
 
@@ -119,7 +142,7 @@ const advancePlayerAlongBoard = (
   state: GameState,
   player: Player,
   steps: number,
-  firstChoice: number | null = null
+  firstChoice: number | null = null,
 ) => {
   let remaining = steps;
   let position = player.position;
@@ -130,8 +153,7 @@ const advancePlayerAlongBoard = (
 
   while (remaining > 0) {
     const rawOptions = getNextTileOptions(state, position);
-    const options =
-      rawOptions.length > 1 ? rawOptions.filter((id) => id !== previous) : rawOptions;
+    const options = rawOptions.length > 1 ? rawOptions.filter((id) => id !== previous) : rawOptions;
     if (!options.length) break;
 
     let chosen: number | null = null;
@@ -376,7 +398,7 @@ export function useGameState() {
         prev,
         cur,
         prev.pendingPathChoice.remainingSteps,
-        nextTileId
+        nextTileId,
       );
 
       if (!moved.finished) {
@@ -417,7 +439,10 @@ export function useGameState() {
         relocatePurchasedStar(tiles, prev.pendingKudoPurchase.atTileId);
       }
 
-      const remaining = Math.max(0, Math.floor(Number(prev.pendingKudoPurchase.remainingSteps ?? 0)));
+      const remaining = Math.max(
+        0,
+        Math.floor(Number(prev.pendingKudoPurchase.remainingSteps ?? 0)),
+      );
       if (remaining <= 0) {
         return {
           ...buildLandingState(stateWithTiles, players),
@@ -465,7 +490,13 @@ export function useGameState() {
       if (prev.currentMinigame) return prev;
       if (prev.pendingPathChoice || prev.pendingKudoPurchase || prev.pendingShop) return prev;
       if (!prev.currentQuestion) return prev;
-      const q = { ...prev.currentQuestion, votes: { up: [...prev.currentQuestion.votes.up], down: [...prev.currentQuestion.votes.down] } };
+      const q = {
+        ...prev.currentQuestion,
+        votes: {
+          up: [...prev.currentQuestion.votes.up],
+          down: [...prev.currentQuestion.votes.down],
+        },
+      };
       q.votes.up = q.votes.up.filter((id) => id !== voterId);
       q.votes.down = q.votes.down.filter((id) => id !== voterId);
       q.votes[vote].push(voterId);

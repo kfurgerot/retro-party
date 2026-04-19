@@ -39,7 +39,7 @@ export const ShopItemCard: React.FC<ShopItemCardProps> = ({
             "rounded-xl border px-3 py-2 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
             canInteract && canBuy
               ? buyButtonClass
-              : "cursor-not-allowed border-slate-500 bg-slate-700/60 text-slate-300"
+              : "cursor-not-allowed border-slate-500 bg-slate-700/60 text-slate-300",
           )}
           onClick={onBuy}
         >

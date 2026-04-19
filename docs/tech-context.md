@@ -3,6 +3,7 @@
 ## Modes techniques
 
 ### 🔍 Mode Discovery (exploration / conception)
+
 Objectif : permettre l’exploration technique et les refontes si nécessaires
 
 - Les refontes globales sont autorisées si justifiées
@@ -14,6 +15,7 @@ Objectif : permettre l’exploration technique et les refontes si nécessaires
 ---
 
 ### 🛠️ Mode Delivery (implémentation)
+
 Objectif : livrer de manière fiable, stable et incrémentale
 
 - changements incrémentaux privilégiés

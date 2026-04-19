@@ -17,7 +17,12 @@ export const PageShell = ({
   noPadding = false,
   ...props
 }: PageShellProps) => {
-  const maxWidthClass = { "sm": "max-w-sm", "4xl": "max-w-4xl", "5xl": "max-w-5xl", "6xl": "max-w-6xl" }[maxWidth];
+  const maxWidthClass = {
+    sm: "max-w-sm",
+    "4xl": "max-w-4xl",
+    "5xl": "max-w-5xl",
+    "6xl": "max-w-6xl",
+  }[maxWidth];
 
   return (
     <div
