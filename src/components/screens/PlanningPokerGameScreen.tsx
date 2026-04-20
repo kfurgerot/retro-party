@@ -1903,7 +1903,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                   : fr.planningPoker.switchPlayer}
               </Button>
             </div>
-            <div className={cn("grid gap-2", "grid-cols-3")}>
+            <div className={cn("grid gap-2", isHost ? "grid-cols-3" : "grid-cols-2")}>
               {isHost ? (
                 <>
                   <Button
@@ -1950,25 +1950,11 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                       CTA_SUBTLE,
                     )}
                     onClick={() => {
-                      setMobileMenuTab("spectators");
-                      setMobileActionsOpen(true);
-                    }}
-                  >
-                    Spectateurs
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    className={cn(
-                      MOBILE_BTN,
-                      "rounded-xl border text-xs font-semibold",
-                      CTA_SUBTLE,
-                    )}
-                    onClick={() => {
                       setMobileMenuTab("stories");
                       setMobileActionsOpen(true);
                     }}
                   >
-                    Stories
+                    Menu
                   </Button>
                   <Button
                     variant="secondary"
