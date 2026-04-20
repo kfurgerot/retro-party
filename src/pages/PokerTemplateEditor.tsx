@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { ChangeEvent, useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   Dialog,
@@ -21,6 +21,233 @@ const VOTE_SYSTEM_OPTIONS = [
   { value: "tshirt", label: "T-Shirt" },
 ];
 
+const TITLE_HEADERS = new Set([
+  "title",
+  "story",
+  "story title",
+  "story name",
+  "user story",
+  "userstory",
+  "user story title",
+  "us",
+  "summary",
+  "nom",
+  "name",
+  "titre",
+  "intitule",
+  "label",
+  "libelle",
+]);
+
+const DESCRIPTION_HEADERS = new Set([
+  "description",
+  "desc",
+  "details",
+  "detail",
+  "category",
+  "categorie",
+  "commentaire",
+  "comment",
+  "note",
+  "notes",
+]);
+
+type ParsedCsvStories = {
+  stories: Array<{ title: string; description: string | null }>;
+  skippedRows: number;
+  invalidRows: string[];
+};
+
+type CsvDecodedContent = {
+  content: string;
+  encoding: "utf-8" | "windows-1252" | "utf-16le" | "utf-16be";
+};
+
+const normalizeCsvHeader = (value: string): string =>
+  value
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ");
+
+const countDelimiter = (line: string, delimiter: string): number => {
+  let inQuotes = false;
+  let count = 0;
+  for (let i = 0; i < line.length; i += 1) {
+    const char = line[i];
+    if (char === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        i += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+    if (!inQuotes && char === delimiter) {
+      count += 1;
+    }
+  }
+  return count;
+};
+
+const detectDelimiter = (content: string): string => {
+  const firstNonEmptyLine =
+    content
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .find((line) => line.length > 0) ?? "";
+  const candidates = [";", ",", "\t"];
+  let best = ";";
+  let maxCount = -1;
+  candidates.forEach((delimiter) => {
+    const count = countDelimiter(firstNonEmptyLine, delimiter);
+    if (count > maxCount) {
+      best = delimiter;
+      maxCount = count;
+    }
+  });
+  return best;
+};
+
+const parseCsvRows = (content: string, delimiter: string): string[][] => {
+  const rows: string[][] = [];
+  let currentRow: string[] = [];
+  let currentValue = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < content.length; i += 1) {
+    const char = content[i];
+
+    if (char === '"') {
+      if (inQuotes && content[i + 1] === '"') {
+        currentValue += '"';
+        i += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+
+    if (!inQuotes && char === delimiter) {
+      currentRow.push(currentValue.trim());
+      currentValue = "";
+      continue;
+    }
+
+    if (!inQuotes && (char === "\n" || char === "\r")) {
+      if (char === "\r" && content[i + 1] === "\n") {
+        i += 1;
+      }
+      currentRow.push(currentValue.trim());
+      if (currentRow.some((cell) => cell.length > 0)) {
+        rows.push(currentRow);
+      }
+      currentRow = [];
+      currentValue = "";
+      continue;
+    }
+
+    currentValue += char;
+  }
+
+  currentRow.push(currentValue.trim());
+  if (currentRow.some((cell) => cell.length > 0)) {
+    rows.push(currentRow);
+  }
+
+  return rows;
+};
+
+const findHeaderIndex = (headers: string[], aliases: Set<string>): number =>
+  headers.findIndex((header) => aliases.has(header));
+
+const decodeCsvFile = async (file: File): Promise<CsvDecodedContent> => {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  if (bytes.length === 0) {
+    return { content: "", encoding: "utf-8" };
+  }
+
+  if (bytes.length >= 2 && bytes[0] === 0xff && bytes[1] === 0xfe) {
+    return {
+      content: new TextDecoder("utf-16le").decode(bytes),
+      encoding: "utf-16le",
+    };
+  }
+
+  if (bytes.length >= 2 && bytes[0] === 0xfe && bytes[1] === 0xff) {
+    return {
+      content: new TextDecoder("utf-16be").decode(bytes),
+      encoding: "utf-16be",
+    };
+  }
+
+  try {
+    return {
+      content: new TextDecoder("utf-8", { fatal: true }).decode(bytes),
+      encoding: "utf-8",
+    };
+  } catch {
+    return {
+      content: new TextDecoder("windows-1252").decode(bytes),
+      encoding: "windows-1252",
+    };
+  }
+};
+
+const parseStoriesCsv = (rawContent: string): ParsedCsvStories => {
+  const content = rawContent.replace(/^\uFEFF/, "");
+  const delimiter = detectDelimiter(content);
+  const rows = parseCsvRows(content, delimiter);
+
+  if (rows.length === 0) {
+    throw new Error("Le fichier CSV est vide.");
+  }
+
+  const normalizedHeaders = rows[0].map(normalizeCsvHeader);
+  const titleHeaderIndex = findHeaderIndex(normalizedHeaders, TITLE_HEADERS);
+  const descriptionHeaderIndex = findHeaderIndex(normalizedHeaders, DESCRIPTION_HEADERS);
+  const hasHeader = titleHeaderIndex >= 0 || descriptionHeaderIndex >= 0;
+
+  const titleIndex = titleHeaderIndex >= 0 ? titleHeaderIndex : 0;
+  const descriptionIndex =
+    descriptionHeaderIndex >= 0 ? descriptionHeaderIndex : hasHeader ? -1 : 1;
+
+  const stories: ParsedCsvStories["stories"] = [];
+  const invalidRows: string[] = [];
+  let skippedRows = 0;
+
+  for (let rowIndex = hasHeader ? 1 : 0; rowIndex < rows.length; rowIndex += 1) {
+    const row = rows[rowIndex];
+    const lineNumber = rowIndex + 1;
+    const title = (row[titleIndex] ?? "").trim();
+    const description = descriptionIndex >= 0 ? (row[descriptionIndex] ?? "").trim() || null : null;
+
+    if (!title && !description) {
+      skippedRows += 1;
+      continue;
+    }
+
+    if (!title) {
+      invalidRows.push(`Ligne ${lineNumber}: titre manquant.`);
+      continue;
+    }
+    if (title.length > 500) {
+      invalidRows.push(`Ligne ${lineNumber}: titre trop long (max 500 caractères).`);
+      continue;
+    }
+    if (description && description.length > 40) {
+      invalidRows.push(`Ligne ${lineNumber}: description trop longue (max 40 caractères).`);
+      continue;
+    }
+
+    stories.push({ title, description });
+  }
+
+  return { stories, skippedRows, invalidRows };
+};
+
 const PokerTemplateEditorPage = () => {
   const { templateId } = useParams<{ templateId: string }>();
   const navigate = useNavigate();
@@ -40,6 +267,10 @@ const PokerTemplateEditorPage = () => {
 
   const [newStoryTitle, setNewStoryTitle] = useState("");
   const [newStoryDesc, setNewStoryDesc] = useState("");
+  const [csvImporting, setCsvImporting] = useState(false);
+  const [csvImportInfo, setCsvImportInfo] = useState<string | null>(null);
+  const [csvImportWarning, setCsvImportWarning] = useState<string | null>(null);
+  const csvInputRef = useRef<HTMLInputElement | null>(null);
 
   const [editingStory, setEditingStory] = useState<TemplateQuestion | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
@@ -95,6 +326,8 @@ const PokerTemplateEditorPage = () => {
   const addStory = async () => {
     if (!templateId || !newStoryTitle.trim()) return;
     setError(null);
+    setCsvImportInfo(null);
+    setCsvImportWarning(null);
     try {
       const response = await api.createTemplateQuestion(templateId, {
         text: newStoryTitle.trim(),
@@ -105,6 +338,67 @@ const PokerTemplateEditorPage = () => {
       setNewStoryDesc("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur inconnue");
+    }
+  };
+
+  const importStoriesFromCsv = async (event: ChangeEvent<HTMLInputElement>) => {
+    if (!templateId) return;
+    const input = event.target;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    setError(null);
+    setCsvImportInfo(null);
+    setCsvImportWarning(null);
+
+    try {
+      const decodedCsv = await decodeCsvFile(file);
+      const parsed = parseStoriesCsv(decodedCsv.content);
+
+      if (parsed.stories.length === 0) {
+        throw new Error("Aucune story valide détectée dans ce CSV.");
+      }
+
+      setCsvImporting(true);
+      const createdStories: TemplateQuestion[] = [];
+      for (const story of parsed.stories) {
+        const response = await api.createTemplateQuestion(templateId, {
+          text: story.title,
+          category: story.description,
+        });
+        createdStories.push(response.question);
+      }
+
+      setStories((prev) => [...prev, ...createdStories].sort((a, b) => a.sortOrder - b.sortOrder));
+
+      const importedCount = createdStories.length;
+      setCsvImportInfo(
+        `${importedCount} story${importedCount > 1 ? "s" : ""} importée${
+          importedCount > 1 ? "s" : ""
+        } depuis ${file.name}.`,
+      );
+
+      if (parsed.skippedRows > 0 || parsed.invalidRows.length > 0) {
+        const warningChunks: string[] = [];
+        if (decodedCsv.encoding !== "utf-8") {
+          warningChunks.push(`Encodage détecté automatiquement : ${decodedCsv.encoding}.`);
+        }
+        if (parsed.skippedRows > 0) {
+          warningChunks.push(`${parsed.skippedRows} ligne(s) vide(s) ignorée(s).`);
+        }
+        if (parsed.invalidRows.length > 0) {
+          warningChunks.push(`${parsed.invalidRows.length} ligne(s) invalide(s) ignorée(s).`);
+          warningChunks.push(parsed.invalidRows.slice(0, 3).join(" "));
+        }
+        setCsvImportWarning(warningChunks.join(" "));
+      } else if (decodedCsv.encoding !== "utf-8") {
+        setCsvImportWarning(`Encodage détecté automatiquement : ${decodedCsv.encoding}.`);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur inconnue");
+    } finally {
+      setCsvImporting(false);
+      input.value = "";
     }
   };
 
@@ -316,6 +610,38 @@ const PokerTemplateEditorPage = () => {
               >
                 + Ajouter
               </button>
+            </div>
+            <div className="mt-4 rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-300">
+                Import CSV
+              </p>
+              <p className="mt-1 text-xs text-slate-500">
+                Colonnes supportées : <span className="text-slate-300">title/titre</span> et{" "}
+                <span className="text-slate-300">description</span> (optionnel). Séparateurs
+                acceptés : <span className="text-slate-300">;</span> ou{" "}
+                <span className="text-slate-300">,</span>.
+              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <input
+                  ref={csvInputRef}
+                  type="file"
+                  accept=".csv,text/csv"
+                  className="hidden"
+                  onChange={importStoriesFromCsv}
+                />
+                <button
+                  type="button"
+                  onClick={() => csvInputRef.current?.click()}
+                  disabled={csvImporting}
+                  className="h-10 rounded-xl border border-emerald-400/40 bg-emerald-500/20 px-4 text-xs font-bold text-emerald-200 transition hover:bg-emerald-500/30 disabled:opacity-40"
+                >
+                  {csvImporting ? "Import en cours…" : "Importer un fichier CSV"}
+                </button>
+              </div>
+              {csvImportInfo && <p className="mt-2 text-xs text-emerald-300">{csvImportInfo}</p>}
+              {csvImportWarning && (
+                <p className="mt-2 text-xs text-amber-300">{csvImportWarning}</p>
+              )}
             </div>
           </div>
 
