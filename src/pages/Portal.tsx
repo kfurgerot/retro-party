@@ -257,171 +257,191 @@ const AuthModal = ({
 
 const ToolCard = ({
   tool,
-  isSelected,
-  onClick,
+  isOpen,
+  code,
+  isLoggedIn,
+  onToggle,
+  onCodeChange,
+  onCreate,
+  onJoin,
+  onPrepare,
+  onLoginRequired,
 }: {
   tool: Tool;
-  isSelected: boolean;
-  onClick: (id: ToolId) => void;
+  isOpen: boolean;
+  code: string;
+  isLoggedIn: boolean;
+  onToggle: (id: ToolId) => void;
+  onCodeChange: (id: ToolId, value: string) => void;
+  onCreate: (id: ToolId) => void;
+  onJoin: (id: ToolId, code: string) => void;
+  onPrepare: () => void;
+  onLoginRequired: () => void;
 }) => {
   const [hovered, setHovered] = useState(false);
-  const active = isSelected || hovered;
   const isLive = tool.status === "live";
+  const active = isOpen || hovered;
+  const canJoin = isLive && code.trim().length >= 4;
+  const canCreate = isLive && !!tool.hostRoute;
+  const canPrepare = isLive && !!tool.hasPrepare;
 
   return (
-    <button
-      type="button"
-      onClick={() => isLive && onClick(tool.id)}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+    <article
       className={cn(
-        "relative flex flex-col gap-3 overflow-hidden rounded-2xl border p-5 text-left transition-all duration-200",
-        isLive ? "cursor-pointer" : "cursor-default opacity-50",
+        "relative overflow-hidden rounded-2xl border transition-all duration-200",
+        isLive ? "opacity-100" : "opacity-50",
       )}
       style={{
         background:
           active && isLive
-            ? `linear-gradient(135deg, ${tool.color}12, ${tool.color}06)`
+            ? `linear-gradient(135deg, ${tool.color}14, ${tool.color}08)`
             : "rgba(255,255,255,0.02)",
-        borderColor: active && isLive ? `${tool.color}55` : "rgba(255,255,255,0.06)",
+        borderColor: active && isLive ? `${tool.color}60` : "rgba(255,255,255,0.06)",
         boxShadow: active && isLive ? `0 0 0 1px ${tool.color}30, 0 8px 32px ${tool.glow}` : "none",
       }}
     >
-      {isSelected && isLive && (
+      {isOpen && isLive && (
         <span
           className="pointer-events-none absolute inset-x-0 top-0 h-0.5"
           style={{ background: `linear-gradient(90deg, transparent, ${tool.color}, transparent)` }}
         />
       )}
 
-      <div className="flex items-start justify-between">
-        <span className="text-3xl leading-none">{tool.icon}</span>
-        {tool.status === "live" ? (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-emerald-400">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_6px_#10b981]" />
-            Disponible
-          </span>
-        ) : (
-          <span className="rounded-full border border-slate-600/20 bg-slate-700/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
-            Bientôt
-          </span>
+      <button
+        type="button"
+        onClick={() => isLive && onToggle(tool.id)}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        className={cn(
+          "w-full p-5 text-left",
+          isLive
+            ? "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a14]"
+            : "cursor-default",
         )}
-      </div>
-
-      <div>
-        <div className="mb-1 text-[15px] font-bold leading-tight text-slate-100">{tool.label}</div>
-        <div className="text-xs leading-relaxed text-slate-500">{tool.desc}</div>
-      </div>
-    </button>
-  );
-};
-
-// ─── Quick action zone ─────────────────────────────────────────────────────────
-
-const QuickActionZone = ({
-  tool,
-  isLoggedIn,
-  onHost,
-  onJoin,
-  onPrepare,
-  onLoginRequired,
-}: {
-  tool: Tool;
-  isLoggedIn: boolean;
-  onHost: () => void;
-  onJoin: (code: string) => void;
-  onPrepare: () => void;
-  onLoginRequired: () => void;
-}) => {
-  const [code, setCode] = useState("");
-  const canJoin = code.length >= 4;
-
-  return (
-    <div className="rounded-2xl border border-white/[0.06] bg-white/[0.015] p-5">
-      <div className="mb-3.5 flex items-center justify-between gap-2.5">
-        <div className="flex items-center gap-2.5">
-          <span className="text-lg leading-none">{tool.icon}</span>
-          <div>
-            <div className="text-sm font-bold text-slate-100">{tool.label}</div>
-            <div className="text-xs text-slate-500">{tool.tagline}</div>
-          </div>
-        </div>
-        {tool.hasPrepare && (
-          <button
-            type="button"
-            onClick={isLoggedIn ? onPrepare : onLoginRequired}
-            className="flex items-center gap-1.5 rounded-lg border border-white/[0.07] bg-white/[0.03] px-3 py-1.5 text-xs font-semibold text-slate-400 transition hover:border-white/[0.12] hover:bg-white/[0.06] hover:text-slate-200"
-            title={
-              isLoggedIn
-                ? "Gérer mes templates de questions"
-                : "Connectez-vous pour préparer une session"
-            }
-          >
-            <svg
-              width="13"
-              height="13"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
-              <rect x="9" y="3" width="6" height="4" rx="1" />
-              <path d="M9 12h6M9 16h4" />
-            </svg>
-            Préparer
-            {!isLoggedIn && (
+        aria-expanded={isOpen}
+        aria-controls={`tool-actions-${tool.id}`}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <span className="text-3xl leading-none">{tool.icon}</span>
+          <div className="flex items-center gap-2">
+            {tool.status === "live" ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-emerald-400">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_6px_#10b981]" />
+                Disponible
+              </span>
+            ) : (
+              <span className="rounded-full border border-slate-600/20 bg-slate-700/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+                Bientôt
+              </span>
+            )}
+            {isLive && (
               <svg
-                width="11"
-                height="11"
+                width="16"
+                height="16"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
-                strokeWidth="2.5"
-                className="ml-0.5 text-slate-600"
+                strokeWidth="2"
+                className={cn(
+                  "text-slate-400 transition-transform duration-300",
+                  isOpen ? "rotate-180" : "rotate-0",
+                )}
               >
-                <rect x="3" y="11" width="18" height="11" rx="2" />
-                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                <path d="m6 9 6 6 6-6" />
               </svg>
             )}
-          </button>
-        )}
-      </div>
+          </div>
+        </div>
 
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center rounded-xl border border-white/[0.07] bg-white/[0.03] px-4 py-3.5">
-        <input
-          value={code}
-          onChange={(e) => setCode(e.target.value.toUpperCase().slice(0, 6))}
-          placeholder="Code room (ex: AB12)"
-          className="min-w-0 flex-1 bg-transparent font-mono text-sm tracking-widest text-slate-100 outline-none placeholder:text-slate-600"
-        />
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => canJoin && onJoin(code)}
-            className={cn(
-              "flex-1 sm:flex-none rounded-lg px-4 py-2 text-[13px] font-semibold transition-all",
-              canJoin ? "cursor-pointer text-white" : "cursor-default bg-white/5 text-slate-600",
-            )}
-            style={canJoin ? { background: tool.color } : undefined}
-          >
-            Rejoindre
-          </button>
-          <div className="h-5 w-px bg-white/[0.08]" />
-          <button
-            type="button"
-            onClick={onHost}
-            className="flex-1 sm:flex-none rounded-lg px-4 py-2 text-[13px] font-semibold text-white transition-all"
-            style={{
-              background: `linear-gradient(135deg, ${tool.color}, ${tool.color}cc)`,
-              boxShadow: `0 4px 12px ${tool.glow}`,
-            }}
-          >
-            + Créer
-          </button>
+        <div className="mt-3">
+          <div className="mb-1 text-[15px] font-bold leading-tight text-slate-100">
+            {tool.label}
+          </div>
+          <div className="text-xs leading-relaxed text-slate-500">{tool.desc}</div>
+        </div>
+      </button>
+
+      <div
+        id={`tool-actions-${tool.id}`}
+        aria-hidden={!isOpen || !isLive}
+        className={cn(
+          "grid transition-all duration-300 ease-out",
+          isOpen && isLive
+            ? "mt-0 grid-rows-[1fr] opacity-100"
+            : "mt-0 grid-rows-[0fr] opacity-0 pointer-events-none",
+        )}
+      >
+        <div className="overflow-hidden">
+          <div className="m-3 mt-0 rounded-xl border border-white/[0.08] bg-white/[0.03] p-3">
+            <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+              Code Room
+            </label>
+            <input
+              value={code}
+              onChange={(e) => onCodeChange(tool.id, e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && canJoin) onJoin(tool.id, code);
+              }}
+              placeholder="Ex: AB12"
+              className="mb-3 h-10 w-full rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 font-mono text-sm tracking-widest text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-white/[0.18] focus:ring-1 focus:ring-indigo-400/60"
+            />
+
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              <button
+                type="button"
+                onClick={() =>
+                  canPrepare ? (isLoggedIn ? onPrepare() : onLoginRequired()) : undefined
+                }
+                disabled={!canPrepare}
+                className={cn(
+                  "h-10 rounded-lg border text-[13px] font-semibold transition",
+                  canPrepare
+                    ? "border-white/[0.12] bg-white/[0.05] text-slate-200 hover:border-white/[0.2] hover:bg-white/[0.08]"
+                    : "cursor-not-allowed border-white/[0.06] bg-white/[0.02] text-slate-600",
+                )}
+              >
+                Préparer
+              </button>
+              <button
+                type="button"
+                onClick={() => canJoin && onJoin(tool.id, code)}
+                disabled={!canJoin}
+                className={cn(
+                  "h-10 rounded-lg text-[13px] font-semibold transition",
+                  canJoin
+                    ? "text-white hover:brightness-110"
+                    : "cursor-not-allowed bg-white/5 text-slate-600",
+                )}
+                style={canJoin ? { background: tool.color } : undefined}
+              >
+                Rejoindre
+              </button>
+              <button
+                type="button"
+                onClick={() => canCreate && onCreate(tool.id)}
+                disabled={!canCreate}
+                className={cn(
+                  "h-10 rounded-lg text-[13px] font-semibold transition",
+                  canCreate
+                    ? "text-white hover:brightness-110"
+                    : "cursor-not-allowed bg-white/5 text-slate-600",
+                )}
+                style={
+                  canCreate
+                    ? {
+                        background: `linear-gradient(135deg, ${tool.color}, ${tool.color}cc)`,
+                        boxShadow: `0 4px 12px ${tool.glow}`,
+                      }
+                    : undefined
+                }
+              >
+                + Créer
+              </button>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+    </article>
   );
 };
 
@@ -430,7 +450,14 @@ const QuickActionZone = ({
 export default function Portal() {
   const navigate = useNavigate();
   const { user, loading: authLoading, logout } = useAuth();
-  const [selected, setSelected] = useState<ToolId>("planning-poker");
+  const [openTool, setOpenTool] = useState<ToolId | null>(null);
+  const [joinCodes, setJoinCodes] = useState<Record<ToolId, string>>({
+    "planning-poker": "",
+    "retro-party": "",
+    "radar-party": "",
+    "draw-duel": "",
+    "retro-generator": "",
+  });
   const [mounted, setMounted] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
   const [pendingPrepare, setPendingPrepare] = useState(false);
@@ -448,15 +475,27 @@ export default function Portal() {
     }
   };
 
-  const selectedTool = TOOLS.find((t) => t.id === selected)!;
-
-  const handleCreate = () => {
-    if (selectedTool.hostRoute) navigate(selectedTool.hostRoute);
+  const handleCreate = (toolId: ToolId) => {
+    const tool = TOOLS.find((entry) => entry.id === toolId);
+    if (tool?.hostRoute) navigate(tool.hostRoute);
   };
 
-  const handleJoin = (code: string) => {
-    const route = selectedTool.joinRoute(code);
+  const handleJoin = (toolId: ToolId, code: string) => {
+    const tool = TOOLS.find((entry) => entry.id === toolId);
+    if (!tool) return;
+    const route = tool.joinRoute(code.trim().toUpperCase());
     if (route) navigate(route);
+  };
+
+  const handleToolToggle = (toolId: ToolId) => {
+    setOpenTool((current) => (current === toolId ? null : toolId));
+  };
+
+  const handleCodeChange = (toolId: ToolId, value: string) => {
+    setJoinCodes((prev) => ({
+      ...prev,
+      [toolId]: value.toUpperCase().slice(0, 6),
+    }));
   };
 
   const handlePrepare = () => {
@@ -596,22 +635,19 @@ export default function Portal() {
               <ToolCard
                 key={tool.id}
                 tool={tool}
-                isSelected={selected === tool.id}
-                onClick={setSelected}
+                isOpen={openTool === tool.id}
+                code={joinCodes[tool.id]}
+                isLoggedIn={!!user}
+                onToggle={handleToolToggle}
+                onCodeChange={handleCodeChange}
+                onCreate={handleCreate}
+                onJoin={handleJoin}
+                onPrepare={handlePrepare}
+                onLoginRequired={handlePrepare}
               />
             ))}
           </div>
         </section>
-
-        {/* Quick action zone */}
-        <QuickActionZone
-          tool={selectedTool}
-          isLoggedIn={!!user}
-          onHost={handleCreate}
-          onJoin={handleJoin}
-          onPrepare={handlePrepare}
-          onLoginRequired={handlePrepare}
-        />
 
         {/* Recent sessions placeholder */}
         <section className="mt-7">
