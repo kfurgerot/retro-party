@@ -230,28 +230,72 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
       });
     }
 
-    const orderedHistoryStories = [...historyEntries].sort((a, b) => {
-      const dateA = a.revealedAt ?? 0;
-      const dateB = b.revealedAt ?? 0;
-      if (dateA !== dateB) return dateA - dateB;
-      return a.round - b.round;
+    type NonPreparedStoryItem = {
+      id: string;
+      title: string;
+      normalizedTitle: string;
+      firstRound: number;
+      firstSeenOrder: number;
+      isVoted: boolean;
+    };
+
+    const byStoryTitle = new Map<string, NonPreparedStoryItem>();
+    let firstSeenOrder = 0;
+
+    for (const entry of history) {
+      const normalizedStoryTitle = entry.storyTitle.trim();
+      if (!normalizedStoryTitle) continue;
+
+      const existing = byStoryTitle.get(normalizedStoryTitle);
+      if (!existing) {
+        byStoryTitle.set(normalizedStoryTitle, {
+          id: entry.id,
+          title: entry.storyTitle,
+          normalizedTitle: normalizedStoryTitle,
+          firstRound: entry.round,
+          firstSeenOrder: firstSeenOrder++,
+          isVoted: true,
+        });
+        continue;
+      }
+
+      existing.id = entry.id;
+      existing.title = entry.storyTitle;
+      existing.firstRound = Math.min(existing.firstRound, entry.round);
+      existing.isVoted = true;
+    }
+
+    if (currentTitle && !byStoryTitle.has(currentTitle)) {
+      byStoryTitle.set(currentTitle, {
+        id: `current-story-${state.round}-${currentTitle}`,
+        title: state.storyTitle,
+        normalizedTitle: currentTitle,
+        firstRound: state.round,
+        firstSeenOrder: firstSeenOrder++,
+        isVoted: false,
+      });
+    }
+
+    const orderedStories = [...byStoryTitle.values()].sort((a, b) => {
+      if (a.firstRound !== b.firstRound) return a.firstRound - b.firstRound;
+      return a.firstSeenOrder - b.firstSeenOrder;
     });
 
-    return orderedHistoryStories.map((entry) => {
-      const normalizedStoryTitle = entry.storyTitle.trim();
+    return orderedStories.map((story) => {
       return {
-        id: entry.id,
-        title: entry.storyTitle,
+        id: story.id,
+        title: story.title,
         description: null,
         preparedIndex: null,
-        isCurrent: !!currentTitle && currentTitle === normalizedStoryTitle,
-        isVoted: true,
+        isCurrent: !!currentTitle && currentTitle === story.normalizedTitle,
+        isVoted: story.isVoted,
       };
     });
   }, [
-    historyEntries,
+    history,
     state.currentStoryIndex,
     state.preparedStories,
+    state.round,
     state.storyTitle,
     votedStoryTitles,
   ]);
@@ -580,7 +624,9 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
     } else if (mobileStoryEditorMode === "history") {
       const sourceTitle = mobileStoryEditorSourceTitle.trim();
       if (sourceTitle && normalized !== sourceTitle) {
-        onSelectPokerStoryByTitle?.(sourceTitle);
+        if (sourceTitle !== state.storyTitle.trim()) {
+          onSelectPokerStoryByTitle?.(sourceTitle);
+        }
         onStoryTitleChange(normalized);
         setStoryDraft(normalized);
       }
@@ -1613,14 +1659,14 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
               {mobileStoryEditorMode === "prepared"
                 ? "Modification d'une story"
                 : mobileStoryEditorMode === "history"
-                  ? "Modification d'une story votée"
+                  ? "Modification d'une story de la liste"
                   : "Configuration du vote en cours"}
             </AlertDialogTitle>
             <AlertDialogDescription className="sr-only">
               {mobileStoryEditorMode === "prepared"
                 ? "Edition du nom d'une story preparee"
                 : mobileStoryEditorMode === "history"
-                  ? "Edition du nom d'une story votee"
+                  ? "Edition du nom d'une story de la liste"
                   : "Edition du nom de la story en cours"}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -1629,7 +1675,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
               {mobileStoryEditorMode === "prepared"
                 ? "Renommer la story de la liste"
                 : mobileStoryEditorMode === "history"
-                  ? "Renommer la story votée"
+                  ? "Renommer la story de la liste"
                   : "Renommer la story en cours"}
             </div>
             <input
