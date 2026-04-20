@@ -166,6 +166,10 @@ export function usePlanningPokerOnlineState() {
         }
       : null,
   );
+  const pendingHistoryRenameRef = useRef<{
+    nextTitle: string;
+    round: number;
+  } | null>(null);
 
   useEffect(() => {
     const tryResume = () => {
@@ -201,6 +205,14 @@ export function usePlanningPokerOnlineState() {
 
       const previousTitle = previousState.storyTitle?.trim() ?? "";
       const nextTitle = nextState.storyTitle?.trim() ?? "";
+      if (
+        pendingHistoryRenameRef.current &&
+        pendingHistoryRenameRef.current.round !== nextState.round
+      ) {
+        pendingHistoryRenameRef.current = null;
+      }
+
+      const pendingHistoryRename = pendingHistoryRenameRef.current;
       const shouldRenameArchivedStory =
         previousState.phase === "playing" &&
         nextState.phase === "playing" &&
@@ -211,7 +223,10 @@ export function usePlanningPokerOnlineState() {
         !nextState.votesOpen &&
         !!previousTitle &&
         !!nextTitle &&
-        previousTitle !== nextTitle;
+        previousTitle !== nextTitle &&
+        !!pendingHistoryRename &&
+        pendingHistoryRename.nextTitle === nextTitle &&
+        pendingHistoryRename.round === nextState.round;
       if (shouldRenameArchivedStory) {
         setHistory((previousHistory) => {
           const hasPreviousTitle = previousHistory.some(
@@ -226,6 +241,7 @@ export function usePlanningPokerOnlineState() {
             entry.storyTitle.trim() === previousTitle ? { ...entry, storyTitle: nextTitle } : entry,
           );
         });
+        pendingHistoryRenameRef.current = null;
       }
 
       if (nextState.phase !== "playing" || !nextState.roomCode || !nextState.revealed) return;
@@ -442,6 +458,15 @@ export function usePlanningPokerOnlineState() {
   }, []);
 
   const setStoryTitle = useCallback((storyTitle: string) => {
+    const nextTitle = storyTitle.trim().slice(0, 64);
+    if (nextTitle) {
+      pendingHistoryRenameRef.current = {
+        nextTitle,
+        round: latestStateRef.current.round,
+      };
+    } else {
+      pendingHistoryRenameRef.current = null;
+    }
     socket.emit(C2S_EVENTS.SET_STORY_TITLE, { storyTitle });
   }, []);
 

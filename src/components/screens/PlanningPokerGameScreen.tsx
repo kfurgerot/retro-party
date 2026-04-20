@@ -214,6 +214,33 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
     () => new Set(historyByStoryTitle.keys()),
     [historyByStoryTitle],
   );
+  const [pendingUnvotedStory, setPendingUnvotedStory] = useState<{
+    title: string;
+    round: number;
+  } | null>(null);
+  React.useEffect(() => {
+    if (hasPreparedSession) {
+      setPendingUnvotedStory(null);
+      return;
+    }
+
+    const normalizedCurrentTitle = state.storyTitle.trim();
+    if (normalizedCurrentTitle && !votedStoryTitles.has(normalizedCurrentTitle)) {
+      setPendingUnvotedStory({
+        title: state.storyTitle,
+        round: state.round,
+      });
+      return;
+    }
+
+    setPendingUnvotedStory((previous) => {
+      if (!previous) return null;
+      const normalizedPendingTitle = previous.title.trim();
+      if (!normalizedPendingTitle) return null;
+      return votedStoryTitles.has(normalizedPendingTitle) ? null : previous;
+    });
+  }, [hasPreparedSession, state.round, state.storyTitle, votedStoryTitles]);
+
   const storyListItems = useMemo<StoryListItem[]>(() => {
     const currentTitle = state.storyTitle.trim();
 
@@ -267,6 +294,20 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
       existing.isVoted = true;
     }
 
+    if (pendingUnvotedStory) {
+      const normalizedPendingTitle = pendingUnvotedStory.title.trim();
+      if (normalizedPendingTitle && !byStoryTitle.has(normalizedPendingTitle)) {
+        byStoryTitle.set(normalizedPendingTitle, {
+          id: `pending-story-${pendingUnvotedStory.round}-${normalizedPendingTitle}`,
+          title: pendingUnvotedStory.title,
+          normalizedTitle: normalizedPendingTitle,
+          firstRound: pendingUnvotedStory.round,
+          firstSeenOrder: firstSeenOrder++,
+          isVoted: false,
+        });
+      }
+    }
+
     if (currentTitle && !byStoryTitle.has(currentTitle)) {
       byStoryTitle.set(currentTitle, {
         id: `current-story-${state.round}-${currentTitle}`,
@@ -296,6 +337,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
   }, [
     hasPreparedSession,
     history,
+    pendingUnvotedStory,
     state.currentStoryIndex,
     state.preparedStories,
     state.round,
