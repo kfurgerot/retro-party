@@ -378,6 +378,32 @@ export function registerSocketHandlers(deps) {
       broadcastPokerState(code);
     });
 
+    socket.on(C2S_EVENTS.SELECT_POKER_STORY_BY_TITLE, ({ storyTitle }) => {
+      const code = socketToPokerRoom.get(socket.id);
+      if (!code) return;
+      const room = pokerRooms.get(code);
+      if (!room) return;
+      if (room.hostSocketId !== socket.id) return;
+      if (room.phase !== "playing") return;
+
+      const nextTitle = typeof storyTitle === "string" ? storyTitle.trim().slice(0, 64) : "";
+      if (!nextTitle) return;
+
+      room.currentStoryIndex = Array.isArray(room.preparedStories)
+        ? room.preparedStories.findIndex((story) => story?.title === nextTitle)
+        : -1;
+      room.storyTitle = nextTitle;
+      room.returnStoryTitle = null;
+      room.votesOpen = false;
+      room.revealed = false;
+      room.lobby = room.lobby.map((player) => ({
+        ...player,
+        hasVoted: false,
+        vote: null,
+      }));
+      broadcastPokerState(code);
+    });
+
     socket.on(C2S_EVENTS.UPDATE_POKER_STORY_TITLE, ({ index, storyTitle }) => {
       const code = socketToPokerRoom.get(socket.id);
       if (!code) return;

@@ -62,6 +62,7 @@ type Props = {
   onVoteSystemChange: (voteSystem: PlanningPokerState["voteSystem"]) => void;
   onStoryTitleChange: (storyTitle: string) => void;
   onSelectPokerStory?: (index: number) => void;
+  onSelectPokerStoryByTitle?: (storyTitle: string) => void;
   onUpdatePreparedStoryTitle?: (index: number, storyTitle: string) => void;
 };
 
@@ -136,6 +137,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
   onVoteSystemChange,
   onStoryTitleChange,
   onSelectPokerStory,
+  onSelectPokerStoryByTitle,
   onUpdatePreparedStoryTitle,
 }) => {
   const hasPreparedStories = state.preparedStories.length > 0;
@@ -152,10 +154,11 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
   const [storyDraft, setStoryDraft] = useState(state.storyTitle);
   const [mobileStoryEditorOpen, setMobileStoryEditorOpen] = useState(false);
   const [mobileStoryEditorDraft, setMobileStoryEditorDraft] = useState(state.storyTitle);
-  const [mobileStoryEditorMode, setMobileStoryEditorMode] = useState<"current" | "prepared">(
-    "current",
-  );
+  const [mobileStoryEditorMode, setMobileStoryEditorMode] = useState<
+    "current" | "prepared" | "history"
+  >("current");
   const [mobileStoryEditorIndex, setMobileStoryEditorIndex] = useState(-1);
+  const [mobileStoryEditorSourceTitle, setMobileStoryEditorSourceTitle] = useState("");
   const mobileStoryEditorInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const votingPlayers = useMemo(
@@ -532,10 +535,30 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
       if (!story) return;
       setMobileStoryEditorMode("prepared");
       setMobileStoryEditorIndex(index);
+      setMobileStoryEditorSourceTitle(story.title);
       setMobileStoryEditorDraft(story.title);
       setMobileStoryEditorOpen(true);
     },
     [canEditPreparedStories, state.preparedStories],
+  );
+
+  const canEditHistoryStories =
+    isHost &&
+    typeof onStoryTitleChange === "function" &&
+    typeof onSelectPokerStoryByTitle === "function";
+
+  const openHistoryStoryEditor = React.useCallback(
+    (storyTitle: string) => {
+      if (!canEditHistoryStories) return;
+      const normalized = typeof storyTitle === "string" ? storyTitle.trim() : "";
+      if (!normalized) return;
+      setMobileStoryEditorMode("history");
+      setMobileStoryEditorIndex(-1);
+      setMobileStoryEditorSourceTitle(normalized);
+      setMobileStoryEditorDraft(normalized);
+      setMobileStoryEditorOpen(true);
+    },
+    [canEditHistoryStories],
   );
 
   const saveMobileStoryEditor = React.useCallback(() => {
@@ -554,6 +577,13 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
       if (state.currentStoryIndex === mobileStoryEditorIndex) {
         setStoryDraft(normalized);
       }
+    } else if (mobileStoryEditorMode === "history") {
+      const sourceTitle = mobileStoryEditorSourceTitle.trim();
+      if (sourceTitle && normalized !== sourceTitle) {
+        onSelectPokerStoryByTitle?.(sourceTitle);
+        onStoryTitleChange(normalized);
+        setStoryDraft(normalized);
+      }
     } else if (normalized !== state.storyTitle) {
       onStoryTitleChange(normalized);
       setStoryDraft(normalized);
@@ -565,6 +595,8 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
     mobileStoryEditorDraft,
     mobileStoryEditorIndex,
     mobileStoryEditorMode,
+    mobileStoryEditorSourceTitle,
+    onSelectPokerStoryByTitle,
     onStoryTitleChange,
     onUpdatePreparedStoryTitle,
     state.currentStoryIndex,
@@ -933,7 +965,13 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                   storyListItems.map((story, idx) => {
                     const isCurrent = story.isCurrent;
                     const isDone = !isCurrent && story.isVoted;
-                    const canSelectStory = isHost && story.preparedIndex !== null;
+                    const canSelectStory =
+                      isHost &&
+                      (story.preparedIndex !== null
+                        ? typeof onSelectPokerStory === "function"
+                        : typeof onSelectPokerStoryByTitle === "function");
+                    const canEditStory =
+                      story.preparedIndex !== null ? canEditPreparedStories : canEditHistoryStories;
                     return (
                       <div
                         key={story.id}
@@ -952,8 +990,11 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                           type="button"
                           disabled={!canSelectStory || isCurrent}
                           onClick={() => {
-                            if (story.preparedIndex == null) return;
-                            onSelectPokerStory?.(story.preparedIndex);
+                            if (story.preparedIndex != null) {
+                              onSelectPokerStory?.(story.preparedIndex);
+                              return;
+                            }
+                            onSelectPokerStoryByTitle?.(story.title);
                           }}
                           className="flex min-w-0 flex-1 items-start gap-2 text-left disabled:cursor-not-allowed"
                         >
@@ -979,10 +1020,16 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                           </div>
                         </button>
                         <div className="ml-auto flex shrink-0 items-center gap-1">
-                          {canEditPreparedStories && story.preparedIndex !== null ? (
+                          {canEditStory ? (
                             <button
                               type="button"
-                              onClick={() => openPreparedStoryEditor(story.preparedIndex)}
+                              onClick={() => {
+                                if (story.preparedIndex !== null) {
+                                  openPreparedStoryEditor(story.preparedIndex);
+                                  return;
+                                }
+                                openHistoryStoryEditor(story.title);
+                              }}
                               className="h-6 rounded-md border border-violet-400/30 bg-violet-500/10 px-2 text-[10px] font-semibold text-violet-200 transition-colors hover:bg-violet-500/20"
                             >
                               Renommer
@@ -1401,7 +1448,13 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                   storyListItems.map((story, idx) => {
                     const isCurrent = story.isCurrent;
                     const isDone = !isCurrent && story.isVoted;
-                    const canSelectStory = isHost && story.preparedIndex !== null;
+                    const canSelectStory =
+                      isHost &&
+                      (story.preparedIndex !== null
+                        ? typeof onSelectPokerStory === "function"
+                        : typeof onSelectPokerStoryByTitle === "function");
+                    const canEditStory =
+                      story.preparedIndex !== null ? canEditPreparedStories : canEditHistoryStories;
                     return (
                       <div
                         key={story.id}
@@ -1418,8 +1471,11 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                           type="button"
                           disabled={!canSelectStory || isCurrent}
                           onClick={() => {
-                            if (story.preparedIndex == null) return;
-                            onSelectPokerStory?.(story.preparedIndex);
+                            if (story.preparedIndex != null) {
+                              onSelectPokerStory?.(story.preparedIndex);
+                            } else {
+                              onSelectPokerStoryByTitle?.(story.title);
+                            }
                             setMobileActionsOpen(false);
                           }}
                           className="flex min-w-0 flex-1 items-start gap-2 text-left disabled:cursor-not-allowed"
@@ -1442,10 +1498,16 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                           </div>
                         </button>
                         <div className="ml-auto flex shrink-0 items-center gap-1">
-                          {canEditPreparedStories && story.preparedIndex !== null ? (
+                          {canEditStory ? (
                             <button
                               type="button"
-                              onClick={() => openPreparedStoryEditor(story.preparedIndex)}
+                              onClick={() => {
+                                if (story.preparedIndex !== null) {
+                                  openPreparedStoryEditor(story.preparedIndex);
+                                  return;
+                                }
+                                openHistoryStoryEditor(story.title);
+                              }}
                               className="h-6 rounded-md border border-violet-400/30 bg-violet-500/10 px-2 text-[10px] font-semibold text-violet-200"
                             >
                               Renommer
@@ -1550,19 +1612,25 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
             <AlertDialogTitle className="text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-indigo-300/90">
               {mobileStoryEditorMode === "prepared"
                 ? "Modification d'une story"
-                : "Configuration du vote en cours"}
+                : mobileStoryEditorMode === "history"
+                  ? "Modification d'une story votée"
+                  : "Configuration du vote en cours"}
             </AlertDialogTitle>
             <AlertDialogDescription className="sr-only">
               {mobileStoryEditorMode === "prepared"
                 ? "Edition du nom d'une story preparee"
-                : "Edition du nom de la story en cours"}
+                : mobileStoryEditorMode === "history"
+                  ? "Edition du nom d'une story votee"
+                  : "Edition du nom de la story en cours"}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="rounded-xl border border-white/[0.06] bg-slate-950 p-3">
             <div className="text-sm font-semibold text-slate-100">
               {mobileStoryEditorMode === "prepared"
                 ? "Renommer la story de la liste"
-                : "Renommer la story en cours"}
+                : mobileStoryEditorMode === "history"
+                  ? "Renommer la story votée"
+                  : "Renommer la story en cours"}
             </div>
             <input
               ref={mobileStoryEditorInputRef}

@@ -140,17 +140,19 @@ const storeHistory = (
 export function usePlanningPokerOnlineState() {
   const initialSession = loadSession();
   const initialHistory = loadHistory(initialSession);
+  const initialState = initialSession?.code
+    ? { ...EMPTY_STATE, roomCode: initialSession.code }
+    : EMPTY_STATE;
 
   const [connected, setConnected] = useState(socket.connected);
   const [code, setCode] = useState<string | null>(initialSession?.code ?? null);
   const [myPlayerId, setMyPlayerId] = useState<string | null>(socket.id ?? null);
-  const [state, setState] = useState<PlanningPokerState>(
-    initialSession?.code ? { ...EMPTY_STATE, roomCode: initialSession.code } : EMPTY_STATE,
-  );
+  const [state, setState] = useState<PlanningPokerState>(initialState);
   const [history, setHistory] = useState<PlanningPokerRoundSummary[]>(initialHistory);
   const [error, setError] = useState<string | null>(null);
 
   const sessionRef = useRef<PlanningPokerSession | null>(initialSession);
+  const latestStateRef = useRef<PlanningPokerState>(initialState);
   const recordedSummariesRef = useRef<Set<string>>(
     new Set(initialHistory.map((entry) => entry.id)),
   );
@@ -189,9 +191,40 @@ export function usePlanningPokerOnlineState() {
     };
 
     const onStateUpdate = (nextState: PlanningPokerState) => {
+      const previousState = latestStateRef.current;
       setState(nextState);
+      latestStateRef.current = nextState;
       if (nextState.roomCode) {
         setCode(nextState.roomCode);
+      }
+
+      const previousTitle = previousState.storyTitle?.trim() ?? "";
+      const nextTitle = nextState.storyTitle?.trim() ?? "";
+      const shouldRenameArchivedStory =
+        previousState.phase === "playing" &&
+        nextState.phase === "playing" &&
+        previousState.round === nextState.round &&
+        !previousState.revealed &&
+        !nextState.revealed &&
+        !previousState.votesOpen &&
+        !nextState.votesOpen &&
+        !!previousTitle &&
+        !!nextTitle &&
+        previousTitle !== nextTitle;
+      if (shouldRenameArchivedStory) {
+        setHistory((previousHistory) => {
+          const hasPreviousTitle = previousHistory.some(
+            (entry) => entry.storyTitle.trim() === previousTitle,
+          );
+          if (!hasPreviousTitle) return previousHistory;
+          const hasNextTitle = previousHistory.some(
+            (entry) => entry.storyTitle.trim() === nextTitle,
+          );
+          if (hasNextTitle) return previousHistory;
+          return previousHistory.map((entry) =>
+            entry.storyTitle.trim() === previousTitle ? { ...entry, storyTitle: nextTitle } : entry,
+          );
+        });
       }
 
       if (nextState.phase !== "playing" || !nextState.roomCode || !nextState.revealed) return;
@@ -258,6 +291,7 @@ export function usePlanningPokerOnlineState() {
       storeSession(null);
       setCode(null);
       setState(EMPTY_STATE);
+      latestStateRef.current = EMPTY_STATE;
     };
 
     const onRoomClosed = ({ message }: { message?: string }) => {
@@ -270,6 +304,7 @@ export function usePlanningPokerOnlineState() {
       storeSession(null);
       setCode(null);
       setState(EMPTY_STATE);
+      latestStateRef.current = EMPTY_STATE;
     };
 
     socket.on("connect", onConnect);
@@ -362,6 +397,7 @@ export function usePlanningPokerOnlineState() {
     storeSession(null);
     setCode(null);
     setState(EMPTY_STATE);
+    latestStateRef.current = EMPTY_STATE;
   }, []);
 
   const startSession = useCallback(() => {
@@ -412,6 +448,10 @@ export function usePlanningPokerOnlineState() {
     socket.emit(C2S_EVENTS.SELECT_POKER_STORY, { index });
   }, []);
 
+  const selectPokerStoryByTitle = useCallback((storyTitle: string) => {
+    socket.emit(C2S_EVENTS.SELECT_POKER_STORY_BY_TITLE, { storyTitle });
+  }, []);
+
   const updatePreparedStoryTitle = useCallback((index: number, storyTitle: string) => {
     socket.emit(C2S_EVENTS.UPDATE_POKER_STORY_TITLE, { index, storyTitle });
   }, []);
@@ -455,6 +495,7 @@ export function usePlanningPokerOnlineState() {
     setRole,
     setStoryTitle,
     selectPokerStory,
+    selectPokerStoryByTitle,
     updatePreparedStoryTitle,
   };
 }

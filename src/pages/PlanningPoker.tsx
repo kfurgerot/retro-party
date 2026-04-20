@@ -172,6 +172,7 @@ const PlanningPokerPage: React.FC = () => {
       onVoteSystemChange={online.setVoteSystem}
       onStoryTitleChange={online.setStoryTitle}
       onSelectPokerStory={online.selectPokerStory}
+      onSelectPokerStoryByTitle={online.selectPokerStoryByTitle}
       onUpdatePreparedStoryTitle={online.updatePreparedStoryTitle}
     />
   );
