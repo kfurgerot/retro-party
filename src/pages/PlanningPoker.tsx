@@ -174,6 +174,7 @@ const PlanningPokerPage: React.FC = () => {
       onSelectPokerStory={online.selectPokerStory}
       onSelectPokerStoryByTitle={online.selectPokerStoryByTitle}
       onUpdatePreparedStoryTitle={online.updatePreparedStoryTitle}
+      onAddPreparedStory={online.addPreparedStory}
     />
   );
 };

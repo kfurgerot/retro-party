@@ -63,7 +63,8 @@ export function registerTemplateRoutes(context) {
           JSON.stringify(baseConfig ?? {}),
         ],
       );
-      const seedQuestions = getDefaultTemplateQuestions();
+      const isPlanningPokerTemplate = baseConfig?.module === "planning-poker";
+      const seedQuestions = isPlanningPokerTemplate ? [] : getDefaultTemplateQuestions();
       for (const question of seedQuestions) {
         await client.query(
           `
@@ -456,7 +457,7 @@ export function registerTemplateRoutes(context) {
         [roomId, code, req.currentUser.id, template.id, JSON.stringify(configSnapshot)],
       );
 
-      createPokerRoom({ code, voteSystem, preparedStories: stories });
+      createPokerRoom({ code, voteSystem, preparedStories: stories, isPreparedSession: true });
 
       return res.status(201).json({
         roomId,

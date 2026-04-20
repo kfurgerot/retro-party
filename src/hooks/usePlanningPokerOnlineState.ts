@@ -20,6 +20,7 @@ const EMPTY_STATE: PlanningPokerState = {
   phase: "lobby",
   roomCode: null,
   storyTitle: "Story #1",
+  isPreparedSession: false,
   voteSystem: "fibonacci",
   votesOpen: false,
   players: [],
@@ -456,6 +457,10 @@ export function usePlanningPokerOnlineState() {
     socket.emit(C2S_EVENTS.UPDATE_POKER_STORY_TITLE, { index, storyTitle });
   }, []);
 
+  const addPreparedStory = useCallback((storyTitle: string) => {
+    socket.emit(C2S_EVENTS.ADD_POKER_STORY, { storyTitle });
+  }, []);
+
   const isHost = useMemo(() => {
     if (!myPlayerId) return false;
     return state.players.some((player) => player.socketId === myPlayerId && player.isHost);
@@ -497,5 +502,6 @@ export function usePlanningPokerOnlineState() {
     selectPokerStory,
     selectPokerStoryByTitle,
     updatePreparedStoryTitle,
+    addPreparedStory,
   };
 }

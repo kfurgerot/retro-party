@@ -64,6 +64,7 @@ type Props = {
   onSelectPokerStory?: (index: number) => void;
   onSelectPokerStoryByTitle?: (storyTitle: string) => void;
   onUpdatePreparedStoryTitle?: (index: number, storyTitle: string) => void;
+  onAddPreparedStory?: (storyTitle: string) => void;
 };
 
 type SessionEntry = {
@@ -139,14 +140,15 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
   onSelectPokerStory,
   onSelectPokerStoryByTitle,
   onUpdatePreparedStoryTitle,
+  onAddPreparedStory,
 }) => {
-  const hasPreparedStories = state.preparedStories.length > 0;
+  const hasPreparedSession = state.isPreparedSession || state.preparedStories.length > 0;
   const [mobileActionsOpen, setMobileActionsOpen] = useState(false);
   const [mobileMenuTab, setMobileMenuTab] = useState<"stories" | "spectators" | "summary">(
-    hasPreparedStories ? "stories" : "summary",
+    hasPreparedSession ? "stories" : "summary",
   );
   const [sidebarTab, setSidebarTab] = useState<"spectators" | "summary" | "stories">(
-    hasPreparedStories ? "stories" : "summary",
+    hasPreparedSession ? "stories" : "summary",
   );
   const [sessionCursor, setSessionCursor] = useState(0);
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
@@ -155,7 +157,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
   const [mobileStoryEditorOpen, setMobileStoryEditorOpen] = useState(false);
   const [mobileStoryEditorDraft, setMobileStoryEditorDraft] = useState(state.storyTitle);
   const [mobileStoryEditorMode, setMobileStoryEditorMode] = useState<
-    "current" | "prepared" | "history"
+    "current" | "prepared" | "history" | "new-prepared"
   >("current");
   const [mobileStoryEditorIndex, setMobileStoryEditorIndex] = useState(-1);
   const [mobileStoryEditorSourceTitle, setMobileStoryEditorSourceTitle] = useState("");
@@ -215,7 +217,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
   const storyListItems = useMemo<StoryListItem[]>(() => {
     const currentTitle = state.storyTitle.trim();
 
-    if (state.preparedStories.length > 0) {
+    if (hasPreparedSession) {
       return state.preparedStories.map((story, idx) => {
         const normalizedStoryTitle = story.title.trim();
         const isVoted = normalizedStoryTitle ? votedStoryTitles.has(normalizedStoryTitle) : false;
@@ -292,6 +294,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
       };
     });
   }, [
+    hasPreparedSession,
     history,
     state.currentStoryIndex,
     state.preparedStories,
@@ -571,6 +574,8 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
   }, [isHost, onStoryTitleChange, state.storyTitle, storyDraft]);
 
   const canEditPreparedStories = isHost && typeof onUpdatePreparedStoryTitle === "function";
+  const canAddPreparedStories =
+    isHost && hasPreparedSession && typeof onAddPreparedStory === "function";
 
   const openPreparedStoryEditor = React.useCallback(
     (index: number) => {
@@ -585,6 +590,15 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
     },
     [canEditPreparedStories, state.preparedStories],
   );
+
+  const openNewPreparedStoryEditor = React.useCallback(() => {
+    if (!canAddPreparedStories) return;
+    setMobileStoryEditorMode("new-prepared");
+    setMobileStoryEditorIndex(-1);
+    setMobileStoryEditorSourceTitle("");
+    setMobileStoryEditorDraft("");
+    setMobileStoryEditorOpen(true);
+  }, [canAddPreparedStories]);
 
   const canEditHistoryStories =
     isHost &&
@@ -621,6 +635,8 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
       if (state.currentStoryIndex === mobileStoryEditorIndex) {
         setStoryDraft(normalized);
       }
+    } else if (mobileStoryEditorMode === "new-prepared") {
+      onAddPreparedStory?.(normalized);
     } else if (mobileStoryEditorMode === "history") {
       const sourceTitle = mobileStoryEditorSourceTitle.trim();
       if (sourceTitle && normalized !== sourceTitle) {
@@ -642,6 +658,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
     mobileStoryEditorIndex,
     mobileStoryEditorMode,
     mobileStoryEditorSourceTitle,
+    onAddPreparedStory,
     onSelectPokerStoryByTitle,
     onStoryTitleChange,
     onUpdatePreparedStoryTitle,
@@ -1003,9 +1020,20 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
 
             {sidebarTab === "stories" ? (
               <div className="grid min-h-0 gap-1.5 overflow-auto pr-1">
+                {canAddPreparedStories ? (
+                  <button
+                    type="button"
+                    onClick={openNewPreparedStoryEditor}
+                    className="flex h-8 items-center justify-center rounded-lg border border-violet-400/30 bg-violet-500/10 px-3 text-[11px] font-semibold text-violet-200 transition-colors hover:bg-violet-500/20"
+                  >
+                    + Ajouter une story
+                  </button>
+                ) : null}
                 {storyListItems.length === 0 ? (
                   <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2 text-xs text-slate-400">
-                    Aucune story votée pour le moment.
+                    {hasPreparedSession
+                      ? "Aucune story pour le moment."
+                      : "Aucune story votée pour le moment."}
                   </div>
                 ) : (
                   storyListItems.map((story, idx) => {
@@ -1486,9 +1514,20 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
           <div className="grid max-h-[72vh] gap-2 overflow-y-auto px-4 pb-4">
             {mobileMenuTab === "stories" ? (
               <div className="grid gap-1.5">
+                {canAddPreparedStories ? (
+                  <button
+                    type="button"
+                    onClick={openNewPreparedStoryEditor}
+                    className="flex h-8 items-center justify-center rounded-lg border border-violet-400/30 bg-violet-500/10 px-3 text-[11px] font-semibold text-violet-200"
+                  >
+                    + Ajouter une story
+                  </button>
+                ) : null}
                 {storyListItems.length === 0 ? (
                   <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2 text-xs text-slate-400">
-                    Aucune story votée pour le moment.
+                    {hasPreparedSession
+                      ? "Aucune story pour le moment."
+                      : "Aucune story votée pour le moment."}
                   </div>
                 ) : (
                   storyListItems.map((story, idx) => {
@@ -1658,25 +1697,31 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
             <AlertDialogTitle className="text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-indigo-300/90">
               {mobileStoryEditorMode === "prepared"
                 ? "Modification d'une story"
-                : mobileStoryEditorMode === "history"
-                  ? "Modification d'une story de la liste"
-                  : "Configuration du vote en cours"}
+                : mobileStoryEditorMode === "new-prepared"
+                  ? "Ajout d'une story"
+                  : mobileStoryEditorMode === "history"
+                    ? "Modification d'une story de la liste"
+                    : "Configuration du vote en cours"}
             </AlertDialogTitle>
             <AlertDialogDescription className="sr-only">
               {mobileStoryEditorMode === "prepared"
                 ? "Edition du nom d'une story preparee"
-                : mobileStoryEditorMode === "history"
-                  ? "Edition du nom d'une story de la liste"
-                  : "Edition du nom de la story en cours"}
+                : mobileStoryEditorMode === "new-prepared"
+                  ? "Ajout d'une story dans la liste preparee"
+                  : mobileStoryEditorMode === "history"
+                    ? "Edition du nom d'une story de la liste"
+                    : "Edition du nom de la story en cours"}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="rounded-xl border border-white/[0.06] bg-slate-950 p-3">
             <div className="text-sm font-semibold text-slate-100">
               {mobileStoryEditorMode === "prepared"
                 ? "Renommer la story de la liste"
-                : mobileStoryEditorMode === "history"
-                  ? "Renommer la story de la liste"
-                  : "Renommer la story en cours"}
+                : mobileStoryEditorMode === "new-prepared"
+                  ? "Ajouter une story a la liste"
+                  : mobileStoryEditorMode === "history"
+                    ? "Renommer la story de la liste"
+                    : "Renommer la story en cours"}
             </div>
             <input
               ref={mobileStoryEditorInputRef}

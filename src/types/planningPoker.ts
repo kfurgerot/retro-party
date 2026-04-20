@@ -23,6 +23,7 @@ export type PlanningPokerState = {
   phase: "lobby" | "playing";
   roomCode: string | null;
   storyTitle: string;
+  isPreparedSession: boolean;
   voteSystem: PlanningPokerVoteSystem;
   votesOpen: boolean;
   players: PlanningPokerPlayer[];

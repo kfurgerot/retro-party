@@ -18,6 +18,7 @@ export const C2S_EVENTS = Object.freeze({
   SELECT_POKER_STORY: "select_poker_story",
   SELECT_POKER_STORY_BY_TITLE: "select_poker_story_by_title",
   UPDATE_POKER_STORY_TITLE: "update_poker_story_title",
+  ADD_POKER_STORY: "add_poker_story",
   CREATE_ROOM: "create_room",
   JOIN_ROOM: "join_room",
   RECONNECT_ROOM: "reconnect_room",

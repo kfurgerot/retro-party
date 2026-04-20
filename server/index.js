@@ -265,6 +265,7 @@ function createPokerRoom({
   role = "player",
   voteSystem = "fibonacci",
   preparedStories = [],
+  isPreparedSession = false,
 } = {}) {
   if (pokerRooms.has(code)) return pokerRooms.get(code);
 
@@ -276,6 +277,7 @@ function createPokerRoom({
     code,
     phase: "lobby",
     storyTitle: stories.length > 0 ? stories[0].title : "Story #1",
+    isPreparedSession: !!isPreparedSession,
     voteSystem: normalizePokerVoteSystem(voteSystem),
     returnStoryTitle: null,
     votesOpen: false,
@@ -335,6 +337,7 @@ function sanitizePokerState(room) {
     revealed: room.revealed,
     round: room.round,
     updatedAt: Date.now(),
+    isPreparedSession: !!room.isPreparedSession,
     preparedStories: room.preparedStories ?? [],
     currentStoryIndex: room.currentStoryIndex ?? -1,
     players: room.lobby.map((player) => ({
