@@ -65,6 +65,7 @@ type Props = {
   onSelectPokerStoryByTitle?: (storyTitle: string) => void;
   onUpdatePreparedStoryTitle?: (index: number, storyTitle: string) => void;
   onAddPreparedStory?: (storyTitle: string) => void;
+  onEndSession?: () => void;
 };
 
 type SessionEntry = {
@@ -141,6 +142,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
   onSelectPokerStoryByTitle,
   onUpdatePreparedStoryTitle,
   onAddPreparedStory,
+  onEndSession,
 }) => {
   const hasPreparedSession = state.isPreparedSession || state.preparedStories.length > 0;
   const [mobileActionsOpen, setMobileActionsOpen] = useState(false);
@@ -153,6 +155,10 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
   const [sessionCursor, setSessionCursor] = useState(0);
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [endSessionDialogOpen, setEndSessionDialogOpen] = useState(false);
+  const [sessionSummaryOpen, setSessionSummaryOpen] = useState(false);
+  const [isExportingSummaryPdf, setIsExportingSummaryPdf] = useState(false);
+  const [sessionEndedAt, setSessionEndedAt] = useState<number | null>(null);
   const [storyDraft, setStoryDraft] = useState(state.storyTitle);
   const [mobileStoryEditorOpen, setMobileStoryEditorOpen] = useState(false);
   const [mobileStoryEditorDraft, setMobileStoryEditorDraft] = useState(state.storyTitle);
@@ -383,17 +389,19 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
       : 0;
   const consensusLabel = archivedStorySnapshot
     ? "Vote deja revele"
-    : !state.votesOpen
-      ? "Votes non lances"
-      : !state.revealed
-        ? "En attente de revelation"
-        : !leadVote
-          ? "Pas de vote"
-          : consensusPct >= 80
-            ? "Consensus fort"
-            : consensusPct >= 60
-              ? "Consensus modere"
-              : "Consensus faible";
+    : state.sessionEnded
+      ? "Session terminee"
+      : !state.votesOpen
+        ? "Votes non lances"
+        : !state.revealed
+          ? "En attente de revelation"
+          : !leadVote
+            ? "Pas de vote"
+            : consensusPct >= 80
+              ? "Consensus fort"
+              : consensusPct >= 60
+                ? "Consensus modere"
+                : "Consensus faible";
   const averageLabel = archivedStorySnapshot
     ? formatPlanningValueForSystem(displayedVoteStats.average, displayedVoteSystem)
     : state.revealed
@@ -558,6 +566,269 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
     stats.totalVotes,
   ]);
 
+  const hostCanEndSession = isHost && !state.sessionEnded && typeof onEndSession === "function";
+  const canExportSessionSummary = summaryRows.length > 0 && !isExportingSummaryPdf;
+
+  const exportSessionSummaryPdf = React.useCallback(async () => {
+    if (!summaryRows.length || isExportingSummaryPdf) return;
+    setIsExportingSummaryPdf(true);
+    try {
+      const { jsPDF } = await import("jspdf");
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 12;
+      const contentWidth = pageWidth - margin * 2;
+      const hostName = state.players.find((player) => player.isHost)?.name ?? "Hote";
+      const sessionCode = state.roomCode || "-";
+      const generatedAt = new Date().toLocaleString("fr-FR", {
+        dateStyle: "medium",
+        timeStyle: "short",
+      });
+      const storiesCount = summaryRows.length;
+      const totalVotes =
+        globalSummary?.totalVotes ?? summaryRows.reduce((acc, row) => acc + row.totalVotes, 0);
+      const overallConsensus = globalSummary?.leadVote
+        ? `${displayVoteValue(globalSummary.leadVote[0])} (${globalSummary.consensusPct}%)`
+        : "-";
+      const voteTypes = globalSummary?.voteSystemsLabel || state.voteSystem;
+
+      const addPageBackground = (subtitle: string) => {
+        pdf.setFillColor(2, 6, 23);
+        pdf.rect(0, 0, pageWidth, pageHeight, "F");
+        pdf.setDrawColor(34, 211, 238);
+        pdf.setLineWidth(0.4);
+        pdf.roundedRect(6, 6, pageWidth - 12, pageHeight - 12, 3, 3, "S");
+
+        pdf.setFillColor(8, 145, 178);
+        pdf.roundedRect(margin, margin, contentWidth, 21, 3, 3, "F");
+        pdf.setTextColor(236, 254, 255);
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(14);
+        pdf.text("Retro Party - Planning Party", margin + 4, margin + 8);
+        pdf.setFontSize(9);
+        pdf.setTextColor(186, 230, 253);
+        pdf.text(subtitle, margin + 4, margin + 14);
+      };
+
+      const drawWrappedParagraph = (text: string, x: number, y: number, width: number) => {
+        const lines = pdf.splitTextToSize(text, width);
+        pdf.text(lines, x, y);
+        return y + lines.length * 4.8;
+      };
+
+      const drawMetaCard = (
+        x: number,
+        y: number,
+        width: number,
+        height: number,
+        label: string,
+        value: string,
+        color: [number, number, number],
+      ) => {
+        pdf.setFillColor(15, 23, 42);
+        pdf.roundedRect(x, y, width, height, 2.5, 2.5, "F");
+        pdf.setDrawColor(color[0], color[1], color[2]);
+        pdf.setLineWidth(0.3);
+        pdf.roundedRect(x, y, width, height, 2.5, 2.5, "S");
+        pdf.setFont("helvetica", "bold");
+        pdf.setTextColor(148, 163, 184);
+        pdf.setFontSize(7.8);
+        pdf.text(label, x + 3, y + 4.2);
+        pdf.setFont("helvetica", "bold");
+        pdf.setTextColor(236, 254, 255);
+        pdf.setFontSize(11.2);
+        const valueLines = pdf.splitTextToSize(value, width - 6);
+        pdf.text(valueLines, x + 3, y + height - 4.1);
+      };
+
+      const drawBulletSection = (
+        title: string,
+        items: string[],
+        tone: [number, number, number],
+        cursorY: number,
+      ) => {
+        const sectionWidth = contentWidth;
+        const estimatedHeight =
+          12 +
+          items.reduce(
+            (acc, item) =>
+              acc + Math.max(1, pdf.splitTextToSize(`- ${item}`, sectionWidth - 8).length),
+            0,
+          ) *
+            4.8;
+        pdf.setFillColor(15, 23, 42);
+        pdf.roundedRect(margin, cursorY, sectionWidth, estimatedHeight, 3, 3, "F");
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(10.5);
+        pdf.setTextColor(tone[0], tone[1], tone[2]);
+        pdf.text(title, margin + 4, cursorY + 7);
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(9.2);
+        pdf.setTextColor(226, 232, 240);
+        let itemY = cursorY + 12;
+        items.forEach((item) => {
+          itemY = drawWrappedParagraph(`- ${item}`, margin + 4, itemY, sectionWidth - 8);
+        });
+        return itemY + 2;
+      };
+
+      const drawStoryPageHeader = (cursorY: number) => {
+        pdf.setFont("helvetica", "bold");
+        pdf.setTextColor(236, 254, 255);
+        pdf.setFontSize(11);
+        pdf.text("Synthese par story", margin, cursorY);
+        return cursorY + 5;
+      };
+
+      addPageBackground("Synthese session - export atelier");
+      let cursorY = margin + 26;
+
+      const cardGap = 4;
+      const halfCardWidth = (contentWidth - cardGap) / 2;
+      drawMetaCard(margin, cursorY, halfCardWidth, 16, "CODE SESSION", sessionCode, [56, 189, 248]);
+      drawMetaCard(
+        margin + halfCardWidth + cardGap,
+        cursorY,
+        halfCardWidth,
+        16,
+        "HOTE",
+        hostName,
+        [34, 197, 94],
+      );
+      cursorY += 18;
+      drawMetaCard(
+        margin,
+        cursorY,
+        halfCardWidth,
+        16,
+        "STORIES VOTEES",
+        `${storiesCount}`,
+        [14, 165, 233],
+      );
+      drawMetaCard(
+        margin + halfCardWidth + cardGap,
+        cursorY,
+        halfCardWidth,
+        16,
+        "VOTES EXPRIMES",
+        `${totalVotes}`,
+        [250, 204, 21],
+      );
+      cursorY += 18;
+      drawMetaCard(
+        margin,
+        cursorY,
+        halfCardWidth,
+        16,
+        "CONSENSUS GLOBAL",
+        overallConsensus,
+        [125, 211, 252],
+      );
+      drawMetaCard(
+        margin + halfCardWidth + cardGap,
+        cursorY,
+        halfCardWidth,
+        16,
+        "TYPE DE VOTE",
+        voteTypes,
+        [167, 139, 250],
+      );
+      cursorY += 18;
+      drawMetaCard(margin, cursorY, contentWidth, 13.5, "GENERE LE", generatedAt, [125, 211, 252]);
+      cursorY += 17;
+
+      cursorY = drawBulletSection(
+        "Resume session",
+        [
+          `Stories votees: ${storiesCount}`,
+          `Votes exprimes: ${totalVotes}`,
+          `Consensus global: ${overallConsensus}`,
+          `Types de vote utilises: ${voteTypes}`,
+          state.sessionEnded
+            ? "Session cloturee (lecture seule active)."
+            : "Session toujours en cours.",
+        ],
+        [56, 189, 248],
+        cursorY,
+      );
+
+      cursorY += 2;
+      cursorY = drawStoryPageHeader(cursorY);
+
+      const drawStoryCard = (row: (typeof summaryRows)[number], y: number) => {
+        const titleLines = pdf.splitTextToSize(row.title || "-", contentWidth - 8);
+        const cardHeight = 12 + titleLines.length * 4.8 + 5;
+        pdf.setFillColor(15, 23, 42);
+        pdf.roundedRect(margin, y, contentWidth, cardHeight, 3, 3, "F");
+        pdf.setDrawColor(30, 41, 59);
+        pdf.setLineWidth(0.3);
+        pdf.roundedRect(margin, y, contentWidth, cardHeight, 3, 3, "S");
+
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(8.5);
+        pdf.setTextColor(148, 163, 184);
+        pdf.text(row.roundLabel, margin + 3, y + 4.8);
+        pdf.text(`${row.totalVotes} votes`, margin + contentWidth - 3, y + 4.8, { align: "right" });
+
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(9.5);
+        pdf.setTextColor(236, 254, 255);
+        pdf.text(titleLines, margin + 3, y + 9.2);
+
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(8.8);
+        pdf.setTextColor(186, 230, 253);
+        pdf.text(
+          `Moy: ${row.average}   |   Med: ${row.median}   |   Consensus: ${row.consensus}`,
+          margin + 3,
+          y + cardHeight - 2.8,
+        );
+
+        return cardHeight;
+      };
+
+      for (const row of summaryRows) {
+        const titleLines = pdf.splitTextToSize(row.title || "-", contentWidth - 8);
+        const cardHeight = 12 + titleLines.length * 4.8 + 5;
+        if (cursorY + cardHeight > pageHeight - margin) {
+          pdf.addPage();
+          addPageBackground("Details stories");
+          cursorY = drawStoryPageHeader(margin + 27);
+        }
+        cursorY += drawStoryCard(row, cursorY) + 2;
+      }
+
+      const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+      const filename = `planning-party-synthese-${(state.roomCode || "session").toLowerCase()}-${stamp}.pdf`;
+      pdf.save(filename);
+    } catch (error) {
+      // Keep silent in UI and log for debugging.
+      console.error("planning-poker summary pdf export failed", error);
+    } finally {
+      setIsExportingSummaryPdf(false);
+    }
+  }, [
+    globalSummary,
+    isExportingSummaryPdf,
+    state.players,
+    state.roomCode,
+    state.sessionEnded,
+    state.voteSystem,
+    summaryRows,
+  ]);
+
+  const requestEndSession = () => {
+    if (!hostCanEndSession) return;
+    setEndSessionDialogOpen(true);
+  };
+
+  const confirmEndSession = () => {
+    if (!hostCanEndSession) return;
+    onEndSession?.();
+    setEndSessionDialogOpen(false);
+  };
+
   const requestLeave = () => {
     setMobileActionsOpen(false);
     setLeaveDialogOpen(true);
@@ -569,7 +840,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
   };
 
   const requestResetVotes = () => {
-    if (!isHost) return;
+    if (!isHost || state.sessionEnded) return;
     if (!state.revealed && votedCount > 0) {
       setResetDialogOpen(true);
       return;
@@ -592,32 +863,39 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
     setMobileActionsOpen(false);
   }, [isHost, onReopenStoryVote, selectedSession, state.round, state.storyTitle]);
 
-  const hostMainActionLabel = state.revealed
-    ? "Vote suivant"
-    : !state.votesOpen
-      ? "Lancer les votes"
-      : fr.planningPoker.revealVotes;
-  const hostMainActionShortLabel = state.revealed
-    ? "Suivant"
-    : !state.votesOpen
-      ? "Lancer"
-      : "Reveler";
-  const handleHostMainAction = state.revealed
-    ? requestResetVotes
-    : state.votesOpen
-      ? onRevealVotes
-      : onOpenVotes;
+  const hostMainActionLabel = state.sessionEnded
+    ? "Session terminee"
+    : state.revealed
+      ? "Vote suivant"
+      : !state.votesOpen
+        ? "Lancer les votes"
+        : fr.planningPoker.revealVotes;
+  const hostMainActionShortLabel = state.sessionEnded
+    ? "Terminee"
+    : state.revealed
+      ? "Suivant"
+      : !state.votesOpen
+        ? "Lancer"
+        : "Reveler";
+  const handleHostMainAction = state.sessionEnded
+    ? () => {}
+    : state.revealed
+      ? requestResetVotes
+      : state.votesOpen
+        ? onRevealVotes
+        : onOpenVotes;
 
   const submitStoryTitle = React.useCallback(() => {
-    if (!isHost) return;
+    if (!isHost || state.sessionEnded) return;
     const normalized = storyDraft.trim();
     if (!normalized || normalized === state.storyTitle) return;
     onStoryTitleChange(normalized);
-  }, [isHost, onStoryTitleChange, state.storyTitle, storyDraft]);
+  }, [isHost, onStoryTitleChange, state.sessionEnded, state.storyTitle, storyDraft]);
 
-  const canEditPreparedStories = isHost && typeof onUpdatePreparedStoryTitle === "function";
+  const canEditPreparedStories =
+    isHost && !state.sessionEnded && typeof onUpdatePreparedStoryTitle === "function";
   const canAddPreparedStories =
-    isHost && hasPreparedSession && typeof onAddPreparedStory === "function";
+    isHost && !state.sessionEnded && hasPreparedSession && typeof onAddPreparedStory === "function";
 
   const openPreparedStoryEditor = React.useCallback(
     (index: number) => {
@@ -644,6 +922,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
 
   const canEditHistoryStories =
     isHost &&
+    !state.sessionEnded &&
     typeof onStoryTitleChange === "function" &&
     typeof onSelectPokerStoryByTitle === "function";
 
@@ -662,7 +941,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
   );
 
   const saveMobileStoryEditor = React.useCallback(() => {
-    if (!isHost) return;
+    if (!isHost || state.sessionEnded) return;
     const normalized = mobileStoryEditorDraft.trim();
     if (!normalized) {
       setMobileStoryEditorOpen(false);
@@ -706,15 +985,16 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
     onUpdatePreparedStoryTitle,
     state.currentStoryIndex,
     state.preparedStories,
+    state.sessionEnded,
     state.storyTitle,
   ]);
 
   const handleDeckVote = React.useCallback(
     (value: string) => {
-      if (state.revealed || !state.votesOpen) return;
+      if (state.sessionEnded || state.revealed || !state.votesOpen) return;
       onVoteCard(myVote === value ? "" : value);
     },
-    [myVote, onVoteCard, state.revealed, state.votesOpen],
+    [myVote, onVoteCard, state.revealed, state.sessionEnded, state.votesOpen],
   );
 
   React.useEffect(() => {
@@ -724,6 +1004,19 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
   React.useEffect(() => {
     setSessionCursor(0);
   }, [state.round, state.storyTitle]);
+
+  React.useEffect(() => {
+    if (!state.sessionEnded) return;
+    setSidebarTab("summary");
+    setMobileMenuTab("summary");
+    setSessionSummaryOpen(true);
+    setSessionEndedAt((previous) => previous ?? state.updatedAt);
+  }, [state.sessionEnded, state.updatedAt]);
+
+  React.useEffect(() => {
+    if (state.sessionEnded) return;
+    setSessionEndedAt(null);
+  }, [state.sessionEnded]);
 
   React.useEffect(() => {
     if (!mobileStoryEditorOpen) return;
@@ -738,7 +1031,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
       if (isInteractiveElement(event.target)) return;
       if (event.repeat) return;
 
-      if (myRole === "player" && !state.revealed && state.votesOpen) {
+      if (myRole === "player" && !state.sessionEnded && !state.revealed && state.votesOpen) {
         const voteIndex = DECK_SHORTCUT_KEYS.indexOf(event.key);
         if (voteIndex >= 0 && voteIndex < activeDeck.length) {
           event.preventDefault();
@@ -748,6 +1041,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
       }
 
       if (!isHost) return;
+      if (state.sessionEnded) return;
       if (event.key.toLowerCase() === "r") {
         event.preventDefault();
         onRevealVotes();
@@ -769,6 +1063,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
     onResetVotes,
     onRevealVotes,
     state.revealed,
+    state.sessionEnded,
     state.votesOpen,
   ]);
 
@@ -878,6 +1173,22 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
           </div>
         </header>
 
+        {state.sessionEnded ? (
+          <div className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-100 sm:text-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="font-semibold uppercase tracking-[0.08em] text-emerald-200">
+                Session terminee
+              </span>
+              <span className="text-[11px] text-emerald-200/80">
+                Cloture le {new Date(sessionEndedAt ?? state.updatedAt).toLocaleString("fr-FR")}
+              </span>
+            </div>
+            <div className="mt-1 text-[11px] text-emerald-200/85 sm:text-xs">
+              Les votes sont figes. Consulte la synthese et exporte-la en PDF.
+            </div>
+          </div>
+        ) : null}
+
         {/* ── Main content grid ── */}
         <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(280px,22vw)]">
           {/* ── Game panel ── */}
@@ -912,7 +1223,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                               key={`mini-${value}`}
                               type="button"
                               onClick={() => handleDeckVote(value)}
-                              disabled={state.revealed || !state.votesOpen}
+                              disabled={state.sessionEnded || state.revealed || !state.votesOpen}
                               style={cardStyle}
                               className={cn(
                                 "mt-2 h-[58px] w-[38px] shrink-0 snap-start rounded-xl border text-sm font-semibold transition-all duration-150",
@@ -941,7 +1252,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                           key={value}
                           type="button"
                           onClick={() => handleDeckVote(value)}
-                          disabled={state.revealed || !state.votesOpen}
+                          disabled={state.sessionEnded || state.revealed || !state.votesOpen}
                           style={cardStyle}
                           className={cn(
                             "h-[94px] w-[62px] rounded-xl border text-xl font-semibold transition-all duration-150",
@@ -982,18 +1293,22 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                     ? fr.planningPoker.switchSpectator
                     : fr.planningPoker.switchPlayer}
                 </Button>
-                {isHost ? (
+                {isHost && !state.sessionEnded ? (
                   <div className="flex min-w-0 items-center gap-1 rounded-xl border border-white/[0.06] bg-slate-900/55 p-1">
                     {VOTE_SYSTEM_OPTIONS.map((option) => (
                       <button
                         key={option.value}
                         type="button"
+                        disabled={state.sessionEnded}
                         onClick={() => onVoteSystemChange(option.value)}
                         className={cn(
                           "h-7 min-w-0 rounded px-2 text-[11px] transition-colors",
                           state.voteSystem === option.value
                             ? "bg-indigo-500 text-white"
                             : "bg-transparent text-slate-300 hover:bg-white/[0.06]",
+                          state.sessionEnded
+                            ? "cursor-not-allowed opacity-50 hover:bg-transparent"
+                            : "",
                         )}
                       >
                         {option.label}
@@ -1004,7 +1319,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
               </div>
 
               <div className="grid w-full min-w-0 grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:justify-end">
-                {isHost && state.revealed ? (
+                {isHost && state.revealed && !state.sessionEnded ? (
                   <Button
                     variant="secondary"
                     className={cn(
@@ -1022,7 +1337,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                     "h-9 min-w-0 w-full rounded-xl border text-[11px] font-semibold sm:w-auto sm:text-xs",
                     CTA_PRIMARY,
                   )}
-                  disabled={!isHost}
+                  disabled={!isHost || state.sessionEnded}
                   onClick={handleHostMainAction}
                 >
                   <span className="sm:hidden">{hostMainActionShortLabel}</span>
@@ -1083,11 +1398,15 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                     const isDone = !isCurrent && story.isVoted;
                     const canSelectStory =
                       isHost &&
+                      !state.sessionEnded &&
                       (story.preparedIndex !== null
                         ? typeof onSelectPokerStory === "function"
                         : typeof onSelectPokerStoryByTitle === "function");
                     const canEditStory =
-                      story.preparedIndex !== null ? canEditPreparedStories : canEditHistoryStories;
+                      !state.sessionEnded &&
+                      (story.preparedIndex !== null
+                        ? canEditPreparedStories
+                        : canEditHistoryStories);
                     return (
                       <div
                         key={story.id}
@@ -1189,9 +1508,34 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                   <span className="text-slate-400">Synthese des votes</span>
                   <span className="text-[11px] text-slate-500">{summaryRows.length} lignes</span>
                 </div>
+                <div className="grid grid-cols-1 gap-1.5 xl:grid-cols-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className={cn("h-8 rounded-xl border text-[11px] font-semibold", CTA_SUBTLE)}
+                    disabled={!canExportSessionSummary}
+                    onClick={exportSessionSummaryPdf}
+                  >
+                    {isExportingSummaryPdf ? "Export PDF..." : "Exporter la synthese (PDF)"}
+                  </Button>
+                  {hostCanEndSession ? (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className={cn("h-8 rounded-xl border text-[11px] font-semibold", CTA_DANGER)}
+                      onClick={requestEndSession}
+                    >
+                      Terminer la session
+                    </Button>
+                  ) : state.sessionEnded ? (
+                    <div className="inline-flex h-8 items-center justify-center rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-emerald-200">
+                      Session terminee
+                    </div>
+                  ) : null}
+                </div>
                 {summaryRows.length === 0 ? (
                   <div className="rounded-xl border border-white/[0.05] bg-white/[0.015] px-2 py-1.5 text-xs text-slate-400">
-                    Aucune story revelee pour le moment.
+                    Aucune story votee pour le moment.
                   </div>
                 ) : (
                   <div className="grid min-h-0 gap-1 overflow-auto pr-1">
@@ -1409,7 +1753,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                     })}
                   </div>
                 ) : null}
-                {!selectedSession?.isCurrent && isHost ? (
+                {!selectedSession?.isCurrent && isHost && !state.sessionEnded ? (
                   <Button
                     variant="secondary"
                     size="sm"
@@ -1458,6 +1802,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                   <Button
                     variant="secondary"
                     className={cn(MOBILE_BTN, "rounded-xl border text-xs font-bold", CTA_PRIMARY)}
+                    disabled={state.sessionEnded}
                     onClick={handleHostMainAction}
                   >
                     {hostMainActionLabel}
@@ -1577,11 +1922,15 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                     const isDone = !isCurrent && story.isVoted;
                     const canSelectStory =
                       isHost &&
+                      !state.sessionEnded &&
                       (story.preparedIndex !== null
                         ? typeof onSelectPokerStory === "function"
                         : typeof onSelectPokerStoryByTitle === "function");
                     const canEditStory =
-                      story.preparedIndex !== null ? canEditPreparedStories : canEditHistoryStories;
+                      !state.sessionEnded &&
+                      (story.preparedIndex !== null
+                        ? canEditPreparedStories
+                        : canEditHistoryStories);
                     return (
                       <div
                         key={story.id}
@@ -1684,9 +2033,34 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                   <span className="text-slate-400">Synthese des votes</span>
                   <span className="text-[11px] text-slate-500">{summaryRows.length} lignes</span>
                 </div>
+                <div className="grid gap-1.5">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className={cn("h-8 rounded-xl border text-[11px] font-semibold", CTA_SUBTLE)}
+                    disabled={!canExportSessionSummary}
+                    onClick={exportSessionSummaryPdf}
+                  >
+                    {isExportingSummaryPdf ? "Export PDF..." : "Exporter la synthese (PDF)"}
+                  </Button>
+                  {hostCanEndSession ? (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className={cn("h-8 rounded-xl border text-[11px] font-semibold", CTA_DANGER)}
+                      onClick={requestEndSession}
+                    >
+                      Terminer la session
+                    </Button>
+                  ) : state.sessionEnded ? (
+                    <div className="inline-flex h-8 items-center justify-center rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-emerald-200">
+                      Session terminee
+                    </div>
+                  ) : null}
+                </div>
                 {summaryRows.length === 0 ? (
                   <div className="rounded-xl border border-white/[0.05] bg-white/[0.015] px-2 py-1.5 text-xs text-slate-400">
-                    Aucune story revelee pour le moment.
+                    Aucune story votee pour le moment.
                   </div>
                 ) : (
                   <div className="grid max-h-[52vh] gap-1 overflow-y-auto pr-1">
@@ -1725,6 +2099,109 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
           </div>
         </DrawerContent>
       </Drawer>
+
+      {/* ── Session summary dialog ── */}
+      <AlertDialog
+        open={sessionSummaryOpen && state.sessionEnded}
+        onOpenChange={setSessionSummaryOpen}
+      >
+        <AlertDialogContent className={cn(DIALOG_CLS, "max-w-2xl")}>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-left text-lg text-slate-100">
+              Synthese de session
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-left text-slate-400">
+              Session terminee. Les votes sont figes et la synthese est disponible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="grid max-h-[60vh] gap-2 overflow-auto rounded-xl border border-white/[0.06] bg-slate-950/50 p-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-slate-400">Stories estimees: {summaryRows.length}</span>
+              {globalSummary ? (
+                <span className="text-xs text-slate-400">
+                  Votes exprimes: {globalSummary.totalVotes}
+                </span>
+              ) : null}
+            </div>
+            {summaryRows.length === 0 ? (
+              <div className="rounded-xl border border-white/[0.05] bg-white/[0.015] px-3 py-2 text-xs text-slate-400">
+                Aucune story votee pour le moment.
+              </div>
+            ) : (
+              summaryRows.map((row) => (
+                <div
+                  key={`session-summary-dialog-${row.id}`}
+                  className="rounded-xl border border-white/[0.04] bg-white/[0.01] px-3 py-2 text-xs"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] text-slate-400">{row.roundLabel}</span>
+                    <span className="text-[10px] text-slate-400">{row.totalVotes} votes</span>
+                  </div>
+                  <div className="truncate text-sm font-semibold text-slate-100">{row.title}</div>
+                  <div className="mt-1 grid grid-cols-3 gap-2 text-[11px]">
+                    <div>
+                      <div className="text-slate-400">Moy.</div>
+                      <div className="text-indigo-300">{row.average}</div>
+                    </div>
+                    <div>
+                      <div className="text-slate-400">Med.</div>
+                      <div className="text-indigo-300">{row.median}</div>
+                    </div>
+                    <div>
+                      <div className="text-slate-400">Consensus</div>
+                      <div className="text-indigo-300">{row.consensus}</div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+          <AlertDialogFooter className="mt-0 grid grid-cols-2 gap-2 sm:space-x-0">
+            <Button
+              variant="secondary"
+              className={cn(MOBILE_BTN, "rounded-xl border text-xs font-semibold", CTA_SUBTLE)}
+              onClick={() => setSessionSummaryOpen(false)}
+            >
+              Fermer
+            </Button>
+            <Button
+              variant="secondary"
+              className={cn(MOBILE_BTN, "rounded-xl border text-xs font-bold", CTA_PRIMARY)}
+              disabled={!canExportSessionSummary}
+              onClick={exportSessionSummaryPdf}
+            >
+              {isExportingSummaryPdf ? "Export PDF..." : "Exporter la synthese (PDF)"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ── End session dialog ── */}
+      <AlertDialog open={endSessionDialogOpen} onOpenChange={setEndSessionDialogOpen}>
+        <AlertDialogContent className={cn(DIALOG_CLS, "max-w-md")}>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-center text-xl text-slate-100">
+              Terminer cette session de vote ?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-slate-400">
+              Les votes seront figes. Vous pourrez consulter la synthese et l&apos;exporter en PDF.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-1 grid grid-cols-1 gap-2 sm:grid-cols-2 sm:space-x-0">
+            <AlertDialogCancel
+              className={cn("h-11 w-full rounded-xl border text-sm font-semibold", CTA_SUBTLE)}
+            >
+              Annuler
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className={cn("h-11 w-full rounded-xl border text-sm font-semibold", CTA_DANGER)}
+              onClick={confirmEndSession}
+            >
+              Oui, terminer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* ── Story editor dialog ── */}
       <AlertDialog open={mobileStoryEditorOpen} onOpenChange={setMobileStoryEditorOpen}>

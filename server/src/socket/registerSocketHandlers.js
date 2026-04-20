@@ -175,6 +175,7 @@ export function registerSocketHandlers(deps) {
       if (room.hostSocketId !== socket.id) return;
 
       room.phase = "playing";
+      room.sessionEnded = false;
       room.votesOpen = false;
       room.revealed = false;
       if (!room.storyTitle) room.storyTitle = `Story #${room.round}`;
@@ -192,6 +193,7 @@ export function registerSocketHandlers(deps) {
       const room = pokerRooms.get(code);
       if (!room) return;
       if (room.hostSocketId !== socket.id) return;
+      if (room.sessionEnded) return;
 
       room.voteSystem = normalizePokerVoteSystem(voteSystem);
       room.votesOpen = false;
@@ -227,6 +229,7 @@ export function registerSocketHandlers(deps) {
       const room = pokerRooms.get(code);
       if (!room) return;
       if (room.phase !== "playing") return;
+      if (room.sessionEnded) return;
       if (!room.votesOpen) return;
       if (room.revealed) return;
 
@@ -251,6 +254,7 @@ export function registerSocketHandlers(deps) {
       const room = pokerRooms.get(code);
       if (!room) return;
       if (room.hostSocketId !== socket.id) return;
+      if (room.sessionEnded) return;
       if (!room.votesOpen) return;
 
       room.revealed = true;
@@ -264,6 +268,7 @@ export function registerSocketHandlers(deps) {
       if (!room) return;
       if (room.hostSocketId !== socket.id) return;
       if (room.phase !== "playing") return;
+      if (room.sessionEnded) return;
 
       room.returnStoryTitle = null;
       room.votesOpen = true;
@@ -283,6 +288,7 @@ export function registerSocketHandlers(deps) {
       if (!room) return;
       if (room.hostSocketId !== socket.id) return;
       if (room.phase !== "playing") return;
+      if (room.sessionEnded) return;
 
       room.votesOpen = true;
       room.revealed = false;
@@ -301,6 +307,7 @@ export function registerSocketHandlers(deps) {
       if (!room) return;
       if (room.hostSocketId !== socket.id) return;
       if (room.phase !== "playing") return;
+      if (room.sessionEnded) return;
 
       const nextStoryTitle = typeof storyTitle === "string" ? storyTitle.trim().slice(0, 64) : "";
       if (!nextStoryTitle) return;
@@ -319,12 +326,34 @@ export function registerSocketHandlers(deps) {
       broadcastPokerState(code);
     });
 
+    socket.on(C2S_EVENTS.END_POKER_SESSION, () => {
+      const code = socketToPokerRoom.get(socket.id);
+      if (!code) return;
+      const room = pokerRooms.get(code);
+      if (!room) return;
+      if (room.hostSocketId !== socket.id) return;
+      if (room.phase !== "playing") return;
+      if (room.sessionEnded) return;
+
+      room.sessionEnded = true;
+      room.votesOpen = false;
+      room.revealed = false;
+      room.returnStoryTitle = null;
+      room.lobby = room.lobby.map((player) => ({
+        ...player,
+        hasVoted: false,
+        vote: null,
+      }));
+      broadcastPokerState(code);
+    });
+
     socket.on(C2S_EVENTS.RESET_VOTES, () => {
       const code = socketToPokerRoom.get(socket.id);
       if (!code) return;
       const room = pokerRooms.get(code);
       if (!room) return;
       if (room.hostSocketId !== socket.id) return;
+      if (room.sessionEnded) return;
 
       room.votesOpen = false;
       room.revealed = false;
@@ -362,6 +391,7 @@ export function registerSocketHandlers(deps) {
       const room = pokerRooms.get(code);
       if (!room) return;
       if (room.hostSocketId !== socket.id) return;
+      if (room.sessionEnded) return;
       if (!Array.isArray(room.preparedStories)) return;
       const idx = typeof index === "number" ? Math.floor(index) : -1;
       if (idx < 0 || idx >= room.preparedStories.length) return;
@@ -385,6 +415,7 @@ export function registerSocketHandlers(deps) {
       if (!room) return;
       if (room.hostSocketId !== socket.id) return;
       if (room.phase !== "playing") return;
+      if (room.sessionEnded) return;
 
       const nextTitle = typeof storyTitle === "string" ? storyTitle.trim().slice(0, 64) : "";
       if (!nextTitle) return;
@@ -410,6 +441,7 @@ export function registerSocketHandlers(deps) {
       const room = pokerRooms.get(code);
       if (!room) return;
       if (room.hostSocketId !== socket.id) return;
+      if (room.sessionEnded) return;
       if (!Array.isArray(room.preparedStories)) return;
 
       const idx = typeof index === "number" ? Math.floor(index) : -1;
@@ -444,6 +476,7 @@ export function registerSocketHandlers(deps) {
       if (!room) return;
       if (room.hostSocketId !== socket.id) return;
       if (room.phase !== "playing") return;
+      if (room.sessionEnded) return;
       if (!room.isPreparedSession) return;
 
       const nextTitle = typeof storyTitle === "string" ? storyTitle.trim().slice(0, 64) : "";
@@ -472,6 +505,7 @@ export function registerSocketHandlers(deps) {
       const room = pokerRooms.get(code);
       if (!room) return;
       if (room.hostSocketId !== socket.id) return;
+      if (room.sessionEnded) return;
 
       const nextTitle = typeof storyTitle === "string" ? storyTitle.trim().slice(0, 64) : "";
       room.storyTitle = nextTitle || `Story #${room.round}`;

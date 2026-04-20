@@ -24,6 +24,7 @@ export type PlanningPokerState = {
   roomCode: string | null;
   storyTitle: string;
   isPreparedSession: boolean;
+  sessionEnded: boolean;
   voteSystem: PlanningPokerVoteSystem;
   votesOpen: boolean;
   players: PlanningPokerPlayer[];
