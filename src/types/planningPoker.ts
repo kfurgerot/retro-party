@@ -1,5 +1,11 @@
 export type PlanningPokerVoteSystem = "fibonacci" | "man-day" | "tshirt";
 
+export type PokerPreparedStory = {
+  id: string;
+  title: string;
+  description: string | null;
+};
+
 export type PlanningPokerRole = "player" | "spectator";
 
 export type PlanningPokerPlayer = {
@@ -17,12 +23,16 @@ export type PlanningPokerState = {
   phase: "lobby" | "playing";
   roomCode: string | null;
   storyTitle: string;
+  isPreparedSession: boolean;
+  sessionEnded: boolean;
   voteSystem: PlanningPokerVoteSystem;
   votesOpen: boolean;
   players: PlanningPokerPlayer[];
   revealed: boolean;
   round: number;
   updatedAt: number;
+  preparedStories: PokerPreparedStory[];
+  currentStoryIndex: number;
 };
 
 export type PlanningPokerRoundVote = {

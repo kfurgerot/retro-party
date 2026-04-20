@@ -34,18 +34,30 @@ export function IndividualRecommendationsSection({ cards }: IndividualRecommenda
   if (cards.length === 0) return null;
 
   return (
-    <Card className="rounded-3xl border-cyan-300/30 bg-slate-950/45 p-4">
-      <h4 className="text-sm font-semibold text-cyan-100">Recommandations suggerees (2 semaines)</h4>
+    <Card className="rounded-3xl border-emerald-500/20 bg-slate-950/45 p-4">
+      <h4 className="text-sm font-semibold text-emerald-200">
+        Recommandations suggerees (2 semaines)
+      </h4>
       <p className="mt-1 text-xs text-slate-300">Suggestions automatiques (sans IA externe).</p>
-      <p className="mt-1 text-xs text-slate-300">A adapter a ton contexte: ce sont des pistes, pas des obligations.</p>
+      <p className="mt-1 text-xs text-slate-300">
+        A adapter a ton contexte: ce sont des pistes, pas des obligations.
+      </p>
 
       <div className="mt-3 grid gap-3 md:grid-cols-2">
         {cards.map((card) => {
           const tone = RECOMMENDATION_TONE[card.kind];
           return (
-            <div key={`${card.kind}-${card.axis}`} className={cn("rounded-3xl border p-4", tone.cardClass)}>
+            <div
+              key={`${card.kind}-${card.axis}`}
+              className={cn("rounded-3xl border p-4", tone.cardClass)}
+            >
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className={cn("inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold", tone.badgeClass)}>
+                <span
+                  className={cn(
+                    "inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold",
+                    tone.badgeClass,
+                  )}
+                >
                   {tone.label}
                 </span>
                 <span className="text-xs font-semibold text-slate-100">{card.score}/100</span>
@@ -53,18 +65,21 @@ export function IndividualRecommendationsSection({ cards }: IndividualRecommenda
 
               <p className="mt-2 text-sm font-semibold text-slate-100">{card.axisLabel}</p>
               <p className="mt-1 text-xs text-slate-200/90">
-                <span className="font-semibold text-cyan-100">Constat:</span> {card.observation}
+                <span className="font-semibold text-emerald-300">Constat:</span> {card.observation}
               </p>
 
               <div className="mt-3 space-y-2 text-sm text-slate-100/95">
                 <p className="break-words">
-                  <span className="font-semibold text-cyan-100">{card.suggestionLabel}:</span> {card.suggestion}
+                  <span className="font-semibold text-emerald-300">{card.suggestionLabel}:</span>{" "}
+                  {card.suggestion}
                 </p>
                 <p className="break-words">
-                  <span className="font-semibold text-cyan-100">Premier pas:</span> {card.firstStep}
+                  <span className="font-semibold text-emerald-300">Premier pas:</span>{" "}
+                  {card.firstStep}
                 </p>
                 <p className="break-words">
-                  <span className="font-semibold text-cyan-100">Indicateur (2 semaines):</span> {card.indicator}
+                  <span className="font-semibold text-emerald-300">Indicateur (2 semaines):</span>{" "}
+                  {card.indicator}
                 </p>
               </div>
             </div>

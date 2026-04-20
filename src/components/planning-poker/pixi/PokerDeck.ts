@@ -74,7 +74,8 @@ export class PokerDeck {
   }) {
     const colCount = Math.max(
       1,
-      columnsOverride ?? (forceSingleRow ? this.values.length : width < 520 ? 4 : width < 760 ? 6 : 8)
+      columnsOverride ??
+        (forceSingleRow ? this.values.length : width < 520 ? 4 : width < 760 ? 6 : 8),
     );
     const gap = gapOverride ?? (width < 520 ? 10 : 12);
 
@@ -91,7 +92,8 @@ export class PokerDeck {
 
     const rows = Math.ceil(this.values.length / colCount);
     const contentWidth =
-      Math.min(this.values.length, colCount) * this.cardWidth + (Math.min(this.values.length, colCount) - 1) * gap;
+      Math.min(this.values.length, colCount) * this.cardWidth +
+      (Math.min(this.values.length, colCount) - 1) * gap;
     const contentHeight = rows * this.cardHeight + Math.max(0, rows - 1) * gap;
     this.contentWidth = Math.max(0, contentWidth);
     this.contentHeight = Math.max(0, contentHeight);

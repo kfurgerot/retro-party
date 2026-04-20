@@ -1,7 +1,9 @@
 # AGENTS.md
 
 ## Projet
+
 AgileSuite est une suite d'outils Agile en ligne comprenant :
+
 - Retro Party : jeu de rétrospective multijoueur
 - Planning Party : planning poker multijoueur
 - Radar Party : diagnostic d’équipe Agile avec restitution radar
@@ -9,6 +11,7 @@ AgileSuite est une suite d'outils Agile en ligne comprenant :
 ## Modes de travail
 
 ### 🔍 Mode Discovery (exploration / conception)
+
 Objectif : améliorer profondément le produit
 
 - Les agents sont encouragés à challenger l’existant
@@ -18,6 +21,7 @@ Objectif : améliorer profondément le produit
 - La cohérence globale du produit doit être renforcée
 
 ### 🛠️ Mode Delivery (implémentation)
+
 Objectif : livrer de manière fiable et incrémentale
 
 - Privilégier le MVP le plus simple
@@ -29,6 +33,7 @@ Objectif : livrer de manière fiable et incrémentale
 ---
 
 ## Priorités produit
+
 - cohérence UX/UI entre modules
 - simplicité d’usage
 - expérience fluide desktop et mobile

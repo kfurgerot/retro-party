@@ -3,11 +3,13 @@
 ## 1. Audit critique (sans complaisance)
 
 ### Forces actuelles
+
 - Le produit est fonctionnel de bout en bout (host, lobby, partie, resultats).
 - La logique metier et les flux multijoueur sont stables.
 - Une base de design system existe (tokens CTA, surfaces, i18n FR, perf basique).
 
 ### Faiblesses majeures
+
 - La direction retro est devenue un carcan:
   - style tres marque, mais faible lisibilite sur mobile et faible perception "produit premium".
   - surcharge visuelle (glows, scans, multiples couches neon) qui concurrence l'information.
@@ -37,6 +39,7 @@
 Positionnement cible: **Party game collaboratif premium**.
 
 Principes:
+
 - 1 action principale visible par ecran.
 - Lecture en 3 secondes: contexte, action, consequence.
 - Feedback continu: qui joue, progression, prochaine etape.
@@ -47,6 +50,7 @@ Principes:
 Direction retenue: **Arcade Moderne Clair**.
 
 Caracteristiques:
+
 - Fond neutre profond, cartes claires, contrastes forts.
 - Couleurs semantiques constantes (themes de questions), sans glow excessif.
 - Typographie moderne lisible (sans effet pixel dominant).
@@ -56,11 +60,13 @@ Caracteristiques:
 ## 5. Strategie mobile / PC
 
 ### Mobile
+
 - Priorite au flux vertical, CTA pleine largeur, infos progressives.
 - Plateau simplifie en vue etapes/chapitres, carte detail au tap.
 - Bandeau sticky "A toi de jouer / Action attendue".
 
 ### Desktop
+
 - Espace split: aire de jeu + panneau contexte.
 - Plus de meta-infos visibles en simultane.
 - Navigation rapide entre joueurs, log, legende.
@@ -79,21 +85,25 @@ Recommandation P3: passer a un **plateau hybride etapes + noeuds**.
 ## 7. Plan d'action priorise
 
 ### P3-A (quick wins)
+
 - Simplifier la hierarchie visuelle de `GameScreen`.
 - Introduire un mode "UI moderne" (feature flag style) pour migrer sans casse.
 - Renforcer les feedbacks "tour actif / action attendue / derniere action".
 
 ### P3-B (structurant)
+
 - Refaire le shell de partie: header statut + zone centrale + panneau secondaire adaptatif.
 - Repenser lobby host: checklist de lancement + statut joueurs.
 - Refaire ecran resultats avec narration de fin.
 
 ### P3-C (plateau v2)
+
 - Introduire composant `BoardV2` hybride.
 - Mapping des regles existantes sur la nouvelle vue (sans changer logique serveur).
 - Fallback temporaire sur plateau legacy via feature flag.
 
 ### P3-D (finalisation)
+
 - QA mobile/desktop (host + joueur actif/passif).
 - Ajustements de rythme (timings overlays, transitions, temps morts).
 - Stabilisation et retrait progressif des styles legacy.
@@ -126,10 +136,12 @@ Recommandation P3: passer a un **plateau hybride etapes + noeuds**.
 ## 10. Plan de refonte technique (React vs Pixi)
 
 ### Separation stricte des responsabilites
+
 - React (app shell): auth, home, onboarding, lobby, prepare, template editor, modales globales, navigation.
 - Pixi (in-game): rendu plateau, actions contextuelles du tour, feedback visuel de lancer, badges in-canvas, animations courtes.
 
 ### Architecture cible des dossiers
+
 ```text
 src/
   components/
@@ -155,6 +167,7 @@ src/
 ```
 
 ### Migration etape par etape
+
 1. Fondations: tokens centralises et composants app-shell.
 2. Ecrans hors partie: migration Home + Lobby vers app-shell.
 3. In-game: factorisation de l'overlay action Pixi en primitives reusables.

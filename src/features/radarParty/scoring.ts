@@ -15,11 +15,14 @@ const round = (value: number) => Math.round(value);
 const toPct = (avgOnFive: number) => ((avgOnFive - 1) / 4) * 100;
 
 const createBuckets = (): Record<RadarDimension, number[]> =>
-  Object.fromEntries(RADAR_DIMENSIONS.map((dimension) => [dimension, [] as number[]])) as Record<RadarDimension, number[]>;
+  Object.fromEntries(RADAR_DIMENSIONS.map((dimension) => [dimension, [] as number[]])) as Record<
+    RadarDimension,
+    number[]
+  >;
 
 export function createNeutralRadar(seed = 50): RadarAxisValues {
   return Object.fromEntries(
-    RADAR_DIMENSIONS.map((dimension) => [dimension, round(seed)])
+    RADAR_DIMENSIONS.map((dimension) => [dimension, round(seed)]),
   ) as RadarAxisValues;
 }
 
@@ -36,7 +39,8 @@ export function computeRadarScores(answers: RadarAnswers): RadarScoreResult {
 
   const radar = RADAR_DIMENSIONS.reduce((acc, dimension) => {
     const values = byDimension[dimension];
-    const averageScore = values.length > 0 ? values.reduce((sum, value) => sum + value, 0) / values.length : 3;
+    const averageScore =
+      values.length > 0 ? values.reduce((sum, value) => sum + value, 0) / values.length : 3;
     acc[dimension] = round(toPct(averageScore));
     return acc;
   }, createNeutralRadar());

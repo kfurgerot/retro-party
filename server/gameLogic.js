@@ -6,11 +6,7 @@ import { generateRandomBoard } from "./boardGenerator.js";
 import { pickUniqueQuestion } from "./questions.js";
 import { BUZZWORD_DUEL_BANK } from "./buzzwordBank.js";
 import { SHOP_CATALOG } from "./shopCatalog.js";
-import {
-  actionLogMessage,
-  currentPlayerName,
-  playerName,
-} from "./actionLogMessages.js";
+import { actionLogMessage, currentPlayerName, playerName } from "./actionLogMessages.js";
 
 const BUG_SMASH_DURATION_MS = 20000;
 const BUG_SMASH_ANNOUNCE_MS = 4000;
@@ -201,7 +197,18 @@ export function regenerateBoard(state) {
 }
 
 export function initializePlayers(state, lobbyPlayers, maxRounds = 12) {
-  const colors = ["#3b82f6", "#ef4444", "#22c55e", "#a855f7", "#f97316", "#14b8a6", "#eab308", "#ec4899", "#0ea5e9", "#84cc16"];
+  const colors = [
+    "#3b82f6",
+    "#ef4444",
+    "#22c55e",
+    "#a855f7",
+    "#f97316",
+    "#14b8a6",
+    "#eab308",
+    "#ec4899",
+    "#0ea5e9",
+    "#84cc16",
+  ];
 
   const players = lobbyPlayers.map((p, idx) => ({
     id: p.socketId,
@@ -280,14 +287,18 @@ export function rollDice(state, socketId) {
   if (shouldRequirePreRollChoice(state, socketId)) return state;
 
   let workingState = state;
-  if (!workingState.pendingPreRollEffect && !workingState.pendingDoubleRoll && workingState.preRollSelectedItemId) {
+  if (
+    !workingState.pendingPreRollEffect &&
+    !workingState.pendingDoubleRoll &&
+    workingState.preRollSelectedItemId
+  ) {
     const { state: consumedState, consumed } = consumeInventoryItem(
       {
         ...workingState,
         preRollSelectedItemId: null,
       },
       socketId,
-      workingState.preRollSelectedItemId
+      workingState.preRollSelectedItemId,
     );
     if (consumed?.type === "double_roll" || consumed?.type === "plus_two_roll") {
       workingState = appendActionLog(
@@ -296,7 +307,7 @@ export function rollDice(state, socketId) {
           pendingPreRollEffect: { type: consumed.type },
           preRollActionUsed: true,
         },
-        actionLogMessage.preRollEffectArmed(currentPlayerName(consumedState), consumed.type)
+        actionLogMessage.preRollEffectArmed(currentPlayerName(consumedState), consumed.type),
       );
       console.debug(`[retro-party] pre-roll item used: ${consumed.type}`);
     } else {
@@ -316,14 +327,19 @@ export function rollDice(state, socketId) {
       };
       console.debug("[retro-party] rolling with effect: double_roll (second die)");
       console.debug(
-        `[retro-party] roll result = ${JSON.stringify({ dice: rollResult.dice, bonus: rollResult.bonus, total: rollResult.total })}`
+        `[retro-party] roll result = ${JSON.stringify({ dice: rollResult.dice, bonus: rollResult.bonus, total: rollResult.total })}`,
       );
       const withLogs = appendActionLog(
         appendActionLog(
           workingState,
-          actionLogMessage.rollSecondDieStart(currentPlayerName(workingState))
+          actionLogMessage.rollSecondDieStart(currentPlayerName(workingState)),
         ),
-        actionLogMessage.rollSecondDieResult(currentPlayerName(workingState), firstDie, die2, rollResult.total)
+        actionLogMessage.rollSecondDieResult(
+          currentPlayerName(workingState),
+          firstDie,
+          die2,
+          rollResult.total,
+        ),
       );
       const clearedPreRoll = consumePendingPreRollEffect(withLogs);
       const next = consumePendingDoubleRoll(clearedPreRoll);
@@ -348,9 +364,9 @@ export function rollDice(state, socketId) {
     const withLogs = appendActionLog(
       appendActionLog(
         workingState,
-        actionLogMessage.rollDoubleFirstDieStart(currentPlayerName(workingState))
+        actionLogMessage.rollDoubleFirstDieStart(currentPlayerName(workingState)),
       ),
-      actionLogMessage.rollDoubleFirstDieResult(currentPlayerName(workingState), die1)
+      actionLogMessage.rollDoubleFirstDieResult(currentPlayerName(workingState), die1),
     );
     return {
       ...withLogs,
@@ -367,15 +383,19 @@ export function rollDice(state, socketId) {
   if (!rollResult.dice.length) {
     console.error("[retro-party] invalid rollResult: empty dice", rollResult);
   }
-  console.debug(`[retro-party] roll result = ${JSON.stringify({ dice: rollResult.dice, bonus: rollResult.bonus, total: rollResult.total })}`);
+  console.debug(
+    `[retro-party] roll result = ${JSON.stringify({ dice: rollResult.dice, bonus: rollResult.bonus, total: rollResult.total })}`,
+  );
   const withLogs = appendActionLog(
-    appendActionLog(
-      workingState,
-      actionLogMessage.rollStart(currentPlayerName(workingState))
-    ),
+    appendActionLog(workingState, actionLogMessage.rollStart(currentPlayerName(workingState))),
     rollResult.bonus > 0
-      ? actionLogMessage.rollResultWithBonus(currentPlayerName(workingState), rollResult.dice[0], rollResult.bonus, rollResult.total)
-      : actionLogMessage.rollResult(currentPlayerName(workingState), rollResult.total)
+      ? actionLogMessage.rollResultWithBonus(
+          currentPlayerName(workingState),
+          rollResult.dice[0],
+          rollResult.bonus,
+          rollResult.total,
+        )
+      : actionLogMessage.rollResult(currentPlayerName(workingState), rollResult.total),
   );
   const next = consumePendingPreRollEffect(withLogs);
   return {
@@ -440,7 +460,12 @@ function normalizeColorType(type) {
 function applyTilePoints(type, currentPoints) {
   const normalized = normalizeColorType(type);
   if (normalized === "red") return Math.max(0, currentPoints - 2);
-  if (normalized === "blue" || normalized === "green" || normalized === "violet" || normalized === "yellow") {
+  if (
+    normalized === "blue" ||
+    normalized === "green" ||
+    normalized === "violet" ||
+    normalized === "yellow"
+  ) {
     return Math.max(0, currentPoints + 2);
   }
   return Math.max(0, currentPoints);
@@ -449,7 +474,13 @@ function applyTilePoints(type, currentPoints) {
 function getTilePointDelta(type) {
   const normalized = normalizeColorType(type);
   if (normalized === "red") return -2;
-  if (normalized === "blue" || normalized === "green" || normalized === "violet" || normalized === "yellow") return 2;
+  if (
+    normalized === "blue" ||
+    normalized === "green" ||
+    normalized === "violet" ||
+    normalized === "yellow"
+  )
+    return 2;
   return 0;
 }
 
@@ -610,8 +641,7 @@ function advancePlayerAlongBoard(state, player, steps, firstChoice = null) {
 
   while (remaining > 0) {
     const rawOptions = getNextTileOptions(state.tiles, position);
-    const options =
-      rawOptions.length > 1 ? rawOptions.filter((id) => id !== previous) : rawOptions;
+    const options = rawOptions.length > 1 ? rawOptions.filter((id) => id !== previous) : rawOptions;
     if (options.length === 0) break;
 
     let chosen = null;
@@ -763,7 +793,7 @@ function relocatePurchasedStar(tiles, purchasedStarTileId) {
     (tile) =>
       tile.id !== purchasedStarTileId &&
       normalizeColorType(tile.type) !== "bonus" &&
-      normalizeColorType(tile.type) !== "start"
+      normalizeColorType(tile.type) !== "start",
   );
   if (!candidates.length) return;
 
@@ -789,7 +819,7 @@ function buildLandingState(state, players) {
   }
 
   const collidedPlayer = players.find(
-    (player, idx) => idx !== state.currentPlayerIndex && player.position === curPlayer.position
+    (player, idx) => idx !== state.currentPlayerIndex && player.position === curPlayer.position,
   );
 
   const type = tile.type === "bonus" ? "bonus" : tile.type;
@@ -834,7 +864,9 @@ function buildQuestionStateForCurrentPlayer(state, players) {
   const normalizedType =
     type === "purple" ? "violet" : type === "star" || type === "yellow" ? "bonus" : type;
   const usedQuestionTexts = [
-    ...(Array.isArray(state.questionHistory) ? state.questionHistory.map((entry) => entry?.text) : []),
+    ...(Array.isArray(state.questionHistory)
+      ? state.questionHistory.map((entry) => entry?.text)
+      : []),
     state.currentQuestion?.text ?? null,
   ].filter((entry) => typeof entry === "string" && entry.length > 0);
   const usedQuestionSet = new Set(usedQuestionTexts);
@@ -847,15 +879,18 @@ function buildQuestionStateForCurrentPlayer(state, players) {
           q.category === "purple"
             ? "violet"
             : q.category === "star" || q.category === "yellow"
-            ? "bonus"
-            : q.category;
+              ? "bonus"
+              : q.category;
         return normalizedCategory === normalizedType;
       })
     : [];
   const customText = customPool.length
-    ? customPool[Math.floor(rng() * customPool.length)]?.text ?? ""
+    ? (customPool[Math.floor(rng() * customPool.length)]?.text ?? "")
     : "";
-  const text = customText || pickUniqueQuestion(type, usedQuestionTexts, rng) || "(Plus de questions disponibles)";
+  const text =
+    customText ||
+    pickUniqueQuestion(type, usedQuestionTexts, rng) ||
+    "(Plus de questions disponibles)";
   const qId = `${Date.now()}-${Math.floor(Math.random() * 100000)}`;
 
   return {
@@ -900,7 +935,7 @@ export function startPointDuel(state, firstPlayerId, secondPlayerId, now = Date.
       },
       turnPhase: "resolving",
     },
-    actionLogMessage.pointDuelStart(playerA.name, playerB.name)
+    actionLogMessage.pointDuelStart(playerA.name, playerB.name),
   );
 }
 
@@ -959,15 +994,23 @@ export function resolvePointDuelStep(state, now = Date.now()) {
     const players = state.players.map((p) => ({ ...p }));
     const attackerRoll = Math.max(1, Math.floor(Number(duel.attackerRoll ?? 1)));
     const defenderRoll = Math.max(1, Math.floor(Number(duel.defenderRoll ?? 1)));
-    const result = resolvePointDuelResult(players, duel.attackerId, duel.defenderId, attackerRoll, defenderRoll);
+    const result = resolvePointDuelResult(
+      players,
+      duel.attackerId,
+      duel.defenderId,
+      attackerRoll,
+      defenderRoll,
+    );
     const winnerName = result.winnerId
-      ? players.find((p) => p.id === result.winnerId)?.name ?? "Gagnant"
+      ? (players.find((p) => p.id === result.winnerId)?.name ?? "Gagnant")
       : "Egalite";
     const loserName =
       result.winnerId == null
         ? null
-        : players.find((p) => p.id !== result.winnerId && (p.id === duel.attackerId || p.id === duel.defenderId))
-            ?.name ?? null;
+        : (players.find(
+            (p) =>
+              p.id !== result.winnerId && (p.id === duel.attackerId || p.id === duel.defenderId),
+          )?.name ?? null);
 
     const withResult = {
       ...state,
@@ -985,7 +1028,7 @@ export function resolvePointDuelStep(state, now = Date.now()) {
     }
     return appendActionLog(
       withResult,
-      actionLogMessage.pointDuelSteal(winnerName, result.stolenPoints, loserName)
+      actionLogMessage.pointDuelSteal(winnerName, result.stolenPoints, loserName),
     );
   }
 
@@ -1005,29 +1048,35 @@ export function rollPointDuelDie(state, socketId, now = Date.now()) {
   if (duel.phase === "waiting_attacker_roll") {
     if (duel.attackerId !== socketId) return state;
     const attackerRoll = rollDie();
-    return appendActionLog({
-      ...state,
-      currentMinigame: {
-        ...duel,
-        phase: "show_attacker_roll",
-        attackerRoll,
-        nextStepAt: now + POINT_DUEL_ROLL_REVEAL_MS,
+    return appendActionLog(
+      {
+        ...state,
+        currentMinigame: {
+          ...duel,
+          phase: "show_attacker_roll",
+          attackerRoll,
+          nextStepAt: now + POINT_DUEL_ROLL_REVEAL_MS,
+        },
       },
-    }, actionLogMessage.pointDuelAttackerRoll(attackerName, attackerRoll));
+      actionLogMessage.pointDuelAttackerRoll(attackerName, attackerRoll),
+    );
   }
 
   if (duel.phase === "waiting_defender_roll") {
     if (duel.defenderId !== socketId) return state;
     const defenderRoll = rollDie();
-    return appendActionLog({
-      ...state,
-      currentMinigame: {
-        ...duel,
-        phase: "show_defender_roll",
-        defenderRoll,
-        nextStepAt: now + POINT_DUEL_ROLL_REVEAL_MS,
+    return appendActionLog(
+      {
+        ...state,
+        currentMinigame: {
+          ...duel,
+          phase: "show_defender_roll",
+          defenderRoll,
+          nextStepAt: now + POINT_DUEL_ROLL_REVEAL_MS,
+        },
       },
-    }, actionLogMessage.pointDuelDefenderRoll(defenderName, defenderRoll));
+      actionLogMessage.pointDuelDefenderRoll(defenderName, defenderRoll),
+    );
   }
 
   return state;
@@ -1063,7 +1112,10 @@ export function movePlayer(state, socketId, steps) {
   if (numericSteps <= 0) return state;
   console.debug(`[retro-party] moving player with total roll: ${numericSteps}`);
   const activePlayerName = currentPlayerName(state);
-  const loggedState = appendActionLog(state, actionLogMessage.moveStart(activePlayerName, numericSteps));
+  const loggedState = appendActionLog(
+    state,
+    actionLogMessage.moveStart(activePlayerName, numericSteps),
+  );
 
   const players = loggedState.players.map((p) => ({ ...p }));
   const cur = players[state.currentPlayerIndex];
@@ -1098,7 +1150,7 @@ export function movePlayer(state, socketId, steps) {
       ...buildLandingState(loggedState, players),
       lastMoveTrace: moved.moveTrace,
     },
-    actionLogMessage.moveFinished(activePlayerName, landedTileType)
+    actionLogMessage.moveFinished(activePlayerName, landedTileType),
   );
 }
 
@@ -1119,7 +1171,7 @@ export function choosePath(state, socketId, nextTileId) {
     state,
     cur,
     state.pendingPathChoice.remainingSteps,
-    nextTileId
+    nextTileId,
   );
 
   if (!moved.finished) {
@@ -1141,7 +1193,7 @@ export function choosePath(state, socketId, nextTileId) {
       ...buildLandingState(state, players),
       lastMoveTrace: moved.moveTrace,
     },
-    actionLogMessage.pathValidated(cur.name)
+    actionLogMessage.pathValidated(cur.name),
   );
 }
 
@@ -1187,8 +1239,8 @@ export function resolveKudoPurchase(state, socketId, buyKudo) {
           cleared,
           didBuyKudo
             ? actionLogMessage.kudoConverted(cur.name, KUDO_COST)
-            : actionLogMessage.kudoPassed(cur.name)
-        )
+            : actionLogMessage.kudoPassed(cur.name),
+        ),
       );
     }
     return appendActionLog(
@@ -1196,7 +1248,7 @@ export function resolveKudoPurchase(state, socketId, buyKudo) {
         ...buildLandingState(stateWithTiles, players),
         pendingKudoPurchase: null,
       },
-      didBuyKudo ? actionLogMessage.kudoBought(cur.name) : actionLogMessage.kudoSkipped(cur.name)
+      didBuyKudo ? actionLogMessage.kudoBought(cur.name) : actionLogMessage.kudoSkipped(cur.name),
     );
   }
 
@@ -1217,7 +1269,9 @@ export function resolveKudoPurchase(state, socketId, buyKudo) {
     };
     return appendActionLog(
       withPending,
-      didBuyKudo ? actionLogMessage.kudoBoughtAndContinue(cur.name) : actionLogMessage.kudoRefusedAndContinue(cur.name)
+      didBuyKudo
+        ? actionLogMessage.kudoBoughtAndContinue(cur.name)
+        : actionLogMessage.kudoRefusedAndContinue(cur.name),
     );
   }
   return appendActionLog(
@@ -1226,7 +1280,7 @@ export function resolveKudoPurchase(state, socketId, buyKudo) {
       pendingKudoPurchase: null,
       lastMoveTrace: moved.moveTrace,
     },
-    didBuyKudo ? actionLogMessage.kudoBought(cur.name) : actionLogMessage.kudoSkipped(cur.name)
+    didBuyKudo ? actionLogMessage.kudoBought(cur.name) : actionLogMessage.kudoSkipped(cur.name),
   );
 }
 
@@ -1300,7 +1354,10 @@ export function voteQuestion(state, socketId, vote) {
   if (!state.currentQuestion || state.currentQuestion.status !== "open") return state;
   if (vote !== "up" && vote !== "down") return state;
 
-  const q = { ...state.currentQuestion, votes: { up: [...state.currentQuestion.votes.up], down: [...state.currentQuestion.votes.down] } };
+  const q = {
+    ...state.currentQuestion,
+    votes: { up: [...state.currentQuestion.votes.up], down: [...state.currentQuestion.votes.down] },
+  };
 
   q.votes.up = q.votes.up.filter((id) => id !== socketId);
   q.votes.down = q.votes.down.filter((id) => id !== socketId);
@@ -1334,21 +1391,21 @@ export function validateQuestion(state, socketId) {
         ...state,
         questionHistory,
         currentQuestion: null,
-      currentMinigame: {
-        minigameId: "BUG_SMASH",
-        targetPlayerId: state.currentQuestion.targetPlayerId,
-        startAt: Date.now() + BUG_SMASH_ANNOUNCE_MS,
-        durationMs: BUG_SMASH_DURATION_MS,
-        score: 0,
-      },
-      diceValue: null,
-      isRolling: false,
-      pendingPathChoice: null,
+        currentMinigame: {
+          minigameId: "BUG_SMASH",
+          targetPlayerId: state.currentQuestion.targetPlayerId,
+          startAt: Date.now() + BUG_SMASH_ANNOUNCE_MS,
+          durationMs: BUG_SMASH_DURATION_MS,
+          score: 0,
+        },
+        diceValue: null,
+        isRolling: false,
+        pendingPathChoice: null,
         pendingKudoPurchase: null,
         pendingShop: null,
         turnPhase: "resolving",
       },
-      actionLogMessage.questionValidatedWithBugSmash(playerName(state, socketId))
+      actionLogMessage.questionValidatedWithBugSmash(playerName(state, socketId)),
     );
   }
 
@@ -1369,9 +1426,9 @@ export function validateQuestion(state, socketId) {
       actionLogMessage.questionValidated(
         playerName(state, socketId),
         state.currentQuestion.votes.up.length,
-        state.currentQuestion.votes.down.length
-      )
-    )
+        state.currentQuestion.votes.down.length,
+      ),
+    ),
   );
 }
 
@@ -1382,7 +1439,12 @@ export function openShopForPlayer(state, socketId) {
   if (!cur) return state;
   const tile = state.tiles[cur.position];
   if (!tile || String(tile.type).toLowerCase() !== "shop") return state;
-  if (state.pendingPathChoice || state.pendingKudoPurchase || state.currentQuestion || state.currentMinigame) {
+  if (
+    state.pendingPathChoice ||
+    state.pendingKudoPurchase ||
+    state.currentQuestion ||
+    state.currentMinigame
+  ) {
     return state;
   }
   return {
@@ -1473,7 +1535,7 @@ export function buyShopItem(state, socketId, itemType) {
       players,
       turnPhase: "resolving",
     },
-    actionLogMessage.shopBoughtItem(cur.name, catalogEntry.label, catalogEntry.cost)
+    actionLogMessage.shopBoughtItem(cur.name, catalogEntry.label, catalogEntry.cost),
   );
   return continueFromPendingShop(logged, players, socketId);
 }
@@ -1483,7 +1545,13 @@ export function getUsableItemsForTurn(state, socketId) {
   if (!isPlayersTurn(state, socketId)) return [];
   if (state.turnPhase !== "pre_roll") return [];
   if (state.preRollActionUsed) return [];
-  if (state.pendingPathChoice || state.pendingKudoPurchase || state.pendingShop || state.currentQuestion || state.currentMinigame) {
+  if (
+    state.pendingPathChoice ||
+    state.pendingKudoPurchase ||
+    state.pendingShop ||
+    state.currentQuestion ||
+    state.currentMinigame
+  ) {
     return [];
   }
   const cur = state.players[state.currentPlayerIndex];
@@ -1514,21 +1582,27 @@ export function resolvePreRollChoice(state, socketId, itemInstanceId = null) {
   }
 
   if (!itemInstanceId) {
-    return appendActionLog({
-      ...state,
-      preRollChoiceResolved: true,
-      preRollSelectedItemId: null,
-    }, actionLogMessage.preRollNoItem(curName));
+    return appendActionLog(
+      {
+        ...state,
+        preRollChoiceResolved: true,
+        preRollSelectedItemId: null,
+      },
+      actionLogMessage.preRollNoItem(curName),
+    );
   }
 
   const selected = usableItems.find((item) => item.id === itemInstanceId);
   if (!selected) return state;
   const selectedLabel = SHOP_CATALOG[selected.type]?.label ?? "objet";
-  return appendActionLog({
-    ...state,
-    preRollChoiceResolved: true,
-    preRollSelectedItemId: selected.id,
-  }, actionLogMessage.preRollPreparedItem(curName, selectedLabel));
+  return appendActionLog(
+    {
+      ...state,
+      preRollChoiceResolved: true,
+      preRollSelectedItemId: selected.id,
+    },
+    actionLogMessage.preRollPreparedItem(curName, selectedLabel),
+  );
 }
 
 export function consumeInventoryItem(state, socketId, itemInstanceId) {
@@ -1549,14 +1623,20 @@ export function useShopItem(state, socketId, itemInstanceId, payload = {}) {
   if (!isPlayersTurn(state, socketId)) return state;
   if (state.turnPhase !== "pre_roll") return state;
   if (state.preRollActionUsed) return state;
-  if (state.pendingPathChoice || state.pendingKudoPurchase || state.pendingShop || state.currentQuestion || state.currentMinigame) {
+  if (
+    state.pendingPathChoice ||
+    state.pendingKudoPurchase ||
+    state.pendingShop ||
+    state.currentQuestion ||
+    state.currentMinigame
+  ) {
     return state;
   }
 
   const previewPlayer = state.players[state.currentPlayerIndex];
   if (!previewPlayer || previewPlayer.id !== socketId) return state;
   const previewItem = (Array.isArray(previewPlayer.inventory) ? previewPlayer.inventory : []).find(
-    (item) => item.id === itemInstanceId
+    (item) => item.id === itemInstanceId,
   );
   if (!previewItem) return state;
   const previewDef = SHOP_CATALOG[previewItem.type];
@@ -1610,7 +1690,7 @@ export function useShopItem(state, socketId, itemInstanceId, payload = {}) {
         players,
         turnPhase: "pre_roll",
       },
-      actionLogMessage.itemUsedOnTarget(cur.name, itemDef.label, target.name)
+      actionLogMessage.itemUsedOnTarget(cur.name, itemDef.label, target.name),
     );
   }
 
@@ -1628,7 +1708,7 @@ export function useShopItem(state, socketId, itemInstanceId, payload = {}) {
         players,
         turnPhase: "pre_roll",
       },
-      actionLogMessage.itemStolePoints(cur.name, stolen, target.name)
+      actionLogMessage.itemStolePoints(cur.name, stolen, target.name),
     );
   }
 
@@ -1704,20 +1784,20 @@ export function nextTurn(state) {
         ...state,
         phase: "results",
         players,
-      currentRound: state.maxRounds,
-      currentPlayerIndex: state.currentPlayerIndex,
-      diceValue: null,
-      isRolling: false,
-      pendingPathChoice: null,
-      pendingKudoPurchase: null,
-      pendingShop: null,
-      turnPhase: "finished",
-      pendingPreRollEffect: null,
+        currentRound: state.maxRounds,
+        currentPlayerIndex: state.currentPlayerIndex,
+        diceValue: null,
+        isRolling: false,
+        pendingPathChoice: null,
+        pendingKudoPurchase: null,
+        pendingShop: null,
+        turnPhase: "finished",
+        pendingPreRollEffect: null,
         pendingDoubleRoll: null,
         preRollChoiceResolved: true,
         preRollSelectedItemId: null,
       },
-      actionLogMessage.gameFinished()
+      actionLogMessage.gameFinished(),
     );
   }
   return appendActionLog(
@@ -1725,20 +1805,20 @@ export function nextTurn(state) {
       ...state,
       players,
       currentPlayerIndex: nextIndex,
-    currentRound: nextRound,
-    diceValue: null,
-    isRolling: false,
-    pendingPathChoice: null,
-    pendingKudoPurchase: null,
-    pendingShop: null,
-    turnPhase: "pre_roll",
-    preRollActionUsed: false,
-    pendingPreRollEffect: null,
+      currentRound: nextRound,
+      diceValue: null,
+      isRolling: false,
+      pendingPathChoice: null,
+      pendingKudoPurchase: null,
+      pendingShop: null,
+      turnPhase: "pre_roll",
+      preRollActionUsed: false,
+      pendingPreRollEffect: null,
       pendingDoubleRoll: null,
       preRollChoiceResolved: false,
       preRollSelectedItemId: null,
     },
-    actionLogMessage.nextTurn(players[nextIndex]?.name, nextRound, state.maxRounds)
+    actionLogMessage.nextTurn(players[nextIndex]?.name, nextRound, state.maxRounds),
   );
 }
 
@@ -1747,7 +1827,9 @@ export function resetGame() {
 }
 
 function getBuzzwordDuelists(minigame) {
-  return Array.isArray(minigame.duelists) && minigame.duelists.length === 2 ? minigame.duelists : null;
+  return Array.isArray(minigame.duelists) && minigame.duelists.length === 2
+    ? minigame.duelists
+    : null;
 }
 
 function applyBuzzwordDirectGains(players, scores, duelists) {
@@ -1841,7 +1923,10 @@ export function resolveBuzzwordWord(state, now = Date.now()) {
   if (!isBuzzwordDuelActive(state)) return state;
 
   const minigame = state.currentMinigame;
-  if ((minigame.phase !== "word" && minigame.phase !== "sudden_death") || now < minigame.wordEndsAt) {
+  if (
+    (minigame.phase !== "word" && minigame.phase !== "sudden_death") ||
+    now < minigame.wordEndsAt
+  ) {
     return state;
   }
 
@@ -1856,8 +1941,12 @@ export function resolveBuzzwordWord(state, now = Date.now()) {
     const points = minigame.isDouble ? 2 : 1;
     const scores = {
       ...minigame.scores,
-      [playerA]: (minigame.scores[playerA] ?? 0) + (answerA === minigame._currentCorrectCategory ? points : 0),
-      [playerB]: (minigame.scores[playerB] ?? 0) + (answerB === minigame._currentCorrectCategory ? points : 0),
+      [playerA]:
+        (minigame.scores[playerA] ?? 0) +
+        (answerA === minigame._currentCorrectCategory ? points : 0),
+      [playerB]:
+        (minigame.scores[playerB] ?? 0) +
+        (answerB === minigame._currentCorrectCategory ? points : 0),
     };
 
     if (minigame.currentWordIndex >= BUZZWORD_MAIN_WORDS) {
@@ -1872,7 +1961,7 @@ export function resolveBuzzwordWord(state, now = Date.now()) {
           },
           playerA,
           playerB,
-          now
+          now,
         );
       }
       if (scores[playerB] > scores[playerA]) {
@@ -1886,7 +1975,7 @@ export function resolveBuzzwordWord(state, now = Date.now()) {
           },
           playerB,
           playerA,
-          now
+          now,
         );
       }
 
@@ -1938,7 +2027,8 @@ export function maybeStartBuzzwordNextWord(state, now = Date.now()) {
   if (!isBuzzwordDuelActive(state)) return state;
 
   const minigame = state.currentMinigame;
-  if (minigame.phase !== "between" || !minigame.nextWordAt || now < minigame.nextWordAt) return state;
+  if (minigame.phase !== "between" || !minigame.nextWordAt || now < minigame.nextWordAt)
+    return state;
 
   if (minigame.roundType === "sudden_death") {
     return {
@@ -1954,13 +2044,11 @@ export function maybeStartBuzzwordNextWord(state, now = Date.now()) {
     };
   }
 
-  const nextWord =
-    minigame._nextMainWord ??
-    {
-      text: minigame.wordText,
-      category: minigame._currentCorrectCategory,
-      isDouble: minigame.isDouble,
-    };
+  const nextWord = minigame._nextMainWord ?? {
+    text: minigame.wordText,
+    category: minigame._currentCorrectCategory,
+    isDouble: minigame.isDouble,
+  };
   if (!nextWord) return state;
 
   return {
@@ -2026,8 +2114,8 @@ export function completeBugSmash(state, socketId, score) {
   return nextTurn(
     appendActionLog(
       cleared,
-      actionLogMessage.bugSmashCompleted(target.name, clampedScore, starsEarned)
-    )
+      actionLogMessage.bugSmashCompleted(target.name, clampedScore, starsEarned),
+    ),
   );
 }
 

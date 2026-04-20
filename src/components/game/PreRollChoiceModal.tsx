@@ -53,7 +53,9 @@ export const PreRollChoiceModal: React.FC<PreRollChoiceModalProps> = ({
             <span className="text-base leading-none">🧰</span>
             <span>Item avant lancer</span>
           </div>
-          <AlertDialogTitle className="text-center text-2xl">{fr.preRollChoice.title}</AlertDialogTitle>
+          <AlertDialogTitle className="text-center text-2xl">
+            {fr.preRollChoice.title}
+          </AlertDialogTitle>
           <AlertDialogDescription className="text-center text-slate-300">
             {fr.preRollChoice.description}
           </AlertDialogDescription>

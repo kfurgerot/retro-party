@@ -44,9 +44,7 @@ export const PressStartScreen: React.FC<PressStartScreenProps> = ({ onStart }) =
           </PrimaryButton>
         </div>
 
-        <div className="mt-4 text-[10px] text-slate-400 sm:text-xs">
-          {fr.pressStart.controls}
-        </div>
+        <div className="mt-4 text-[10px] text-slate-400 sm:text-xs">{fr.pressStart.controls}</div>
 
         <div className="mt-7 border-t border-cyan-300/25 pt-3 text-[10px] text-cyan-100/75 sm:text-xs">
           <div>{fr.pressStart.copyright}</div>

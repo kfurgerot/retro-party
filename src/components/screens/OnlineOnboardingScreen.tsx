@@ -1,18 +1,18 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { AVATARS } from "@/types/game";
 import { cn } from "@/lib/utils";
-import { RetroScreenBackground } from "./RetroScreenBackground";
 import { fr } from "@/i18n/fr";
-import { Card, Input, PrimaryButton, SecondaryButton, SectionHeader } from "@/components/app-shell";
-import { APP_SHELL_INPUT } from "@/lib/uiTokens";
-import { useAnimatedProgress } from "@/hooks/useAnimatedProgress";
+import { PageShell, StickyFooter, AvatarPicker } from "@/components/app-shell";
 
 interface OnlineOnboardingScreenProps {
   connected: boolean;
   initialName?: string;
   initialAvatar?: number;
+  /** 1 = focus name, 2 = focus avatar */
   initialStep?: 1 | 2;
   brandLabel?: string;
+  accentColor?: string;
+  accentGlow?: string;
   onSubmit: (payload: { name: string; avatar: number }) => void;
   onBack: () => void;
   overallStepStart?: number;
@@ -27,215 +27,181 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
   initialAvatar,
   initialStep = 1,
   brandLabel,
+  accentColor = "#6366f1",
+  accentGlow = "rgba(99,102,241,0.04)",
   onSubmit,
   onBack,
   overallStepStart,
   overallStepTotal,
 }) => {
-  const [step, setStep] = useState<1 | 2>(initialStep);
   const [name, setName] = useState(() => cleanName(initialName ?? ""));
   const [avatar, setAvatar] = useState(() => {
-    const next = Number.isFinite(initialAvatar) ? Number(initialAvatar) : 0;
-    return Math.max(0, Math.min(AVATARS.length - 1, next));
+    const n = Number.isFinite(initialAvatar) ? Number(initialAvatar) : 0;
+    return Math.max(0, Math.min(AVATARS.length - 1, n));
   });
 
+  const nameRef = useRef<HTMLInputElement>(null);
+  const avatarRef = useRef<HTMLDivElement>(null);
+
   const validName = name.length >= 2;
-  const canNext = validName;
   const canSubmit = connected && validName;
 
-  const stepTitle = useMemo(() => {
-    if (step === 1) return fr.onlineOnboarding.nicknameTitle;
-    return fr.onlineOnboarding.avatarTitle;
-  }, [step]);
-
-  const goNext = () => {
-    if (step === 1 && !validName) return;
-    setStep(2);
-  };
-
-  const goBack = () => {
-    if (step === 1) {
-      onBack();
-      return;
+  useEffect(() => {
+    if (initialStep === 2) {
+      avatarRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    } else {
+      nameRef.current?.focus();
     }
-    setStep(1);
+  }, [initialStep]);
+
+  const handleSubmit = () => {
+    if (!canSubmit) return;
+    onSubmit({ name: cleanName(name), avatar });
   };
 
-  const currentOverallStep =
-    typeof overallStepStart === "number" ? overallStepStart + (step === 2 ? 1 : 0) : null;
-  const showOverallStep = currentOverallStep !== null && typeof overallStepTotal === "number";
-  const progressPct = showOverallStep
-    ? Math.max(0, Math.min(100, Math.round((currentOverallStep / overallStepTotal) * 100)))
-    : step === 1
-      ? 50
-      : 100;
-  const progressFromPct = showOverallStep
-    ? Math.max(0, Math.min(100, Math.round(((currentOverallStep - 1) / overallStepTotal) * 100)))
-    : step === 1
-      ? 0
-      : 50;
-  const animatedProgressPct = useAnimatedProgress(progressPct, progressFromPct);
+  const showStepBadge =
+    typeof overallStepStart === "number" && typeof overallStepTotal === "number";
 
   return (
-    <div className="scanlines relative flex min-h-svh w-full items-start justify-center overflow-hidden px-4 pb-28 pt-4 sm:pb-28 sm:pt-6">
-      <RetroScreenBackground />
-
-      <Card className="relative z-10 flex min-h-[82svh] w-full max-w-4xl flex-col p-5 sm:p-8">
-        <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.16em] text-cyan-200/80">
-          <span>{brandLabel || fr.onlineOnboarding.brand}</span>
-          <span className="rounded-full border border-cyan-300/40 px-2 py-0.5">
-            {showOverallStep
-              ? `${fr.onlineOnboarding.step} ${currentOverallStep}/${overallStepTotal}`
-              : `${fr.onlineOnboarding.step} ${step}/2`}
+    <PageShell accentColor={`${accentColor}12`} accentGlow={accentGlow}>
+      {/* Top nav */}
+      <div className="mb-6 flex items-center justify-between">
+        <button
+          type="button"
+          onClick={onBack}
+          className="flex items-center gap-1.5 text-sm text-slate-500 transition hover:text-slate-200"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <path d="m15 18-6-6 6-6" />
+          </svg>
+          {fr.onlineOnboarding.back}
+        </button>
+        {showStepBadge && (
+          <span className="rounded-full border border-white/[0.07] bg-white/[0.03] px-2.5 py-1 text-[11px] text-slate-500">
+            Étape {overallStepStart} / {overallStepTotal}
           </span>
-        </div>
+        )}
+      </div>
 
-        <h1 className="mt-4 text-center text-xl text-cyan-200 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)] sm:text-3xl">
-          {stepTitle}
-        </h1>
+      {/* Heading */}
+      <div
+        className="mb-1 text-xs font-bold uppercase tracking-widest"
+        style={{ color: accentColor }}
+      >
+        {brandLabel ?? "Agile Suite"}
+      </div>
+      <h1 className="text-2xl font-extrabold tracking-tight text-slate-50 sm:text-3xl">
+        Ton profil
+      </h1>
+      <p className="mt-1.5 text-sm text-slate-500">
+        Choisis un pseudo et un avatar pour rejoindre la session.
+      </p>
 
-        <div className="mt-4 h-1 w-full overflow-hidden rounded bg-slate-900/55">
+      <div className="mt-7 grid gap-4 lg:grid-cols-[1fr_260px]">
+        {/* Form */}
+        <div className="space-y-4">
+          {/* Name */}
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+            <label htmlFor="ds-name" className="mb-3 block text-sm font-semibold text-slate-200">
+              {fr.onlineOnboarding.displayNameLabel}
+            </label>
+            <input
+              ref={nameRef}
+              id="ds-name"
+              value={name}
+              maxLength={16}
+              placeholder={fr.onlineOnboarding.displayNamePlaceholder}
+              autoComplete="off"
+              onChange={(e) => setName(cleanName(e.target.value))}
+              onKeyDown={(e) => e.key === "Enter" && canSubmit && handleSubmit()}
+              className="h-11 w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 text-sm text-slate-100 outline-none placeholder:text-slate-600 transition focus:border-white/20 focus:bg-white/[0.06]"
+            />
+            {!validName && name.length > 0 && (
+              <p className="mt-2 text-xs text-amber-400">{fr.onlineOnboarding.minName}</p>
+            )}
+          </div>
+
+          {/* Avatar */}
           <div
-            className="h-full rounded bg-cyan-400/90 transition-all duration-300"
-            style={{ width: `${animatedProgressPct}%` }}
-          />
+            ref={avatarRef}
+            className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5"
+          >
+            <p className="mb-4 text-sm font-semibold text-slate-200">
+              {fr.onlineOnboarding.avatarLabel}
+            </p>
+            <AvatarPicker value={avatar} onChange={setAvatar} accentColor={accentColor} />
+          </div>
         </div>
 
-        <div className="mt-6 grid flex-1 content-start gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">
-          <Card className="rounded-md p-4 sm:p-5">
-            {step === 1 && (
-              <div className="space-y-2">
-                <label htmlFor="display-name" className="text-xs text-slate-300 sm:text-sm">
-                  {fr.onlineOnboarding.displayNameLabel}
-                </label>
-                <Input
-                  id="display-name"
-                  autoFocus
-                  value={name}
-                  maxLength={16}
-                  placeholder={fr.onlineOnboarding.displayNamePlaceholder}
-                  onChange={(e) => setName(cleanName(e.target.value))}
-                  onKeyDown={(e) => e.key === "Enter" && validName && goNext()}
-                  className={APP_SHELL_INPUT}
+        {/* Profile preview */}
+        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+          <p className="mb-5 text-xs font-bold uppercase tracking-widest text-slate-500">Aperçu</p>
+          <div className="flex flex-col items-center gap-4">
+            <div
+              className="flex h-20 w-20 items-center justify-center rounded-2xl border text-4xl"
+              style={{ borderColor: `${accentColor}30`, background: `${accentColor}10` }}
+            >
+              {AVATARS[avatar] ?? "?"}
+            </div>
+            <div className="text-center">
+              <div className="text-base font-bold text-slate-100">
+                {validName ? (
+                  name
+                ) : (
+                  <span className="text-slate-600">
+                    {fr.onlineOnboarding.displayNamePlaceholder}
+                  </span>
+                )}
+              </div>
+              <div
+                className="mt-2 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold"
+                style={{
+                  color: connected ? "#10b981" : "#f59e0b",
+                  background: connected ? "rgba(16,185,129,0.1)" : "rgba(245,158,11,0.1)",
+                  borderColor: connected ? "rgba(16,185,129,0.25)" : "rgba(245,158,11,0.25)",
+                }}
+              >
+                <span
+                  className={cn("h-1.5 w-1.5 rounded-full", connected && "animate-pulse")}
+                  style={{ background: connected ? "#10b981" : "#f59e0b" }}
                 />
-                {!validName && name.length > 0 && (
-                  <p className="text-xs text-amber-300">{fr.onlineOnboarding.minName}</p>
-                )}
-              </div>
-            )}
-
-            {step === 2 && (
-              <div>
-                <p className="mb-3 text-xs text-slate-300 sm:text-sm">{fr.onlineOnboarding.avatarLabel}</p>
-                <div className="grid grid-cols-5 gap-2 sm:grid-cols-6">
-                  {AVATARS.map((a, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => setAvatar(i)}
-                      className={cn(
-                        "h-12 w-12 rounded-md border border-cyan-400/20 bg-slate-900/50 text-2xl transition hover:border-cyan-300/60 hover:bg-slate-900/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 sm:h-12 sm:w-12",
-                        i === avatar && "ring-2 ring-cyan-400"
-                      )}
-                      aria-label={fr.onlineOnboarding.avatarAria.replace("{index}", String(i + 1))}
-                    >
-                      {a}
-                    </button>
-                  ))}
-                </div>
-
-                {!connected && (
-                  <p className="mt-4 text-xs text-amber-300">{fr.onlineOnboarding.connecting}</p>
-                )}
-              </div>
-            )}
-          </Card>
-
-          <Card className="rounded-md p-4">
-            <SectionHeader title={fr.onlineLobby.profileTitle} />
-            <div className="mt-3 flex items-center gap-3 rounded border border-cyan-300/25 bg-slate-900/55 px-3 py-2">
-              <span className="inline-flex h-10 w-10 items-center justify-center rounded border border-cyan-300/30 bg-slate-950/65 text-2xl">
-                {AVATARS[avatar] ?? "?"}
-              </span>
-              <div className="min-w-0">
-                <div className="truncate text-sm font-semibold text-cyan-50">
-                  {validName ? name : fr.onlineOnboarding.displayNamePlaceholder}
-                </div>
-                <div className="text-xs text-slate-300">{fr.onlineOnboarding.avatarTitle}</div>
+                {connected ? fr.onlineLobby.connected : fr.onlineOnboarding.connecting}
               </div>
             </div>
-          </Card>
+          </div>
         </div>
-
-      </Card>
-
-      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 hidden px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:block">
-        <Card className="pointer-events-auto mx-auto w-full max-w-4xl border-cyan-300/40 bg-slate-950/92 p-3 shadow-[0_0_0_1px_rgba(34,211,238,0.2),0_8px_28px_rgba(2,6,23,0.55)]">
-          <div className="flex items-center justify-between gap-2">
-            <SecondaryButton
-              type="button"
-              className="h-11"
-              onClick={goBack}
-            >
-              {fr.onlineOnboarding.back}
-            </SecondaryButton>
-
-            {step === 1 ? (
-              <PrimaryButton
-                type="button"
-                onClick={goNext}
-                disabled={!canNext}
-                className="h-11 font-semibold"
-              >
-                {fr.onlineOnboarding.next}
-              </PrimaryButton>
-            ) : (
-              <PrimaryButton
-                type="button"
-                disabled={!canSubmit}
-                onClick={() => onSubmit({ name: cleanName(name), avatar })}
-                className="h-11 px-6 text-sm font-semibold tracking-wide"
-              >
-                {fr.onlineOnboarding.continue}
-              </PrimaryButton>
-            )}
-          </div>
-        </Card>
       </div>
 
-      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:hidden">
-        <Card className="pointer-events-auto mx-auto w-full max-w-4xl border-cyan-300/40 bg-slate-950/92 p-3 shadow-[0_0_0_1px_rgba(34,211,238,0.2),0_8px_28px_rgba(2,6,23,0.55)]">
-          <div className="grid grid-cols-2 gap-2">
-            <SecondaryButton
-              type="button"
-              className="h-12 min-h-0"
-              onClick={goBack}
-            >
-              {fr.onlineOnboarding.back}
-            </SecondaryButton>
-
-            {step === 1 ? (
-              <PrimaryButton
-                type="button"
-                onClick={goNext}
-                disabled={!canNext}
-                className="h-12 min-h-0 font-semibold"
-              >
-                {fr.onlineOnboarding.next}
-              </PrimaryButton>
-            ) : (
-              <PrimaryButton
-                type="button"
-                disabled={!canSubmit}
-                onClick={() => onSubmit({ name: cleanName(name), avatar })}
-                className="h-12 min-h-0 font-semibold tracking-wide"
-              >
-                {fr.onlineOnboarding.continue}
-              </PrimaryButton>
-            )}
-          </div>
-        </Card>
-      </div>
-    </div>
+      <StickyFooter>
+        <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={onBack}
+            className="h-11 rounded-xl border border-white/[0.08] bg-white/[0.03] px-5 text-sm font-semibold text-slate-300 transition hover:bg-white/[0.06] hover:text-white"
+          >
+            {fr.onlineOnboarding.back}
+          </button>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={!canSubmit}
+            className="h-11 flex-1 rounded-xl px-5 text-sm font-bold text-white transition disabled:opacity-40 sm:flex-none sm:min-w-[160px]"
+            style={{
+              background: `linear-gradient(135deg, ${accentColor}, ${accentColor}bb)`,
+              boxShadow: canSubmit ? `0 4px 16px ${accentColor}40` : "none",
+            }}
+          >
+            {fr.onlineOnboarding.continue}
+          </button>
+        </div>
+      </StickyFooter>
+    </PageShell>
   );
 };

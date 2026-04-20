@@ -26,4 +26,3 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ title, subtitle, stepLab
     </div>
   );
 };
-

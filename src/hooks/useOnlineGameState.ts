@@ -8,8 +8,15 @@ import {
   WhoSaidItViewState,
 } from "@/types/game";
 import { socket } from "@/net/socket";
+import { C2S_EVENTS, S2C_EVENTS } from "@shared/contracts/socketEvents.js";
 
-type LobbyPlayer = { socketId?: string; name: string; avatar: number; isHost: boolean; connected?: boolean };
+type LobbyPlayer = {
+  socketId?: string;
+  name: string;
+  avatar: number;
+  isHost: boolean;
+  connected?: boolean;
+};
 type RoomPresenceNotice = {
   id: number;
   message: string;
@@ -112,8 +119,12 @@ export function useOnlineGameState() {
   const sessionRef = useRef<OnlineSession | null>(initialSession);
   const pendingProfileRef = useRef<{ name: string; avatar: number; sessionId: string } | null>(
     initialSession
-      ? { name: initialSession.name, avatar: initialSession.avatar, sessionId: initialSession.sessionId }
-      : null
+      ? {
+          name: initialSession.name,
+          avatar: initialSession.avatar,
+          sessionId: initialSession.sessionId,
+        }
+      : null,
   );
   const minigameCleanupRef = useRef<number | null>(null);
   const previousLobbyRef = useRef<LobbyPlayer[] | null>(null);
@@ -127,7 +138,7 @@ export function useOnlineGameState() {
         socket.connect();
         return;
       }
-      socket.emit("reconnect_room", {
+      socket.emit(C2S_EVENTS.RECONNECT_ROOM, {
         code: activeSession.code,
         sessionId: activeSession.sessionId,
       });
@@ -224,8 +235,7 @@ export function useOnlineGameState() {
     const onError = ({ message }: { message?: string }) => {
       const normalized = message?.toLowerCase() ?? "";
       const shouldResetSession =
-        normalized.includes("room introuvable") ||
-        normalized.includes("session introuvable");
+        normalized.includes("room introuvable") || normalized.includes("session introuvable");
       if (!shouldResetSession) return;
       if (minigameCleanupRef.current) {
         window.clearTimeout(minigameCleanupRef.current);
@@ -331,19 +341,19 @@ export function useOnlineGameState() {
       }, 2500);
     };
 
-    socket.on("state_update", onState);
-    socket.on("lobby_update", onLobby);
-    socket.on("room_created", onRoomKnown);
-    socket.on("room_joined", onRoomKnown);
-    socket.on("room_reconnected", onRoomKnown);
-    socket.on("room_closed", onRoomClosed);
+    socket.on(S2C_EVENTS.STATE_UPDATE, onState);
+    socket.on(S2C_EVENTS.LOBBY_UPDATE, onLobby);
+    socket.on(S2C_EVENTS.ROOM_CREATED, onRoomKnown);
+    socket.on(S2C_EVENTS.ROOM_JOINED, onRoomKnown);
+    socket.on(S2C_EVENTS.ROOM_RECONNECTED, onRoomKnown);
+    socket.on(S2C_EVENTS.ROOM_CLOSED, onRoomClosed);
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
-    socket.on("error_msg", onError);
-    socket.on("MINIGAME_START", onWhoSaidItStart);
-    socket.on("WSI_ROUND_START", onWhoSaidItRoundStart);
-    socket.on("WSI_ROUND_REVEAL", onWhoSaidItRoundReveal);
-    socket.on("MINIGAME_END", onWhoSaidItEnd);
+    socket.on(S2C_EVENTS.ERROR_MESSAGE, onError);
+    socket.on(S2C_EVENTS.MINIGAME_START, onWhoSaidItStart);
+    socket.on(S2C_EVENTS.WSI_ROUND_START, onWhoSaidItRoundStart);
+    socket.on(S2C_EVENTS.WSI_ROUND_REVEAL, onWhoSaidItRoundReveal);
+    socket.on(S2C_EVENTS.MINIGAME_END, onWhoSaidItEnd);
 
     const onVisibilityChange = () => {
       if (document.visibilityState !== "visible") return;
@@ -362,19 +372,19 @@ export function useOnlineGameState() {
     if (socket.connected) onConnect();
 
     return () => {
-      socket.off("state_update", onState);
-      socket.off("lobby_update", onLobby);
-      socket.off("room_created", onRoomKnown);
-      socket.off("room_joined", onRoomKnown);
-      socket.off("room_reconnected", onRoomKnown);
-      socket.off("room_closed", onRoomClosed);
+      socket.off(S2C_EVENTS.STATE_UPDATE, onState);
+      socket.off(S2C_EVENTS.LOBBY_UPDATE, onLobby);
+      socket.off(S2C_EVENTS.ROOM_CREATED, onRoomKnown);
+      socket.off(S2C_EVENTS.ROOM_JOINED, onRoomKnown);
+      socket.off(S2C_EVENTS.ROOM_RECONNECTED, onRoomKnown);
+      socket.off(S2C_EVENTS.ROOM_CLOSED, onRoomClosed);
       socket.off("connect", onConnect);
       socket.off("disconnect", onDisconnect);
-      socket.off("error_msg", onError);
-      socket.off("MINIGAME_START", onWhoSaidItStart);
-      socket.off("WSI_ROUND_START", onWhoSaidItRoundStart);
-      socket.off("WSI_ROUND_REVEAL", onWhoSaidItRoundReveal);
-      socket.off("MINIGAME_END", onWhoSaidItEnd);
+      socket.off(S2C_EVENTS.ERROR_MESSAGE, onError);
+      socket.off(S2C_EVENTS.MINIGAME_START, onWhoSaidItStart);
+      socket.off(S2C_EVENTS.WSI_ROUND_START, onWhoSaidItRoundStart);
+      socket.off(S2C_EVENTS.WSI_ROUND_REVEAL, onWhoSaidItRoundReveal);
+      socket.off(S2C_EVENTS.MINIGAME_END, onWhoSaidItEnd);
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.removeEventListener("focus", onWindowFocus);
       window.removeEventListener("online", onNetworkBack);
@@ -390,7 +400,7 @@ export function useOnlineGameState() {
     const sessionId = sessionRef.current?.sessionId ?? makeSessionId();
     pendingProfileRef.current = { name: normalizedName, avatar, sessionId };
     if (!socket.connected) socket.connect();
-    socket.emit("create_room", { name: normalizedName, avatar, sessionId });
+    socket.emit(C2S_EVENTS.CREATE_ROOM, { name: normalizedName, avatar, sessionId });
   }, []);
 
   const joinRoom = useCallback((roomCode: string, name: string, avatar: number) => {
@@ -398,11 +408,11 @@ export function useOnlineGameState() {
     const sessionId = sessionRef.current?.sessionId ?? makeSessionId();
     pendingProfileRef.current = { name: normalizedName, avatar, sessionId };
     if (!socket.connected) socket.connect();
-    socket.emit("join_room", { code: roomCode, name: normalizedName, avatar, sessionId });
+    socket.emit(C2S_EVENTS.JOIN_ROOM, { code: roomCode, name: normalizedName, avatar, sessionId });
   }, []);
 
   const leaveRoom = useCallback(() => {
-    if (socket.connected) socket.emit("leave_room");
+    if (socket.connected) socket.emit(C2S_EVENTS.LEAVE_ROOM);
     if (minigameCleanupRef.current) {
       window.clearTimeout(minigameCleanupRef.current);
       minigameCleanupRef.current = null;
@@ -418,46 +428,58 @@ export function useOnlineGameState() {
     setRoomNotice(null);
   }, []);
 
-  const startGame = useCallback((maxRounds: number) => socket.emit("start_game", { maxRounds }), []);
-  const rollDice = useCallback(() => socket.emit("roll_dice"), []);
-  const movePlayer = useCallback((steps: number) => socket.emit("move_player", { steps }), []);
-  const choosePath = useCallback((nextTileId: number) => socket.emit("choose_path", { nextTileId }), []);
+  const startGame = useCallback(
+    (maxRounds: number) => socket.emit(C2S_EVENTS.START_GAME, { maxRounds }),
+    [],
+  );
+  const rollDice = useCallback(() => socket.emit(C2S_EVENTS.ROLL_DICE), []);
+  const movePlayer = useCallback(
+    (steps: number) => socket.emit(C2S_EVENTS.MOVE_PLAYER, { steps }),
+    [],
+  );
+  const choosePath = useCallback(
+    (nextTileId: number) => socket.emit(C2S_EVENTS.CHOOSE_PATH, { nextTileId }),
+    [],
+  );
   const resolveKudoPurchase = useCallback((buyKudo: boolean) => {
-    socket.emit("resolve_kudo_purchase", { buyKudo });
+    socket.emit(C2S_EVENTS.RESOLVE_KUDO_PURCHASE, { buyKudo });
   }, []);
-  const openShop = useCallback(() => socket.emit("open_shop"), []);
-  const closeShop = useCallback(() => socket.emit("close_shop"), []);
+  const openShop = useCallback(() => socket.emit(C2S_EVENTS.OPEN_SHOP), []);
+  const closeShop = useCallback(() => socket.emit(C2S_EVENTS.CLOSE_SHOP), []);
   const buyShopItem = useCallback((itemType: string) => {
-    socket.emit("buy_shop_item", { itemType });
+    socket.emit(C2S_EVENTS.BUY_SHOP_ITEM, { itemType });
   }, []);
   const useShopItem = useCallback((itemInstanceId: string, payload?: Record<string, unknown>) => {
-    socket.emit("use_shop_item", { itemInstanceId, payload: payload ?? {} });
+    socket.emit(C2S_EVENTS.USE_SHOP_ITEM, { itemInstanceId, payload: payload ?? {} });
   }, []);
   const resolvePreRollChoice = useCallback((itemInstanceId: string | null) => {
-    socket.emit("resolve_pre_roll_choice", { itemInstanceId });
+    socket.emit(C2S_EVENTS.RESOLVE_PRE_ROLL_CHOICE, { itemInstanceId });
   }, []);
-  const openQuestionCard = useCallback(() => socket.emit("open_question"), []);
-  const voteQuestion = useCallback((vote: "up" | "down") => socket.emit("vote_question", { vote }), []);
-  const validateQuestion = useCallback(() => socket.emit("validate_question"), []);
-  const resetGame = useCallback(() => socket.emit("reset_game"), []);
+  const openQuestionCard = useCallback(() => socket.emit(C2S_EVENTS.OPEN_QUESTION), []);
+  const voteQuestion = useCallback(
+    (vote: "up" | "down") => socket.emit(C2S_EVENTS.VOTE_QUESTION, { vote }),
+    [],
+  );
+  const validateQuestion = useCallback(() => socket.emit(C2S_EVENTS.VALIDATE_QUESTION), []);
+  const resetGame = useCallback(() => socket.emit(C2S_EVENTS.RESET_GAME), []);
   const completeBugSmash = useCallback((score: number) => {
-    socket.emit("BUG_SMASH_COMPLETE", { score });
+    socket.emit(C2S_EVENTS.BUG_SMASH_COMPLETE, { score });
   }, []);
   const updateBugSmashProgress = useCallback((score: number) => {
-    socket.emit("BUG_SMASH_PROGRESS", { score });
+    socket.emit(C2S_EVENTS.BUG_SMASH_PROGRESS, { score });
   }, []);
   const submitWhoSaidIt = useCallback((role: WhoSaidItRole) => {
     setWhoSaidIt((prev) => {
       if (!prev || prev.phase !== "answer") return prev;
-      socket.emit("WSI_SUBMIT", { roundIndex: prev.roundIndex, role });
+      socket.emit(C2S_EVENTS.WSI_SUBMIT, { roundIndex: prev.roundIndex, role });
       return { ...prev, selectedRole: role };
     });
   }, []);
   const submitBuzzwordDuel = useCallback((category: "LEGIT" | "BULLSHIT") => {
-    socket.emit("BUZZWORD_SUBMIT", { category });
+    socket.emit(C2S_EVENTS.BUZZWORD_SUBMIT, { category });
   }, []);
   const rollPointDuel = useCallback(() => {
-    socket.emit("point_duel_roll");
+    socket.emit(C2S_EVENTS.POINT_DUEL_ROLL);
   }, []);
 
   const isHost = useMemo(() => {

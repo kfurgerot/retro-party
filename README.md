@@ -5,12 +5,14 @@ Application web de retrospective d'equipe en mode jeu de plateau retro, jouable 
 ## Apercu
 
 Retro Party contient:
+
 - un frontend React/TypeScript (Vite, Tailwind, shadcn/ui)
 - un backend Node.js/Express avec Socket.IO
 - une base PostgreSQL
 - un deploiement conteneurise (Docker + Docker Compose + Nginx)
 
 Fonctions principales:
+
 - parties online avec code de room
 - logique de jeu autoritaire cote serveur
 - authentification (inscription/connexion/logout)
@@ -81,6 +83,7 @@ docker compose up -d --build
 ```
 
 3. Acceder aux services:
+
 - frontend: `http://localhost:8088`
 - backend: `http://localhost:3001`
 - postgres: `localhost:5432` (expose uniquement en compose local)
@@ -100,6 +103,7 @@ docker compose down -v
 ## Deploiement production (`docker-compose-prod.yml`)
 
 Le compose de production demarre 3 services:
+
 - `frontend` (Nginx, port `8088:80`)
 - `backend` (Node.js, port `3001:3001`)
 - `postgres` (non expose publiquement par defaut)
@@ -113,6 +117,7 @@ cp .env.prod.example .env.prod
 ```
 
 Renseigner au minimum:
+
 - `ORIGIN` (URL publique autorisee en CORS)
 - `POSTGRES_PASSWORD`
 - `GMAIL_USER` et `GMAIL_APP_PASSWORD` (si reset password actif)
@@ -154,6 +159,7 @@ curl http://localhost:3001/health
 ### Backend
 
 Variables principales:
+
 - `PORT` (defaut `3001`)
 - `ORIGIN` (CORS, URL frontend)
 - `DATABASE_URL`
@@ -167,12 +173,14 @@ Variables principales:
 - `RESET_PASSWORD_URL_BASE`
 
 Voir:
+
 - `.env.local.example`
 - `.env.prod.example`
 
 ## Endpoints API (resume)
 
 Auth:
+
 - `POST /api/auth/register`
 - `POST /api/auth/login`
 - `POST /api/auth/logout`
@@ -181,6 +189,7 @@ Auth:
 - `POST /api/auth/reset-password`
 
 Templates (auth requis):
+
 - `GET/POST /api/templates`
 - `GET/PATCH/DELETE /api/templates/:templateId`
 - `GET/POST /api/templates/:templateId/questions`
@@ -189,9 +198,11 @@ Templates (auth requis):
 - `POST /api/templates/:templateId/launch-room`
 
 Rooms:
+
 - `POST /api/rooms/quick`
 
 Radar Party:
+
 - `GET /api/radar/questions`
 - `POST /api/radar/sessions`
 - `POST /api/radar/sessions/:code/participants`
@@ -199,6 +210,7 @@ Radar Party:
 - `GET /api/radar/sessions/:code`
 
 Documentation module:
+
 - `docs/radar-party.md`
 
 ## Socket.IO (evenements principaux)

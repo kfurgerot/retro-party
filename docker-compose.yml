@@ -12,7 +12,9 @@ services:
       - backend
 
   backend:
-    build: ./server
+    build:
+      context: .
+      dockerfile: server/Dockerfile
     container_name: retro-party-backend
     restart: unless-stopped
     env_file:

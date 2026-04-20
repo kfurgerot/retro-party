@@ -67,4 +67,3 @@ export class TableCameraController {
     this.resetTimer = null;
   }
 }
-

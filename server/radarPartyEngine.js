@@ -31,7 +31,8 @@ const AXIS_GUIDANCE = {
     high: "la coopération est fluide et l’entraide soutient la performance collective.",
     medium: "la collaboration existe mais peut encore gagner en régularité.",
     low: "le risque de travail en silo est réel sans rituels de synchronisation renforcés.",
-    workshopPrompt: "Quel rituel simple peut améliorer la circulation d’information cette semaine ?",
+    workshopPrompt:
+      "Quel rituel simple peut améliorer la circulation d’information cette semaine ?",
   },
   fun: {
     high: "l’ambiance d’équipe renforce l’engagement au quotidien.",
@@ -43,13 +44,15 @@ const AXIS_GUIDANCE = {
     high: "l’équipe apprend activement et transforme les retours en progrès.",
     medium: "les apprentissages existent mais sont encore peu systématisés.",
     low: "le risque est de répéter les mêmes problèmes sans boucle d’amélioration claire.",
-    workshopPrompt: "Quelle action d’amélioration continue allons-nous ancrer dès le prochain sprint ?",
+    workshopPrompt:
+      "Quelle action d’amélioration continue allons-nous ancrer dès le prochain sprint ?",
   },
   alignment: {
     high: "les priorités sont claires et alignées avec les objectifs business.",
     medium: "la direction est globalement comprise mais parfois ambiguë.",
     low: "le manque d’alignement peut créer de la dispersion et des arbitrages incohérents.",
-    workshopPrompt: "Quelle priorité devons-nous clarifier immédiatement pour réduire les ambiguïtés ?",
+    workshopPrompt:
+      "Quelle priorité devons-nous clarifier immédiatement pour réduire les ambiguïtés ?",
   },
   ownership: {
     high: "la responsabilité collective est forte et l’équipe agit avec autonomie.",
@@ -85,7 +88,8 @@ const AXIS_GUIDANCE = {
     high: "la valeur livrée est lisible et orientée impact utilisateur.",
     medium: "la valeur est présente mais pas toujours mesurée ou explicitée.",
     low: "la priorisation risque de se déconnecter des besoins réels des utilisateurs.",
-    workshopPrompt: "Quel indicateur de valeur allons-nous suivre pour guider les prochaines décisions ?",
+    workshopPrompt:
+      "Quel indicateur de valeur allons-nous suivre pour guider les prochaines décisions ?",
   },
 };
 
@@ -111,7 +115,9 @@ function createNeutralRadar(seed = 50) {
 }
 
 function sortByScore(radar) {
-  return RADAR_DIMENSIONS.map((axis) => ({ axis, value: Number(radar?.[axis] ?? 0) })).sort((a, b) => b.value - a.value);
+  return RADAR_DIMENSIONS.map((axis) => ({ axis, value: Number(radar?.[axis] ?? 0) })).sort(
+    (a, b) => b.value - a.value,
+  );
 }
 
 function messageForAxis(axis, value) {
@@ -188,14 +194,14 @@ export function buildIndividualInsights(radar) {
     scoreGap > 25
       ? `Profil dominant: ${AXIS_LABELS[dominant.axis]} (${dominant.value}/100). ${messageForAxis(
           dominant.axis,
-          dominant.value
+          dominant.value,
         )} Axe à consolider en priorité: ${AXIS_LABELS[fragile.axis]} (${fragile.value}/100).`
       : `Profil globalement équilibré. Point d’appui principal: ${AXIS_LABELS[dominant.axis]} (${dominant.value}/100). Point de progression principal: ${AXIS_LABELS[fragile.axis]} (${fragile.value}/100).`;
 
   return {
     summary,
     strengths: topThree.map(
-      ({ axis, value }) => `${AXIS_LABELS[axis]} (${value}/100): ${messageForAxis(axis, value)}`
+      ({ axis, value }) => `${AXIS_LABELS[axis]} (${value}/100): ${messageForAxis(axis, value)}`,
     ),
     watchouts: lowThree.map(({ axis, value }) => {
       const severity = value < 40 ? "Vigilance élevée" : "Point de vigilance";
@@ -211,7 +217,9 @@ export function buildIndividualInsights(radar) {
 
 export function buildTeamInsights(teamRadar, memberRadars) {
   const spreads = RADAR_DIMENSIONS.map((axis) => {
-    const values = memberRadars.map((radar) => Number(radar?.[axis])).filter((value) => Number.isFinite(value));
+    const values = memberRadars
+      .map((radar) => Number(radar?.[axis]))
+      .filter((value) => Number.isFinite(value));
     const min = values.length ? Math.min(...values) : Number(teamRadar?.[axis] || 0);
     const max = values.length ? Math.max(...values) : Number(teamRadar?.[axis] || 0);
     const spread = max - min;

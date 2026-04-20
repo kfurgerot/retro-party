@@ -36,7 +36,10 @@ export const TargetPlayerModal: React.FC<TargetPlayerModalProps> = ({
         <AlertDialogHeader>
           <AlertDialogTitle>{fr.targetPlayerModal.title}</AlertDialogTitle>
           <AlertDialogDescription className="text-slate-300">
-            {fr.targetPlayerModal.description.replace("{action}", action?.label ?? fr.targetPlayerModal.actionFallback)}
+            {fr.targetPlayerModal.description.replace(
+              "{action}",
+              action?.label ?? fr.targetPlayerModal.actionFallback,
+            )}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <div className="grid gap-2">
@@ -49,13 +52,17 @@ export const TargetPlayerModal: React.FC<TargetPlayerModalProps> = ({
             >
               <span className="text-sm font-semibold">{player.name}</span>
               <span className="ml-2 text-xs text-slate-300">
-                {fr.targetPlayerModal.pointsLabel} {player.points ?? 0} | {fr.targetPlayerModal.kudoLabel} {player.stars}
+                {fr.targetPlayerModal.pointsLabel} {player.points ?? 0} |{" "}
+                {fr.targetPlayerModal.kudoLabel} {player.stars}
               </span>
             </button>
           ))}
         </div>
         <AlertDialogFooter>
-          <AlertDialogCancel className={cn(neutralBtnClass, "h-11 rounded-xl text-cyan-100")} onClick={onCancel}>
+          <AlertDialogCancel
+            className={cn(neutralBtnClass, "h-11 rounded-xl text-cyan-100")}
+            onClick={onCancel}
+          >
             {fr.targetPlayerModal.cancel}
           </AlertDialogCancel>
         </AlertDialogFooter>

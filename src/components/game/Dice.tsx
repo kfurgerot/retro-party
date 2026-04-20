@@ -27,11 +27,7 @@ const DiceFace: React.FC<{ value: number }> = ({ value }) => {
   const dotPositions: Record<number, string[]> = {
     1: ["top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"],
     2: ["top-3 right-3", "bottom-3 left-3"],
-    3: [
-      "top-3 right-3",
-      "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2",
-      "bottom-3 left-3",
-    ],
+    3: ["top-3 right-3", "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2", "bottom-3 left-3"],
     4: ["top-3 left-3", "top-3 right-3", "bottom-3 left-3", "bottom-3 right-3"],
     5: [
       "top-3 left-3",
@@ -106,7 +102,8 @@ const DiceComponent: React.FC<DiceProps> = ({
   }, [rollResult]);
 
   const canOpen = canOpenQuestionCard && !!onOpenQuestionCard;
-  const hasInvalidRollResult = !!rollResult && (!Array.isArray(rollResult.dice) || rollResult.dice.length === 0);
+  const hasInvalidRollResult =
+    !!rollResult && (!Array.isArray(rollResult.dice) || rollResult.dice.length === 0);
 
   const disabled = !canRoll && !canMove && !canOpen;
   const showCardFace = canOpen && !canRoll && !canMove && !isRolling;
@@ -180,14 +177,14 @@ const DiceComponent: React.FC<DiceProps> = ({
           "hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_rgba(0,0,0,0.5)]",
           "active:translate-x-[4px] active:translate-y-[4px] active:shadow-none",
           "disabled:opacity-50 disabled:cursor-not-allowed disabled:translate-x-0 disabled:translate-y-0",
-          isRolling && "animate-pixel-pulse"
+          isRolling && "animate-pixel-pulse",
         )}
       >
         {label}
       </button>
 
       {rollDetails && (!compact || showCompactDetails) && (
-        <div className={cn("text-cyan-100 text-center", compact ? "text-[10px]" : "text-xs")}>
+        <div className={cn("text-pink-100 text-center", compact ? "text-[10px]" : "text-xs")}>
           {rollDetails.map((line) => (
             <div key={line}>{line}</div>
           ))}

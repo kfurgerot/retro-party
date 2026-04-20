@@ -39,25 +39,50 @@ export const GAME_UI_THEME = {
   },
 } as const;
 
+// Portal-aligned shell tokens (used by pre-game screens)
 export const APP_SHELL_SURFACE =
-  `${GAME_UI_THEME.radius.panel} border ${GAME_UI_THEME.palette.border} ${GAME_UI_THEME.palette.panel} backdrop-blur ${GAME_UI_THEME.shadow.panel}`;
+  "rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur";
 
 export const APP_SHELL_SURFACE_SOFT =
-  `${GAME_UI_THEME.radius.panel} border border-cyan-300/18 ${GAME_UI_THEME.palette.panelSoft} backdrop-blur-sm`;
+  "rounded-2xl border border-white/[0.04] bg-white/[0.015] backdrop-blur-sm";
 
 export const APP_SHELL_INPUT =
-  "h-11 rounded-xl border border-cyan-300/25 bg-slate-900/60 text-cyan-50 placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900";
+  "h-11 rounded-xl border border-white/[0.08] bg-white/[0.04] text-slate-100 placeholder:text-slate-600 focus-visible:ring-1 focus-visible:ring-indigo-400/60 focus-visible:border-white/20 transition";
 
 export const CTA_NEON_PRIMARY =
-  `border-cyan-300 ${GAME_UI_THEME.palette.primary} text-slate-950 ${GAME_UI_THEME.shadow.button} ${GAME_UI_THEME.palette.primaryHover}`;
+  "border-indigo-400/40 bg-indigo-500 text-white shadow-[0_4px_16px_rgba(99,102,241,0.35)] hover:bg-indigo-400";
 
 export const CTA_NEON_SECONDARY =
-  `border-cyan-300/50 ${GAME_UI_THEME.palette.secondary} text-cyan-50 shadow-[0_0_0_1px_rgba(34,211,238,0.18)] ${GAME_UI_THEME.palette.secondaryHover} hover:text-cyan-50`;
+  "border-white/[0.08] bg-white/[0.04] text-slate-200 hover:bg-white/[0.08] hover:text-white";
 
 export const CTA_NEON_SECONDARY_SUBTLE =
-  "border-cyan-300/20 bg-slate-900/45 text-cyan-100 hover:bg-slate-900/70";
+  "border-white/[0.06] bg-white/[0.03] text-slate-300 hover:bg-white/[0.06] hover:text-white";
 
 export const CTA_NEON_DANGER = GAME_UI_THEME.palette.danger;
+
+// Per-tool accent colors (shared between Portal and game screens)
+export const TOOL_ACCENT = {
+  "planning-poker": {
+    color: "#6366f1",
+    glow: "rgba(99,102,241,0.3)",
+    ambientColor: "rgba(99,102,241,0.08)",
+    ambientGlow: "rgba(99,102,241,0.04)",
+  },
+  "retro-party": {
+    color: "#ec4899",
+    glow: "rgba(236,72,153,0.3)",
+    ambientColor: "rgba(236,72,153,0.08)",
+    ambientGlow: "rgba(236,72,153,0.04)",
+  },
+  "radar-party": {
+    color: "#10b981",
+    glow: "rgba(16,185,129,0.3)",
+    ambientColor: "rgba(16,185,129,0.08)",
+    ambientGlow: "rgba(16,185,129,0.04)",
+  },
+} as const;
+
+export type ToolAccentKey = keyof typeof TOOL_ACCENT;
 
 export const GAME_DRAWER_CONTENT =
   "border-cyan-300/30 bg-slate-950/95 pb-[env(safe-area-inset-bottom)] text-cyan-50 lg:hidden";
@@ -68,8 +93,7 @@ export const GAME_DRAWER_CLOSE_BUTTON =
 export const GAME_DIALOG_CONTENT =
   "rounded-2xl border-cyan-300/40 bg-slate-950/95 p-5 text-cyan-50 shadow-[0_0_0_1px_rgba(34,211,238,0.2),0_14px_40px_rgba(2,6,23,0.6)] sm:p-6";
 
-export const GAME_MOBILE_ACTION_BUTTON =
-  "h-12 w-full rounded-xl";
+export const GAME_MOBILE_ACTION_BUTTON = "h-12 w-full rounded-xl";
 
 export const GAME_HUD_SURFACE =
   "rounded-2xl border border-cyan-300/32 bg-slate-950/72 text-cyan-50 backdrop-blur shadow-[0_0_0_1px_rgba(34,211,238,0.14),0_10px_26px_rgba(2,6,23,0.45)]";
@@ -77,8 +101,7 @@ export const GAME_HUD_SURFACE =
 export const GAME_PANEL_SURFACE =
   "rounded-xl border border-cyan-300/25 bg-slate-900/58 text-cyan-50 shadow-[0_0_0_1px_rgba(34,211,238,0.1),0_8px_24px_rgba(2,6,23,0.34)]";
 
-export const GAME_SUBPANEL_SURFACE =
-  "rounded-xl border border-cyan-300/18 bg-slate-950/32";
+export const GAME_SUBPANEL_SURFACE = "rounded-xl border border-cyan-300/18 bg-slate-950/32";
 
 export const GAME_TAB_BUTTON =
   "h-9 rounded-xl border border-cyan-300/22 bg-slate-900/45 px-3 text-xs font-semibold text-cyan-100 hover:bg-slate-900/65";

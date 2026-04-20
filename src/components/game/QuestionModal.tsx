@@ -60,7 +60,9 @@ export function QuestionModal({ question, players, myPlayerId, onVote, onValidat
   const theme = TYPE_THEME[question.type];
 
   const targetName = useMemo(() => {
-    return players.find((p) => p.id === question.targetPlayerId)?.name ?? fr.questionModal.defaultPlayer;
+    return (
+      players.find((p) => p.id === question.targetPlayerId)?.name ?? fr.questionModal.defaultPlayer
+    );
   }, [players, question.targetPlayerId]);
 
   const upCount = question.votes.up.length;
@@ -76,10 +78,19 @@ export function QuestionModal({ question, players, myPlayerId, onVote, onValidat
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <span className={cn("inline-flex h-7 min-w-7 items-center justify-center rounded-full border px-2 text-xs font-bold", theme.chip)}>
+              <span
+                className={cn(
+                  "inline-flex h-7 min-w-7 items-center justify-center rounded-full border px-2 text-xs font-bold",
+                  theme.chip,
+                )}
+              >
                 {theme.icon}
               </span>
-              <div className={cn("text-[11px] font-bold uppercase tracking-[0.12em]", theme.accent)}>{theme.title}</div>
+              <div
+                className={cn("text-[11px] font-bold uppercase tracking-[0.12em]", theme.accent)}
+              >
+                {theme.title}
+              </div>
             </div>
             <div className="mt-2 text-sm text-cyan-100/90">
               {fr.questionModal.questionFor} <span className="font-semibold">{targetName}</span>
@@ -120,7 +131,10 @@ export function QuestionModal({ question, players, myPlayerId, onVote, onValidat
           )}
 
           {isTarget && (
-            <Button onClick={onValidate} className={cn("h-11 rounded-xl px-5 text-sm font-semibold", CTA_NEON_PRIMARY)}>
+            <Button
+              onClick={onValidate}
+              className={cn("h-11 rounded-xl px-5 text-sm font-semibold", CTA_NEON_PRIMARY)}
+            >
               {fr.questionModal.validateAnswer}
             </Button>
           )}

@@ -111,10 +111,13 @@ export function submitWhoSaidItAnswer(session, playerId, roundIndex, role, nowTs
   if (!session?.currentRound) return { accepted: false, reason: "NO_ACTIVE_ROUND" };
   if (!session.playerIds.includes(playerId)) return { accepted: false, reason: "UNKNOWN_PLAYER" };
   if (!WHO_SAID_IT_ROLES.includes(role)) return { accepted: false, reason: "INVALID_ROLE" };
-  if (roundIndex !== session.currentRound.roundIndex) return { accepted: false, reason: "ROUND_MISMATCH" };
+  if (roundIndex !== session.currentRound.roundIndex)
+    return { accepted: false, reason: "ROUND_MISMATCH" };
   if (session.status !== "answer") return { accepted: false, reason: "ROUND_NOT_ACCEPTING" };
-  if (nowTs > session.currentRound.endsAtServerTs) return { accepted: false, reason: "ROUND_ENDED" };
-  if (session.currentRound.submissions[playerId]) return { accepted: false, reason: "ALREADY_SUBMITTED" };
+  if (nowTs > session.currentRound.endsAtServerTs)
+    return { accepted: false, reason: "ROUND_ENDED" };
+  if (session.currentRound.submissions[playerId])
+    return { accepted: false, reason: "ALREADY_SUBMITTED" };
 
   session.currentRound.submissions[playerId] = {
     role,

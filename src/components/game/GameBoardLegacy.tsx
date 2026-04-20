@@ -80,7 +80,7 @@ const GameBoardLegacyComponent: React.FC<GameBoardProps> = ({
 
   const points = useMemo(
     () => tiles.map((t) => ({ x: t.x - bounds.minX, y: t.y - bounds.minY })),
-    [tiles, bounds.minX, bounds.minY]
+    [tiles, bounds.minX, bounds.minY],
   );
 
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -126,30 +126,38 @@ const GameBoardLegacyComponent: React.FC<GameBoardProps> = ({
       }
   >(null);
 
-  const computeFitScale = useCallback((containerW: number, containerH: number) => {
-    const pad = 16;
-    const availW = Math.max(0, containerW - pad);
-    const availH = Math.max(0, containerH - pad);
-    if (width <= 0 || height <= 0) return 1;
-    return Math.min(availW / width, availH / height);
-  }, [height, width]);
+  const computeFitScale = useCallback(
+    (containerW: number, containerH: number) => {
+      const pad = 16;
+      const availW = Math.max(0, containerW - pad);
+      const availH = Math.max(0, containerH - pad);
+      if (width <= 0 || height <= 0) return 1;
+      return Math.min(availW / width, availH / height);
+    },
+    [height, width],
+  );
 
-  const clampOffset = useCallback((nextScale: number, nextOffset: Point, containerW: number, containerH: number) => {
-    const pad = 8;
-    const contentW = width * nextScale;
-    const contentH = height * nextScale;
+  const clampOffset = useCallback(
+    (nextScale: number, nextOffset: Point, containerW: number, containerH: number) => {
+      const pad = 8;
+      const contentW = width * nextScale;
+      const contentH = height * nextScale;
 
-    // If content is smaller than container, keep it centered.
-    const minX = contentW <= containerW ? (containerW - contentW) / 2 : containerW - contentW - pad;
-    const maxX = contentW <= containerW ? (containerW - contentW) / 2 : pad;
-    const minY = contentH <= containerH ? (containerH - contentH) / 2 : containerH - contentH - pad;
-    const maxY = contentH <= containerH ? (containerH - contentH) / 2 : pad;
+      // If content is smaller than container, keep it centered.
+      const minX =
+        contentW <= containerW ? (containerW - contentW) / 2 : containerW - contentW - pad;
+      const maxX = contentW <= containerW ? (containerW - contentW) / 2 : pad;
+      const minY =
+        contentH <= containerH ? (containerH - contentH) / 2 : containerH - contentH - pad;
+      const maxY = contentH <= containerH ? (containerH - contentH) / 2 : pad;
 
-    return {
-      x: clamp(nextOffset.x, minX, maxX),
-      y: clamp(nextOffset.y, minY, maxY),
-    };
-  }, [height, width]);
+      return {
+        x: clamp(nextOffset.x, minX, maxX),
+        y: clamp(nextOffset.y, minY, maxY),
+      };
+    },
+    [height, width],
+  );
 
   const focusOnPosition = useCallback(
     (position: number, boostScale: boolean) => {
@@ -163,7 +171,9 @@ const GameBoardLegacyComponent: React.FC<GameBoardProps> = ({
       const coarse = isCoarsePointer();
       const fit = computeFitScale(rect.width, rect.height);
       const minScale = coarse ? Math.min(1, fit) : Math.min(0.5, fit);
-      const followFloor = coarse ? Math.max(minScale, FOLLOW_MOBILE_SCALE) : Math.max(minScale, FOLLOW_DESKTOP_SCALE);
+      const followFloor = coarse
+        ? Math.max(minScale, FOLLOW_MOBILE_SCALE)
+        : Math.max(minScale, FOLLOW_DESKTOP_SCALE);
       const nextScale = boostScale
         ? clamp(Math.max(scaleRef.current, followFloor), minScale, 2.75)
         : scaleRef.current;
@@ -178,47 +188,50 @@ const GameBoardLegacyComponent: React.FC<GameBoardProps> = ({
       setScale(nextScale);
       setOffset(clampOffset(nextScale, nextOffset, rect.width, rect.height));
     },
-    [bounds.minX, bounds.minY, clampOffset, computeFitScale, tiles]
+    [bounds.minX, bounds.minY, clampOffset, computeFitScale, tiles],
   );
 
-  const resetView = useCallback((animate = false) => {
-    const el = containerRef.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
+  const resetView = useCallback(
+    (animate = false) => {
+      const el = containerRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
 
-    const coarse = isCoarsePointer();
-    const fit = computeFitScale(rect.width, rect.height);
+      const coarse = isCoarsePointer();
+      const fit = computeFitScale(rect.width, rect.height);
 
-    // Desktop: default "fit".
-    // Mobile: start slightly zoomed OUT so the whole board is visible immediately.
-    // (Players can pinch / use +/- to zoom back in.)
-    const nextScale = clamp(
-      coarse ? Math.min(fit * 0.96, 1.05) : Math.min(fit * 1.04, 2.2),
-      0.5,
-      2.75
-    );
+      // Desktop: default "fit".
+      // Mobile: start slightly zoomed OUT so the whole board is visible immediately.
+      // (Players can pinch / use +/- to zoom back in.)
+      const nextScale = clamp(
+        coarse ? Math.min(fit * 0.96, 1.05) : Math.min(fit * 1.04, 2.2),
+        0.5,
+        2.75,
+      );
 
-    const contentW = width * nextScale;
-    const contentH = height * nextScale;
-    const centered = {
-      x: (rect.width - contentW) / 2,
-      y: (rect.height - contentH) / 2,
-    };
+      const contentW = width * nextScale;
+      const contentH = height * nextScale;
+      const centered = {
+        x: (rect.width - contentW) / 2,
+        y: (rect.height - contentH) / 2,
+      };
 
-    if (animate) {
-      setIsAutoResettingView(true);
-      if (autoZoomTimeoutRef.current) {
-        window.clearTimeout(autoZoomTimeoutRef.current);
+      if (animate) {
+        setIsAutoResettingView(true);
+        if (autoZoomTimeoutRef.current) {
+          window.clearTimeout(autoZoomTimeoutRef.current);
+        }
+        autoZoomTimeoutRef.current = window.setTimeout(() => {
+          setIsAutoResettingView(false);
+          autoZoomTimeoutRef.current = null;
+        }, 650);
       }
-      autoZoomTimeoutRef.current = window.setTimeout(() => {
-        setIsAutoResettingView(false);
-        autoZoomTimeoutRef.current = null;
-      }, 650);
-    }
 
-    setScale(nextScale);
-    setOffset(clampOffset(nextScale, centered, rect.width, rect.height));
-  }, [clampOffset, computeFitScale, height, width]);
+      setScale(nextScale);
+      setOffset(clampOffset(nextScale, centered, rect.width, rect.height));
+    },
+    [clampOffset, computeFitScale, height, width],
+  );
 
   const zoomOutKeepingPosition = useCallback(
     (position: number, animate = false) => {
@@ -239,7 +252,7 @@ const GameBoardLegacyComponent: React.FC<GameBoardProps> = ({
       const nextScale = clamp(
         coarse ? Math.min(fit * 0.96, 1.05) : Math.min(fit * 1.04, 2.2),
         0.5,
-        2.75
+        2.75,
       );
 
       const centerX = tile.x - bounds.minX + TILE_CENTER;
@@ -263,7 +276,7 @@ const GameBoardLegacyComponent: React.FC<GameBoardProps> = ({
       setScale(nextScale);
       setOffset(clampOffset(nextScale, wanted, rect.width, rect.height));
     },
-    [bounds.minX, bounds.minY, clampOffset, computeFitScale, resetView, tiles]
+    [bounds.minX, bounds.minY, clampOffset, computeFitScale, resetView, tiles],
   );
 
   const tryAutoZoomOut = useCallback(() => {
@@ -298,7 +311,7 @@ const GameBoardLegacyComponent: React.FC<GameBoardProps> = ({
         const initial = clamp(
           coarse ? Math.min(fit * 0.96, 1.05) : Math.min(fit * 1.04, 2.2),
           0.5,
-          2.75
+          2.75,
         );
         return initial;
       });
@@ -402,8 +415,10 @@ const GameBoardLegacyComponent: React.FC<GameBoardProps> = ({
       const desired = gesture.current.startScale * ratio;
 
       // Zoom around current midpoint.
-      const contentX = (gesture.current.startMid.x - gesture.current.startOffset.x) / gesture.current.startScale;
-      const contentY = (gesture.current.startMid.y - gesture.current.startOffset.y) / gesture.current.startScale;
+      const contentX =
+        (gesture.current.startMid.x - gesture.current.startOffset.x) / gesture.current.startScale;
+      const contentY =
+        (gesture.current.startMid.y - gesture.current.startOffset.y) / gesture.current.startScale;
 
       const coarse = isCoarsePointer();
       const fit = computeFitScale(rect.width, rect.height);
@@ -454,29 +469,38 @@ const GameBoardLegacyComponent: React.FC<GameBoardProps> = ({
   const tilePointDelta = useCallback((tileType: string) => {
     const normalized = String(tileType ?? "").toLowerCase();
     if (normalized === "red") return -2;
-    if (normalized === "blue" || normalized === "green" || normalized === "violet" || normalized === "purple") return 2;
+    if (
+      normalized === "blue" ||
+      normalized === "green" ||
+      normalized === "violet" ||
+      normalized === "purple"
+    )
+      return 2;
     return 0;
   }, []);
 
-  const pushFloatingDelta = useCallback((tileId: number, delta: number) => {
-    if (!delta) return;
-    const pt = points[tileId];
-    if (!pt) return;
-    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const text = delta > 0 ? `+${delta}` : `${delta}`;
-    const next: FloatingDelta = {
-      id,
-      x: pt.x + TILE_CENTER,
-      y: pt.y + TILE_CENTER - 12,
-      text,
-      positive: delta > 0,
-    };
-    setFloatingDeltas((prev) => [...prev, next]);
-    const timeoutId = window.setTimeout(() => {
-      setFloatingDeltas((prev) => prev.filter((entry) => entry.id !== id));
-    }, 900);
-    floatingTimeoutsRef.current.push(timeoutId);
-  }, [points]);
+  const pushFloatingDelta = useCallback(
+    (tileId: number, delta: number) => {
+      if (!delta) return;
+      const pt = points[tileId];
+      if (!pt) return;
+      const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const text = delta > 0 ? `+${delta}` : `${delta}`;
+      const next: FloatingDelta = {
+        id,
+        x: pt.x + TILE_CENTER,
+        y: pt.y + TILE_CENTER - 12,
+        text,
+        positive: delta > 0,
+      };
+      setFloatingDeltas((prev) => [...prev, next]);
+      const timeoutId = window.setTimeout(() => {
+        setFloatingDeltas((prev) => prev.filter((entry) => entry.id !== id));
+      }, 900);
+      floatingTimeoutsRef.current.push(timeoutId);
+    },
+    [points],
+  );
 
   const getNextIds = useCallback(
     (tileId: number) => {
@@ -485,7 +509,7 @@ const GameBoardLegacyComponent: React.FC<GameBoardProps> = ({
       const next = Array.isArray(tile.nextTileIds) ? tile.nextTileIds : [tileId + 1];
       return next.filter((id) => id >= 0 && id < tiles.length);
     },
-    [tiles]
+    [tiles],
   );
 
   const findPath = useCallback(
@@ -520,7 +544,7 @@ const GameBoardLegacyComponent: React.FC<GameBoardProps> = ({
 
       return [to];
     },
-    [getNextIds, tiles.length]
+    [getNextIds, tiles.length],
   );
 
   useLayoutEffect(() => {
@@ -570,7 +594,11 @@ const GameBoardLegacyComponent: React.FC<GameBoardProps> = ({
       const path = traceMatchesPlayer ? lastMoveTrace.path : findPath(from, to);
       const stepDeltas = traceMatchesPlayer
         ? lastMoveTrace.pointDeltas
-        : path.slice(1).map((_tileId, idx) => (idx === path.length - 2 ? tilePointDelta(tiles[to]?.type ?? "") : 0));
+        : path
+            .slice(1)
+            .map((_tileId, idx) =>
+              idx === path.length - 2 ? tilePointDelta(tiles[to]?.type ?? "") : 0,
+            );
       const steps = path.slice(1);
       if (!steps.length) return;
 
@@ -578,26 +606,29 @@ const GameBoardLegacyComponent: React.FC<GameBoardProps> = ({
       if (!followedPlayerId) followedPlayerId = p.id;
 
       steps.forEach((position, idx) => {
-        const timeoutId = window.setTimeout(() => {
-          const delta = stepDeltas[idx] ?? 0;
-          setDisplayPositions((prev) => ({ ...prev, [p.id]: position }));
-          pushFloatingDelta(position, delta);
-          if (followedPlayerId === p.id) focusOnPosition(position, true);
-          if (idx === steps.length - 1 && followedPlayerId === p.id) {
-            setMovingPlayerId(null);
-            pendingAutoZoomOutRef.current = true;
-            pendingAutoZoomTargetRef.current = position;
-            if (!eventOverlayActive) {
-              const timeoutId = window.setTimeout(() => {
-                tryAutoZoomOut();
-              }, 260);
-              moveTimeoutsRef.current.push(timeoutId);
+        const timeoutId = window.setTimeout(
+          () => {
+            const delta = stepDeltas[idx] ?? 0;
+            setDisplayPositions((prev) => ({ ...prev, [p.id]: position }));
+            pushFloatingDelta(position, delta);
+            if (followedPlayerId === p.id) focusOnPosition(position, true);
+            if (idx === steps.length - 1 && followedPlayerId === p.id) {
+              setMovingPlayerId(null);
+              pendingAutoZoomOutRef.current = true;
+              pendingAutoZoomTargetRef.current = position;
+              if (!eventOverlayActive) {
+                const timeoutId = window.setTimeout(() => {
+                  tryAutoZoomOut();
+                }, 260);
+                moveTimeoutsRef.current.push(timeoutId);
+              }
             }
-          }
-          if (idx === steps.length - 1) {
-            onMoveAnimationEnd?.(p.id);
-          }
-        }, MOVE_STEP_MS * (idx + 1));
+            if (idx === steps.length - 1) {
+              onMoveAnimationEnd?.(p.id);
+            }
+          },
+          MOVE_STEP_MS * (idx + 1),
+        );
         moveTimeoutsRef.current.push(timeoutId);
       });
     });
@@ -609,7 +640,19 @@ const GameBoardLegacyComponent: React.FC<GameBoardProps> = ({
       setMovingPlayerId(null);
     }
     previousPositionsRef.current = nextActual;
-  }, [eventOverlayActive, findPath, focusOnPosition, lastMoveTrace, movingPlayerId, onMoveAnimationEnd, players, pushFloatingDelta, tilePointDelta, tiles, tryAutoZoomOut]);
+  }, [
+    eventOverlayActive,
+    findPath,
+    focusOnPosition,
+    lastMoveTrace,
+    movingPlayerId,
+    onMoveAnimationEnd,
+    players,
+    pushFloatingDelta,
+    tilePointDelta,
+    tiles,
+    tryAutoZoomOut,
+  ]);
 
   useLayoutEffect(() => {
     if (!eventOverlayActive) {
@@ -646,7 +689,7 @@ const GameBoardLegacyComponent: React.FC<GameBoardProps> = ({
 
   const focusedPlayer = useMemo(
     () => players.find((player) => player.id === focusPlayerId) ?? null,
-    [focusPlayerId, players]
+    [focusPlayerId, players],
   );
   const focusedPosition = focusedPlayer
     ? (displayPositions[focusedPlayer.id] ?? focusedPlayer.position)
@@ -680,7 +723,8 @@ const GameBoardLegacyComponent: React.FC<GameBoardProps> = ({
             height,
             transform: `translate3d(${offset.x}px, ${offset.y}px, 0) scale(${scale})`,
             transformOrigin: "top left",
-            transition: movingPlayerId || isAutoResettingView ? "transform 360ms ease-out" : undefined,
+            transition:
+              movingPlayerId || isAutoResettingView ? "transform 360ms ease-out" : undefined,
           }}
         >
           {/* Path lines */}
@@ -709,7 +753,9 @@ const GameBoardLegacyComponent: React.FC<GameBoardProps> = ({
                         y1={from.y + TILE_CENTER}
                         x2={to.x + TILE_CENTER}
                         y2={to.y + TILE_CENTER}
-                        stroke={isHighlighted ? "rgba(250, 204, 21, 0.95)" : "rgba(125, 211, 252, 0.6)"}
+                        stroke={
+                          isHighlighted ? "rgba(250, 204, 21, 0.95)" : "rgba(125, 211, 252, 0.6)"
+                        }
                         strokeWidth={isHighlighted ? "7" : "5"}
                         strokeLinecap="round"
                       />
@@ -719,50 +765,55 @@ const GameBoardLegacyComponent: React.FC<GameBoardProps> = ({
             })}
 
             {/* Intersection directional hints */}
-            {pendingPathChoice && (() => {
-              const from = points[pendingPathChoice.atTileId];
-              if (!from) return null;
-              return pendingPathChoice.options
-                .filter((id) => id >= 0 && id < points.length)
-                .map((nextId) => {
-                  const to = points[nextId];
-                  if (!to) return null;
-                  const fromX = from.x + TILE_CENTER;
-                  const fromY = from.y + TILE_CENTER;
-                  const toX = to.x + TILE_CENTER;
-                  const toY = to.y + TILE_CENTER;
-                  const dx = toX - fromX;
-                  const dy = toY - fromY;
-                  const len = Math.hypot(dx, dy) || 1;
-                  const ux = dx / len;
-                  const uy = dy / len;
-                  const tailX = fromX + ux * 20;
-                  const tailY = fromY + uy * 20;
-                  const headX = toX - ux * 22;
-                  const headY = toY - uy * 22;
-                  const leftX = headX - ux * 10 + -uy * 7;
-                  const leftY = headY - uy * 10 + ux * 7;
-                  const rightX = headX - ux * 10 - -uy * 7;
-                  const rightY = headY - uy * 10 - ux * 7;
-                  return (
-                    <g key={`hint-${pendingPathChoice.atTileId}-${nextId}`}>
-                      <line
-                        x1={tailX}
-                        y1={tailY}
-                        x2={headX}
-                        y2={headY}
-                        stroke={canChoosePath ? "rgba(251, 191, 36, 0.95)" : "rgba(148, 163, 184, 0.9)"}
-                        strokeWidth="6"
-                        strokeLinecap="round"
-                      />
-                      <polygon
-                        points={`${headX},${headY} ${leftX},${leftY} ${rightX},${rightY}`}
-                        fill={canChoosePath ? "rgba(251, 191, 36, 0.98)" : "rgba(148, 163, 184, 0.95)"}
-                      />
-                    </g>
-                  );
-                });
-            })()}
+            {pendingPathChoice &&
+              (() => {
+                const from = points[pendingPathChoice.atTileId];
+                if (!from) return null;
+                return pendingPathChoice.options
+                  .filter((id) => id >= 0 && id < points.length)
+                  .map((nextId) => {
+                    const to = points[nextId];
+                    if (!to) return null;
+                    const fromX = from.x + TILE_CENTER;
+                    const fromY = from.y + TILE_CENTER;
+                    const toX = to.x + TILE_CENTER;
+                    const toY = to.y + TILE_CENTER;
+                    const dx = toX - fromX;
+                    const dy = toY - fromY;
+                    const len = Math.hypot(dx, dy) || 1;
+                    const ux = dx / len;
+                    const uy = dy / len;
+                    const tailX = fromX + ux * 20;
+                    const tailY = fromY + uy * 20;
+                    const headX = toX - ux * 22;
+                    const headY = toY - uy * 22;
+                    const leftX = headX - ux * 10 + -uy * 7;
+                    const leftY = headY - uy * 10 + ux * 7;
+                    const rightX = headX - ux * 10 - -uy * 7;
+                    const rightY = headY - uy * 10 - ux * 7;
+                    return (
+                      <g key={`hint-${pendingPathChoice.atTileId}-${nextId}`}>
+                        <line
+                          x1={tailX}
+                          y1={tailY}
+                          x2={headX}
+                          y2={headY}
+                          stroke={
+                            canChoosePath ? "rgba(251, 191, 36, 0.95)" : "rgba(148, 163, 184, 0.9)"
+                          }
+                          strokeWidth="6"
+                          strokeLinecap="round"
+                        />
+                        <polygon
+                          points={`${headX},${headY} ${leftX},${leftY} ${rightX},${rightY}`}
+                          fill={
+                            canChoosePath ? "rgba(251, 191, 36, 0.98)" : "rgba(148, 163, 184, 0.95)"
+                          }
+                        />
+                      </g>
+                    );
+                  });
+              })()}
           </svg>
 
           {/* Tiles */}
@@ -778,7 +829,7 @@ const GameBoardLegacyComponent: React.FC<GameBoardProps> = ({
                 className={cn(
                   "absolute flex h-16 w-16 items-center justify-center rounded-lg border-4 border-black text-lg font-bold shadow-[4px_4px_0_0_rgba(0,0,0,0.65)]",
                   TileColors[tile.type] ?? "bg-slate-800",
-                  focusedPosition === tile.id && "ring-4 ring-amber-300/85"
+                  focusedPosition === tile.id && "ring-4 ring-amber-300/85",
                 )}
                 style={{ left: px, top: py }}
                 title={`${idx + 1} - ${tile.type}`}
@@ -792,7 +843,7 @@ const GameBoardLegacyComponent: React.FC<GameBoardProps> = ({
                         key={`${p.id}-${k}`}
                         className={cn(
                           "flex h-8 w-8 items-center justify-center rounded-full border-2 bg-white text-base shadow-[0_0_0_2px_rgba(15,23,42,0.6)]",
-                          movingPlayerId === p.id && "animate-bounce ring-2 ring-cyan-300"
+                          movingPlayerId === p.id && "animate-bounce ring-2 ring-pink-400",
                         )}
                         style={{ borderColor: p.color }}
                         title={p.name}
@@ -811,60 +862,58 @@ const GameBoardLegacyComponent: React.FC<GameBoardProps> = ({
             );
           })}
 
-          {pendingPathChoice && (() => {
-            const from = points[pendingPathChoice.atTileId];
-            if (!from) return null;
-            return pendingPathChoice.options
-              .filter((id) => id >= 0 && id < points.length)
-              .map((nextId) => {
-                const to = points[nextId];
-                if (!to) return null;
-                const fromX = from.x + TILE_CENTER;
-                const fromY = from.y + TILE_CENTER;
-                const toX = to.x + TILE_CENTER;
-                const toY = to.y + TILE_CENTER;
-                const x = fromX + (toX - fromX) * 0.52;
-                const y = fromY + (toY - fromY) * 0.52;
-                const angleDeg = (Math.atan2(toY - fromY, toX - fromX) * 180) / Math.PI;
-                return (
-                  <button
-                    key={`choose-${pendingPathChoice.atTileId}-${nextId}`}
-                    type="button"
-                    disabled={!canChoosePath}
-                    onPointerDown={(e) => e.stopPropagation()}
-                    onPointerMove={(e) => e.stopPropagation()}
-                    onPointerUp={(e) => e.stopPropagation()}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (!canChoosePath) return;
-                      onChoosePath?.(nextId);
-                    }}
-                    className={cn(
-                      "absolute z-20 flex h-9 w-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 text-sm font-black shadow-[3px_3px_0_0_rgba(0,0,0,0.6)]",
-                      canChoosePath
-                        ? "border-amber-200 bg-amber-400 text-slate-900 hover:bg-amber-300"
-                        : "cursor-not-allowed border-slate-300 bg-slate-400 text-slate-700"
-                    )}
-                    style={{ left: x, top: y }}
-                    title={canChoosePath ? "Choisir cette direction" : "Direction indisponible"}
-                  >
-                    <span
-                      className="block"
-                      style={{ transform: `rotate(${angleDeg}deg)` }}
+          {pendingPathChoice &&
+            (() => {
+              const from = points[pendingPathChoice.atTileId];
+              if (!from) return null;
+              return pendingPathChoice.options
+                .filter((id) => id >= 0 && id < points.length)
+                .map((nextId) => {
+                  const to = points[nextId];
+                  if (!to) return null;
+                  const fromX = from.x + TILE_CENTER;
+                  const fromY = from.y + TILE_CENTER;
+                  const toX = to.x + TILE_CENTER;
+                  const toY = to.y + TILE_CENTER;
+                  const x = fromX + (toX - fromX) * 0.52;
+                  const y = fromY + (toY - fromY) * 0.52;
+                  const angleDeg = (Math.atan2(toY - fromY, toX - fromX) * 180) / Math.PI;
+                  return (
+                    <button
+                      key={`choose-${pendingPathChoice.atTileId}-${nextId}`}
+                      type="button"
+                      disabled={!canChoosePath}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onPointerMove={(e) => e.stopPropagation()}
+                      onPointerUp={(e) => e.stopPropagation()}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (!canChoosePath) return;
+                        onChoosePath?.(nextId);
+                      }}
+                      className={cn(
+                        "absolute z-20 flex h-9 w-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 text-sm font-black shadow-[3px_3px_0_0_rgba(0,0,0,0.6)]",
+                        canChoosePath
+                          ? "border-amber-200 bg-amber-400 text-slate-900 hover:bg-amber-300"
+                          : "cursor-not-allowed border-slate-300 bg-slate-400 text-slate-700",
+                      )}
+                      style={{ left: x, top: y }}
+                      title={canChoosePath ? "Choisir cette direction" : "Direction indisponible"}
                     >
-                      &gt;
-                    </span>
-                  </button>
-                );
-              });
-          })()}
+                      <span className="block" style={{ transform: `rotate(${angleDeg}deg)` }}>
+                        &gt;
+                      </span>
+                    </button>
+                  );
+                });
+            })()}
 
           {floatingDeltas.map((fx) => (
             <div
               key={fx.id}
               className={cn(
                 "pointer-events-none absolute z-30 -translate-x-1/2 -translate-y-1/2 text-xl font-black drop-shadow-[0_2px_0_rgba(0,0,0,0.75)] animate-[ping_0.9s_ease-out_1]",
-                fx.positive ? "text-emerald-300" : "text-rose-300"
+                fx.positive ? "text-emerald-300" : "text-rose-300",
               )}
               style={{ left: fx.x, top: fx.y }}
             >
@@ -902,7 +951,7 @@ const GameBoardLegacyComponent: React.FC<GameBoardProps> = ({
           <button
             type="button"
             className="h-10 w-10 rounded-md border-4 border-black bg-white/90 text-sm font-extrabold text-black shadow-[3px_3px_0_0_rgba(0,0,0,0.6)]"
-            onClick={resetView}
+            onClick={() => resetView()}
             aria-label="Recentrer"
           >
             C
@@ -921,7 +970,7 @@ const GameBoardLegacyComponent: React.FC<GameBoardProps> = ({
       )}
 
       {focusedPlayer && focusedPosition != null && (
-        <div className="pointer-events-none absolute bottom-2 left-2 z-20 rounded border border-cyan-300/35 bg-slate-900/75 px-2 py-1 text-[11px] text-cyan-100">
+        <div className="pointer-events-none absolute bottom-2 left-2 z-20 rounded border border-pink-400/35 bg-slate-900/75 px-2 py-1 text-[11px] text-pink-100">
           {focusedPlayer.name}
         </div>
       )}
@@ -935,12 +984,7 @@ function areTilesEqual(prevTiles: Tile[], nextTiles: Tile[]) {
   for (let i = 0; i < prevTiles.length; i += 1) {
     const a = prevTiles[i];
     const b = nextTiles[i];
-    if (
-      a.id !== b.id ||
-      a.type !== b.type ||
-      a.x !== b.x ||
-      a.y !== b.y
-    ) {
+    if (a.id !== b.id || a.type !== b.type || a.x !== b.x || a.y !== b.y) {
       return false;
     }
     const aNext = a.nextTileIds ?? [];
@@ -974,7 +1018,7 @@ function arePlayersEqualForBoard(prevPlayers: Player[], nextPlayers: Player[]) {
 
 function arePendingChoicesEqual(
   prevChoice: PendingPathChoice | null | undefined,
-  nextChoice: PendingPathChoice | null | undefined
+  nextChoice: PendingPathChoice | null | undefined,
 ) {
   if (prevChoice === nextChoice) return true;
   if (!prevChoice || !nextChoice) return false;
@@ -992,7 +1036,10 @@ function arePendingChoicesEqual(
   return true;
 }
 
-function areMoveTracesEqual(prevTrace: MoveTrace | null | undefined, nextTrace: MoveTrace | null | undefined) {
+function areMoveTracesEqual(
+  prevTrace: MoveTrace | null | undefined,
+  nextTrace: MoveTrace | null | undefined,
+) {
   if (prevTrace === nextTrace) return true;
   if (!prevTrace || !nextTrace) return false;
   if (
@@ -1012,7 +1059,10 @@ function areMoveTracesEqual(prevTrace: MoveTrace | null | undefined, nextTrace: 
   return true;
 }
 
-function areBoardActionsEqual(prevAction: GameBoardProps["actionOverlay"], nextAction: GameBoardProps["actionOverlay"]) {
+function areBoardActionsEqual(
+  prevAction: GameBoardProps["actionOverlay"],
+  nextAction: GameBoardProps["actionOverlay"],
+) {
   if (prevAction === nextAction) return true;
   if (!prevAction || !nextAction) return false;
   const prevDice = prevAction.rollResult?.dice ?? [];
@@ -1056,4 +1106,3 @@ function areGameBoardPropsEqual(prev: GameBoardProps, next: GameBoardProps) {
 
 export const GameBoardLegacy = React.memo(GameBoardLegacyComponent, areGameBoardPropsEqual);
 GameBoardLegacy.displayName = "GameBoardLegacy";
-

@@ -1,5 +1,5 @@
 export const QUESTIONS = {
-  "blue": [
+  blue: [
     "Qu’est-ce qui a le mieux fonctionné ce sprint ?",
     "Qu’est-ce qui a été livré et dont on peut être fier ?",
     "Quel moment a été le plus productif pour l’équipe ?",
@@ -15,9 +15,9 @@ export const QUESTIONS = {
     "Qu’est-ce qu’on referait exactement de la même façon ?",
     "Qu’est-ce qu’on a appris sur notre façon de travailler ?",
     "Si tu devais résumer le sprint en une phrase, laquelle ?",
-    "Quel fait important pourrait être oublié si on ne le disait pas ?"
+    "Quel fait important pourrait être oublié si on ne le disait pas ?",
   ],
-  "green": [
+  green: [
     "Quelle amélioration simple pourrait avoir un gros impact ?",
     "Que pourrait-on faire pour réduire les interruptions ?",
     "Quelle pratique Agile pourrait-on renforcer ?",
@@ -33,9 +33,9 @@ export const QUESTIONS = {
     "Comment réduire les retours ou bugs ?",
     "Quelle amélioration sur la communication ?",
     "Si on ne changeait qu’une seule chose, laquelle ?",
-    "Quelle bonne pratique d’une autre équipe pourrait-on adopter ?"
+    "Quelle bonne pratique d’une autre équipe pourrait-on adopter ?",
   ],
-  "red": [
+  red: [
     "Qu’est-ce qui t’a le plus frustré ce sprint ?",
     "Qu’est-ce qui t’a fait perdre du temps inutilement ?",
     "Quel obstacle a été le plus pénible ?",
@@ -51,9 +51,9 @@ export const QUESTIONS = {
     "Quel process nous freine plus qu’il ne nous aide ?",
     "Qu’est-ce qui a été inutilement compliqué ?",
     "Quelle décision a eu un impact négatif ?",
-    "Si tu pouvais supprimer une contrainte, laquelle ?"
+    "Si tu pouvais supprimer une contrainte, laquelle ?",
   ],
-  "violet": [
+  violet: [
     "À quoi ressemblerait un sprint idéal ?",
     "Où aimerais-tu voir l’équipe dans 3 sprints ?",
     "Quelle serait notre plus grande réussite dans 6 mois ?",
@@ -69,9 +69,9 @@ export const QUESTIONS = {
     "Qu’est-ce qui différencierait notre équipe des autres ?",
     "Quel objectif ambitieux mais atteignable pourrait-on se fixer ?",
     "Quelle habitude d’équipe aimerais-tu voir émerger ?",
-    "Dans un an, de quoi serions-nous le plus fiers ?"
+    "Dans un an, de quoi serions-nous le plus fiers ?",
   ],
-  "bonus": [
+  bonus: [
     "Remercie un membre de l’équipe pour quelque chose de précis.",
     "Cite une personne qui t’a aidé pendant le sprint.",
     "Remercie quelqu’un pour son attitude, pas seulement ses résultats.",
@@ -81,8 +81,8 @@ export const QUESTIONS = {
     "Cite une action qui mérite d’être reconnue.",
     "Remercie quelqu’un qui a facilité ton travail.",
     "Dis merci à quelqu’un qui a pris une initiative.",
-    "Remercie quelqu’un pour son esprit d’équipe."
-  ]
+    "Remercie quelqu’un pour son esprit d’équipe.",
+  ],
 };
 
 function normalizeQuestionType(type) {
@@ -105,7 +105,7 @@ export function pickUniqueQuestion(type, usedQuestionTexts = [], rng = Math.rand
   const usedSet = new Set(
     Array.isArray(usedQuestionTexts)
       ? usedQuestionTexts.filter((entry) => typeof entry === "string" && entry.length > 0)
-      : []
+      : [],
   );
 
   const sameTypePool = getPoolForType(type);

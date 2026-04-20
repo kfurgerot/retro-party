@@ -57,32 +57,53 @@ export class PlayerSeat {
     this.namePlate.width = 112;
     this.namePlate.height = 18;
 
-    this.avatarText = new Text(":)", new TextStyle({
-      fontFamily: "Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif",
-      fontSize: 20,
-    }));
+    this.avatarText = new Text(
+      ":)",
+      new TextStyle({
+        fontFamily: "Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif",
+        fontSize: 20,
+      }),
+    );
     this.avatarText.anchor.set(0.5);
 
-    this.nameText = new Text("", new TextStyle({
-      fontFamily: "'Press Start 2P', monospace",
-      fontSize: 8,
-      fill: POKER_THEME.seat.text,
-      align: "center",
-    }));
+    this.nameText = new Text(
+      "",
+      new TextStyle({
+        fontFamily: "'Press Start 2P', monospace",
+        fontSize: 8,
+        fill: POKER_THEME.seat.text,
+        align: "center",
+      }),
+    );
     this.nameText.anchor.set(0.5);
 
-    this.badgeText = new Text("", new TextStyle({
-      fontFamily: "'Press Start 2P', monospace",
-      fontSize: 7,
-      fill: POKER_THEME.seat.badge,
-      align: "center",
-    }));
+    this.badgeText = new Text(
+      "",
+      new TextStyle({
+        fontFamily: "'Press Start 2P', monospace",
+        fontSize: 7,
+        fill: POKER_THEME.seat.badge,
+        align: "center",
+      }),
+    );
     this.badgeText.anchor.set(0.5);
 
-    this.avatarContainer.addChild(this.pulseRing, this.avatarShadow, this.avatarBadge, this.avatarText);
+    this.avatarContainer.addChild(
+      this.pulseRing,
+      this.avatarShadow,
+      this.avatarBadge,
+      this.avatarText,
+    );
     this.cardAnchor.addChild(this.card.view);
 
-    this.view.addChild(this.seatBase, this.cardAnchor, this.avatarContainer, this.namePlate, this.nameText, this.badgeText);
+    this.view.addChild(
+      this.seatBase,
+      this.cardAnchor,
+      this.avatarContainer,
+      this.namePlate,
+      this.nameText,
+      this.badgeText,
+    );
     this.view.sortableChildren = true;
 
     this.avatarContainer.eventMode = "static";
@@ -160,8 +181,15 @@ export class PlayerSeat {
     this.avatarShadow.endFill();
 
     this.avatarBadge.clear();
-    this.avatarBadge.lineStyle(2, player.connected ? POKER_THEME.seat.online : POKER_THEME.seat.offline, 0.9);
-    this.avatarBadge.beginFill(opts.isMe ? POKER_THEME.seat.meFill : POKER_THEME.seat.defaultFill, 0.96);
+    this.avatarBadge.lineStyle(
+      2,
+      player.connected ? POKER_THEME.seat.online : POKER_THEME.seat.offline,
+      0.9,
+    );
+    this.avatarBadge.beginFill(
+      opts.isMe ? POKER_THEME.seat.meFill : POKER_THEME.seat.defaultFill,
+      0.96,
+    );
     this.avatarBadge.drawCircle(0, 0, 16);
     this.avatarBadge.endFill();
 
@@ -228,5 +256,3 @@ export class PlayerSeat {
     }, duration + 32);
   }
 }
-
-

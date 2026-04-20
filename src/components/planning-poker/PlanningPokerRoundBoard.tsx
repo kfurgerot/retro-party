@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { AVATARS } from "@/types/game";
 import { PLANNING_POKER_DECKS } from "@/lib/planningPoker";
 import { PlanningPokerPlayer, PlanningPokerVoteSystem } from "@/types/planningPoker";
@@ -44,7 +44,7 @@ const normalizeVoteValue = (value: string | null) => {
 
 const getVoteBorderStyle = (
   vote: string | null,
-  voteSystem: PlanningPokerVoteSystem
+  voteSystem: PlanningPokerVoteSystem,
 ): React.CSSProperties | undefined => {
   const normalizedVote = normalizeVoteValue(vote);
   if (!normalizedVote) return undefined;
@@ -54,13 +54,15 @@ const getVoteBorderStyle = (
   if (index < 0) return undefined;
 
   const ratio = activeDeck.length <= 1 ? 0 : index / (activeDeck.length - 1);
-  const hue = 198 - ratio * 190;
-  const borderColor = `hsl(${hue} 92% 64%)`;
-  const glow = `hsla(${hue} 95% 60% / 0.42)`;
+  // Indigo gradient: low values → indigo-400, high values → violet-500
+  const hue = 239 - ratio * 20;
+  const lightness = 62 + ratio * 8;
+  const borderColor = `hsl(${hue} 72% ${lightness}%)`;
+  const glow = `hsla(${hue} 75% 58% / 0.35)`;
 
   return {
     borderColor,
-    boxShadow: `0 0 0 1px hsla(${hue} 95% 70% / 0.45), 0 10px 20px ${glow}`,
+    boxShadow: `0 0 0 1px hsla(${hue} 75% 68% / 0.35), 0 8px 16px ${glow}`,
   };
 };
 
@@ -77,7 +79,7 @@ const SeatVoteCard: React.FC<{
   const valueLabel = normalizedVote ?? "-";
   const revealedCardStyle = useMemo(
     () => (revealed ? getVoteBorderStyle(normalizedVote, voteSystem) : undefined),
-    [normalizedVote, revealed, voteSystem]
+    [normalizedVote, revealed, voteSystem],
   );
 
   useEffect(() => {
@@ -146,19 +148,28 @@ export const PlanningPokerRoundBoard: React.FC<Props> = ({
   const displayedStory = storyTitle.trim() || `Story #${round}`;
 
   return (
-    <div className="relative h-full w-full overflow-hidden rounded-2xl border border-cyan-300/28 bg-slate-950/40 p-2.5 sm:p-4 lg:p-5">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(34,211,238,0.12),_transparent_64%)]" />
+    <div className="relative h-full w-full overflow-hidden rounded-2xl border border-indigo-500/20 bg-slate-950/40 p-2.5 sm:p-4 lg:p-5">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(99,102,241,0.08),_transparent_64%)]" />
 
       <div className="relative h-full w-full">
-        <div className="absolute left-1/2 top-1/2 h-[42%] w-[70%] -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-300/22 bg-slate-900/55 shadow-[0_0_0_1px_rgba(34,211,238,0.08)] sm:h-[44%] sm:w-[68%] lg:h-[50%] lg:w-[74%]" />
+        {/* Oval table surface */}
+        <div className="absolute left-1/2 top-1/2 h-[42%] w-[70%] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/[0.06] bg-slate-900/55 sm:h-[44%] sm:w-[68%] lg:h-[50%] lg:w-[74%]" />
 
-        <div className="absolute left-1/2 top-1/2 z-10 w-[74%] max-w-[460px] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-cyan-300/30 bg-cyan-500/10 px-3 py-2 text-center sm:w-[66%] sm:px-4 sm:py-3">
-          <p className="mb-1 truncate text-[10px] font-semibold uppercase tracking-[0.08em] text-cyan-100/80 sm:text-[11px]">{displayedStory}</p>
-          <p className="text-xs font-medium text-cyan-50 sm:text-sm">
-            {revealed ? "Revelation des votes" : votesOpen ? "En attente des votes..." : "En attente du lancement des votes"}
+        {/* Story card */}
+        <div className="absolute left-1/2 top-1/2 z-10 w-[74%] max-w-[460px] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-indigo-500/30 bg-indigo-500/8 px-3 py-2 text-center sm:w-[66%] sm:px-4 sm:py-3">
+          <p className="mb-1 truncate text-[10px] font-semibold uppercase tracking-[0.08em] text-indigo-200/80 sm:text-[11px]">
+            {displayedStory}
+          </p>
+          <p className="text-xs font-medium text-slate-200 sm:text-sm">
+            {revealed
+              ? "Revelation des votes"
+              : votesOpen
+                ? "En attente des votes..."
+                : "En attente du lancement des votes"}
           </p>
         </div>
 
+        {/* Player seats */}
         {seats.map(({ player, x, y }) => (
           <div
             key={player.socketId}
@@ -167,11 +178,13 @@ export const PlanningPokerRoundBoard: React.FC<Props> = ({
           >
             <div className="flex flex-col items-center gap-1">
               <SeatVoteCard player={player} revealed={revealed} voteSystem={voteSystem} />
-              <div className="flex h-8 w-8 items-center justify-center rounded-full border border-cyan-300/35 bg-slate-900/85 text-base shadow-[0_0_0_1px_rgba(34,211,238,0.12)] sm:h-10 sm:w-10 sm:text-lg">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full border border-white/[0.12] bg-slate-900/85 text-base shadow-[0_0_0_1px_rgba(99,102,241,0.1)] sm:h-10 sm:w-10 sm:text-lg">
                 {AVATARS[player.avatar] ?? ":)"}
               </div>
-              <div className="max-w-[78px] truncate text-center text-[10px] text-cyan-50 sm:max-w-[90px] sm:text-[11px]">{player.name}</div>
-              {player.isHost ? <div className="text-[10px] text-cyan-200">Host</div> : null}
+              <div className="max-w-[78px] truncate text-center text-[10px] text-slate-300 sm:max-w-[90px] sm:text-[11px]">
+                {player.name}
+              </div>
+              {player.isHost ? <div className="text-[10px] text-indigo-400">Host</div> : null}
             </div>
           </div>
         ))}
@@ -179,5 +192,3 @@ export const PlanningPokerRoundBoard: React.FC<Props> = ({
     </div>
   );
 };
-
-

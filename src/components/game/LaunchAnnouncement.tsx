@@ -19,10 +19,10 @@ export const LaunchAnnouncement: React.FC<LaunchAnnouncementProps> = ({
   emphasisText = null,
 }) => {
   const [initialDurationMs, setInitialDurationMs] = useState(() =>
-    startAt ? Math.max(1, startAt - Date.now()) : 1
+    startAt ? Math.max(1, startAt - Date.now()) : 1,
   );
   const [remainingMs, setRemainingMs] = useState(() =>
-    startAt ? Math.max(0, startAt - Date.now()) : 0
+    startAt ? Math.max(0, startAt - Date.now()) : 0,
   );
 
   useEffect(() => {
@@ -40,33 +40,33 @@ export const LaunchAnnouncement: React.FC<LaunchAnnouncementProps> = ({
   const skin =
     variant === "turn"
       ? {
-          glow: "shadow-[0_0_0_2px_rgba(34,211,238,0.2),0_0_44px_rgba(34,211,238,0.3)]",
-          border: "border-cyan-300/45",
-          panel: "from-slate-900/95 via-slate-900/90 to-cyan-950/85",
-          accent: "bg-cyan-400",
-          badge: "text-cyan-200 border-cyan-300/40 bg-cyan-500/15",
+          glow: "shadow-[0_0_0_2px_rgba(236,72,153,0.2),0_0_44px_rgba(236,72,153,0.3)]",
+          border: "border-pink-400/45",
+          panel: "from-slate-900/95 via-slate-900/90 to-pink-950/85",
+          accent: "bg-pink-400",
+          badge: "text-pink-200 border-pink-400/40 bg-pink-500/15",
           icon: "🎮",
           label: "Tour actif",
         }
       : variant === "roll"
-      ? {
-          glow: "shadow-[0_0_0_2px_rgba(251,146,60,0.24),0_0_44px_rgba(251,146,60,0.35)]",
-          border: "border-orange-300/50",
-          panel: "from-slate-900/95 via-slate-900/90 to-orange-950/85",
-          accent: "bg-orange-400",
-          badge: "text-orange-200 border-orange-300/45 bg-orange-500/15",
-          icon: "🎲",
-          label: "Lancer valide",
-        }
-      : {
-          glow: "shadow-[0_0_0_2px_rgba(163,230,53,0.2),0_0_44px_rgba(163,230,53,0.28)]",
-          border: "border-lime-300/40",
-          panel: "from-slate-900/95 via-slate-900/90 to-lime-950/80",
-          accent: "bg-lime-400",
-          badge: "text-lime-200 border-lime-300/45 bg-lime-500/15",
-          icon: "✨",
-          label: fr.launchAnnouncement.preparation,
-        };
+        ? {
+            glow: "shadow-[0_0_0_2px_rgba(251,146,60,0.24),0_0_44px_rgba(251,146,60,0.35)]",
+            border: "border-orange-300/50",
+            panel: "from-slate-900/95 via-slate-900/90 to-orange-950/85",
+            accent: "bg-orange-400",
+            badge: "text-orange-200 border-orange-300/45 bg-orange-500/15",
+            icon: "🎲",
+            label: "Lancer valide",
+          }
+        : {
+            glow: "shadow-[0_0_0_2px_rgba(163,230,53,0.2),0_0_44px_rgba(163,230,53,0.28)]",
+            border: "border-lime-300/40",
+            panel: "from-slate-900/95 via-slate-900/90 to-lime-950/80",
+            accent: "bg-lime-400",
+            badge: "text-lime-200 border-lime-300/45 bg-lime-500/15",
+            icon: "✨",
+            label: fr.launchAnnouncement.preparation,
+          };
 
   return (
     <div
@@ -91,7 +91,7 @@ export const LaunchAnnouncement: React.FC<LaunchAnnouncementProps> = ({
               className={
                 variant === "roll"
                   ? "inline-flex items-center rounded-xl border border-orange-200/70 bg-orange-500/22 px-4 py-2 text-xl font-black tracking-wide text-orange-50 shadow-[0_0_24px_rgba(251,146,60,0.35)] sm:text-2xl"
-                  : "inline-flex items-center rounded-xl border border-cyan-200/70 bg-cyan-500/20 px-4 py-2 text-xl font-black tracking-wide text-cyan-50 shadow-[0_0_24px_rgba(34,211,238,0.3)] sm:text-2xl"
+                  : "inline-flex items-center rounded-xl border border-pink-300/70 bg-pink-500/20 px-4 py-2 text-xl font-black tracking-wide text-slate-100 shadow-[0_0_24px_rgba(236,72,153,0.3)] sm:text-2xl"
               }
             >
               {emphasisText}
@@ -114,7 +114,9 @@ export const LaunchAnnouncement: React.FC<LaunchAnnouncementProps> = ({
           />
         </div>
 
-        <div className={`mt-4 inline-flex rounded-lg border px-3 py-1 text-lg font-semibold ${skin.badge}`}>
+        <div
+          className={`mt-4 inline-flex rounded-lg border px-3 py-1 text-lg font-semibold ${skin.badge}`}
+        >
           {countdown}s
         </div>
       </div>

@@ -16,14 +16,17 @@ export class CenterInfo {
   private readonly progress: Text;
 
   constructor() {
-    this.title = new Text("", new TextStyle({
-      fontFamily: "'Press Start 2P', monospace",
-      fontSize: 10,
-      fill: POKER_THEME.center.title,
-      align: "center",
-      wordWrap: true,
-      wordWrapWidth: 240,
-    }));
+    this.title = new Text(
+      "",
+      new TextStyle({
+        fontFamily: "'Press Start 2P', monospace",
+        fontSize: 10,
+        fill: POKER_THEME.center.title,
+        align: "center",
+        wordWrap: true,
+        wordWrapWidth: 240,
+      }),
+    );
     this.title.anchor.set(0.5);
 
     const bodyStyle = new TextStyle({

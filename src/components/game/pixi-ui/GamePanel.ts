@@ -10,7 +10,7 @@ export function createGamePanel() {
     PIXI_GAME_THEME.panel.y,
     PIXI_GAME_THEME.panel.width,
     PIXI_GAME_THEME.panel.height,
-    PIXI_GAME_THEME.panel.radius
+    PIXI_GAME_THEME.panel.radius,
   );
   panel.endFill();
 
@@ -21,4 +21,3 @@ export function createGamePanel() {
 
   return { panel, separator };
 }
-

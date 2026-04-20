@@ -1,9 +1,5 @@
-﻿import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   DropdownMenu,
@@ -12,7 +8,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -31,47 +26,50 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { api, TemplateItem, TemplateQuestion } from "@/net/api";
-import { RetroScreenBackground } from "@/components/screens/RetroScreenBackground";
 import { fr } from "@/i18n/fr";
-import { CTA_NEON_PRIMARY, CTA_NEON_SECONDARY } from "@/lib/uiTokens";
+import { PageShell } from "@/components/app-shell";
+import { cn } from "@/lib/utils";
 
 type ThemeTab = "all" | "blue" | "green" | "red" | "violet" | "bonus" | "other";
 type ThemeKey = Exclude<ThemeTab, "all" | "other">;
 type StatusFilter = "all" | "active" | "inactive";
 
-const THEME_META: Record<
-  ThemeKey,
-  { label: string; className: string; chipClassName: string }
-> = {
+const THEME_META: Record<ThemeKey, { label: string; color: string; bg: string; dot: string }> = {
   blue: {
     label: fr.templateEditor.understand,
-    className: "text-blue-300",
-    chipClassName: "bg-tile-blue",
+    color: "#93c5fd",
+    bg: "rgba(59,130,246,0.12)",
+    dot: "#3b82f6",
   },
   green: {
     label: fr.templateEditor.improve,
-    className: "text-green-300",
-    chipClassName: "bg-tile-green",
+    color: "#6ee7b7",
+    bg: "rgba(16,185,129,0.12)",
+    dot: "#10b981",
   },
   red: {
     label: fr.templateEditor.frictions,
-    className: "text-red-300",
-    chipClassName: "bg-tile-red",
+    color: "#fca5a5",
+    bg: "rgba(239,68,68,0.12)",
+    dot: "#ef4444",
   },
   violet: {
     label: fr.templateEditor.vision,
-    className: "text-violet-300",
-    chipClassName: "bg-tile-violet",
+    color: "#c4b5fd",
+    bg: "rgba(139,92,246,0.12)",
+    dot: "#8b5cf6",
   },
   bonus: {
     label: fr.templateEditor.kudobox,
-    className: "text-yellow-300",
-    chipClassName: "bg-tile-star",
+    color: "#fcd34d",
+    bg: "rgba(245,158,11,0.12)",
+    dot: "#f59e0b",
   },
 };
 const THEME_ORDER: ThemeKey[] = ["blue", "green", "red", "violet", "bonus"];
-const neutralSecondaryBtn = CTA_NEON_SECONDARY;
-const activeCyanBtn = CTA_NEON_PRIMARY;
+
+const inputCls =
+  "w-full h-11 rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 text-sm text-slate-100 placeholder:text-slate-600 outline-none focus:border-white/20 focus:ring-1 focus:ring-indigo-400/50 transition";
 
 function normalizeCategory(value: string | null | undefined): ThemeTab {
   if (!value) return "other";
@@ -90,8 +88,34 @@ function normalizeCategory(value: string | null | undefined): ThemeTab {
 }
 
 function isThemeKey(value: ThemeTab): value is ThemeKey {
-  return value === "blue" || value === "green" || value === "red" || value === "violet" || value === "bonus";
+  return (
+    value === "blue" ||
+    value === "green" ||
+    value === "red" ||
+    value === "violet" ||
+    value === "bonus"
+  );
 }
+
+const CategoryChip = ({ category }: { category: ThemeTab }) => {
+  if (category === "all" || category === "other") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full border border-white/[0.08] bg-white/[0.04] px-2 py-0.5 text-[11px] font-semibold text-slate-400">
+        {category === "other" ? fr.templateEditor.other : fr.templateEditor.all}
+      </span>
+    );
+  }
+  const meta = THEME_META[category];
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"
+      style={{ background: meta.bg, color: meta.color }}
+    >
+      <span className="h-1.5 w-1.5 rounded-full" style={{ background: meta.dot }} />
+      {meta.label}
+    </span>
+  );
+};
 
 const TemplateEditorPage = () => {
   const { templateId } = useParams<{ templateId: string }>();
@@ -172,7 +196,9 @@ const TemplateEditorPage = () => {
         text: newQuestionText.trim(),
         category: newQuestionCategory,
       });
-      setQuestions((prev) => [...prev, response.question].sort((a, b) => a.sortOrder - b.sortOrder));
+      setQuestions((prev) =>
+        [...prev, response.question].sort((a, b) => a.sortOrder - b.sortOrder),
+      );
       setNewQuestionText("");
     } catch (err) {
       setError(err instanceof Error ? err.message : fr.templateEditor.unknownError);
@@ -186,7 +212,9 @@ const TemplateEditorPage = () => {
       const response = await api.patchTemplateQuestion(templateId, question.id, {
         isActive: !question.isActive,
       });
-      setQuestions((prev) => prev.map((item) => (item.id === question.id ? response.question : item)));
+      setQuestions((prev) =>
+        prev.map((item) => (item.id === question.id ? response.question : item)),
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : fr.templateEditor.unknownError);
     }
@@ -205,7 +233,9 @@ const TemplateEditorPage = () => {
       const response = await api.patchTemplateQuestion(templateId, editingQuestion.id, {
         text: editingQuestionText.trim(),
       });
-      setQuestions((prev) => prev.map((item) => (item.id === editingQuestion.id ? response.question : item)));
+      setQuestions((prev) =>
+        prev.map((item) => (item.id === editingQuestion.id ? response.question : item)),
+      );
       setEditingQuestion(null);
       setEditingQuestionText("");
     } catch (err) {
@@ -222,7 +252,9 @@ const TemplateEditorPage = () => {
       const response = await api.patchTemplateQuestion(templateId, question.id, {
         category: nextCategory,
       });
-      setQuestions((prev) => prev.map((item) => (item.id === question.id ? response.question : item)));
+      setQuestions((prev) =>
+        prev.map((item) => (item.id === question.id ? response.question : item)),
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : fr.templateEditor.unknownError);
     }
@@ -242,18 +274,17 @@ const TemplateEditorPage = () => {
   const deleteQuestionsByTheme = async (theme: ThemeKey) => {
     if (!templateId) return;
     const idsToDelete = questions
-      .filter((question) => normalizeCategory(question.category) === theme)
-      .map((question) => question.id);
+      .filter((q) => normalizeCategory(q.category) === theme)
+      .map((q) => q.id);
     if (!idsToDelete.length) {
       setBulkDeleteTheme(null);
       return;
     }
-
     setDeletingThemeQuestions(true);
     setError(null);
     try {
-      await Promise.all(idsToDelete.map((questionId) => api.deleteTemplateQuestion(templateId, questionId)));
-      setQuestions((prev) => prev.filter((question) => normalizeCategory(question.category) !== theme));
+      await Promise.all(idsToDelete.map((id) => api.deleteTemplateQuestion(templateId, id)));
+      setQuestions((prev) => prev.filter((q) => normalizeCategory(q.category) !== theme));
       setBulkDeleteTheme(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : fr.templateEditor.unknownError);
@@ -268,15 +299,16 @@ const TemplateEditorPage = () => {
     if (currentIndex < 0) return;
     const nextIndex = currentIndex + direction;
     if (nextIndex < 0 || nextIndex >= questions.length) return;
-
     const nextQuestions = [...questions];
-    [nextQuestions[currentIndex], nextQuestions[nextIndex]] = [nextQuestions[nextIndex], nextQuestions[currentIndex]];
+    [nextQuestions[currentIndex], nextQuestions[nextIndex]] = [
+      nextQuestions[nextIndex],
+      nextQuestions[currentIndex],
+    ];
     setQuestions(nextQuestions);
-
     try {
       const response = await api.reorderTemplateQuestions(
         templateId,
-        nextQuestions.map((item) => item.id)
+        nextQuestions.map((item) => item.id),
       );
       setQuestions(response.items);
     } catch (err) {
@@ -290,7 +322,9 @@ const TemplateEditorPage = () => {
     setError(null);
     try {
       const response = await api.launchTemplateRoom(templateId);
-      navigate(`/play?mode=join&code=${response.roomCode}&name=${fr.prepare.hostPlaceholder}&avatar=0&auto=1`);
+      navigate(
+        `/play?mode=join&code=${response.roomCode}&name=${fr.prepare.hostPlaceholder}&avatar=0&auto=1`,
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : fr.templateEditor.unknownError);
     }
@@ -298,280 +332,340 @@ const TemplateEditorPage = () => {
 
   const canSave = useMemo(() => !!name.trim() && !saving, [name, saving]);
 
-  const counts = useMemo(() => {
-    return questions.reduce(
-      (acc, question) => {
-        const category = normalizeCategory(question.category);
-        acc[category] = (acc[category] ?? 0) + 1;
-        acc.all += 1;
-        return acc;
-      },
-      { all: 0, blue: 0, green: 0, red: 0, violet: 0, bonus: 0, other: 0 } as Record<ThemeTab, number>
-    );
-  }, [questions]);
+  const counts = useMemo(
+    () =>
+      questions.reduce(
+        (acc, q) => {
+          const cat = normalizeCategory(q.category);
+          acc[cat] = (acc[cat] ?? 0) + 1;
+          acc.all += 1;
+          return acc;
+        },
+        { all: 0, blue: 0, green: 0, red: 0, violet: 0, bonus: 0, other: 0 } as Record<
+          ThemeTab,
+          number
+        >,
+      ),
+    [questions],
+  );
 
   const filteredQuestions = useMemo(() => {
     const themeFiltered =
       activeTab === "all"
         ? questions
-        : questions.filter((question) => normalizeCategory(question.category) === activeTab);
-    if (statusFilter === "active") return themeFiltered.filter((question) => question.isActive);
-    if (statusFilter === "inactive") return themeFiltered.filter((question) => !question.isActive);
+        : questions.filter((q) => normalizeCategory(q.category) === activeTab);
+    if (statusFilter === "active") return themeFiltered.filter((q) => q.isActive);
+    if (statusFilter === "inactive") return themeFiltered.filter((q) => !q.isActive);
     return themeFiltered;
   }, [questions, activeTab, statusFilter]);
 
   const selectedThemeForBulkDelete = isThemeKey(activeTab) ? activeTab : null;
   const selectedThemeCount = selectedThemeForBulkDelete ? counts[selectedThemeForBulkDelete] : 0;
 
+  const selectCls =
+    "h-11 w-full rounded-xl border border-white/[0.08] bg-[#0d0d1a] px-3 text-sm text-slate-100 outline-none focus:border-white/20 focus:ring-1 focus:ring-indigo-400/50 transition";
+
   return (
-    <div className="scanlines relative flex min-h-svh w-full items-center justify-center overflow-x-hidden overflow-y-hidden px-4 py-8">
-      <RetroScreenBackground />
-      <Card className="relative z-10 w-full min-w-0 max-w-5xl border-cyan-300/40 bg-slate-900/55 shadow-[0_0_0_1px_rgba(34,211,238,0.18),0_0_24px_rgba(34,211,238,0.12)] backdrop-blur">
-        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle className="text-base font-semibold uppercase tracking-[0.14em] text-cyan-100/90">
-            {fr.templateEditor.title}
-          </CardTitle>
-          <div className="flex w-full flex-wrap gap-2 sm:w-auto">
-            <Button
-              variant="secondary"
-              className={`w-full sm:w-auto ${neutralSecondaryBtn}`}
-              onClick={() => navigate("/prepare")}
-            >
-              {fr.templateEditor.myTemplates}
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={() => navigate("/")}
-              className={`w-full sm:w-auto ${neutralSecondaryBtn}`}
-            >
-              {fr.templateEditor.home}
-            </Button>
+    <PageShell
+      accentColor="rgba(236,72,153,0.08)"
+      accentGlow="rgba(236,72,153,0.04)"
+      maxWidth="5xl"
+    >
+      {/* Header */}
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-2">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 text-sm">
+            ⚡
           </div>
-        </CardHeader>
-        <CardContent className="min-w-0 space-y-4">
-          {loading && <p className="text-sm text-slate-300">{fr.templateEditor.loading}</p>}
-          {!validTemplateId && <p className="text-sm text-red-300">{fr.templateEditor.invalidTemplate}</p>}
-          {error && <p className="text-sm text-red-300">{error}</p>}
-
-          {!loading && template && (
+          <span className="text-xs font-bold uppercase tracking-[0.12em] text-indigo-400">
+            Agile Suite
+          </span>
+          <span className="text-slate-700">/</span>
+          <span className="text-xs font-bold uppercase tracking-[0.12em] text-pink-400">
+            Préparer
+          </span>
+          {template && (
             <>
-              <div className="grid gap-3 rounded border border-cyan-300/20 p-3">
-                <div className="grid gap-1">
-                  <Label htmlFor="template-name">{fr.templateEditor.name}</Label>
-                  <Input id="template-name" value={name} onChange={(e) => setName(e.target.value)} />
-                </div>
-                <div className="grid gap-1">
-                  <Label htmlFor="template-description">{fr.templateEditor.description}</Label>
-                  <Input
-                    id="template-description"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                  />
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="secondary"
-                    onClick={saveTemplate}
-                    disabled={!canSave}
-                    className={`w-full sm:w-auto ${activeCyanBtn}`}
-                  >
-                    {saving ? fr.templateEditor.saving : fr.templateEditor.save}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    onClick={launchRoom}
-                    className={`w-full sm:w-auto ${activeCyanBtn}`}
-                  >
-                    {fr.templateEditor.launchParty}
-                  </Button>
-                </div>
-              </div>
-
-              <div className="grid min-w-0 gap-4 rounded border border-cyan-300/20 p-3">
-                <div className="min-w-0 rounded-lg border border-cyan-300/20 bg-slate-950/30 p-3">
-                  <p className="mb-3 text-sm font-semibold text-cyan-100">{fr.templateEditor.addQuestion}</p>
-                  <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
-                    <Input
-                      value={newQuestionText}
-                      onChange={(e) => setNewQuestionText(e.target.value)}
-                      placeholder={fr.templateEditor.newQuestionPlaceholder}
-                    />
-                    <Button
-                      variant="secondary"
-                      onClick={addQuestion}
-                      className={`w-full sm:w-auto ${activeCyanBtn}`}
-                    >
-                      {fr.templateEditor.add}
-                    </Button>
-                  </div>
-                  <div className="mt-2 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-                    {THEME_ORDER.map((themeKey) => {
-                      const isActive = newQuestionCategory === themeKey;
-                      return (
-                        <Button
-                          key={themeKey}
-                          type="button"
-                          variant="outline"
-                          className={`justify-start border-cyan-300/30 bg-slate-900/55 text-cyan-100 hover:bg-slate-900/70 hover:text-cyan-50 ${
-                            isActive
-                              ? "border-cyan-300/80 bg-cyan-500/35 !text-cyan-50 hover:!text-cyan-50"
-                              : ""
-                          }`}
-                          onClick={() => setNewQuestionCategory(themeKey)}
-                        >
-                          <span
-                            className={`inline-flex h-2.5 w-2.5 shrink-0 rounded-full border border-black/40 ${THEME_META[themeKey].chipClassName}`}
-                          />
-                          <span>{isActive ? "* " : ""}{THEME_META[themeKey].label}</span>
-                        </Button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="min-w-0 rounded-lg border border-cyan-300/20 bg-slate-950/20 p-3">
-                  <p className="mb-3 text-sm font-semibold text-cyan-100">{fr.templateEditor.existingQuestions}</p>
-                  <div className="mb-3 grid gap-2 sm:grid-cols-2">
-                    <div className="grid gap-1">
-                      <Label htmlFor="theme-filter">{fr.templateEditor.questionType}</Label>
-                      <select
-                        id="theme-filter"
-                        value={activeTab}
-                        onChange={(e) => setActiveTab(e.target.value as ThemeTab)}
-                        className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                      >
-                        <option value="all">{fr.templateEditor.all} ({counts.all})</option>
-                        <option value="blue">{THEME_META.blue.label} ({counts.blue})</option>
-                        <option value="green">{THEME_META.green.label} ({counts.green})</option>
-                        <option value="red">{THEME_META.red.label} ({counts.red})</option>
-                        <option value="violet">{THEME_META.violet.label} ({counts.violet})</option>
-                        <option value="bonus">{THEME_META.bonus.label} ({counts.bonus})</option>
-                        <option value="other">{fr.templateEditor.others} ({counts.other})</option>
-                      </select>
-                    </div>
-                    <div className="grid gap-1">
-                      <Label htmlFor="status-filter">{fr.templateEditor.status}</Label>
-                      <select
-                        id="status-filter"
-                        value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-                        className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                      >
-                        <option value="all">{fr.templateEditor.all}</option>
-                        <option value="active">{fr.templateEditor.activePlural}</option>
-                        <option value="inactive">{fr.templateEditor.inactivePlural}</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div className="mb-3">
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      disabled={!selectedThemeForBulkDelete || selectedThemeCount === 0}
-                      className="h-auto w-full whitespace-normal break-words py-2 text-left sm:w-auto"
-                      onClick={() => {
-                        if (!selectedThemeForBulkDelete) return;
-                        setBulkDeleteTheme(selectedThemeForBulkDelete);
-                      }}
-                    >
-                      {fr.templateEditor.deleteThemeQuestions}
-                      {selectedThemeForBulkDelete ? ` (${THEME_META[selectedThemeForBulkDelete].label})` : ""}
-                    </Button>
-                  </div>
-                  {filteredQuestions.length === 0 ? (
-                    <p className="text-sm text-slate-300">{fr.templateEditor.noQuestionsForFilter}</p>
-                  ) : (
-                    <div className="grid gap-2">
-                      {filteredQuestions.map((question) => {
-                        const normalized = normalizeCategory(question.category);
-                        const theme =
-                          normalized === "other" ? { label: fr.templateEditor.other, className: "text-slate-300" } : THEME_META[normalized];
-                        const currentIndex = questions.findIndex((item) => item.id === question.id);
-                        const canMoveUp = currentIndex > 0;
-                        const canMoveDown = currentIndex >= 0 && currentIndex < questions.length - 1;
-                        return (
-                          <div
-                            key={question.id}
-                            className="flex flex-wrap items-center justify-between gap-2 rounded border border-cyan-300/15 p-2"
-                          >
-                            <div className="w-full min-w-0 flex-1 sm:w-auto sm:min-w-64">
-                              <p className="text-sm text-cyan-100 break-words">{question.text}</p>
-                              <div className="mt-1 flex flex-wrap items-center gap-2">
-                                <Badge variant="outline" className={theme.className}>
-                                  {theme.label}
-                                </Badge>
-                                <Badge variant={question.isActive ? "default" : "secondary"}>
-                                  {question.isActive ? fr.templateEditor.active : fr.templateEditor.inactive}
-                                </Badge>
-                              </div>
-                            </div>
-                            <div className="w-full sm:w-auto sm:self-start">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button
-                                    variant="secondary"
-                                    className={`w-full sm:w-auto ${neutralSecondaryBtn}`}
-                                  >
-                                    {fr.templateEditor.actions}
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent
-                                  align="start"
-                                  className="w-[min(14rem,calc(100vw-2rem))]"
-                                >
-                                  <DropdownMenuItem
-                                    disabled={!canMoveUp}
-                                    onClick={() => reorderQuestion(question.id, -1)}
-                                  >
-                                    {fr.templateEditor.up}
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    disabled={!canMoveDown}
-                                    onClick={() => reorderQuestion(question.id, 1)}
-                                  >
-                                    {fr.templateEditor.down}
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => toggleQuestion(question)}>
-                                    {question.isActive ? fr.templateEditor.disable : fr.templateEditor.enable}
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => openEditQuestion(question)}>
-                                    {fr.templateEditor.edit}
-                                  </DropdownMenuItem>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem disabled className="opacity-80">
-                                    {fr.templateEditor.changeTheme}
-                                  </DropdownMenuItem>
-                                  {THEME_ORDER.map((themeKey) => (
-                                    <DropdownMenuItem
-                                      key={themeKey}
-                                      disabled={normalized === themeKey}
-                                      onClick={() => changeQuestionCategory(question, themeKey)}
-                                    >
-                                      {THEME_META[themeKey].label}
-                                    </DropdownMenuItem>
-                                  ))}
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem
-                                    onClick={() => deleteQuestion(question.id)}
-                                    className="text-red-400 focus:text-red-300"
-                                  >
-                                    {fr.templateEditor.delete}
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
+              <span className="text-slate-700">/</span>
+              <span className="max-w-[200px] truncate text-xs text-slate-400">{template.name}</span>
             </>
           )}
-        </CardContent>
-      </Card>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => navigate("/prepare")}
+            className="h-9 rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 text-sm font-semibold text-slate-300 transition hover:bg-white/[0.07] hover:text-white"
+          >
+            {fr.templateEditor.myTemplates}
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate("/")}
+            className="h-9 rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 text-sm font-semibold text-slate-400 transition hover:bg-white/[0.07] hover:text-slate-200"
+          >
+            {fr.templateEditor.home}
+          </button>
+        </div>
+      </div>
 
+      {loading && (
+        <p className="py-8 text-center text-sm text-slate-500">{fr.templateEditor.loading}</p>
+      )}
+      {!validTemplateId && (
+        <p className="text-sm text-red-300">{fr.templateEditor.invalidTemplate}</p>
+      )}
+      {error && (
+        <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+          {error}
+        </div>
+      )}
+
+      {!loading && template && (
+        <div className="space-y-5">
+          {/* Template info */}
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+            <p className="mb-4 text-sm font-semibold text-slate-200">{fr.templateEditor.title}</p>
+            <div className="flex flex-wrap gap-3">
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={fr.templateEditor.name}
+                className={`${inputCls} min-w-[180px] flex-1`}
+              />
+              <input
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder={fr.templateEditor.description}
+                className={`${inputCls} min-w-[180px] flex-1`}
+              />
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={saveTemplate}
+                  disabled={!canSave}
+                  className="h-11 rounded-xl border border-indigo-400/40 bg-indigo-500 px-5 text-sm font-bold text-white transition hover:bg-indigo-400 disabled:opacity-40"
+                >
+                  {saving ? fr.templateEditor.saving : fr.templateEditor.save}
+                </button>
+                <button
+                  type="button"
+                  onClick={launchRoom}
+                  className="h-11 rounded-xl bg-pink-500 px-5 text-sm font-bold text-white transition hover:bg-pink-400"
+                  style={{ boxShadow: "0 4px 12px rgba(236,72,153,0.3)" }}
+                >
+                  {fr.templateEditor.launchParty}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Add question */}
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+            <p className="mb-4 text-sm font-semibold text-slate-200">
+              {fr.templateEditor.addQuestion}
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <input
+                value={newQuestionText}
+                onChange={(e) => setNewQuestionText(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && addQuestion()}
+                placeholder={fr.templateEditor.newQuestionPlaceholder}
+                className={`${inputCls} min-w-[240px] flex-1`}
+              />
+              <button
+                type="button"
+                onClick={addQuestion}
+                className="h-11 rounded-xl bg-indigo-500 px-5 text-sm font-bold text-white transition hover:bg-indigo-400"
+              >
+                + {fr.templateEditor.add}
+              </button>
+            </div>
+            {/* Category picker */}
+            <div className="mt-3 flex flex-wrap gap-2">
+              {THEME_ORDER.map((themeKey) => {
+                const isActive = newQuestionCategory === themeKey;
+                const meta = THEME_META[themeKey];
+                return (
+                  <button
+                    key={themeKey}
+                    type="button"
+                    onClick={() => setNewQuestionCategory(themeKey)}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-all",
+                      isActive
+                        ? "ring-1"
+                        : "border border-white/[0.07] bg-white/[0.02] text-slate-400 hover:bg-white/[0.06]",
+                    )}
+                    style={isActive ? { background: meta.bg, color: meta.color } : undefined}
+                  >
+                    <span className="h-2 w-2 rounded-full" style={{ background: meta.dot }} />
+                    {meta.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Question list */}
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm font-semibold text-slate-200">
+                {fr.templateEditor.existingQuestions}
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Theme filter */}
+                <select
+                  value={activeTab}
+                  onChange={(e) => setActiveTab(e.target.value as ThemeTab)}
+                  className={selectCls + " w-auto min-w-[140px]"}
+                >
+                  <option value="all">
+                    {fr.templateEditor.all} ({counts.all})
+                  </option>
+                  {THEME_ORDER.map((k) => (
+                    <option key={k} value={k}>
+                      {THEME_META[k].label} ({counts[k]})
+                    </option>
+                  ))}
+                  <option value="other">
+                    {fr.templateEditor.others} ({counts.other})
+                  </option>
+                </select>
+                {/* Status filter */}
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+                  className={selectCls + " w-auto min-w-[120px]"}
+                >
+                  <option value="all">{fr.templateEditor.all}</option>
+                  <option value="active">{fr.templateEditor.activePlural}</option>
+                  <option value="inactive">{fr.templateEditor.inactivePlural}</option>
+                </select>
+                {/* Bulk delete */}
+                {selectedThemeForBulkDelete && selectedThemeCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setBulkDeleteTheme(selectedThemeForBulkDelete)}
+                    className="h-9 rounded-xl border border-red-500/30 bg-red-500/10 px-3 text-xs font-semibold text-red-400 transition hover:bg-red-500/20 hover:text-red-300"
+                  >
+                    {fr.templateEditor.deleteThemeQuestions} ({selectedThemeCount})
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {filteredQuestions.length === 0 ? (
+              <div className="rounded-xl border border-white/[0.05] bg-white/[0.02] px-4 py-8 text-center text-sm text-slate-500">
+                {fr.templateEditor.noQuestionsForFilter}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {filteredQuestions.map((question) => {
+                  const normalized = normalizeCategory(question.category);
+                  const currentIndex = questions.findIndex((item) => item.id === question.id);
+                  const canMoveUp = currentIndex > 0;
+                  const canMoveDown = currentIndex >= 0 && currentIndex < questions.length - 1;
+                  return (
+                    <div
+                      key={question.id}
+                      className="flex flex-wrap items-center gap-3 rounded-xl border border-white/[0.05] bg-white/[0.02] px-4 py-3 transition hover:border-white/[0.08]"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p
+                          className={cn(
+                            "text-sm break-words",
+                            question.isActive ? "text-slate-100" : "text-slate-500 line-through",
+                          )}
+                        >
+                          {question.text}
+                        </p>
+                        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                          <CategoryChip category={normalized} />
+                          <span
+                            className={cn(
+                              "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest",
+                              question.isActive
+                                ? "border border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                                : "border border-white/[0.06] bg-white/[0.02] text-slate-600",
+                            )}
+                          >
+                            {question.isActive
+                              ? fr.templateEditor.active
+                              : fr.templateEditor.inactive}
+                          </span>
+                        </div>
+                      </div>
+
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            type="button"
+                            className="h-8 rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 text-xs font-semibold text-slate-400 transition hover:bg-white/[0.07] hover:text-slate-200"
+                          >
+                            {fr.templateEditor.actions} ▾
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                          align="end"
+                          className="w-[min(14rem,calc(100vw-2rem))] rounded-xl border border-white/[0.08] bg-[#0d0d1a] text-slate-200 shadow-xl"
+                        >
+                          <DropdownMenuItem
+                            disabled={!canMoveUp}
+                            onClick={() => reorderQuestion(question.id, -1)}
+                          >
+                            {fr.templateEditor.up}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            disabled={!canMoveDown}
+                            onClick={() => reorderQuestion(question.id, 1)}
+                          >
+                            {fr.templateEditor.down}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => toggleQuestion(question)}>
+                            {question.isActive
+                              ? fr.templateEditor.disable
+                              : fr.templateEditor.enable}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openEditQuestion(question)}>
+                            {fr.templateEditor.edit}
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem disabled className="opacity-50 text-xs">
+                            {fr.templateEditor.changeTheme}
+                          </DropdownMenuItem>
+                          {THEME_ORDER.map((themeKey) => (
+                            <DropdownMenuItem
+                              key={themeKey}
+                              disabled={normalized === themeKey}
+                              onClick={() => changeQuestionCategory(question, themeKey)}
+                            >
+                              <span
+                                className="mr-2 h-2 w-2 rounded-full inline-block"
+                                style={{ background: THEME_META[themeKey].dot }}
+                              />
+                              {THEME_META[themeKey].label}
+                            </DropdownMenuItem>
+                          ))}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => deleteQuestion(question.id)}
+                            className="text-red-400 focus:text-red-300"
+                          >
+                            {fr.templateEditor.delete}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Edit question dialog */}
       <Dialog
         open={!!editingQuestion}
         onOpenChange={(open) => {
@@ -581,47 +675,51 @@ const TemplateEditorPage = () => {
           }
         }}
       >
-        <DialogContent className="border-cyan-300/30 bg-slate-950/95 text-cyan-50 sm:max-w-xl">
+        <DialogContent className="max-w-lg rounded-2xl border border-white/[0.08] bg-[#0d0d1a] p-6 text-slate-100 shadow-2xl">
           <DialogHeader>
-            <DialogTitle>{fr.templateEditor.editQuestion}</DialogTitle>
+            <DialogTitle className="text-base font-bold text-slate-50">
+              {fr.templateEditor.editQuestion}
+            </DialogTitle>
           </DialogHeader>
-          <div className="grid gap-2">
-            <Label htmlFor="edit-question-text">{fr.templateEditor.question}</Label>
-            <Textarea
-              id="edit-question-text"
-              value={editingQuestionText}
-              onChange={(e) => setEditingQuestionText(e.target.value)}
-              className="min-h-28"
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              variant="secondary"
-              className={neutralSecondaryBtn}
+          <Textarea
+            value={editingQuestionText}
+            onChange={(e) => setEditingQuestionText(e.target.value)}
+            className="min-h-28 rounded-xl border border-white/[0.08] bg-white/[0.04] text-slate-100 placeholder:text-slate-600 focus-visible:ring-indigo-400/50"
+          />
+          <DialogFooter className="gap-2">
+            <button
+              type="button"
               onClick={() => {
                 setEditingQuestion(null);
                 setEditingQuestionText("");
               }}
+              className="h-10 rounded-xl border border-white/[0.08] bg-white/[0.03] px-5 text-sm font-semibold text-slate-300 transition hover:bg-white/[0.07]"
             >
               {fr.templateEditor.cancel}
-            </Button>
-            <Button
-              variant="secondary"
-              className={activeCyanBtn}
-              disabled={!editingQuestionText.trim() || savingQuestionEdit}
+            </button>
+            <button
+              type="button"
               onClick={saveEditedQuestion}
+              disabled={!editingQuestionText.trim() || savingQuestionEdit}
+              className="h-10 rounded-xl bg-indigo-500 px-5 text-sm font-bold text-white transition hover:bg-indigo-400 disabled:opacity-40"
             >
               {savingQuestionEdit ? fr.templateEditor.saving : fr.templateEditor.saveButton}
-            </Button>
+            </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={!!bulkDeleteTheme} onOpenChange={(open) => !open && setBulkDeleteTheme(null)}>
-        <AlertDialogContent className="border-cyan-300/30 bg-slate-950/95 text-cyan-50">
-          <AlertDialogHeader>
-            <AlertDialogTitle>{fr.templateEditor.deleteThemeConfirmTitle}</AlertDialogTitle>
-            <AlertDialogDescription className="text-slate-300">
+      {/* Bulk delete dialog */}
+      <AlertDialog
+        open={!!bulkDeleteTheme}
+        onOpenChange={(open) => !open && setBulkDeleteTheme(null)}
+      >
+        <AlertDialogContent className="max-w-sm rounded-2xl border border-white/[0.08] bg-[#0d0d1a] p-6 text-slate-100 shadow-2xl">
+          <AlertDialogHeader className="space-y-2">
+            <AlertDialogTitle className="text-base font-bold text-slate-50">
+              {fr.templateEditor.deleteThemeConfirmTitle}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-sm text-slate-400">
               {bulkDeleteTheme
                 ? fr.templateEditor.deleteThemeConfirmWithCount
                     .replace("{count}", String(counts[bulkDeleteTheme]))
@@ -629,15 +727,16 @@ const TemplateEditorPage = () => {
                 : fr.templateEditor.deleteThemeConfirmFallback}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className={neutralSecondaryBtn}>{fr.templateEditor.cancel}</AlertDialogCancel>
+          <AlertDialogFooter className="mt-2 grid grid-cols-2 gap-2 space-x-0">
+            <AlertDialogCancel className="h-11 rounded-xl border border-white/[0.08] bg-white/[0.03] text-slate-300 hover:bg-white/[0.06]">
+              {fr.templateEditor.cancel}
+            </AlertDialogCancel>
             <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="h-11 rounded-xl border border-red-500/30 bg-red-500/15 text-red-400 hover:bg-red-500/25 hover:text-red-300"
               disabled={!bulkDeleteTheme || deletingThemeQuestions}
               onClick={(e) => {
                 e.preventDefault();
-                if (!bulkDeleteTheme) return;
-                void deleteQuestionsByTheme(bulkDeleteTheme);
+                if (bulkDeleteTheme) void deleteQuestionsByTheme(bulkDeleteTheme);
               }}
             >
               {deletingThemeQuestions ? fr.templateEditor.deleting : fr.templateEditor.delete}
@@ -645,12 +744,8 @@ const TemplateEditorPage = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </PageShell>
   );
 };
 
 export default TemplateEditorPage;
-
-
-
-

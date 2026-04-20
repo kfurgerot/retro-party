@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { socket } from "@/net/socket";
-import { PlanningPokerRole, PlanningPokerRoundSummary, PlanningPokerState, PlanningPokerVoteSystem } from "@/types/planningPoker";
+import { C2S_EVENTS, S2C_EVENTS } from "@shared/contracts/socketEvents.js";
+import {
+  PlanningPokerRole,
+  PlanningPokerRoundSummary,
+  PlanningPokerState,
+  PlanningPokerVoteSystem,
+} from "@/types/planningPoker";
 import { computePlanningPokerStats } from "@/lib/planningPoker";
 
 type PlanningPokerSession = {
@@ -14,12 +20,16 @@ const EMPTY_STATE: PlanningPokerState = {
   phase: "lobby",
   roomCode: null,
   storyTitle: "Story #1",
+  isPreparedSession: false,
+  sessionEnded: false,
   voteSystem: "fibonacci",
   votesOpen: false,
   players: [],
   revealed: false,
   round: 1,
   updatedAt: Date.now(),
+  preparedStories: [],
+  currentStoryIndex: -1,
 };
 
 const STORAGE_KEY = "retro-party:planning-poker:session";
@@ -99,16 +109,22 @@ const loadHistory = (session: PlanningPokerSession | null): PlanningPokerRoundSu
     const raw = window.localStorage.getItem(HISTORY_STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as Partial<PersistedHistory>;
+    const history = parsed.history;
     const sameSession =
-      parsed.sessionId === session.sessionId && parsed.code === session.code && Array.isArray(parsed.history);
+      parsed.sessionId === session.sessionId &&
+      parsed.code === session.code &&
+      Array.isArray(history);
     if (!sameSession) return [];
-    return parsed.history.filter(isRoundSummary);
+    return history.filter(isRoundSummary);
   } catch {
     return [];
   }
 };
 
-const storeHistory = (session: PlanningPokerSession | null, history: PlanningPokerRoundSummary[]) => {
+const storeHistory = (
+  session: PlanningPokerSession | null,
+  history: PlanningPokerRoundSummary[],
+) => {
   if (typeof window === "undefined") return;
   if (!session || history.length === 0) {
     window.localStorage.removeItem(HISTORY_STORAGE_KEY);
@@ -126,23 +142,35 @@ const storeHistory = (session: PlanningPokerSession | null, history: PlanningPok
 export function usePlanningPokerOnlineState() {
   const initialSession = loadSession();
   const initialHistory = loadHistory(initialSession);
+  const initialState = initialSession?.code
+    ? { ...EMPTY_STATE, roomCode: initialSession.code }
+    : EMPTY_STATE;
 
   const [connected, setConnected] = useState(socket.connected);
   const [code, setCode] = useState<string | null>(initialSession?.code ?? null);
   const [myPlayerId, setMyPlayerId] = useState<string | null>(socket.id ?? null);
-  const [state, setState] = useState<PlanningPokerState>(
-    initialSession?.code ? { ...EMPTY_STATE, roomCode: initialSession.code } : EMPTY_STATE
-  );
+  const [state, setState] = useState<PlanningPokerState>(initialState);
   const [history, setHistory] = useState<PlanningPokerRoundSummary[]>(initialHistory);
   const [error, setError] = useState<string | null>(null);
 
   const sessionRef = useRef<PlanningPokerSession | null>(initialSession);
-  const recordedSummariesRef = useRef<Set<string>>(new Set(initialHistory.map((entry) => entry.id)));
+  const latestStateRef = useRef<PlanningPokerState>(initialState);
+  const recordedSummariesRef = useRef<Set<string>>(
+    new Set(initialHistory.map((entry) => entry.id)),
+  );
   const pendingProfileRef = useRef<{ name: string; avatar: number; sessionId: string } | null>(
     initialSession
-      ? { name: initialSession.name, avatar: initialSession.avatar, sessionId: initialSession.sessionId }
-      : null
+      ? {
+          name: initialSession.name,
+          avatar: initialSession.avatar,
+          sessionId: initialSession.sessionId,
+        }
+      : null,
   );
+  const pendingHistoryRenameRef = useRef<{
+    nextTitle: string;
+    round: number;
+  } | null>(null);
 
   useEffect(() => {
     const tryResume = () => {
@@ -152,7 +180,7 @@ export function usePlanningPokerOnlineState() {
         socket.connect();
         return;
       }
-      socket.emit("reconnect_poker_room", {
+      socket.emit(C2S_EVENTS.RECONNECT_POKER_ROOM, {
         code: active.code,
         sessionId: active.sessionId,
       });
@@ -169,16 +197,63 @@ export function usePlanningPokerOnlineState() {
     };
 
     const onStateUpdate = (nextState: PlanningPokerState) => {
+      const previousState = latestStateRef.current;
       setState(nextState);
+      latestStateRef.current = nextState;
       if (nextState.roomCode) {
         setCode(nextState.roomCode);
+      }
+
+      const previousTitle = previousState.storyTitle?.trim() ?? "";
+      const nextTitle = nextState.storyTitle?.trim() ?? "";
+      if (
+        pendingHistoryRenameRef.current &&
+        pendingHistoryRenameRef.current.round !== nextState.round
+      ) {
+        pendingHistoryRenameRef.current = null;
+      }
+
+      const pendingHistoryRename = pendingHistoryRenameRef.current;
+      const shouldRenameArchivedStory =
+        previousState.phase === "playing" &&
+        nextState.phase === "playing" &&
+        previousState.round === nextState.round &&
+        !previousState.sessionEnded &&
+        !nextState.sessionEnded &&
+        !previousState.revealed &&
+        !nextState.revealed &&
+        !previousState.votesOpen &&
+        !nextState.votesOpen &&
+        !!previousTitle &&
+        !!nextTitle &&
+        previousTitle !== nextTitle &&
+        !!pendingHistoryRename &&
+        pendingHistoryRename.nextTitle === nextTitle &&
+        pendingHistoryRename.round === nextState.round;
+      if (shouldRenameArchivedStory) {
+        setHistory((previousHistory) => {
+          const hasPreviousTitle = previousHistory.some(
+            (entry) => entry.storyTitle.trim() === previousTitle,
+          );
+          if (!hasPreviousTitle) return previousHistory;
+          const hasNextTitle = previousHistory.some(
+            (entry) => entry.storyTitle.trim() === nextTitle,
+          );
+          if (hasNextTitle) return previousHistory;
+          return previousHistory.map((entry) =>
+            entry.storyTitle.trim() === previousTitle ? { ...entry, storyTitle: nextTitle } : entry,
+          );
+        });
+        pendingHistoryRenameRef.current = null;
       }
 
       if (nextState.phase !== "playing" || !nextState.roomCode || !nextState.revealed) return;
       const summaryId = `${nextState.roomCode}:${nextState.round}`;
       if (recordedSummariesRef.current.has(summaryId)) return;
 
-      const votedPlayers = nextState.players.filter((player) => player.role === "player" && player.vote != null);
+      const votedPlayers = nextState.players.filter(
+        (player) => player.role === "player" && player.vote != null,
+      );
       const stats = computePlanningPokerStats(nextState.players, nextState.voteSystem);
       const summary: PlanningPokerRoundSummary = {
         id: summaryId,
@@ -236,6 +311,7 @@ export function usePlanningPokerOnlineState() {
       storeSession(null);
       setCode(null);
       setState(EMPTY_STATE);
+      latestStateRef.current = EMPTY_STATE;
     };
 
     const onRoomClosed = ({ message }: { message?: string }) => {
@@ -248,16 +324,17 @@ export function usePlanningPokerOnlineState() {
       storeSession(null);
       setCode(null);
       setState(EMPTY_STATE);
+      latestStateRef.current = EMPTY_STATE;
     };
 
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
-    socket.on("poker_state_update", onStateUpdate);
-    socket.on("poker_room_created", onRoomKnown);
-    socket.on("poker_room_joined", onRoomKnown);
-    socket.on("poker_room_reconnected", onRoomKnown);
-    socket.on("poker_error_msg", onError);
-    socket.on("poker_room_closed", onRoomClosed);
+    socket.on(S2C_EVENTS.POKER_STATE_UPDATE, onStateUpdate);
+    socket.on(S2C_EVENTS.POKER_ROOM_CREATED, onRoomKnown);
+    socket.on(S2C_EVENTS.POKER_ROOM_JOINED, onRoomKnown);
+    socket.on(S2C_EVENTS.POKER_ROOM_RECONNECTED, onRoomKnown);
+    socket.on(S2C_EVENTS.POKER_ERROR_MESSAGE, onError);
+    socket.on(S2C_EVENTS.POKER_ROOM_CLOSED, onRoomClosed);
 
     if (socket.connected) onConnect();
 
@@ -275,12 +352,12 @@ export function usePlanningPokerOnlineState() {
     return () => {
       socket.off("connect", onConnect);
       socket.off("disconnect", onDisconnect);
-      socket.off("poker_state_update", onStateUpdate);
-      socket.off("poker_room_created", onRoomKnown);
-      socket.off("poker_room_joined", onRoomKnown);
-      socket.off("poker_room_reconnected", onRoomKnown);
-      socket.off("poker_error_msg", onError);
-      socket.off("poker_room_closed", onRoomClosed);
+      socket.off(S2C_EVENTS.POKER_STATE_UPDATE, onStateUpdate);
+      socket.off(S2C_EVENTS.POKER_ROOM_CREATED, onRoomKnown);
+      socket.off(S2C_EVENTS.POKER_ROOM_JOINED, onRoomKnown);
+      socket.off(S2C_EVENTS.POKER_ROOM_RECONNECTED, onRoomKnown);
+      socket.off(S2C_EVENTS.POKER_ERROR_MESSAGE, onError);
+      socket.off(S2C_EVENTS.POKER_ROOM_CLOSED, onRoomClosed);
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.removeEventListener("focus", onWindowFocus);
       window.removeEventListener("online", onOnline);
@@ -288,13 +365,18 @@ export function usePlanningPokerOnlineState() {
   }, []);
 
   const createRoom = useCallback(
-    (name: string, avatar: number, role: PlanningPokerRole, voteSystem: PlanningPokerVoteSystem) => {
+    (
+      name: string,
+      avatar: number,
+      role: PlanningPokerRole,
+      voteSystem: PlanningPokerVoteSystem,
+    ) => {
       const normalizedName = name.trim() || "Hote";
       const sessionId = sessionRef.current?.sessionId ?? makeSessionId();
       pendingProfileRef.current = { name: normalizedName, avatar, sessionId };
       setError(null);
       if (!socket.connected) socket.connect();
-      socket.emit("create_poker_room", {
+      socket.emit(C2S_EVENTS.CREATE_POKER_ROOM, {
         name: normalizedName,
         avatar,
         role,
@@ -302,27 +384,30 @@ export function usePlanningPokerOnlineState() {
         sessionId,
       });
     },
-    []
+    [],
   );
 
-  const joinRoom = useCallback((roomCode: string, name: string, avatar: number, role: PlanningPokerRole) => {
-    const normalizedName = name.trim() || "Joueur";
-    const sessionId = sessionRef.current?.sessionId ?? makeSessionId();
-    pendingProfileRef.current = { name: normalizedName, avatar, sessionId };
-    setError(null);
-    if (!socket.connected) socket.connect();
-    socket.emit("join_poker_room", {
-      code: roomCode,
-      name: normalizedName,
-      avatar,
-      role,
-      sessionId,
-    });
-  }, []);
+  const joinRoom = useCallback(
+    (roomCode: string, name: string, avatar: number, role: PlanningPokerRole) => {
+      const normalizedName = name.trim() || "Joueur";
+      const sessionId = sessionRef.current?.sessionId ?? makeSessionId();
+      pendingProfileRef.current = { name: normalizedName, avatar, sessionId };
+      setError(null);
+      if (!socket.connected) socket.connect();
+      socket.emit(C2S_EVENTS.JOIN_POKER_ROOM, {
+        code: roomCode,
+        name: normalizedName,
+        avatar,
+        role,
+        sessionId,
+      });
+    },
+    [],
+  );
 
   const leaveRoom = useCallback(() => {
     if (socket.connected) {
-      socket.emit("leave_poker_room");
+      socket.emit(C2S_EVENTS.LEAVE_POKER_ROOM);
     }
     storeHistory(sessionRef.current, []);
     sessionRef.current = null;
@@ -332,18 +417,19 @@ export function usePlanningPokerOnlineState() {
     storeSession(null);
     setCode(null);
     setState(EMPTY_STATE);
+    latestStateRef.current = EMPTY_STATE;
   }, []);
 
   const startSession = useCallback(() => {
-    socket.emit("start_poker_session");
+    socket.emit(C2S_EVENTS.START_POKER_SESSION);
   }, []);
 
   const voteCard = useCallback((value: string) => {
-    socket.emit("vote_card", { value });
+    socket.emit(C2S_EVENTS.VOTE_CARD, { value });
   }, []);
 
   const revealVotes = useCallback(() => {
-    socket.emit("reveal_votes");
+    socket.emit(C2S_EVENTS.REVEAL_VOTES);
   }, []);
 
   useEffect(() => {
@@ -351,31 +437,60 @@ export function usePlanningPokerOnlineState() {
   }, [history]);
 
   const openVotes = useCallback(() => {
-    socket.emit("open_votes");
+    socket.emit(C2S_EVENTS.OPEN_VOTES);
   }, []);
 
   const reopenStoryVote = useCallback((storyTitle: string, returnStoryTitle: string) => {
-    socket.emit("reopen_story_vote", { storyTitle, returnStoryTitle });
+    socket.emit(C2S_EVENTS.REOPEN_STORY_VOTE, { storyTitle, returnStoryTitle });
   }, []);
 
   const resetVotes = useCallback(() => {
-    socket.emit("reset_votes");
+    socket.emit(C2S_EVENTS.RESET_VOTES);
   }, []);
 
   const revoteCurrentStory = useCallback(() => {
-    socket.emit("revote_current_story");
+    socket.emit(C2S_EVENTS.REVOTE_CURRENT_STORY);
   }, []);
 
   const setVoteSystem = useCallback((voteSystem: PlanningPokerVoteSystem) => {
-    socket.emit("set_vote_system", { voteSystem });
+    socket.emit(C2S_EVENTS.SET_VOTE_SYSTEM, { voteSystem });
   }, []);
 
   const setRole = useCallback((role: PlanningPokerRole) => {
-    socket.emit("set_poker_role", { role });
+    socket.emit(C2S_EVENTS.SET_POKER_ROLE, { role });
   }, []);
 
   const setStoryTitle = useCallback((storyTitle: string) => {
-    socket.emit("set_story_title", { storyTitle });
+    const nextTitle = storyTitle.trim().slice(0, 64);
+    if (nextTitle) {
+      pendingHistoryRenameRef.current = {
+        nextTitle,
+        round: latestStateRef.current.round,
+      };
+    } else {
+      pendingHistoryRenameRef.current = null;
+    }
+    socket.emit(C2S_EVENTS.SET_STORY_TITLE, { storyTitle });
+  }, []);
+
+  const selectPokerStory = useCallback((index: number) => {
+    socket.emit(C2S_EVENTS.SELECT_POKER_STORY, { index });
+  }, []);
+
+  const selectPokerStoryByTitle = useCallback((storyTitle: string) => {
+    socket.emit(C2S_EVENTS.SELECT_POKER_STORY_BY_TITLE, { storyTitle });
+  }, []);
+
+  const updatePreparedStoryTitle = useCallback((index: number, storyTitle: string) => {
+    socket.emit(C2S_EVENTS.UPDATE_POKER_STORY_TITLE, { index, storyTitle });
+  }, []);
+
+  const addPreparedStory = useCallback((storyTitle: string) => {
+    socket.emit(C2S_EVENTS.ADD_POKER_STORY, { storyTitle });
+  }, []);
+
+  const endSession = useCallback(() => {
+    socket.emit(C2S_EVENTS.END_POKER_SESSION);
   }, []);
 
   const isHost = useMemo(() => {
@@ -416,5 +531,10 @@ export function usePlanningPokerOnlineState() {
     setVoteSystem,
     setRole,
     setStoryTitle,
+    selectPokerStory,
+    selectPokerStoryByTitle,
+    updatePreparedStoryTitle,
+    addPreparedStory,
+    endSession,
   };
 }

@@ -1,0 +1,11 @@
+node_modules
+dist
+playwright-report
+test-results
+tmp
+_bmad
+_bmad-output
+.bmad-output
+.agents
+.codex
+.claude

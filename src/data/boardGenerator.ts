@@ -1,18 +1,21 @@
-import { Tile, TileType } from '@/types/game';
+import { Tile, TileType } from "@/types/game";
 
 // Random board generator (local mode).
 // For online mode, the server is authoritative and sends tiles in state_update.
 
 function mulberry32(seed: number) {
   return function () {
-    let t = (seed += 0x6D2B79F5);
+    let t = (seed += 0x6d2b79f5);
     t = Math.imul(t ^ (t >>> 15), t | 1);
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
 
-export function generateRandomBoard(seed: number, opts?: { cols?: number; rows?: number; length?: number }) {
+export function generateRandomBoard(
+  seed: number,
+  opts?: { cols?: number; rows?: number; length?: number },
+) {
   const rng = mulberry32(seed);
   const cols = opts?.cols ?? 30;
   const rows = opts?.rows ?? 20;
@@ -87,29 +90,45 @@ export function generateRandomBoard(seed: number, opts?: { cols?: number; rows?:
 
   // Main directed loop (clockwise).
   pathByWaypoints([
-    [2, 2], [18, 2], [18, 10], [2, 10], [2, 2],
+    [2, 2],
+    [18, 2],
+    [18, 10],
+    [2, 10],
+    [2, 2],
   ]);
   const stableMainPathIds = new Set(mainPathIds);
   mainPathIds.clear();
 
   // Branch 1: top lane detour.
   pathByWaypoints([
-    [8, 2], [8, 6], [14, 6], [14, 2],
+    [8, 2],
+    [8, 6],
+    [14, 6],
+    [14, 2],
   ]);
 
   // Branch 2: right-side middle detour.
   pathByWaypoints([
-    [18, 5], [15, 5], [15, 8], [18, 8],
+    [18, 5],
+    [15, 5],
+    [15, 8],
+    [18, 8],
   ]);
 
   // Branch 3: bottom-middle detour.
   pathByWaypoints([
-    [12, 10], [12, 7], [10, 7], [10, 10],
+    [12, 10],
+    [12, 7],
+    [10, 7],
+    [10, 10],
   ]);
 
   // Branch 4: left-side shortcut.
   pathByWaypoints([
-    [2, 7], [5, 7], [5, 4], [2, 4],
+    [2, 7],
+    [5, 7],
+    [5, 4],
+    [2, 4],
   ]);
   validateBoardGraph(tiles);
 
@@ -146,7 +165,9 @@ function validateBoardGraph(tiles: Tile[]) {
   const directedEdges = new Set<string>();
 
   for (const tile of tiles) {
-    const next = (tile.nextTileIds ?? []).filter((id) => Number.isInteger(id) && id >= 0 && id < tiles.length && id !== tile.id);
+    const next = (tile.nextTileIds ?? []).filter(
+      (id) => Number.isInteger(id) && id >= 0 && id < tiles.length && id !== tile.id,
+    );
     if (next.length < 1) {
       throw new Error(`Tile ${tile.id} has no outgoing edge`);
     }
@@ -207,7 +228,7 @@ function chooseShopCandidate(
   starIds: Set<number>,
   tiles: Tile[],
   minGap: number,
-  rng: () => number
+  rng: () => number,
 ) {
   const shuffled = [...candidates].sort(() => (rng() < 0.5 ? -1 : 1));
   for (const tileId of shuffled) {
@@ -254,7 +275,7 @@ function validateBoardShopsInternal(tiles: Tile[]): ShopViolation[] {
   }
 
   const starIds = new Set(
-    tiles.filter((tile) => String(tile.type).toLowerCase() === "bonus").map((tile) => tile.id)
+    tiles.filter((tile) => String(tile.type).toLowerCase() === "bonus").map((tile) => tile.id),
   );
   for (const tile of shopTiles) {
     const next = Array.isArray(tile.nextTileIds) ? tile.nextTileIds : [];
@@ -267,16 +288,17 @@ function validateBoardShopsInternal(tiles: Tile[]): ShopViolation[] {
 }
 
 export function validateBoardShops(board: { tiles?: Tile[] } | Tile[]) {
-  const tiles = Array.isArray(board) ? board : board.tiles ?? [];
+  const tiles = Array.isArray(board) ? board : (board.tiles ?? []);
   return validateBoardShopsInternal(tiles);
 }
 
 function paintTileTypes(tiles: Tile[], rng: () => number, mainPathIds: Set<number> = new Set()) {
   if (!tiles.length) return;
 
-  tiles[0].type = 'start';
+  tiles[0].type = "start";
 
-  const balancedColors: TileType[] = ['blue', 'green', 'red', 'violet'].sort(() => (rng() < 0.5 ? -1 : 1));
+  const balancedColors: TileType[] = ["blue", "green", "red", "violet"];
+  balancedColors.sort(() => (rng() < 0.5 ? -1 : 1));
   for (let i = 1; i < tiles.length; i++) {
     tiles[i].type = balancedColors[(i - 1) % balancedColors.length];
   }
@@ -300,19 +322,18 @@ function paintTileTypes(tiles: Tile[], rng: () => number, mainPathIds: Set<numbe
   const bonusCount = 2;
   const bonusIdGap = Math.max(8, Math.floor(tiles.length * 0.16));
   const bonusGridGap = 6;
-  const bonusCandidates = tiles.map((tile) => tile.id).filter((id) => id >= minIdx && !used.has(id));
-  const pickBonusWithGap = (
-    gapById: number,
-    gapByGrid: number,
-    selected: number[]
-  ) => {
+  const bonusCandidates = tiles
+    .map((tile) => tile.id)
+    .filter((id) => id >= minIdx && !used.has(id));
+  const pickBonusWithGap = (gapById: number, gapByGrid: number, selected: number[]) => {
     const shuffled = [...bonusCandidates].sort(() => (rng() < 0.5 ? -1 : 1));
     for (const candidate of shuffled) {
       if (used.has(candidate)) continue;
-      const tooClose = selected.some((otherId) => (
-        Math.abs(otherId - candidate) < gapById
-        || manhattanTileDistance(tiles[otherId], tiles[candidate]) < gapByGrid
-      ));
+      const tooClose = selected.some(
+        (otherId) =>
+          Math.abs(otherId - candidate) < gapById ||
+          manhattanTileDistance(tiles[otherId], tiles[candidate]) < gapByGrid,
+      );
       if (tooClose) continue;
       used.add(candidate);
       tiles[candidate].type = "bonus";
@@ -325,7 +346,8 @@ function paintTileTypes(tiles: Tile[], rng: () => number, mainPathIds: Set<numbe
   const bonusSelected: number[] = [];
   while (bonusSelected.length < bonusCount) {
     if (pickBonusWithGap(bonusIdGap, bonusGridGap, bonusSelected)) continue;
-    if (pickBonusWithGap(Math.max(6, bonusIdGap - 2), Math.max(4, bonusGridGap - 2), bonusSelected)) continue;
+    if (pickBonusWithGap(Math.max(6, bonusIdGap - 2), Math.max(4, bonusGridGap - 2), bonusSelected))
+      continue;
     if (pickBonusWithGap(4, 2, bonusSelected)) continue;
     if (place("bonus") == null) break;
     const placed = tiles
@@ -335,7 +357,9 @@ function paintTileTypes(tiles: Tile[], rng: () => number, mainPathIds: Set<numbe
     if (typeof placed === "number") bonusSelected.push(placed);
   }
   if (bonusSelected.length < bonusCount) {
-    const fallbackCandidates = tiles.map((tile) => tile.id).filter((id) => id >= minIdx && !bonusSelected.includes(id));
+    const fallbackCandidates = tiles
+      .map((tile) => tile.id)
+      .filter((id) => id >= minIdx && !bonusSelected.includes(id));
     for (const candidate of fallbackCandidates) {
       if (bonusSelected.length >= bonusCount) break;
       if (used.has(candidate)) continue;
@@ -370,7 +394,9 @@ function paintTileTypes(tiles: Tile[], rng: () => number, mainPathIds: Set<numbe
       if (used.has(id)) return false;
       if (mainPathIds.has(id)) return false;
       const incomingCount = (incoming.get(id) ?? []).length;
-      const outgoingCount = Array.isArray(tiles[id]?.nextTileIds) ? tiles[id].nextTileIds.length : 0;
+      const outgoingCount = Array.isArray(tiles[id]?.nextTileIds)
+        ? tiles[id].nextTileIds.length
+        : 0;
       return incomingCount >= 1 && outgoingCount >= 1;
     });
 
@@ -382,9 +408,7 @@ function paintTileTypes(tiles: Tile[], rng: () => number, mainPathIds: Set<numbe
     }
   });
 
-  const fallback = tiles
-    .map((tile) => tile.id)
-    .filter((id) => id >= minIdx && !used.has(id));
+  const fallback = tiles.map((tile) => tile.id).filter((id) => id >= minIdx && !used.has(id));
   while (selected.length < count) {
     const chosen = chooseShopCandidate(fallback, selected, starIds, tiles, minGap, rng);
     if (chosen == null) break;

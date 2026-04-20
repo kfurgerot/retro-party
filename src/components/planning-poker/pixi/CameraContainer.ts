@@ -55,7 +55,8 @@ export class CameraContainer {
 
     const fitScale = Math.min(
       (config.viewportWidth - 12) / Math.max(1, config.worldWidth),
-      (config.viewportHeight - config.topPadding - config.bottomPadding - 12) / Math.max(1, config.worldHeight)
+      (config.viewportHeight - config.topPadding - config.bottomPadding - 12) /
+        Math.max(1, config.worldHeight),
     );
 
     this.baseScale = clamp(fitScale, config.minScale, config.maxScale);
@@ -71,7 +72,11 @@ export class CameraContainer {
   }
 
   focus(worldX: number, worldY: number, zoomMultiplier: number, durationMs = 320) {
-    const targetScale = clamp(this.baseScale * zoomMultiplier, this.config.minScale, this.config.maxScale * 1.2);
+    const targetScale = clamp(
+      this.baseScale * zoomMultiplier,
+      this.config.minScale,
+      this.config.maxScale * 1.2,
+    );
     const targetX = this.config.viewportWidth * 0.5 - worldX * targetScale;
     const usableH = this.config.viewportHeight - this.config.bottomPadding;
     const targetY = this.config.topPadding + usableH * 0.48 - worldY * targetScale;

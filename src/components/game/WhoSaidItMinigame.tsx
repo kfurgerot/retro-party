@@ -44,16 +44,16 @@ export const WhoSaidItMinigame: React.FC<WhoSaidItMinigameProps> = ({
 
   const totalVotes = useMemo(
     () => Object.values(state.distribution).reduce((sum, value) => sum + value, 0),
-    [state.distribution]
+    [state.distribution],
   );
 
-  const myDelta = myPlayerId ? state.pointsDelta[myPlayerId] ?? 0 : 0;
+  const myDelta = myPlayerId ? (state.pointsDelta[myPlayerId] ?? 0) : 0;
   const winnerNames = useMemo(
     () =>
       state.winners
         .map((id) => players.find((player) => player.id === id)?.name)
         .filter((name): name is string => Boolean(name)),
-    [players, state.winners]
+    [players, state.winners],
   );
 
   useEffect(() => {
@@ -119,7 +119,7 @@ export const WhoSaidItMinigame: React.FC<WhoSaidItMinigameProps> = ({
     timerSeconds <= 5
       ? "border-rose-400/50 bg-rose-500/20 text-rose-100"
       : "border-cyan-300/35 bg-slate-900/70 text-cyan-50";
-  const myPlayer = myPlayerId ? players.find((p) => p.id === myPlayerId) ?? null : null;
+  const myPlayer = myPlayerId ? (players.find((p) => p.id === myPlayerId) ?? null) : null;
 
   return (
     <div className="absolute inset-0 z-50 flex h-full w-full flex-col overflow-hidden bg-slate-950/95 p-3 sm:p-6">
@@ -132,7 +132,7 @@ export const WhoSaidItMinigame: React.FC<WhoSaidItMinigameProps> = ({
         <div
           className={cn(
             "rounded-xl border px-3 py-2 text-sm font-semibold",
-            phase === "answer" ? urgencyClass : "border-cyan-300/35 bg-slate-900/70"
+            phase === "answer" ? urgencyClass : "border-cyan-300/35 bg-slate-900/70",
           )}
         >
           {phase === "answer" ? `${phaseLabel} - ${timerSeconds}s` : phaseLabel}
@@ -143,7 +143,7 @@ export const WhoSaidItMinigame: React.FC<WhoSaidItMinigameProps> = ({
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <PlayerBadge
             name={myPlayer?.name ?? fr.buzzwordDuel.spectator}
-            avatar={myPlayer ? AVATARS[myPlayer.avatar] ?? "?" : undefined}
+            avatar={myPlayer ? (AVATARS[myPlayer.avatar] ?? "?") : undefined}
             roleLabel={fr.whoSaidIt.yourChoice}
             highlighted={!isSpectator}
             rightSlot={
@@ -195,11 +195,13 @@ export const WhoSaidItMinigame: React.FC<WhoSaidItMinigameProps> = ({
                       "!h-auto min-h-16 !whitespace-normal items-center justify-center px-3 py-3 text-center text-sm font-semibold sm:px-4 sm:text-base",
                       isSelected
                         ? "border-cyan-300 bg-cyan-500 text-slate-950"
-                        : "border-cyan-300/35 bg-slate-900/75 text-cyan-50 hover:bg-slate-800"
+                        : "border-cyan-300/35 bg-slate-900/75 text-cyan-50 hover:bg-slate-800",
                     )}
                   >
                     <span className="flex w-full items-center justify-center gap-2">
-                      <span className="w-full whitespace-normal break-words text-center leading-tight">{role.label}</span>
+                      <span className="w-full whitespace-normal break-words text-center leading-tight">
+                        {role.label}
+                      </span>
                       <span className="hidden shrink-0 rounded border border-cyan-300/35 bg-slate-950/55 px-2 py-0.5 text-xs lg:inline-flex">
                         {role.keyHint}
                       </span>
@@ -242,8 +244,16 @@ export const WhoSaidItMinigame: React.FC<WhoSaidItMinigameProps> = ({
               })}
             </div>
             <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <ActionBadge tone="system" className="justify-center px-2 py-1 tracking-normal" label={`${fr.whoSaidIt.yourChoice}: ${selectedRole ? ROLE_LABELS[selectedRole] : fr.whoSaidIt.none}`} />
-              <ActionBadge tone={myDelta > 0 ? "next" : "neutral"} className="justify-center px-2 py-1 tracking-normal" label={`${fr.whoSaidIt.yourPointsThisRound}: +${myDelta}`} />
+              <ActionBadge
+                tone="system"
+                className="justify-center px-2 py-1 tracking-normal"
+                label={`${fr.whoSaidIt.yourChoice}: ${selectedRole ? ROLE_LABELS[selectedRole] : fr.whoSaidIt.none}`}
+              />
+              <ActionBadge
+                tone={myDelta > 0 ? "next" : "neutral"}
+                className="justify-center px-2 py-1 tracking-normal"
+                label={`${fr.whoSaidIt.yourPointsThisRound}: +${myDelta}`}
+              />
             </div>
           </Card>
         )}
@@ -253,7 +263,7 @@ export const WhoSaidItMinigame: React.FC<WhoSaidItMinigameProps> = ({
             <div className="text-lg font-bold">{fr.whoSaidIt.minigameFinished}</div>
             <div className="mt-2 text-sm">
               {fr.whoSaidIt.pointsGained}: +
-              {myPlayerId && state.summary ? state.summary.pointsGained[myPlayerId] ?? 0 : 0}
+              {myPlayerId && state.summary ? (state.summary.pointsGained[myPlayerId] ?? 0) : 0}
             </div>
           </Card>
         )}
