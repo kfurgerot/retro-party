@@ -80,6 +80,15 @@ type SessionEntry = {
   isCurrent: boolean;
 };
 
+type StoryListItem = {
+  id: string;
+  title: string;
+  description: string | null;
+  preparedIndex: number | null;
+  isCurrent: boolean;
+  isVoted: boolean;
+};
+
 const VOTE_SYSTEM_OPTIONS: Array<{ value: PlanningPokerState["voteSystem"]; label: string }> = [
   { value: "fibonacci", label: "Fibonacci" },
   { value: "man-day", label: "JH" },
@@ -200,6 +209,49 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
     () => new Set(historyByStoryTitle.keys()),
     [historyByStoryTitle],
   );
+  const storyListItems = useMemo<StoryListItem[]>(() => {
+    const currentTitle = state.storyTitle.trim();
+
+    if (state.preparedStories.length > 0) {
+      return state.preparedStories.map((story, idx) => {
+        const normalizedStoryTitle = story.title.trim();
+        const isVoted = normalizedStoryTitle ? votedStoryTitles.has(normalizedStoryTitle) : false;
+        return {
+          id: story.id,
+          title: story.title,
+          description: story.description,
+          preparedIndex: idx,
+          isCurrent: idx === state.currentStoryIndex,
+          isVoted,
+        };
+      });
+    }
+
+    const orderedHistoryStories = [...historyEntries].sort((a, b) => {
+      const dateA = a.revealedAt ?? 0;
+      const dateB = b.revealedAt ?? 0;
+      if (dateA !== dateB) return dateA - dateB;
+      return a.round - b.round;
+    });
+
+    return orderedHistoryStories.map((entry) => {
+      const normalizedStoryTitle = entry.storyTitle.trim();
+      return {
+        id: entry.id,
+        title: entry.storyTitle,
+        description: null,
+        preparedIndex: null,
+        isCurrent: !!currentTitle && currentTitle === normalizedStoryTitle,
+        isVoted: true,
+      };
+    });
+  }, [
+    historyEntries,
+    state.currentStoryIndex,
+    state.preparedStories,
+    state.storyTitle,
+    votedStoryTitles,
+  ]);
   const archivedStorySnapshot = useMemo(() => {
     if (state.votesOpen || state.revealed) return null;
     const key = state.storyTitle.trim();
@@ -865,7 +917,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                   {tab === "spectators"
                     ? "Spectateurs"
                     : tab === "stories"
-                      ? `Stories (${state.preparedStories.length})`
+                      ? `Stories (${storyListItems.length})`
                       : "Synthese"}
                 </button>
               ))}
@@ -873,18 +925,15 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
 
             {sidebarTab === "stories" ? (
               <div className="grid min-h-0 gap-1.5 overflow-auto pr-1">
-                {state.preparedStories.length === 0 ? (
+                {storyListItems.length === 0 ? (
                   <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2 text-xs text-slate-400">
-                    Aucune story preparee pour cette session.
+                    Aucune story votée pour le moment.
                   </div>
                 ) : (
-                  state.preparedStories.map((story, idx) => {
-                    const isCurrent = idx === state.currentStoryIndex;
-                    const normalizedStoryTitle = story.title.trim();
-                    const isVoted = normalizedStoryTitle
-                      ? votedStoryTitles.has(normalizedStoryTitle)
-                      : false;
-                    const isDone = !isCurrent && isVoted;
+                  storyListItems.map((story, idx) => {
+                    const isCurrent = story.isCurrent;
+                    const isDone = !isCurrent && story.isVoted;
+                    const canSelectStory = isHost && story.preparedIndex !== null;
                     return (
                       <div
                         key={story.id}
@@ -901,8 +950,11 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                       >
                         <button
                           type="button"
-                          disabled={!isHost || isCurrent}
-                          onClick={() => onSelectPokerStory?.(idx)}
+                          disabled={!canSelectStory || isCurrent}
+                          onClick={() => {
+                            if (story.preparedIndex == null) return;
+                            onSelectPokerStory?.(story.preparedIndex);
+                          }}
                           className="flex min-w-0 flex-1 items-start gap-2 text-left disabled:cursor-not-allowed"
                         >
                           <span
@@ -927,10 +979,10 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                           </div>
                         </button>
                         <div className="ml-auto flex shrink-0 items-center gap-1">
-                          {canEditPreparedStories ? (
+                          {canEditPreparedStories && story.preparedIndex !== null ? (
                             <button
                               type="button"
-                              onClick={() => openPreparedStoryEditor(idx)}
+                              onClick={() => openPreparedStoryEditor(story.preparedIndex)}
                               className="h-6 rounded-md border border-violet-400/30 bg-violet-500/10 px-2 text-[10px] font-semibold text-violet-200 transition-colors hover:bg-violet-500/20"
                             >
                               Renommer
@@ -941,7 +993,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                               En cours
                             </span>
                           )}
-                          {!isCurrent && isVoted && (
+                          {story.isVoted && (
                             <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-300">
                               Voté
                             </span>
@@ -1234,7 +1286,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                       CTA_SUBTLE,
                     )}
                     onClick={() => {
-                      setMobileMenuTab(hasPreparedStories ? "stories" : "summary");
+                      setMobileMenuTab("stories");
                       setMobileActionsOpen(true);
                     }}
                   >
@@ -1283,11 +1335,11 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                       CTA_SUBTLE,
                     )}
                     onClick={() => {
-                      setMobileMenuTab(hasPreparedStories ? "stories" : "summary");
+                      setMobileMenuTab("stories");
                       setMobileActionsOpen(true);
                     }}
                   >
-                    {hasPreparedStories ? "Stories" : "Synthese"}
+                    Stories
                   </Button>
                   <Button
                     variant="secondary"
@@ -1341,18 +1393,15 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
           <div className="grid max-h-[72vh] gap-2 overflow-y-auto px-4 pb-4">
             {mobileMenuTab === "stories" ? (
               <div className="grid gap-1.5">
-                {state.preparedStories.length === 0 ? (
+                {storyListItems.length === 0 ? (
                   <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2 text-xs text-slate-400">
-                    Aucune story preparee pour cette session.
+                    Aucune story votée pour le moment.
                   </div>
                 ) : (
-                  state.preparedStories.map((story, idx) => {
-                    const isCurrent = idx === state.currentStoryIndex;
-                    const normalizedStoryTitle = story.title.trim();
-                    const isVoted = normalizedStoryTitle
-                      ? votedStoryTitles.has(normalizedStoryTitle)
-                      : false;
-                    const isDone = !isCurrent && isVoted;
+                  storyListItems.map((story, idx) => {
+                    const isCurrent = story.isCurrent;
+                    const isDone = !isCurrent && story.isVoted;
+                    const canSelectStory = isHost && story.preparedIndex !== null;
                     return (
                       <div
                         key={story.id}
@@ -1367,9 +1416,10 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                       >
                         <button
                           type="button"
-                          disabled={!isHost || isCurrent}
+                          disabled={!canSelectStory || isCurrent}
                           onClick={() => {
-                            onSelectPokerStory?.(idx);
+                            if (story.preparedIndex == null) return;
+                            onSelectPokerStory?.(story.preparedIndex);
                             setMobileActionsOpen(false);
                           }}
                           className="flex min-w-0 flex-1 items-start gap-2 text-left disabled:cursor-not-allowed"
@@ -1392,10 +1442,10 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                           </div>
                         </button>
                         <div className="ml-auto flex shrink-0 items-center gap-1">
-                          {canEditPreparedStories ? (
+                          {canEditPreparedStories && story.preparedIndex !== null ? (
                             <button
                               type="button"
-                              onClick={() => openPreparedStoryEditor(idx)}
+                              onClick={() => openPreparedStoryEditor(story.preparedIndex)}
                               className="h-6 rounded-md border border-violet-400/30 bg-violet-500/10 px-2 text-[10px] font-semibold text-violet-200"
                             >
                               Renommer
@@ -1406,7 +1456,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                               En cours
                             </span>
                           )}
-                          {!isCurrent && isVoted && (
+                          {story.isVoted && (
                             <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase text-emerald-300">
                               Voté
                             </span>
