@@ -32,7 +32,7 @@ const TOOLS: Tool[] = [
     glow: "rgba(99,102,241,0.3)",
     desc: "Votes synchronisés en temps réel, révélation simultanée, stats instantanées.",
     hostRoute: "/play?from=portal&experience=planning-poker",
-    joinRoute: (code) => `/play?experience=planning-poker&code=${code}`,
+    joinRoute: (code) => `/play?from=portal&experience=planning-poker&mode=join&code=${code}`,
     hasPrepare: true,
   },
   {
@@ -45,7 +45,7 @@ const TOOLS: Tool[] = [
     glow: "rgba(236,72,153,0.3)",
     desc: "Plateau de jeu collaboratif, questions Agile, mini-jeux d'équipe.",
     hostRoute: "/play?from=portal",
-    joinRoute: (code) => `/play?code=${code}`,
+    joinRoute: (code) => `/play?from=portal&mode=join&code=${code}`,
     hasPrepare: true,
   },
   {

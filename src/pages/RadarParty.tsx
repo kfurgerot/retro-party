@@ -313,6 +313,7 @@ const RadarPartyPage = () => {
   const location = useLocation();
   const params = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const initialMode = params.get("mode") === "join" ? "join" : "host";
+  const initialCode = (params.get("code") || "").toUpperCase();
   const fromEntry = params.get("from") === "entry";
 
   const [stage, setStage] = useState<Stage>("lobby");
@@ -1826,6 +1827,7 @@ const RadarPartyPage = () => {
           initialName={profile.name || undefined}
           initialAvatar={profile.avatar}
           initialMode={initialMode}
+          initialCode={initialCode}
           autoSubmitKey={0}
           stepLabel="Etape 5/5"
           stepCurrent={5}

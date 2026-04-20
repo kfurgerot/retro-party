@@ -60,11 +60,15 @@ const PlanningPokerPage: React.FC = () => {
     initialParams.name || undefined,
     initialParams.avatar,
   );
+  const forceProfileBeforeJoin = useMemo(
+    () => initialParams.mode === "join" && !!initialParams.code && !initialParams.autoSubmit,
+    [initialParams.autoSubmit, initialParams.code, initialParams.mode],
+  );
   const [showOnboarding, setShowOnboarding] = useState<boolean>(
-    () => !profile.name && !initialParams.direct,
+    () => forceProfileBeforeJoin || (!profile.name && !initialParams.direct),
   );
   const [onboardingInitialStep, setOnboardingInitialStep] = useState<1 | 2>(() =>
-    profile.name ? 2 : 1,
+    forceProfileBeforeJoin ? 1 : profile.name ? 2 : 1,
   );
   const [voteSystem, setVoteSystem] = useState<PlanningPokerVoteSystem>("fibonacci");
   const [role, setRole] = useState<PlanningPokerRole>("player");

@@ -78,11 +78,15 @@ const Index: React.FC = () => {
     initialParams.name || undefined,
     initialParams.avatar,
   );
+  const forceProfileBeforeJoin = useMemo(
+    () => initialParams.mode === "join" && !!initialParams.code && !initialParams.autoSubmit,
+    [initialParams.autoSubmit, initialParams.code, initialParams.mode],
+  );
   const [showOnlineOnboarding, setShowOnlineOnboarding] = useState<boolean>(
-    () => !onboardingProfile.name && !initialParams.direct,
+    () => forceProfileBeforeJoin || (!onboardingProfile.name && !initialParams.direct),
   );
   const [onboardingInitialStep, setOnboardingInitialStep] = useState<1 | 2>(() =>
-    onboardingProfile.name ? 2 : 1,
+    forceProfileBeforeJoin ? 1 : onboardingProfile.name ? 2 : 1,
   );
   const accent = TOOL_ACCENT["retro-party"];
 
