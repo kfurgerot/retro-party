@@ -296,8 +296,18 @@ const ToolCard = ({
           active && isLive
             ? `linear-gradient(135deg, ${tool.color}14, ${tool.color}08)`
             : "rgba(255,255,255,0.02)",
-        borderColor: active && isLive ? `${tool.color}60` : "rgba(255,255,255,0.06)",
-        boxShadow: active && isLive ? `0 0 0 1px ${tool.color}30, 0 8px 32px ${tool.glow}` : "none",
+        borderColor:
+          active && isLive
+            ? `${tool.color}60`
+            : isLive
+              ? `${tool.color}26`
+              : "rgba(255,255,255,0.06)",
+        boxShadow:
+          active && isLive
+            ? `0 0 0 1px ${tool.color}30, 0 8px 32px ${tool.glow}`
+            : isLive
+              ? `0 0 0 1px ${tool.color}1a`
+              : "none",
       }}
     >
       {isOpen && isLive && (
