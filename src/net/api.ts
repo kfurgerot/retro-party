@@ -117,6 +117,7 @@ const SUCCESS_TRANSLATIONS: Record<string, string> = {
   "If this account exists, a reset email has been sent.":
     "Si ce compte existe, un email de reinitialisation a ete envoye.",
   "Password has been reset.": "Le mot de passe a ete reinitialise.",
+  "Password updated.": "Le mot de passe a ete mis a jour.",
 };
 
 const localizeMessage = (message: string) => ERROR_TRANSLATIONS[message] ?? message;
@@ -173,6 +174,19 @@ export const api = {
     })),
   resetPassword: (payload: { token: string; password: string }) =>
     request<{ ok: boolean; message: string }>("/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }).then((response) => ({
+      ...response,
+      message: localizeSuccessMessage(response.message),
+    })),
+  updateProfile: (payload: { displayName: string }) =>
+    request<{ user: HostUser }>("/auth/profile", {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }),
+  changePassword: (payload: { currentPassword: string; newPassword: string }) =>
+    request<{ ok: boolean; message: string }>("/auth/change-password", {
       method: "POST",
       body: JSON.stringify(payload),
     }).then((response) => ({

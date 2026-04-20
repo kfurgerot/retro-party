@@ -253,6 +253,212 @@ const AuthModal = ({
   );
 };
 
+const AccountModal = ({
+  open,
+  onOpenChange,
+  onLogout,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  onLogout: () => Promise<void>;
+}) => {
+  const { user, updateProfile, changePassword } = useAuth();
+  const [displayName, setDisplayName] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [logoutLoading, setLogoutLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open || !user) return;
+    setDisplayName(user.displayName ?? "");
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setError(null);
+    setInfo(null);
+  }, [open, user]);
+
+  if (!user) return null;
+
+  const inputCls =
+    "w-full h-10 rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 text-sm text-slate-100 placeholder:text-slate-600 outline-none transition focus:border-white/20 focus:ring-1 focus:ring-indigo-400/50";
+
+  const handleProfileSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setInfo(null);
+    const nextName = displayName.trim();
+    if (nextName.length < 2) {
+      setError("Le nom d'affichage doit contenir au moins 2 caractères.");
+      return;
+    }
+    setProfileLoading(true);
+    try {
+      await updateProfile(nextName);
+      setInfo("Profil mis à jour.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Une erreur est survenue.");
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  const handlePasswordSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setInfo(null);
+    if (newPassword.length < 8) {
+      setError("Le nouveau mot de passe doit contenir au moins 8 caractères.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError("Les mots de passe ne correspondent pas.");
+      return;
+    }
+    setPasswordLoading(true);
+    try {
+      const message = await changePassword(currentPassword, newPassword);
+      setInfo(message || "Mot de passe mis à jour.");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Une erreur est survenue.");
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    setError(null);
+    setInfo(null);
+    setLogoutLoading(true);
+    try {
+      await onLogout();
+      onOpenChange(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Une erreur est survenue.");
+    } finally {
+      setLogoutLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md rounded-2xl border border-white/[0.08] bg-[#0d0d1a] p-0 shadow-2xl [&>button]:text-slate-400 [&>button]:hover:text-slate-100">
+        <div className="p-5 sm:p-6">
+          <div className="mb-5 flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-pink-500 text-sm font-bold text-white">
+              {user.displayName
+                .split(" ")
+                .map((w) => w[0])
+                .join("")
+                .toUpperCase()
+                .slice(0, 2)}
+            </div>
+            <div className="min-w-0">
+              <div className="text-sm font-semibold text-slate-100">Mon compte</div>
+              <div className="truncate text-xs text-slate-500">{user.email}</div>
+            </div>
+          </div>
+
+          {error && (
+            <div className="mb-3 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+              {error}
+            </div>
+          )}
+          {info && (
+            <div className="mb-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-300">
+              {info}
+            </div>
+          )}
+
+          <div className="space-y-4">
+            <form
+              onSubmit={handleProfileSubmit}
+              className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-3"
+            >
+              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
+                Informations personnelles
+              </p>
+              <label className="mb-1 block text-xs text-slate-500">Nom d'affichage</label>
+              <input
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                className={inputCls}
+                maxLength={60}
+              />
+              <button
+                type="submit"
+                disabled={profileLoading}
+                className="mt-3 h-10 w-full rounded-lg bg-indigo-500 text-sm font-semibold text-white transition hover:bg-indigo-400 disabled:opacity-50"
+              >
+                {profileLoading ? "Mise à jour..." : "Mettre à jour"}
+              </button>
+            </form>
+
+            <form
+              onSubmit={handlePasswordSubmit}
+              className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-3"
+            >
+              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
+                Sécurité
+              </p>
+              <div className="space-y-2">
+                <input
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="Mot de passe actuel"
+                  className={inputCls}
+                  required
+                />
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Nouveau mot de passe"
+                  className={inputCls}
+                  required
+                />
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirmer le nouveau mot de passe"
+                  className={inputCls}
+                  required
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={passwordLoading}
+                className="mt-3 h-10 w-full rounded-lg bg-indigo-500 text-sm font-semibold text-white transition hover:bg-indigo-400 disabled:opacity-50"
+              >
+                {passwordLoading ? "Mise à jour..." : "Changer le mot de passe"}
+              </button>
+            </form>
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              disabled={logoutLoading}
+              className="h-10 w-full rounded-lg border border-white/[0.1] bg-white/[0.03] text-sm font-semibold text-slate-200 transition hover:bg-white/[0.08] disabled:opacity-50"
+            >
+              {logoutLoading ? "Déconnexion..." : "Se déconnecter"}
+            </button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 // ─── Tool card ─────────────────────────────────────────────────────────────────
 
 const ToolCard = ({
@@ -470,6 +676,7 @@ export default function Portal() {
   });
   const [mounted, setMounted] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
   const [pendingPrepare, setPendingPrepare] = useState(false);
 
   useEffect(() => {
@@ -552,8 +759,8 @@ export default function Portal() {
       >
         {/* Header */}
         <header className="mb-9">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1 pr-2">
               <div className="mb-2.5 inline-flex items-center gap-2">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 text-sm">
                   ⚡
@@ -577,33 +784,14 @@ export default function Portal() {
             {/* User badge / login button */}
             {!authLoading &&
               (user ? (
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-2.5 rounded-full border border-white/[0.07] bg-white/[0.03] px-3.5 py-2">
-                    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-pink-500 text-xs font-bold">
-                      {initials}
-                    </div>
-                    <span className="text-[13px] text-slate-400">{user.email}</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={logout}
-                    className="rounded-full border border-white/[0.07] bg-white/[0.03] px-3.5 py-2 text-[13px] text-slate-500 transition hover:bg-white/[0.06] hover:text-slate-300"
-                    title="Se déconnecter"
-                  >
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
-                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                      <polyline points="16 17 21 12 16 7" />
-                      <line x1="21" y1="12" x2="9" y2="12" />
-                    </svg>
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setAccountOpen(true)}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-indigo-400/40 bg-indigo-500/15 text-sm font-bold text-indigo-100 transition hover:bg-indigo-500/25 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a14]"
+                  title="Mon compte"
+                >
+                  {initials}
+                </button>
               ) : (
                 <button
                   type="button"
@@ -611,7 +799,7 @@ export default function Portal() {
                     setPendingPrepare(false);
                     setLoginOpen(true);
                   }}
-                  className="flex items-center gap-2 rounded-full border border-indigo-500/40 bg-indigo-500/10 px-4 py-2 text-[13px] font-semibold text-indigo-300 transition hover:bg-indigo-500/20 hover:text-indigo-200"
+                  className="flex shrink-0 items-center gap-2 rounded-full border border-indigo-500/40 bg-indigo-500/10 px-4 py-2 text-[13px] font-semibold text-indigo-300 transition hover:bg-indigo-500/20 hover:text-indigo-200"
                 >
                   <svg
                     width="14"
@@ -731,6 +919,13 @@ export default function Portal() {
           if (!v) setPendingPrepare(false);
         }}
         onSuccess={handleAuthSuccess}
+      />
+      <AccountModal
+        open={accountOpen}
+        onOpenChange={setAccountOpen}
+        onLogout={async () => {
+          await logout();
+        }}
       />
     </div>
   );

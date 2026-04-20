@@ -291,6 +291,87 @@ export function registerAuthRoutes(context) {
     }
   });
 
+  app.patch("/api/auth/profile", requireAuth, async (req, res, next) => {
+    try {
+      const displayName =
+        typeof req.body?.displayName === "string" ? req.body.displayName.trim() : "";
+      if (displayName.length < 2 || displayName.length > 60) {
+        return res.status(400).json({ error: "Invalid payload" });
+      }
+
+      const result = await pool.query(
+        `
+          UPDATE users
+          SET display_name = $1, updated_at = now()
+          WHERE id = $2
+          RETURNING id, email, display_name
+        `,
+        [displayName, req.currentUser.id],
+      );
+
+      const updated = result.rows[0];
+      if (!updated) return res.status(404).json({ error: "Not found" });
+
+      return res.status(200).json({
+        user: {
+          id: updated.id,
+          email: updated.email,
+          displayName: updated.display_name,
+        },
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.post("/api/auth/change-password", requireAuth, authLimiter, async (req, res, next) => {
+    try {
+      const currentPassword = req.body?.currentPassword;
+      const newPassword = req.body?.newPassword;
+      if (
+        typeof currentPassword !== "string" ||
+        typeof newPassword !== "string" ||
+        newPassword.length < 8 ||
+        newPassword.length > 72
+      ) {
+        return res.status(400).json({ error: "Invalid payload" });
+      }
+
+      const userResult = await pool.query("SELECT password_hash FROM users WHERE id = $1 LIMIT 1", [
+        req.currentUser.id,
+      ]);
+      const user = userResult.rows[0];
+      if (!user) return res.status(404).json({ error: "Not found" });
+
+      const ok = await bcrypt.compare(currentPassword, user.password_hash);
+      if (!ok) return res.status(401).json({ error: "Invalid credentials" });
+
+      const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+      await pool.query(
+        `
+          UPDATE users
+          SET password_hash = $1, updated_at = now()
+          WHERE id = $2
+        `,
+        [passwordHash, req.currentUser.id],
+      );
+      await pool.query(
+        `
+          UPDATE auth_sessions
+          SET revoked_at = now()
+          WHERE user_id = $1
+            AND revoked_at IS NULL
+            AND ($2::uuid IS NULL OR id <> $2)
+        `,
+        [req.currentUser.id, req.currentUser.sessionId ?? null],
+      );
+
+      return res.status(200).json({ ok: true, message: "Password updated." });
+    } catch (err) {
+      next(err);
+    }
+  });
+
   app.post("/api/auth/logout", async (req, res, next) => {
     try {
       if (req.currentUser?.sessionId) {
