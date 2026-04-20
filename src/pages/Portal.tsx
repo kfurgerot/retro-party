@@ -1,4 +1,4 @@
-import { FormEvent, useState, useEffect } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -6,6 +6,14 @@ import { api } from "@/net/api";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 type ToolId = "planning-poker" | "retro-party" | "radar-party" | "draw-duel" | "retro-generator";
+type ModuleCategoryId = "insight" | "action" | "pilotage";
+type ModuleCategoryFilterId = "all" | ModuleCategoryId;
+
+type ModuleCategory = {
+  id: ModuleCategoryId;
+  label: string;
+  rgb: string;
+};
 
 type Tool = {
   id: ToolId;
@@ -19,7 +27,18 @@ type Tool = {
   hostRoute: string | null;
   joinRoute: (code: string) => string | null;
   hasPrepare?: boolean;
+  categories: ModuleCategoryId[];
 };
+
+const MODULE_CATEGORIES: ModuleCategory[] = [
+  { id: "insight", label: "Insight", rgb: "14,165,233" },
+  { id: "action", label: "Action", rgb: "99,102,241" },
+  { id: "pilotage", label: "Pilotage", rgb: "245,158,11" },
+];
+
+const CATEGORY_BY_ID = Object.fromEntries(
+  MODULE_CATEGORIES.map((category) => [category.id, category]),
+) as Record<ModuleCategoryId, ModuleCategory>;
 
 const TOOLS: Tool[] = [
   {
@@ -34,6 +53,7 @@ const TOOLS: Tool[] = [
     hostRoute: "/play?from=portal&experience=planning-poker",
     joinRoute: (code) => `/play?from=portal&experience=planning-poker&mode=join&code=${code}`,
     hasPrepare: true,
+    categories: ["action", "pilotage"],
   },
   {
     id: "retro-party",
@@ -47,6 +67,7 @@ const TOOLS: Tool[] = [
     hostRoute: "/play?from=portal",
     joinRoute: (code) => `/play?from=portal&mode=join&code=${code}`,
     hasPrepare: true,
+    categories: ["insight", "action"],
   },
   {
     id: "radar-party",
@@ -59,6 +80,7 @@ const TOOLS: Tool[] = [
     desc: "Questionnaire Agile, radar individuel & équipe, insights atelier.",
     hostRoute: "/radar-party?from=portal&mode=host",
     joinRoute: (code) => `/radar-party?mode=join&code=${code}`,
+    categories: ["insight", "pilotage"],
   },
   {
     id: "draw-duel",
@@ -71,6 +93,7 @@ const TOOLS: Tool[] = [
     desc: "Mini-jeu de dessin collaboratif pour briser la glace.",
     hostRoute: null,
     joinRoute: () => null,
+    categories: ["action"],
   },
   {
     id: "retro-generator",
@@ -83,6 +106,7 @@ const TOOLS: Tool[] = [
     desc: "Génère des formats de rétrospective adaptés à votre contexte.",
     hostRoute: null,
     joinRoute: () => null,
+    categories: ["insight"],
   },
 ];
 
@@ -725,6 +749,48 @@ const AccountModal = ({
 
 // ─── Tool cards ────────────────────────────────────────────────────────────────
 
+const ModuleCategoryBadge = ({
+  categoryId,
+  highlighted = false,
+}: {
+  categoryId: ModuleCategoryId;
+  highlighted?: boolean;
+}) => {
+  const category = CATEGORY_BY_ID[categoryId];
+  return (
+    <span
+      className="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em]"
+      style={{
+        borderColor: `rgba(${category.rgb}, ${highlighted ? 0.62 : 0.36})`,
+        background: `rgba(${category.rgb}, ${highlighted ? 0.26 : 0.12})`,
+        color: highlighted ? "#f8fafc" : "#cbd5e1",
+      }}
+    >
+      {category.label}
+    </span>
+  );
+};
+
+const ToolCategoryTags = ({
+  tool,
+  activeCategoryId,
+  className,
+}: {
+  tool: Tool;
+  activeCategoryId: ModuleCategoryId | null;
+  className?: string;
+}) => (
+  <div className={cn("flex flex-wrap gap-1.5", className)}>
+    {tool.categories.map((categoryId) => (
+      <ModuleCategoryBadge
+        key={`${tool.id}-${categoryId}`}
+        categoryId={categoryId}
+        highlighted={categoryId === activeCategoryId}
+      />
+    ))}
+  </div>
+);
+
 type ToolActionsContentProps = {
   tool: Tool;
   code: string;
@@ -935,6 +1001,7 @@ const ToolActionsContent = ({
 
 const ToolCard = ({
   tool,
+  activeCategoryId,
   isOpen,
   code,
   isLoggedIn,
@@ -946,6 +1013,7 @@ const ToolCard = ({
   onLoginRequired,
 }: {
   tool: Tool;
+  activeCategoryId: ModuleCategoryId | null;
   isOpen: boolean;
   code: string;
   isLoggedIn: boolean;
@@ -1043,6 +1111,7 @@ const ToolCard = ({
             {tool.label}
           </div>
           <div className="text-xs leading-relaxed text-slate-500">{tool.desc}</div>
+          <ToolCategoryTags tool={tool} activeCategoryId={activeCategoryId} className="mt-3" />
         </div>
       </button>
 
@@ -1078,10 +1147,12 @@ const ToolCard = ({
 
 const ToolDesktopCard = ({
   tool,
+  activeCategoryId,
   isSelected,
   onSelect,
 }: {
   tool: Tool;
+  activeCategoryId: ModuleCategoryId | null;
   isSelected: boolean;
   onSelect: (id: ToolId) => void;
 }) => {
@@ -1141,12 +1212,14 @@ const ToolDesktopCard = ({
       <div className="text-[15px] font-bold leading-tight text-slate-100">{tool.label}</div>
       <div className="mt-1 text-[12px] text-slate-500">{tool.tagline}</div>
       <div className="mt-3 text-xs leading-relaxed text-slate-500">{tool.desc}</div>
+      <ToolCategoryTags tool={tool} activeCategoryId={activeCategoryId} className="mt-3" />
     </button>
   );
 };
 
 const ToolDesktopDetailPanel = ({
   tool,
+  activeCategoryId,
   code,
   isLoggedIn,
   onCodeChange,
@@ -1156,6 +1229,7 @@ const ToolDesktopDetailPanel = ({
   onLoginRequired,
 }: {
   tool: Tool;
+  activeCategoryId: ModuleCategoryId | null;
   code: string;
   isLoggedIn: boolean;
   onCodeChange: (id: ToolId, value: string) => void;
@@ -1164,7 +1238,7 @@ const ToolDesktopDetailPanel = ({
   onPrepare: () => void;
   onLoginRequired: () => void;
 }) => (
-  <aside className="sticky top-7">
+  <aside className="sticky top-7 self-start">
     <article
       className="overflow-hidden rounded-2xl border p-4"
       style={{
@@ -1182,6 +1256,7 @@ const ToolDesktopDetailPanel = ({
       </div>
 
       <div className="mb-3 text-xs leading-relaxed text-slate-500">{tool.desc}</div>
+      <ToolCategoryTags tool={tool} activeCategoryId={activeCategoryId} className="mb-3" />
 
       <ToolActionsContent
         tool={tool}
@@ -1204,7 +1279,10 @@ export default function Portal() {
   const navigate = useNavigate();
   const { user, loading: authLoading, logout } = useAuth();
   const defaultDesktopToolId = TOOLS.find((entry) => entry.status === "live")?.id ?? TOOLS[0].id;
+  const defaultCategoryId: ModuleCategoryFilterId = "all";
   const [openTool, setOpenTool] = useState<ToolId | null>(null);
+  const [selectedCategoryId, setSelectedCategoryId] =
+    useState<ModuleCategoryFilterId>(defaultCategoryId);
   const [selectedToolId, setSelectedToolId] = useState<ToolId>(defaultDesktopToolId);
   const [joinCodes, setJoinCodes] = useState<Record<ToolId, string>>({
     "planning-poker": "",
@@ -1222,6 +1300,43 @@ export default function Portal() {
     const t = setTimeout(() => setMounted(true), 50);
     return () => clearTimeout(t);
   }, []);
+
+  const toolsForCategory = useMemo(
+    () =>
+      selectedCategoryId === "all"
+        ? TOOLS
+        : TOOLS.filter((entry) => entry.categories.includes(selectedCategoryId)),
+    [selectedCategoryId],
+  );
+  const categoryStats = useMemo(() => {
+    const stats = MODULE_CATEGORIES.reduce(
+      (acc, category) => ({
+        ...acc,
+        [category.id]: { total: 0, active: 0 },
+      }),
+      {} as Record<ModuleCategoryId, { total: number; active: number }>,
+    );
+    for (const tool of TOOLS) {
+      for (const categoryId of tool.categories) {
+        stats[categoryId].total += 1;
+        if (tool.status === "live") stats[categoryId].active += 1;
+      }
+    }
+    return stats;
+  }, []);
+
+  useEffect(() => {
+    if (toolsForCategory.length === 0) {
+      setOpenTool(null);
+      return;
+    }
+    if (!toolsForCategory.some((entry) => entry.id === selectedToolId)) {
+      setSelectedToolId(toolsForCategory[0].id);
+    }
+    if (openTool && !toolsForCategory.some((entry) => entry.id === openTool)) {
+      setOpenTool(null);
+    }
+  }, [openTool, selectedToolId, toolsForCategory]);
 
   // After login succeeds from modal, go to /prepare if that was the intent
   const handleAuthSuccess = () => {
@@ -1252,6 +1367,10 @@ export default function Portal() {
     setSelectedToolId(toolId);
   };
 
+  const handleCategorySelect = (categoryId: ModuleCategoryFilterId) => {
+    setSelectedCategoryId(categoryId);
+  };
+
   const handleCodeChange = (toolId: ToolId, value: string) => {
     setJoinCodes((prev) => ({
       ...prev,
@@ -1276,7 +1395,12 @@ export default function Portal() {
         .toUpperCase()
         .slice(0, 2)
     : "?";
-  const selectedDesktopTool = TOOLS.find((entry) => entry.id === selectedToolId) ?? TOOLS[0];
+  const selectedDesktopTool =
+    toolsForCategory.find((entry) => entry.id === selectedToolId) ??
+    toolsForCategory[0] ??
+    TOOLS[0];
+  const activeToolsInCategory = toolsForCategory.filter((entry) => entry.status === "live").length;
+  const highlightedCategoryId = selectedCategoryId === "all" ? null : selectedCategoryId;
 
   return (
     <div
@@ -1370,48 +1494,113 @@ export default function Portal() {
               Outils disponibles
             </h2>
             <span className="rounded-full border border-white/[0.05] bg-white/[0.04] px-2.5 py-1 text-[11px] text-slate-600">
-              3 / 5 actifs
+              {activeToolsInCategory} / {toolsForCategory.length} actifs
             </span>
           </div>
-          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:hidden">
-            {TOOLS.map((tool) => (
-              <ToolCard
-                key={tool.id}
-                tool={tool}
-                isOpen={openTool === tool.id}
-                code={joinCodes[tool.id]}
-                isLoggedIn={!!user}
-                onToggle={handleToolToggle}
-                onCodeChange={handleCodeChange}
-                onCreate={handleCreate}
-                onJoin={handleJoin}
-                onPrepare={handlePrepare}
-                onLoginRequired={handlePrepare}
-              />
-            ))}
-          </div>
-          <div className="hidden lg:grid lg:grid-cols-[minmax(0,1.8fr)_minmax(360px,1fr)] lg:gap-4">
-            <div className="grid grid-cols-2 gap-2.5 xl:grid-cols-3">
-              {TOOLS.map((tool) => (
-                <ToolDesktopCard
-                  key={tool.id}
-                  tool={tool}
-                  isSelected={selectedToolId === tool.id}
-                  onSelect={handleDesktopToolSelect}
-                />
-              ))}
+          <div className="mb-4 overflow-x-auto pb-1">
+            <div className="flex min-w-max items-center gap-2">
+              <button
+                type="button"
+                onClick={() => handleCategorySelect("all")}
+                className={cn(
+                  "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-semibold transition",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a14]",
+                )}
+                style={{
+                  borderColor:
+                    selectedCategoryId === "all"
+                      ? "rgba(248,250,252,0.5)"
+                      : "rgba(148,163,184,0.35)",
+                  background:
+                    selectedCategoryId === "all"
+                      ? "rgba(148,163,184,0.26)"
+                      : "rgba(148,163,184,0.1)",
+                  color: selectedCategoryId === "all" ? "#f8fafc" : "#cbd5e1",
+                }}
+              >
+                <span>All</span>
+                <span className="rounded-full border border-white/15 bg-white/10 px-1.5 py-0.5 text-[10px] text-slate-100/90">
+                  {TOOLS.length}
+                </span>
+              </button>
+              {MODULE_CATEGORIES.map((category) => {
+                const categoryCount = categoryStats[category.id].total;
+                const isActiveCategory = selectedCategoryId === category.id;
+                return (
+                  <button
+                    key={category.id}
+                    type="button"
+                    onClick={() => handleCategorySelect(category.id)}
+                    className={cn(
+                      "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-semibold transition",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a14]",
+                    )}
+                    style={{
+                      borderColor: `rgba(${category.rgb}, ${isActiveCategory ? 0.62 : 0.34})`,
+                      background: `rgba(${category.rgb}, ${isActiveCategory ? 0.26 : 0.1})`,
+                      color: isActiveCategory ? "#f8fafc" : "#cbd5e1",
+                    }}
+                  >
+                    <span>{category.label}</span>
+                    <span className="rounded-full border border-white/15 bg-white/10 px-1.5 py-0.5 text-[10px] text-slate-100/90">
+                      {categoryCount}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
-            <ToolDesktopDetailPanel
-              tool={selectedDesktopTool}
-              code={joinCodes[selectedDesktopTool.id]}
-              isLoggedIn={!!user}
-              onCodeChange={handleCodeChange}
-              onCreate={handleCreate}
-              onJoin={handleJoin}
-              onPrepare={handlePrepare}
-              onLoginRequired={handlePrepare}
-            />
           </div>
+
+          {toolsForCategory.length === 0 ? (
+            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-sm text-slate-400">
+              Aucun module n'est encore rattaché à cette catégorie.
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:hidden">
+                {toolsForCategory.map((tool) => (
+                  <ToolCard
+                    key={tool.id}
+                    tool={tool}
+                    activeCategoryId={highlightedCategoryId}
+                    isOpen={openTool === tool.id}
+                    code={joinCodes[tool.id]}
+                    isLoggedIn={!!user}
+                    onToggle={handleToolToggle}
+                    onCodeChange={handleCodeChange}
+                    onCreate={handleCreate}
+                    onJoin={handleJoin}
+                    onPrepare={handlePrepare}
+                    onLoginRequired={handlePrepare}
+                  />
+                ))}
+              </div>
+              <div className="hidden lg:grid lg:grid-cols-[minmax(0,1.8fr)_minmax(360px,1fr)] lg:items-start lg:gap-4">
+                <div className="grid content-start self-start grid-cols-2 gap-2.5 xl:grid-cols-3">
+                  {toolsForCategory.map((tool) => (
+                    <ToolDesktopCard
+                      key={tool.id}
+                      tool={tool}
+                      activeCategoryId={highlightedCategoryId}
+                      isSelected={selectedToolId === tool.id}
+                      onSelect={handleDesktopToolSelect}
+                    />
+                  ))}
+                </div>
+                <ToolDesktopDetailPanel
+                  tool={selectedDesktopTool}
+                  activeCategoryId={highlightedCategoryId}
+                  code={joinCodes[selectedDesktopTool.id]}
+                  isLoggedIn={!!user}
+                  onCodeChange={handleCodeChange}
+                  onCreate={handleCreate}
+                  onJoin={handleJoin}
+                  onPrepare={handlePrepare}
+                  onLoginRequired={handlePrepare}
+                />
+              </div>
+            </>
+          )}
         </section>
 
         {/* Recent sessions placeholder */}
