@@ -723,7 +723,215 @@ const AccountModal = ({
   );
 };
 
-// ─── Tool card ─────────────────────────────────────────────────────────────────
+// ─── Tool cards ────────────────────────────────────────────────────────────────
+
+type ToolActionsContentProps = {
+  tool: Tool;
+  code: string;
+  isLoggedIn: boolean;
+  buttonLayout?: "stack" | "split";
+  onCodeChange: (id: ToolId, value: string) => void;
+  onCreate: (id: ToolId) => void;
+  onJoin: (id: ToolId, code: string) => void;
+  onPrepare: () => void;
+  onLoginRequired: () => void;
+};
+
+const ToolActionsContent = ({
+  tool,
+  code,
+  isLoggedIn,
+  buttonLayout = "split",
+  onCodeChange,
+  onCreate,
+  onJoin,
+  onPrepare,
+  onLoginRequired,
+}: ToolActionsContentProps) => {
+  const isLive = tool.status === "live";
+  const canJoin = isLive && code.trim().length >= 4;
+  const canCreate = isLive && !!tool.hostRoute;
+  const canPrepare = isLive && !!tool.hasPrepare;
+
+  if (!isLive) {
+    return (
+      <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+          Module en préparation
+        </p>
+        <p className="mt-1 text-[11px] text-slate-500">Ce module sera disponible prochainement.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2.5">
+      <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3">
+        <div className="mb-2">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+            Rejoindre une session
+          </p>
+          <p className="mt-0.5 text-[11px] text-slate-500">
+            Saisis le code partagé par l'animateur.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto]">
+          <div
+            className={cn(
+              "flex h-10 items-center gap-2 rounded-2xl border px-2.5 transition",
+              "bg-white/[0.04]",
+              canJoin
+                ? "border-white/[0.2] shadow-[0_0_0_1px_rgba(99,102,241,0.28)]"
+                : "border-white/[0.08]",
+            )}
+          >
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/[0.12] bg-white/[0.05] font-mono text-[11px] font-semibold text-slate-400">
+              #
+            </span>
+            <input
+              value={code}
+              onChange={(e) => onCodeChange(tool.id, e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && canJoin) onJoin(tool.id, code);
+              }}
+              placeholder="AB12"
+              autoComplete="off"
+              inputMode="text"
+              className="h-full w-full border-none bg-transparent px-0 font-mono text-sm tracking-widest text-slate-100 outline-none placeholder:tracking-[0.08em] placeholder:text-slate-600"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => canJoin && onJoin(tool.id, code)}
+            disabled={!canJoin}
+            className={cn(
+              "h-10 rounded-2xl px-4 text-[13px] font-semibold transition",
+              canJoin
+                ? "text-white hover:brightness-110"
+                : "cursor-not-allowed bg-white/5 text-slate-600",
+            )}
+            style={canJoin ? { background: tool.color } : undefined}
+          >
+            Rejoindre
+          </button>
+        </div>
+        <p className="mt-1 text-[11px] text-slate-500">Code court (4 à 6 caractères)</p>
+      </div>
+
+      <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3">
+        <div className="mb-2">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+            Démarrer une nouvelle session
+          </p>
+          <p className="mt-0.5 text-[11px] text-slate-500">
+            {canPrepare
+              ? "Lance tout de suite ou prépare d'abord ton atelier."
+              : "Crée une salle et invite ton équipe en quelques secondes."}
+          </p>
+        </div>
+
+        <div
+          className={cn(
+            "grid grid-cols-1 gap-2",
+            canPrepare && buttonLayout === "split" && "sm:grid-cols-2",
+          )}
+        >
+          <button
+            type="button"
+            onClick={() => canCreate && onCreate(tool.id)}
+            disabled={!canCreate}
+            className={cn(
+              "flex h-10 items-center justify-center gap-2 rounded-2xl px-4 text-center text-[13px] font-semibold transition",
+              canCreate
+                ? "text-white hover:brightness-110"
+                : "cursor-not-allowed bg-white/5 text-slate-600",
+            )}
+            style={
+              canCreate
+                ? {
+                    background: `linear-gradient(135deg, ${tool.color}, ${tool.color}cc)`,
+                    boxShadow: `0 4px 12px ${tool.glow}`,
+                  }
+                : undefined
+            }
+          >
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/25 bg-white/10">
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                className="leading-none"
+              >
+                <path d="M12 5v14" />
+                <path d="M5 12h14" />
+              </svg>
+            </span>
+            <span className="leading-none">Créer une session</span>
+          </button>
+
+          {canPrepare && (
+            <button
+              type="button"
+              onClick={() => (isLoggedIn ? onPrepare() : onLoginRequired())}
+              className={cn(
+                "flex h-10 items-center justify-center gap-2 rounded-2xl border px-4 text-center text-[13px] font-semibold transition",
+                isLoggedIn
+                  ? "border-white/[0.12] bg-white/[0.05] text-slate-200 hover:border-white/[0.2] hover:bg-white/[0.08]"
+                  : "border-indigo-400/35 bg-indigo-500/10 text-indigo-200 hover:border-indigo-300/55 hover:bg-indigo-500/18",
+              )}
+            >
+              <span
+                className={cn(
+                  "flex h-6 w-6 shrink-0 items-center justify-center rounded-full",
+                  isLoggedIn
+                    ? "border border-white/[0.18] bg-white/[0.08] text-slate-300"
+                    : "border border-indigo-300/35 bg-indigo-500/15 text-indigo-200",
+                )}
+              >
+                {isLoggedIn ? (
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    className="leading-none"
+                  >
+                    <path d="m5 12 4 4 10-10" />
+                  </svg>
+                ) : (
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    className="leading-none"
+                  >
+                    <rect x="5" y="11" width="14" height="10" rx="2" />
+                    <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+                  </svg>
+                )}
+              </span>
+              <span className="leading-none">Préparer une partie</span>
+            </button>
+          )}
+        </div>
+
+        {canPrepare && !isLoggedIn && (
+          <p className="mt-2 text-[11px] text-slate-500">
+            Connexion requise pour accéder à la préparation.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+};
 
 const ToolCard = ({
   tool,
@@ -751,9 +959,6 @@ const ToolCard = ({
   const [hovered, setHovered] = useState(false);
   const isLive = tool.status === "live";
   const active = isOpen || hovered;
-  const canJoin = isLive && code.trim().length >= 4;
-  const canCreate = isLive && !!tool.hostRoute;
-  const canPrepare = isLive && !!tool.hasPrepare;
 
   return (
     <article
@@ -852,165 +1057,18 @@ const ToolCard = ({
         )}
       >
         <div className="overflow-hidden">
-          <div className="m-3 mt-0 space-y-2.5">
-            <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3">
-              <div className="mb-2">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
-                  Rejoindre une session
-                </p>
-                <p className="mt-0.5 text-[11px] text-slate-500">
-                  Saisis le code partagé par l'animateur.
-                </p>
-              </div>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto]">
-                <div
-                  className={cn(
-                    "flex h-10 items-center gap-2 rounded-2xl border px-2.5 transition",
-                    "bg-white/[0.04]",
-                    canJoin
-                      ? "border-white/[0.2] shadow-[0_0_0_1px_rgba(99,102,241,0.28)]"
-                      : "border-white/[0.08]",
-                  )}
-                >
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/[0.12] bg-white/[0.05] font-mono text-[11px] font-semibold text-slate-400">
-                    #
-                  </span>
-                  <input
-                    value={code}
-                    onChange={(e) => onCodeChange(tool.id, e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && canJoin) onJoin(tool.id, code);
-                    }}
-                    placeholder="AB12"
-                    autoComplete="off"
-                    inputMode="text"
-                    className="h-full w-full border-none bg-transparent px-0 font-mono text-sm tracking-widest text-slate-100 outline-none placeholder:tracking-[0.08em] placeholder:text-slate-600"
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={() => canJoin && onJoin(tool.id, code)}
-                  disabled={!canJoin}
-                  className={cn(
-                    "h-10 rounded-2xl px-4 text-[13px] font-semibold transition",
-                    canJoin
-                      ? "text-white hover:brightness-110"
-                      : "cursor-not-allowed bg-white/5 text-slate-600",
-                  )}
-                  style={canJoin ? { background: tool.color } : undefined}
-                >
-                  Rejoindre
-                </button>
-              </div>
-              <p className="mt-1 text-[11px] text-slate-500">Code court (4 à 6 caractères)</p>
-            </div>
-
-            <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3">
-              <div className="mb-2">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
-                  Démarrer une nouvelle session
-                </p>
-                <p className="mt-0.5 text-[11px] text-slate-500">
-                  {canPrepare
-                    ? "Lance tout de suite ou prépare d'abord ton atelier."
-                    : "Crée une salle et invite ton équipe en quelques secondes."}
-                </p>
-              </div>
-
-              <div className={cn("grid grid-cols-1 gap-2", canPrepare && "sm:grid-cols-2")}>
-                <button
-                  type="button"
-                  onClick={() => canCreate && onCreate(tool.id)}
-                  disabled={!canCreate}
-                  className={cn(
-                    "flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-2xl px-4 text-[13px] font-semibold transition",
-                    canCreate
-                      ? "text-white hover:brightness-110"
-                      : "cursor-not-allowed bg-white/5 text-slate-600",
-                  )}
-                  style={
-                    canCreate
-                      ? {
-                          background: `linear-gradient(135deg, ${tool.color}, ${tool.color}cc)`,
-                          boxShadow: `0 4px 12px ${tool.glow}`,
-                        }
-                      : undefined
-                  }
-                >
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/25 bg-white/10">
-                    <svg
-                      width="12"
-                      height="12"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.2"
-                      className="leading-none"
-                    >
-                      <path d="M12 5v14" />
-                      <path d="M5 12h14" />
-                    </svg>
-                  </span>
-                  <span className="leading-none">Créer une session</span>
-                </button>
-
-                {canPrepare && (
-                  <button
-                    type="button"
-                    onClick={() => (isLoggedIn ? onPrepare() : onLoginRequired())}
-                    className={cn(
-                      "flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-2xl border px-4 text-[13px] font-semibold transition",
-                      isLoggedIn
-                        ? "border-white/[0.12] bg-white/[0.05] text-slate-200 hover:border-white/[0.2] hover:bg-white/[0.08]"
-                        : "border-indigo-400/35 bg-indigo-500/10 text-indigo-200 hover:border-indigo-300/55 hover:bg-indigo-500/18",
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "flex h-6 w-6 shrink-0 items-center justify-center rounded-full",
-                        isLoggedIn
-                          ? "border border-white/[0.18] bg-white/[0.08] text-slate-300"
-                          : "border border-indigo-300/35 bg-indigo-500/15 text-indigo-200",
-                      )}
-                    >
-                      {isLoggedIn ? (
-                        <svg
-                          width="12"
-                          height="12"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2.2"
-                          className="leading-none"
-                        >
-                          <path d="m5 12 4 4 10-10" />
-                        </svg>
-                      ) : (
-                        <svg
-                          width="12"
-                          height="12"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2.2"
-                          className="leading-none"
-                        >
-                          <rect x="5" y="11" width="14" height="10" rx="2" />
-                          <path d="M8 11V8a4 4 0 0 1 8 0v3" />
-                        </svg>
-                      )}
-                    </span>
-                    <span className="leading-none">Préparer une partie</span>
-                  </button>
-                )}
-              </div>
-
-              {canPrepare && !isLoggedIn && (
-                <p className="mt-2 text-[11px] text-slate-500">
-                  Connexion requise pour accéder à la préparation.
-                </p>
-              )}
-            </div>
+          <div className="m-3 mt-0">
+            <ToolActionsContent
+              tool={tool}
+              code={code}
+              isLoggedIn={isLoggedIn}
+              buttonLayout="split"
+              onCodeChange={onCodeChange}
+              onCreate={onCreate}
+              onJoin={onJoin}
+              onPrepare={onPrepare}
+              onLoginRequired={onLoginRequired}
+            />
           </div>
         </div>
       </div>
@@ -1018,12 +1076,136 @@ const ToolCard = ({
   );
 };
 
+const ToolDesktopCard = ({
+  tool,
+  isSelected,
+  onSelect,
+}: {
+  tool: Tool;
+  isSelected: boolean;
+  onSelect: (id: ToolId) => void;
+}) => {
+  const [hovered, setHovered] = useState(false);
+  const isLive = tool.status === "live";
+  const active = isSelected || hovered;
+
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(tool.id)}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      className={cn(
+        "relative flex min-h-[180px] w-full flex-col rounded-2xl border p-5 text-left transition-all duration-200",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a14]",
+        isLive ? "opacity-100" : "opacity-60",
+      )}
+      style={{
+        background:
+          active && isLive
+            ? `linear-gradient(135deg, ${tool.color}16, ${tool.color}08)`
+            : "rgba(255,255,255,0.02)",
+        borderColor: active
+          ? `${tool.color}60`
+          : isLive
+            ? `${tool.color}26`
+            : "rgba(255,255,255,0.06)",
+        boxShadow:
+          active && isLive
+            ? `0 0 0 1px ${tool.color}30, 0 8px 24px ${tool.glow}`
+            : isLive
+              ? `0 0 0 1px ${tool.color}1a`
+              : "none",
+      }}
+      aria-pressed={isSelected}
+    >
+      {isSelected && isLive && (
+        <span
+          className="pointer-events-none absolute inset-x-0 top-0 h-0.5"
+          style={{ background: `linear-gradient(90deg, transparent, ${tool.color}, transparent)` }}
+        />
+      )}
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <span className="text-3xl leading-none">{tool.icon}</span>
+        {tool.status === "live" ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-emerald-400">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_6px_#10b981]" />
+            Disponible
+          </span>
+        ) : (
+          <span className="rounded-full border border-slate-600/20 bg-slate-700/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+            Bientôt
+          </span>
+        )}
+      </div>
+      <div className="text-[15px] font-bold leading-tight text-slate-100">{tool.label}</div>
+      <div className="mt-1 text-[12px] text-slate-500">{tool.tagline}</div>
+      <div className="mt-3 text-xs leading-relaxed text-slate-500">{tool.desc}</div>
+    </button>
+  );
+};
+
+const ToolDesktopDetailPanel = ({
+  tool,
+  code,
+  isLoggedIn,
+  onCodeChange,
+  onCreate,
+  onJoin,
+  onPrepare,
+  onLoginRequired,
+}: {
+  tool: Tool;
+  code: string;
+  isLoggedIn: boolean;
+  onCodeChange: (id: ToolId, value: string) => void;
+  onCreate: (id: ToolId) => void;
+  onJoin: (id: ToolId, code: string) => void;
+  onPrepare: () => void;
+  onLoginRequired: () => void;
+}) => (
+  <aside className="sticky top-7">
+    <article
+      className="overflow-hidden rounded-2xl border p-4"
+      style={{
+        background: `linear-gradient(135deg, ${tool.color}10, rgba(255,255,255,0.02))`,
+        borderColor: `${tool.color}38`,
+        boxShadow: `0 0 0 1px ${tool.color}1f`,
+      }}
+    >
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="text-[15px] font-bold leading-tight text-slate-100">{tool.label}</div>
+          <div className="mt-0.5 text-xs text-slate-500">{tool.tagline}</div>
+        </div>
+        <span className="text-2xl leading-none">{tool.icon}</span>
+      </div>
+
+      <div className="mb-3 text-xs leading-relaxed text-slate-500">{tool.desc}</div>
+
+      <ToolActionsContent
+        tool={tool}
+        code={code}
+        isLoggedIn={isLoggedIn}
+        buttonLayout="stack"
+        onCodeChange={onCodeChange}
+        onCreate={onCreate}
+        onJoin={onJoin}
+        onPrepare={onPrepare}
+        onLoginRequired={onLoginRequired}
+      />
+    </article>
+  </aside>
+);
+
 // ─── Portal ────────────────────────────────────────────────────────────────────
 
 export default function Portal() {
   const navigate = useNavigate();
   const { user, loading: authLoading, logout } = useAuth();
+  const defaultDesktopToolId = TOOLS.find((entry) => entry.status === "live")?.id ?? TOOLS[0].id;
   const [openTool, setOpenTool] = useState<ToolId | null>(null);
+  const [selectedToolId, setSelectedToolId] = useState<ToolId>(defaultDesktopToolId);
   const [joinCodes, setJoinCodes] = useState<Record<ToolId, string>>({
     "planning-poker": "",
     "retro-party": "",
@@ -1062,7 +1244,12 @@ export default function Portal() {
   };
 
   const handleToolToggle = (toolId: ToolId) => {
+    setSelectedToolId(toolId);
     setOpenTool((current) => (current === toolId ? null : toolId));
+  };
+
+  const handleDesktopToolSelect = (toolId: ToolId) => {
+    setSelectedToolId(toolId);
   };
 
   const handleCodeChange = (toolId: ToolId, value: string) => {
@@ -1089,6 +1276,7 @@ export default function Portal() {
         .toUpperCase()
         .slice(0, 2)
     : "?";
+  const selectedDesktopTool = TOOLS.find((entry) => entry.id === selectedToolId) ?? TOOLS[0];
 
   return (
     <div
@@ -1107,7 +1295,7 @@ export default function Portal() {
       />
 
       <div
-        className="relative z-10 mx-auto max-w-[900px] px-5 pb-16 pt-7"
+        className="relative z-10 mx-auto max-w-[1180px] px-5 pb-16 pt-7"
         style={{
           opacity: mounted ? 1 : 0,
           transition: "opacity 0.4s ease, transform 0.4s ease",
@@ -1185,7 +1373,7 @@ export default function Portal() {
               3 / 5 actifs
             </span>
           </div>
-          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:hidden">
             {TOOLS.map((tool) => (
               <ToolCard
                 key={tool.id}
@@ -1201,6 +1389,28 @@ export default function Portal() {
                 onLoginRequired={handlePrepare}
               />
             ))}
+          </div>
+          <div className="hidden lg:grid lg:grid-cols-[minmax(0,1.8fr)_minmax(360px,1fr)] lg:gap-4">
+            <div className="grid grid-cols-2 gap-2.5 xl:grid-cols-3">
+              {TOOLS.map((tool) => (
+                <ToolDesktopCard
+                  key={tool.id}
+                  tool={tool}
+                  isSelected={selectedToolId === tool.id}
+                  onSelect={handleDesktopToolSelect}
+                />
+              ))}
+            </div>
+            <ToolDesktopDetailPanel
+              tool={selectedDesktopTool}
+              code={joinCodes[selectedDesktopTool.id]}
+              isLoggedIn={!!user}
+              onCodeChange={handleCodeChange}
+              onCreate={handleCreate}
+              onJoin={handleJoin}
+              onPrepare={handlePrepare}
+              onLoginRequired={handlePrepare}
+            />
           </div>
         </section>
 
