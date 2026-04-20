@@ -6,6 +6,39 @@ export type HostUser = {
   displayName: string;
 };
 
+export type DashboardActivity = {
+  id: string;
+  moduleId: "retro-party" | "planning-poker" | "radar-party";
+  moduleLabel: string;
+  moduleIcon: string;
+  activityType: "session" | "template";
+  activityLabel: string;
+  title: string;
+  details: string | null;
+  status: string;
+  occurredAt: string | null;
+  createdAt: string | null;
+  startedAt: string | null;
+  endedAt: string | null;
+};
+
+export type DashboardModuleActivity = {
+  moduleId: "retro-party" | "planning-poker" | "radar-party";
+  moduleLabel: string;
+  moduleIcon: string;
+  totalActivities: number;
+  lastActivityAt: string | null;
+  activities: DashboardActivity[];
+};
+
+export type DashboardActivitiesResponse = {
+  generatedAt: string;
+  modules: DashboardModuleActivity[];
+  roadmap: {
+    upcoming: string[];
+  };
+};
+
 export type TemplateItem = {
   id: string;
   name: string;
@@ -193,6 +226,10 @@ export const api = {
       ...response,
       message: localizeSuccessMessage(response.message),
     })),
+  getDashboardActivities: () =>
+    request<DashboardActivitiesResponse>("/dashboard/activities", {
+      method: "GET",
+    }),
   logout: () => request<void>("/auth/logout", { method: "POST" }),
 
   listTemplates: () => request<{ items: TemplateItem[] }>("/templates", { method: "GET" }),
