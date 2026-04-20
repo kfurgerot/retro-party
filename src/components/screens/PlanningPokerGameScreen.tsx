@@ -83,6 +83,17 @@ type SessionEntry = {
   isCurrent: boolean;
 };
 
+type SummaryRow = {
+  id: string;
+  roundLabel: string;
+  title: string;
+  totalVotes: number;
+  average: string;
+  median: string;
+  consensus: string;
+  votes: PlanningPokerRoundSummary["votes"];
+};
+
 type StoryListItem = {
   id: string;
   title: string;
@@ -516,7 +527,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
       voteSystemsLabel,
     };
   }, [historyEntries]);
-  const summaryRows = useMemo(() => {
+  const summaryRows = useMemo<SummaryRow[]>(() => {
     const orderedHistory = [...historyEntries].sort((a, b) => {
       if (a.round !== b.round) return a.round - b.round;
       return (a.revealedAt ?? 0) - (b.revealedAt ?? 0);
@@ -537,6 +548,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
         average: formatPlanningValueForSystem(entry.average, entry.voteSystem),
         median: formatPlanningValueForSystem(entry.median, entry.voteSystem),
         consensus: lead ? `${displayVoteValue(lead[0])} (${consensus}%)` : "-",
+        votes: entry.votes ?? [],
       };
     });
 
@@ -551,6 +563,13 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
       average: averageLabel,
       median: medianLabel,
       consensus: currentConsensus,
+      votes: votingPlayers
+        .filter((player) => player.vote != null)
+        .map((player) => ({
+          playerName: player.name,
+          avatar: player.avatar,
+          value: player.vote ?? "-",
+        })),
     };
 
     return [...archivedRows, currentRow];
@@ -564,6 +583,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
     state.round,
     state.storyTitle,
     stats.totalVotes,
+    votingPlayers,
   ]);
 
   const hostCanEndSession = isHost && !state.sessionEnded && typeof onEndSession === "function";
@@ -681,6 +701,100 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
         return cursorY + 5;
       };
 
+      const normalizePdfText = (value: string) => {
+        const normalized = value
+          .replace(/\r\n|\n|\r/g, " ")
+          .replace(/\s+/g, " ")
+          .trim();
+        return normalized || "-";
+      };
+
+      const splitTextToSizeStrict = (text: string, maxWidth: number): string[] => {
+        const sourceLines = pdf.splitTextToSize(text, maxWidth) as string[];
+        const resolvedLines: string[] = [];
+
+        sourceLines.forEach((rawLine) => {
+          const line = `${rawLine ?? ""}`.trim();
+          if (!line) {
+            resolvedLines.push("-");
+            return;
+          }
+
+          if (pdf.getTextWidth(line) <= maxWidth) {
+            resolvedLines.push(line);
+            return;
+          }
+
+          let remaining = line;
+          while (remaining.length > 0) {
+            let cut = remaining.length;
+            while (cut > 1 && pdf.getTextWidth(remaining.slice(0, cut)) > maxWidth) {
+              cut -= 1;
+            }
+            if (cut <= 1) {
+              resolvedLines.push(remaining.slice(0, 1));
+              remaining = remaining.slice(1);
+              continue;
+            }
+            resolvedLines.push(remaining.slice(0, cut).trimEnd());
+            remaining = remaining.slice(cut).trimStart();
+          }
+        });
+
+        return resolvedLines.length > 0 ? resolvedLines : ["-"];
+      };
+
+      type MeasuredStoryCard = {
+        cardHeight: number;
+        titleLines: string[];
+        statsLines: string[];
+        perPersonLines: string[];
+      };
+
+      const measureStoryCard = (row: SummaryRow): MeasuredStoryCard => {
+        const innerWidth = contentWidth - 8;
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(9.2);
+        const titleLines = splitTextToSizeStrict(normalizePdfText(row.title || "-"), innerWidth);
+
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(8.4);
+        const statsLines = splitTextToSizeStrict(
+          `Moy: ${row.average}   |   Med: ${row.median}   |   Consensus: ${row.consensus}`,
+          innerWidth,
+        );
+
+        const perPersonVotes = (row.votes ?? [])
+          .map((vote) => {
+            const player = normalizePdfText(vote.playerName || "Participant");
+            return `${player}: ${displayVoteValue(vote.value || "-")}`;
+          })
+          .sort((a, b) => a.localeCompare(b, "fr", { sensitivity: "base" }));
+
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(8.3);
+        const perPersonLines = (
+          perPersonVotes.length > 0
+            ? perPersonVotes.flatMap((entry) => splitTextToSizeStrict(`- ${entry}`, innerWidth))
+            : ["- Aucune estimation individuelle."]
+        ) as string[];
+
+        const cardHeight =
+          14 +
+          Math.max(1, titleLines.length) * 4.3 +
+          Math.max(1, statsLines.length) * 3.9 +
+          3.8 +
+          Math.max(1, perPersonLines.length) * 3.9 +
+          4;
+
+        return {
+          cardHeight,
+          titleLines,
+          statsLines,
+          perPersonLines,
+        };
+      };
+
       addPageBackground("Synthese session - export atelier");
       let cursorY = margin + 26;
 
@@ -756,14 +870,12 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
       cursorY += 2;
       cursorY = drawStoryPageHeader(cursorY);
 
-      const drawStoryCard = (row: (typeof summaryRows)[number], y: number) => {
-        const titleLines = pdf.splitTextToSize(row.title || "-", contentWidth - 8);
-        const cardHeight = 12 + titleLines.length * 4.8 + 5;
+      const drawStoryCard = (row: SummaryRow, y: number, measured: MeasuredStoryCard) => {
         pdf.setFillColor(15, 23, 42);
-        pdf.roundedRect(margin, y, contentWidth, cardHeight, 3, 3, "F");
+        pdf.roundedRect(margin, y, contentWidth, measured.cardHeight, 3, 3, "F");
         pdf.setDrawColor(30, 41, 59);
         pdf.setLineWidth(0.3);
-        pdf.roundedRect(margin, y, contentWidth, cardHeight, 3, 3, "S");
+        pdf.roundedRect(margin, y, contentWidth, measured.cardHeight, 3, 3, "S");
 
         pdf.setFont("helvetica", "bold");
         pdf.setFontSize(8.5);
@@ -771,32 +883,41 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
         pdf.text(row.roundLabel, margin + 3, y + 4.8);
         pdf.text(`${row.totalVotes} votes`, margin + contentWidth - 3, y + 4.8, { align: "right" });
 
+        let rowCursorY = y + 9.2;
         pdf.setFont("helvetica", "bold");
-        pdf.setFontSize(9.5);
+        pdf.setFontSize(9.2);
         pdf.setTextColor(236, 254, 255);
-        pdf.text(titleLines, margin + 3, y + 9.2);
+        pdf.text(measured.titleLines, margin + 3, rowCursorY);
+        rowCursorY += Math.max(1, measured.titleLines.length) * 4.3 + 0.7;
 
         pdf.setFont("helvetica", "normal");
-        pdf.setFontSize(8.8);
+        pdf.setFontSize(8.4);
         pdf.setTextColor(186, 230, 253);
-        pdf.text(
-          `Moy: ${row.average}   |   Med: ${row.median}   |   Consensus: ${row.consensus}`,
-          margin + 3,
-          y + cardHeight - 2.8,
-        );
+        pdf.text(measured.statsLines, margin + 3, rowCursorY);
+        rowCursorY += Math.max(1, measured.statsLines.length) * 3.9 + 1.1;
 
-        return cardHeight;
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(8.2);
+        pdf.setTextColor(148, 163, 184);
+        pdf.text("Estimations par personne", margin + 3, rowCursorY);
+        rowCursorY += 3.6;
+
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(8.3);
+        pdf.setTextColor(226, 232, 240);
+        pdf.text(measured.perPersonLines, margin + 3, rowCursorY);
+
+        return measured.cardHeight;
       };
 
       for (const row of summaryRows) {
-        const titleLines = pdf.splitTextToSize(row.title || "-", contentWidth - 8);
-        const cardHeight = 12 + titleLines.length * 4.8 + 5;
-        if (cursorY + cardHeight > pageHeight - margin) {
+        const measured = measureStoryCard(row);
+        if (cursorY + measured.cardHeight > pageHeight - margin) {
           pdf.addPage();
           addPageBackground("Details stories");
           cursorY = drawStoryPageHeader(margin + 27);
         }
-        cursorY += drawStoryCard(row, cursorY) + 2;
+        cursorY += drawStoryCard(row, cursorY, measured) + 2;
       }
 
       const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
