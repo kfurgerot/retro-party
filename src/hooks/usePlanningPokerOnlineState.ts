@@ -412,6 +412,10 @@ export function usePlanningPokerOnlineState() {
     socket.emit(C2S_EVENTS.SELECT_POKER_STORY, { index });
   }, []);
 
+  const updatePreparedStoryTitle = useCallback((index: number, storyTitle: string) => {
+    socket.emit(C2S_EVENTS.UPDATE_POKER_STORY_TITLE, { index, storyTitle });
+  }, []);
+
   const isHost = useMemo(() => {
     if (!myPlayerId) return false;
     return state.players.some((player) => player.socketId === myPlayerId && player.isHost);
@@ -451,5 +455,6 @@ export function usePlanningPokerOnlineState() {
     setRole,
     setStoryTitle,
     selectPokerStory,
+    updatePreparedStoryTitle,
   };
 }

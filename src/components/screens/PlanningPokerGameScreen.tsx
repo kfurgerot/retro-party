@@ -62,6 +62,7 @@ type Props = {
   onVoteSystemChange: (voteSystem: PlanningPokerState["voteSystem"]) => void;
   onStoryTitleChange: (storyTitle: string) => void;
   onSelectPokerStory?: (index: number) => void;
+  onUpdatePreparedStoryTitle?: (index: number, storyTitle: string) => void;
 };
 
 type SessionEntry = {
@@ -126,15 +127,15 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
   onVoteSystemChange,
   onStoryTitleChange,
   onSelectPokerStory,
+  onUpdatePreparedStoryTitle,
 }) => {
   const hasPreparedStories = state.preparedStories.length > 0;
   const [mobileActionsOpen, setMobileActionsOpen] = useState(false);
-  const [mobileMenuTab, setMobileMenuTab] = useState<"spectators" | "session">("session");
-  const [mobileSessionTab, setMobileSessionTab] = useState<
-    "current" | "history" | "summary" | "stories"
-  >("current");
-  const [sidebarTab, setSidebarTab] = useState<"spectators" | "session" | "summary" | "stories">(
-    "session",
+  const [mobileMenuTab, setMobileMenuTab] = useState<"stories" | "spectators" | "summary">(
+    hasPreparedStories ? "stories" : "summary",
+  );
+  const [sidebarTab, setSidebarTab] = useState<"spectators" | "summary" | "stories">(
+    hasPreparedStories ? "stories" : "summary",
   );
   const [sessionCursor, setSessionCursor] = useState(0);
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
@@ -142,6 +143,10 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
   const [storyDraft, setStoryDraft] = useState(state.storyTitle);
   const [mobileStoryEditorOpen, setMobileStoryEditorOpen] = useState(false);
   const [mobileStoryEditorDraft, setMobileStoryEditorDraft] = useState(state.storyTitle);
+  const [mobileStoryEditorMode, setMobileStoryEditorMode] = useState<"current" | "prepared">(
+    "current",
+  );
+  const [mobileStoryEditorIndex, setMobileStoryEditorIndex] = useState(-1);
   const mobileStoryEditorInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const votingPlayers = useMemo(
@@ -162,32 +167,6 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
     [votingPlayers],
   );
   const totalVoters = votingPlayers.length;
-  const voteProgressLabel = `${votedCount}/${totalVoters}`;
-  const voteProgressPct = totalVoters > 0 ? Math.round((votedCount / totalVoters) * 100) : 0;
-  const voteEntries = useMemo(
-    () => Object.entries(stats.distribution).sort(([, a], [, b]) => b - a),
-    [stats.distribution],
-  );
-  const leadVote = voteEntries[0] ?? null;
-  const consensusPct =
-    leadVote && stats.totalVotes > 0 ? Math.round((leadVote[1] / stats.totalVotes) * 100) : 0;
-  const consensusLabel = !state.votesOpen
-    ? "Votes non lances"
-    : !state.revealed
-      ? "En attente de revelation"
-      : !leadVote
-        ? "Pas de vote"
-        : consensusPct >= 80
-          ? "Consensus fort"
-          : consensusPct >= 60
-            ? "Consensus modere"
-            : "Consensus faible";
-  const averageLabel = state.revealed
-    ? formatPlanningValueForSystem(stats.average, state.voteSystem)
-    : "-";
-  const medianLabel = state.revealed
-    ? formatPlanningValueForSystem(stats.median, state.voteSystem)
-    : "-";
   const historyEntries = useMemo(() => {
     const byStory = new Map<string, PlanningPokerRoundSummary>();
     for (const entry of history) {
@@ -209,6 +188,97 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
       return (b.revealedAt ?? 0) - (a.revealedAt ?? 0);
     });
   }, [history]);
+  const historyByStoryTitle = useMemo(() => {
+    const byStory = new Map<string, PlanningPokerRoundSummary>();
+    for (const entry of historyEntries) {
+      const key = entry.storyTitle?.trim();
+      if (key) byStory.set(key, entry);
+    }
+    return byStory;
+  }, [historyEntries]);
+  const votedStoryTitles = useMemo(
+    () => new Set(historyByStoryTitle.keys()),
+    [historyByStoryTitle],
+  );
+  const archivedStorySnapshot = useMemo(() => {
+    if (state.votesOpen || state.revealed) return null;
+    const key = state.storyTitle.trim();
+    if (!key) return null;
+    return historyByStoryTitle.get(key) ?? null;
+  }, [historyByStoryTitle, state.revealed, state.storyTitle, state.votesOpen]);
+  const displayedVoteSystem = archivedStorySnapshot?.voteSystem ?? state.voteSystem;
+  const displayedVoteStats = useMemo(
+    () =>
+      archivedStorySnapshot
+        ? {
+            totalVotes: archivedStorySnapshot.totalVotes,
+            average: archivedStorySnapshot.average,
+            median: archivedStorySnapshot.median,
+            min: archivedStorySnapshot.min,
+            max: archivedStorySnapshot.max,
+            distribution: archivedStorySnapshot.distribution,
+          }
+        : stats,
+    [archivedStorySnapshot, stats],
+  );
+  const displayedVotedCount = archivedStorySnapshot ? displayedVoteStats.totalVotes : votedCount;
+  const displayedTotalVoters = archivedStorySnapshot
+    ? Math.max(totalVoters, displayedVoteStats.totalVotes, 1)
+    : totalVoters;
+  const voteProgressLabel = `${displayedVotedCount}/${displayedTotalVoters}`;
+  const voteProgressPct =
+    displayedTotalVoters > 0 ? Math.round((displayedVotedCount / displayedTotalVoters) * 100) : 0;
+  const voteEntries = useMemo(
+    () => Object.entries(displayedVoteStats.distribution).sort(([, a], [, b]) => b - a),
+    [displayedVoteStats.distribution],
+  );
+  const leadVote = voteEntries[0] ?? null;
+  const consensusPct =
+    leadVote && displayedVoteStats.totalVotes > 0
+      ? Math.round((leadVote[1] / displayedVoteStats.totalVotes) * 100)
+      : 0;
+  const consensusLabel = archivedStorySnapshot
+    ? "Vote deja revele"
+    : !state.votesOpen
+      ? "Votes non lances"
+      : !state.revealed
+        ? "En attente de revelation"
+        : !leadVote
+          ? "Pas de vote"
+          : consensusPct >= 80
+            ? "Consensus fort"
+            : consensusPct >= 60
+              ? "Consensus modere"
+              : "Consensus faible";
+  const averageLabel = archivedStorySnapshot
+    ? formatPlanningValueForSystem(displayedVoteStats.average, displayedVoteSystem)
+    : state.revealed
+      ? formatPlanningValueForSystem(stats.average, state.voteSystem)
+      : "-";
+  const medianLabel = archivedStorySnapshot
+    ? formatPlanningValueForSystem(displayedVoteStats.median, displayedVoteSystem)
+    : state.revealed
+      ? formatPlanningValueForSystem(stats.median, state.voteSystem)
+      : "-";
+  const displayedRevealed = archivedStorySnapshot ? true : state.revealed;
+  const displayedVotesOpen = archivedStorySnapshot ? false : state.votesOpen;
+  const displayedRound = archivedStorySnapshot?.round ?? state.round;
+  const tablePlayers = useMemo(() => {
+    if (!archivedStorySnapshot) return votingPlayers;
+    if (!Array.isArray(archivedStorySnapshot.votes) || archivedStorySnapshot.votes.length === 0) {
+      return votingPlayers;
+    }
+    return archivedStorySnapshot.votes.map((vote, index) => ({
+      socketId: `archived-${archivedStorySnapshot.id}-${index}`,
+      name: vote.playerName,
+      avatar: vote.avatar,
+      isHost: false,
+      connected: true,
+      role: "player" as const,
+      hasVoted: true,
+      vote: vote.value || null,
+    }));
+  }, [archivedStorySnapshot, votingPlayers]);
   const sessionEntries = useMemo<SessionEntry[]>(
     () => [
       {
@@ -294,19 +364,6 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
       voteSystemsLabel,
     };
   }, [historyEntries]);
-  const selectedStatusLabel = selectedSession?.isCurrent
-    ? state.revealed
-      ? "Revele"
-      : state.votesOpen
-        ? "Vote en cours"
-        : "Votes non lances"
-    : "Question archivee";
-  const selectedProgressLabel = selectedSession?.isCurrent
-    ? voteProgressLabel
-    : `${selectedSession?.totalVotes ?? 0} votes`;
-  const mobileSessionActionLabel = selectedSession?.isCurrent ? "🔓 Revoter" : "🔓 Réouvrir";
-  const mobileSessionActionDisabled =
-    !isHost || (selectedSession?.isCurrent ? !state.revealed : false);
   const summaryRows = useMemo(() => {
     const orderedHistory = [...historyEntries].sort((a, b) => {
       if (a.round !== b.round) return a.round - b.round;
@@ -391,15 +448,6 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
     setMobileActionsOpen(false);
   }, [isHost, onReopenStoryVote, selectedSession, state.round, state.storyTitle]);
 
-  const handleMobileSessionAction = React.useCallback(() => {
-    if (!isHost || !selectedSession) return;
-    if (selectedSession.isCurrent) {
-      onRevoteCurrentStory();
-      return;
-    }
-    reopenPastQuestion();
-  }, [isHost, onRevoteCurrentStory, reopenPastQuestion, selectedSession]);
-
   const hostMainActionLabel = state.revealed
     ? "Vote suivant"
     : !state.votesOpen
@@ -423,10 +471,20 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
     onStoryTitleChange(normalized);
   }, [isHost, onStoryTitleChange, state.storyTitle, storyDraft]);
 
-  const openMobileStoryEditor = React.useCallback(() => {
-    setMobileStoryEditorDraft(storyDraft);
-    setMobileStoryEditorOpen(true);
-  }, [storyDraft]);
+  const canEditPreparedStories = isHost && typeof onUpdatePreparedStoryTitle === "function";
+
+  const openPreparedStoryEditor = React.useCallback(
+    (index: number) => {
+      if (!canEditPreparedStories) return;
+      const story = state.preparedStories[index];
+      if (!story) return;
+      setMobileStoryEditorMode("prepared");
+      setMobileStoryEditorIndex(index);
+      setMobileStoryEditorDraft(story.title);
+      setMobileStoryEditorOpen(true);
+    },
+    [canEditPreparedStories, state.preparedStories],
+  );
 
   const saveMobileStoryEditor = React.useCallback(() => {
     if (!isHost) return;
@@ -436,13 +494,31 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
       setMobileActionsOpen(false);
       return;
     }
-    if (normalized !== state.storyTitle) {
+    if (mobileStoryEditorMode === "prepared") {
+      const targetStory = state.preparedStories[mobileStoryEditorIndex];
+      if (targetStory && normalized !== targetStory.title) {
+        onUpdatePreparedStoryTitle?.(mobileStoryEditorIndex, normalized);
+      }
+      if (state.currentStoryIndex === mobileStoryEditorIndex) {
+        setStoryDraft(normalized);
+      }
+    } else if (normalized !== state.storyTitle) {
       onStoryTitleChange(normalized);
       setStoryDraft(normalized);
     }
     setMobileStoryEditorOpen(false);
     setMobileActionsOpen(false);
-  }, [isHost, mobileStoryEditorDraft, onStoryTitleChange, state.storyTitle]);
+  }, [
+    isHost,
+    mobileStoryEditorDraft,
+    mobileStoryEditorIndex,
+    mobileStoryEditorMode,
+    onStoryTitleChange,
+    onUpdatePreparedStoryTitle,
+    state.currentStoryIndex,
+    state.preparedStories,
+    state.storyTitle,
+  ]);
 
   const handleDeckVote = React.useCallback(
     (value: string) => {
@@ -623,12 +699,12 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
             )}
           >
             <PlanningPokerRoundBoard
-              players={votingPlayers}
-              revealed={state.revealed}
-              votesOpen={state.votesOpen}
+              players={tablePlayers}
+              revealed={displayedRevealed}
+              votesOpen={displayedVotesOpen}
               storyTitle={state.storyTitle}
-              round={state.round}
-              voteSystem={state.voteSystem}
+              round={displayedRound}
+              voteSystem={displayedVoteSystem}
             />
 
             {/* ── Vote deck ── */}
@@ -770,20 +846,8 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
           {/* ── Desktop sidebar ── */}
           <div className={cn(PANEL, "hidden min-h-0 p-3 lg:flex lg:flex-col")}>
             {/* Sidebar tab bar */}
-            <div
-              className={cn(
-                "mb-2 grid w-full gap-1.5",
-                hasPreparedStories ? "grid-cols-4" : "grid-cols-3",
-              )}
-            >
-              {(
-                [
-                  ...(hasPreparedStories ? ["stories"] : []),
-                  "spectators",
-                  "session",
-                  "summary",
-                ] as const
-              ).map((tab) => (
+            <div className={cn("mb-2 grid w-full gap-1.5", "grid-cols-3")}>
+              {(["stories", "spectators", "summary"] as const).map((tab) => (
                 <button
                   key={tab}
                   type="button"
@@ -800,65 +864,93 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                 >
                   {tab === "spectators"
                     ? "Spectateurs"
-                    : tab === "session"
-                      ? "Session"
-                      : tab === "stories"
-                        ? `Stories (${state.preparedStories.length})`
-                        : "Synthese"}
+                    : tab === "stories"
+                      ? `Stories (${state.preparedStories.length})`
+                      : "Synthese"}
                 </button>
               ))}
             </div>
 
             {sidebarTab === "stories" ? (
               <div className="grid min-h-0 gap-1.5 overflow-auto pr-1">
-                {state.preparedStories.map((story, idx) => {
-                  const isCurrent = idx === state.currentStoryIndex;
-                  const isDone = state.currentStoryIndex >= 0 && idx < state.currentStoryIndex;
-                  return (
-                    <button
-                      key={story.id}
-                      type="button"
-                      disabled={!isHost || isCurrent}
-                      onClick={() => onSelectPokerStory?.(idx)}
-                      className={cn(
-                        "flex items-start gap-2 rounded-xl border px-3 py-2 text-left text-xs transition-all",
-                        isCurrent
-                          ? "border-violet-400/40 bg-violet-500/15 text-violet-100"
-                          : isDone
-                            ? "border-white/[0.04] bg-white/[0.01] text-slate-600 line-through"
-                            : isHost
-                              ? "border-white/[0.06] bg-white/[0.02] text-slate-300 hover:border-violet-400/30 hover:bg-violet-500/10 hover:text-violet-200"
-                              : "border-white/[0.06] bg-white/[0.02] text-slate-300",
-                      )}
-                    >
-                      <span
+                {state.preparedStories.length === 0 ? (
+                  <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2 text-xs text-slate-400">
+                    Aucune story preparee pour cette session.
+                  </div>
+                ) : (
+                  state.preparedStories.map((story, idx) => {
+                    const isCurrent = idx === state.currentStoryIndex;
+                    const normalizedStoryTitle = story.title.trim();
+                    const isVoted = normalizedStoryTitle
+                      ? votedStoryTitles.has(normalizedStoryTitle)
+                      : false;
+                    const isDone = !isCurrent && isVoted;
+                    return (
+                      <div
+                        key={story.id}
                         className={cn(
-                          "mt-0.5 shrink-0 text-[10px] font-bold",
+                          "flex items-start gap-2 rounded-xl border px-3 py-2 text-left text-xs transition-all",
                           isCurrent
-                            ? "text-violet-400"
+                            ? "border-violet-400/40 bg-violet-500/15 text-violet-100"
                             : isDone
-                              ? "text-slate-600"
-                              : "text-slate-500",
+                              ? "border-white/[0.04] bg-white/[0.01] text-slate-600 line-through"
+                              : isHost
+                                ? "border-white/[0.06] bg-white/[0.02] text-slate-300 hover:border-violet-400/30 hover:bg-violet-500/10 hover:text-violet-200"
+                                : "border-white/[0.06] bg-white/[0.02] text-slate-300",
                         )}
                       >
-                        {String(idx + 1).padStart(2, "0")}
-                      </span>
-                      <div className="min-w-0">
-                        <div className="font-semibold leading-snug">{story.title}</div>
-                        {story.description && (
-                          <div className="mt-0.5 text-[10px] text-slate-500 line-clamp-2">
-                            {story.description}
+                        <button
+                          type="button"
+                          disabled={!isHost || isCurrent}
+                          onClick={() => onSelectPokerStory?.(idx)}
+                          className="flex min-w-0 flex-1 items-start gap-2 text-left disabled:cursor-not-allowed"
+                        >
+                          <span
+                            className={cn(
+                              "mt-0.5 shrink-0 text-[10px] font-bold",
+                              isCurrent
+                                ? "text-violet-400"
+                                : isDone
+                                  ? "text-slate-600"
+                                  : "text-slate-500",
+                            )}
+                          >
+                            {String(idx + 1).padStart(2, "0")}
+                          </span>
+                          <div className="min-w-0">
+                            <div className="font-semibold leading-snug">{story.title}</div>
+                            {story.description && (
+                              <div className="mt-0.5 text-[10px] text-slate-500 line-clamp-2">
+                                {story.description}
+                              </div>
+                            )}
                           </div>
-                        )}
+                        </button>
+                        <div className="ml-auto flex shrink-0 items-center gap-1">
+                          {canEditPreparedStories ? (
+                            <button
+                              type="button"
+                              onClick={() => openPreparedStoryEditor(idx)}
+                              className="h-6 rounded-md border border-violet-400/30 bg-violet-500/10 px-2 text-[10px] font-semibold text-violet-200 transition-colors hover:bg-violet-500/20"
+                            >
+                              Renommer
+                            </button>
+                          ) : null}
+                          {isCurrent && (
+                            <span className="rounded-full bg-violet-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-violet-300">
+                              En cours
+                            </span>
+                          )}
+                          {!isCurrent && isVoted && (
+                            <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-300">
+                              Voté
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      {isCurrent && (
-                        <span className="ml-auto shrink-0 rounded-full bg-violet-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-violet-300">
-                          En cours
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
+                    );
+                  })
+                )}
               </div>
             ) : sidebarTab === "spectators" ? (
               <div className="grid min-h-0 gap-2 overflow-auto pr-1">
@@ -1142,8 +1234,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                       CTA_SUBTLE,
                     )}
                     onClick={() => {
-                      setMobileMenuTab("session");
-                      setMobileSessionTab("current");
+                      setMobileMenuTab(hasPreparedStories ? "stories" : "summary");
                       setMobileActionsOpen(true);
                     }}
                   >
@@ -1192,12 +1283,11 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                       CTA_SUBTLE,
                     )}
                     onClick={() => {
-                      setMobileMenuTab("session");
-                      setMobileSessionTab("current");
+                      setMobileMenuTab(hasPreparedStories ? "stories" : "summary");
                       setMobileActionsOpen(true);
                     }}
                   >
-                    Session
+                    {hasPreparedStories ? "Stories" : "Synthese"}
                   </Button>
                   <Button
                     variant="secondary"
@@ -1221,52 +1311,114 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
       <Drawer open={mobileActionsOpen} onOpenChange={setMobileActionsOpen}>
         <DrawerContent className={DRAWER_CLS}>
           <DrawerHeader>
-            <DrawerTitle className="text-slate-100">
-              {mobileMenuTab === "spectators" ? "Spectateurs" : "Session"}
-            </DrawerTitle>
+            <DrawerTitle className="text-slate-100">Menu</DrawerTitle>
           </DrawerHeader>
-          {mobileMenuTab === "session" ? (
-            <div className="px-4 pb-2">
-              <div
-                className={cn(
-                  "grid gap-1 rounded-xl border border-white/[0.06] bg-slate-900/55 p-1",
-                  hasPreparedStories ? "grid-cols-4" : "grid-cols-3",
-                )}
-              >
-                {(
-                  [
-                    ...(hasPreparedStories ? ["stories"] : []),
-                    "current",
-                    "history",
-                    "summary",
-                  ] as const
-                ).map((tab) => (
-                  <button
-                    key={tab}
-                    type="button"
-                    onClick={() => setMobileSessionTab(tab)}
-                    className={cn(
-                      "h-8 rounded px-2 text-[11px] transition-colors",
-                      mobileSessionTab === tab
-                        ? tab === "stories"
-                          ? "bg-violet-500 text-white"
-                          : "bg-indigo-500 text-white"
-                        : "bg-transparent text-slate-300 hover:bg-white/[0.06]",
-                    )}
-                  >
-                    {tab === "current"
-                      ? "Vote en cours"
-                      : tab === "history"
-                        ? "Historique"
-                        : tab === "stories"
-                          ? "Stories"
-                          : "Synthese"}
-                  </button>
-                ))}
-              </div>
+          <div className="px-4 pb-2">
+            <div className="grid grid-cols-3 gap-1 rounded-xl border border-white/[0.06] bg-slate-900/55 p-1">
+              {(["stories", "spectators", "summary"] as const).map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setMobileMenuTab(tab)}
+                  className={cn(
+                    "h-8 rounded px-2 text-[11px] transition-colors",
+                    mobileMenuTab === tab
+                      ? tab === "stories"
+                        ? "bg-violet-500 text-white"
+                        : "bg-indigo-500 text-white"
+                      : "bg-transparent text-slate-300 hover:bg-white/[0.06]",
+                  )}
+                >
+                  {tab === "stories"
+                    ? "Stories"
+                    : tab === "spectators"
+                      ? "Spectateurs"
+                      : "Synthese"}
+                </button>
+              ))}
             </div>
-          ) : null}
+          </div>
           <div className="grid max-h-[72vh] gap-2 overflow-y-auto px-4 pb-4">
+            {mobileMenuTab === "stories" ? (
+              <div className="grid gap-1.5">
+                {state.preparedStories.length === 0 ? (
+                  <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2 text-xs text-slate-400">
+                    Aucune story preparee pour cette session.
+                  </div>
+                ) : (
+                  state.preparedStories.map((story, idx) => {
+                    const isCurrent = idx === state.currentStoryIndex;
+                    const normalizedStoryTitle = story.title.trim();
+                    const isVoted = normalizedStoryTitle
+                      ? votedStoryTitles.has(normalizedStoryTitle)
+                      : false;
+                    const isDone = !isCurrent && isVoted;
+                    return (
+                      <div
+                        key={story.id}
+                        className={cn(
+                          "flex items-start gap-2 rounded-xl border px-3 py-2 text-left text-xs",
+                          isCurrent
+                            ? "border-violet-400/40 bg-violet-500/15 text-violet-100"
+                            : isDone
+                              ? "border-white/[0.04] bg-white/[0.01] text-slate-600 line-through"
+                              : "border-white/[0.06] bg-white/[0.02] text-slate-300",
+                        )}
+                      >
+                        <button
+                          type="button"
+                          disabled={!isHost || isCurrent}
+                          onClick={() => {
+                            onSelectPokerStory?.(idx);
+                            setMobileActionsOpen(false);
+                          }}
+                          className="flex min-w-0 flex-1 items-start gap-2 text-left disabled:cursor-not-allowed"
+                        >
+                          <span
+                            className={cn(
+                              "mt-0.5 shrink-0 text-[10px] font-bold",
+                              isCurrent ? "text-violet-400" : "text-slate-500",
+                            )}
+                          >
+                            {String(idx + 1).padStart(2, "0")}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="font-semibold">{story.title}</div>
+                            {story.description && (
+                              <div className="mt-0.5 text-[10px] text-slate-500">
+                                {story.description}
+                              </div>
+                            )}
+                          </div>
+                        </button>
+                        <div className="ml-auto flex shrink-0 items-center gap-1">
+                          {canEditPreparedStories ? (
+                            <button
+                              type="button"
+                              onClick={() => openPreparedStoryEditor(idx)}
+                              className="h-6 rounded-md border border-violet-400/30 bg-violet-500/10 px-2 text-[10px] font-semibold text-violet-200"
+                            >
+                              Renommer
+                            </button>
+                          ) : null}
+                          {isCurrent && (
+                            <span className="rounded-full bg-violet-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase text-violet-300">
+                              En cours
+                            </span>
+                          )}
+                          {!isCurrent && isVoted && (
+                            <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase text-emerald-300">
+                              Voté
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            ) : null}
+
             {mobileMenuTab === "spectators" ? (
               <>
                 {spectators.length > 0 ? (
@@ -1285,331 +1437,60 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                   </div>
                 )}
               </>
-            ) : (
-              <>
-                {mobileSessionTab === "stories" ? (
-                  <div className="grid gap-1.5">
-                    {state.preparedStories.map((story, idx) => {
-                      const isCurrent = idx === state.currentStoryIndex;
-                      const isDone = state.currentStoryIndex >= 0 && idx < state.currentStoryIndex;
-                      return (
-                        <button
-                          key={story.id}
-                          type="button"
-                          disabled={!isHost || isCurrent}
-                          onClick={() => {
-                            onSelectPokerStory?.(idx);
-                            setMobileActionsOpen(false);
-                          }}
-                          className={cn(
-                            "flex items-start gap-2 rounded-xl border px-3 py-2 text-left text-xs",
-                            isCurrent
-                              ? "border-violet-400/40 bg-violet-500/15 text-violet-100"
-                              : isDone
-                                ? "border-white/[0.04] bg-white/[0.01] text-slate-600 line-through"
-                                : "border-white/[0.06] bg-white/[0.02] text-slate-300",
-                          )}
-                        >
-                          <span
-                            className={cn(
-                              "mt-0.5 shrink-0 text-[10px] font-bold",
-                              isCurrent ? "text-violet-400" : "text-slate-500",
-                            )}
-                          >
-                            {String(idx + 1).padStart(2, "0")}
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <div className="font-semibold">{story.title}</div>
-                            {story.description && (
-                              <div className="mt-0.5 text-[10px] text-slate-500">
-                                {story.description}
-                              </div>
-                            )}
-                          </div>
-                          {isCurrent && (
-                            <span className="ml-auto shrink-0 rounded-full bg-violet-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase text-violet-300">
-                              En cours
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                ) : null}
+            ) : null}
 
-                {mobileSessionTab === "current" ? (
-                  <div className={cn("rounded-xl p-2 text-xs", SUBPANEL)}>
-                    <div className="px-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-indigo-300/90">
-                      Vote en cours
-                    </div>
-                    <div className="mt-2 grid grid-cols-3 gap-1 rounded-xl border border-white/[0.06] bg-slate-900/55 p-1">
-                      {VOTE_SYSTEM_OPTIONS.map((option) => (
-                        <button
-                          key={`mobile-current-${option.value}`}
-                          type="button"
-                          onClick={() => isHost && onVoteSystemChange(option.value)}
-                          disabled={!isHost}
-                          className={cn(
-                            "h-8 rounded px-2 text-[11px] transition-colors disabled:cursor-not-allowed disabled:opacity-70",
-                            state.voteSystem === option.value
-                              ? "bg-indigo-500 text-white"
-                              : "bg-transparent text-slate-300 hover:bg-white/[0.06]",
-                          )}
-                        >
-                          {option.label}
-                        </button>
-                      ))}
-                    </div>
-                    {isHost ? (
-                      <button
-                        type="button"
-                        onClick={openMobileStoryEditor}
-                        className="mt-2 w-full rounded-xl border border-white/[0.06] bg-slate-950/55 px-2 py-2 text-left transition-colors hover:bg-slate-900/70"
-                      >
-                        <div className="text-[10px] uppercase tracking-[0.08em] text-slate-400">
-                          Nom de la story
-                        </div>
-                        <div className="truncate text-xs text-slate-100">
-                          {state.storyTitle || storyDraft || "Story en cours"}
-                        </div>
-                      </button>
-                    ) : (
-                      <div className="mt-2 rounded-xl border border-white/[0.06] bg-slate-950/55 px-2 py-2 text-left">
-                        <div className="text-[10px] uppercase tracking-[0.08em] text-slate-400">
-                          Nom de la story
-                        </div>
-                        <div className="truncate text-xs text-slate-100">
-                          {state.storyTitle || "Story en cours"}
-                        </div>
-                      </div>
-                    )}
+            {mobileMenuTab === "summary" ? (
+              <div className={cn("grid gap-2 rounded-xl p-2 text-xs", SUBPANEL)}>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400">Synthese des votes</span>
+                  <span className="text-[11px] text-slate-500">{summaryRows.length} lignes</span>
+                </div>
+                {summaryRows.length === 0 ? (
+                  <div className="rounded-xl border border-white/[0.05] bg-white/[0.015] px-2 py-1.5 text-xs text-slate-400">
+                    Aucune story revelee pour le moment.
                   </div>
-                ) : null}
-
-                {mobileSessionTab === "history" ? (
-                  <>
-                    <div className="px-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-indigo-300/90">
-                      Historique des votes
-                    </div>
-                    <div className="rounded-xl border border-white/[0.05] bg-white/[0.015] px-2 py-1.5 text-xs text-slate-100">
-                      <div className="mb-1 flex items-center justify-between gap-2">
-                        <span className="font-semibold">
-                          {selectedSession?.roundLabel ?? "Session"}
-                        </span>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            className={cn(
-                              TAB_BTN,
-                              "h-8 w-8 px-0 text-base font-semibold disabled:opacity-45",
-                            )}
-                            disabled={sessionCursor >= sessionEntries.length - 1}
-                            onClick={() =>
-                              setSessionCursor((value) =>
-                                Math.min(value + 1, sessionEntries.length - 1),
-                              )
-                            }
-                          >
-                            ‹
-                          </Button>
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            className={cn(
-                              TAB_BTN,
-                              "h-8 w-8 px-0 text-base font-semibold disabled:opacity-45",
-                            )}
-                            disabled={sessionCursor <= 0}
-                            onClick={() => setSessionCursor((value) => Math.max(value - 1, 0))}
-                          >
-                            ›
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="truncate text-sm font-semibold">
-                        {selectedSession?.storyTitle || "-"}
-                      </div>
-                      <div className="mt-2 grid grid-cols-2 gap-2">
-                        <div className="rounded-xl border border-white/[0.05] bg-white/[0.015] px-2 py-1">
-                          <div className="text-[10px] text-slate-400">Statut</div>
-                          <div className="font-semibold text-slate-100">{selectedStatusLabel}</div>
-                        </div>
-                        <div className="rounded-xl border border-white/[0.05] bg-white/[0.015] px-2 py-1">
-                          <div className="text-[10px] text-slate-400">Nombre de votes</div>
-                          <div className="font-semibold text-slate-100">
-                            {selectedProgressLabel}
-                          </div>
-                        </div>
-                      </div>
-                      {isHost ? (
-                        <div className="mt-1 flex justify-end">
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            className={cn(
-                              TAB_BTN,
-                              "h-7 min-w-[92px] px-2 text-[11px] disabled:opacity-45",
-                            )}
-                            disabled={mobileSessionActionDisabled}
-                            onClick={handleMobileSessionAction}
-                          >
-                            {mobileSessionActionLabel}
-                          </Button>
-                        </div>
-                      ) : null}
-                    </div>
-                    <div className="grid max-h-[44vh] gap-2 overflow-y-auto pr-1">
+                ) : (
+                  <div className="grid max-h-[52vh] gap-1 overflow-y-auto pr-1">
+                    {summaryRows.map((row) => (
                       <div
-                        className={cn("grid grid-cols-2 gap-2 rounded-xl p-2 text-xs", SUBPANEL)}
+                        key={`mobile-summary-row-${row.id}`}
+                        className="rounded-xl border border-white/[0.04] bg-white/[0.01] px-2 py-1.5"
                       >
-                        <div className="col-span-2 text-slate-400">Statistiques</div>
-                        <div>
-                          <div className="text-slate-400">Moyenne</div>
-                          <div className="font-semibold text-slate-100">
-                            {selectedSession?.isCurrent
-                              ? averageLabel
-                              : formatPlanningValueForSystem(
-                                  selectedSession?.average ?? null,
-                                  selectedSession?.voteSystem ?? state.voteSystem,
-                                )}
-                          </div>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] text-slate-400">{row.roundLabel}</span>
+                          <span className="text-[10px] text-slate-400">{row.totalVotes} votes</span>
                         </div>
-                        <div>
-                          <div className="text-slate-400">Mediane</div>
-                          <div className="font-semibold text-slate-100">
-                            {selectedSession?.isCurrent
-                              ? medianLabel
-                              : formatPlanningValueForSystem(
-                                  selectedSession?.median ?? null,
-                                  selectedSession?.voteSystem ?? state.voteSystem,
-                                )}
+                        <div className="truncate text-sm font-semibold text-slate-100">
+                          {row.title}
+                        </div>
+                        <div className="mt-1 grid grid-cols-3 gap-2 text-[11px]">
+                          <div>
+                            <div className="text-slate-400">Moy.</div>
+                            <div className="text-indigo-300">{row.average}</div>
+                          </div>
+                          <div>
+                            <div className="text-slate-400">Med.</div>
+                            <div className="text-indigo-300">{row.median}</div>
+                          </div>
+                          <div>
+                            <div className="text-slate-400">Consensus</div>
+                            <div className="text-indigo-300">{row.consensus}</div>
                           </div>
                         </div>
                       </div>
-                      <div
-                        className={cn("grid grid-cols-2 gap-2 rounded-xl p-2 text-xs", SUBPANEL)}
-                      >
-                        <div>
-                          <div className="text-slate-400">Min</div>
-                          <div className="font-semibold text-slate-100">
-                            {formatPlanningValueForSystem(
-                              selectedSession?.isCurrent
-                                ? stats.min
-                                : (selectedSession?.min ?? null),
-                              selectedSession?.voteSystem ?? state.voteSystem,
-                            )}
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-slate-400">Max</div>
-                          <div className="font-semibold text-slate-100">
-                            {formatPlanningValueForSystem(
-                              selectedSession?.isCurrent
-                                ? stats.max
-                                : (selectedSession?.max ?? null),
-                              selectedSession?.voteSystem ?? state.voteSystem,
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      {selectedSession?.totalVotes ? (
-                        <div className={cn("grid gap-1.5 rounded-xl p-2 text-xs", SUBPANEL)}>
-                          <div className="text-slate-400">Repartition</div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-slate-400">Consensus</span>
-                            <span className="font-semibold text-slate-100">
-                              {selectedLeadVote
-                                ? `${displayVoteValue(selectedLeadVote[0])} (${selectedConsensusPct}%)`
-                                : "-"}
-                            </span>
-                          </div>
-                          {selectedVoteEntries.map(([value, count]) => {
-                            const totalVotes = selectedSession?.totalVotes ?? 0;
-                            const barPct =
-                              totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
-                            return (
-                              <div
-                                key={`mobile-session-distribution-${value}`}
-                                className="grid gap-1"
-                              >
-                                <div className="flex items-center justify-between text-[11px]">
-                                  <span className="text-slate-200">{displayVoteValue(value)}</span>
-                                  <span className="text-slate-400">{count}</span>
-                                </div>
-                                <div className="h-1.5 overflow-hidden rounded bg-slate-900/55">
-                                  <div
-                                    className="h-full rounded bg-indigo-400/80"
-                                    style={{ width: `${barPct}%` }}
-                                  />
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ) : null}
-                    </div>
-                  </>
-                ) : null}
-
-                {mobileSessionTab === "summary" ? (
-                  <div className={cn("grid gap-2 rounded-xl p-2 text-xs", SUBPANEL)}>
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-400">Synthese des votes</span>
-                      <span className="text-[11px] text-slate-500">
-                        {summaryRows.length} lignes
-                      </span>
-                    </div>
-                    {summaryRows.length === 0 ? (
-                      <div className="rounded-xl border border-white/[0.05] bg-white/[0.015] px-2 py-1.5 text-xs text-slate-400">
-                        Aucune story revelee pour le moment.
-                      </div>
-                    ) : (
-                      <div className="grid max-h-[52vh] gap-1 overflow-y-auto pr-1">
-                        {summaryRows.map((row) => (
-                          <div
-                            key={`mobile-summary-row-${row.id}`}
-                            className="rounded-xl border border-white/[0.04] bg-white/[0.01] px-2 py-1.5"
-                          >
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="text-[10px] text-slate-400">{row.roundLabel}</span>
-                              <span className="text-[10px] text-slate-400">
-                                {row.totalVotes} votes
-                              </span>
-                            </div>
-                            <div className="truncate text-sm font-semibold text-slate-100">
-                              {row.title}
-                            </div>
-                            <div className="mt-1 grid grid-cols-3 gap-2 text-[11px]">
-                              <div>
-                                <div className="text-slate-400">Moy.</div>
-                                <div className="text-indigo-300">{row.average}</div>
-                              </div>
-                              <div>
-                                <div className="text-slate-400">Med.</div>
-                                <div className="text-indigo-300">{row.median}</div>
-                              </div>
-                              <div>
-                                <div className="text-slate-400">Consensus</div>
-                                <div className="text-indigo-300">{row.consensus}</div>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    ))}
                   </div>
-                ) : null}
-              </>
-            )}
+                )}
+              </div>
+            ) : null}
           </div>
         </DrawerContent>
       </Drawer>
 
-      {/* ── Mobile story editor dialog ── */}
+      {/* ── Story editor dialog ── */}
       <AlertDialog open={mobileStoryEditorOpen} onOpenChange={setMobileStoryEditorOpen}>
         <AlertDialogContent
-          className={cn(DIALOG_CLS, "max-w-md sm:hidden")}
+          className={cn(DIALOG_CLS, "max-w-md")}
           onOpenAutoFocus={(event) => {
             event.preventDefault();
             mobileStoryEditorInputRef.current?.focus();
@@ -1617,14 +1498,22 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
         >
           <AlertDialogHeader>
             <AlertDialogTitle className="text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-indigo-300/90">
-              Configuration du vote en cours
+              {mobileStoryEditorMode === "prepared"
+                ? "Modification d'une story"
+                : "Configuration du vote en cours"}
             </AlertDialogTitle>
             <AlertDialogDescription className="sr-only">
-              Edition du nom de la story
+              {mobileStoryEditorMode === "prepared"
+                ? "Edition du nom d'une story preparee"
+                : "Edition du nom de la story en cours"}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="rounded-xl border border-white/[0.06] bg-slate-950 p-3">
-            <div className="text-sm font-semibold text-slate-100">Renommer la story</div>
+            <div className="text-sm font-semibold text-slate-100">
+              {mobileStoryEditorMode === "prepared"
+                ? "Renommer la story de la liste"
+                : "Renommer la story en cours"}
+            </div>
             <input
               ref={mobileStoryEditorInputRef}
               type="text"
@@ -1634,7 +1523,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                 if (event.key === "Enter") saveMobileStoryEditor();
               }}
               className="mt-2 h-10 w-full rounded-xl border border-white/[0.08] bg-slate-950 px-3 text-sm text-slate-100 outline-none focus:border-indigo-400/50 transition"
-              placeholder="Story en cours"
+              placeholder="Nom de la story"
             />
           </div>
           <AlertDialogFooter className="mt-0 grid grid-cols-2 gap-2 sm:space-x-0">
