@@ -186,31 +186,45 @@ const AuthModal = ({
   };
 
   const inputCls =
-    "w-full h-11 rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 text-sm text-slate-100 placeholder:text-slate-600 outline-none focus:border-white/20 focus:ring-1 focus:ring-indigo-400/50 transition";
+    "h-11 w-full rounded-2xl border border-white/[0.08] bg-white/[0.04] px-4 text-sm text-slate-100 placeholder:text-slate-600 outline-none transition focus:border-white/20 focus:ring-1 focus:ring-indigo-400/50";
+
+  const titleByTab: Record<AuthTab, string> = {
+    login: "Connexion",
+    register: "Créer un compte",
+    forgot: "Réinitialiser le mot de passe",
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm rounded-2xl border border-white/[0.08] bg-[#0d0d1a] p-0 shadow-2xl [&>button]:text-slate-400 [&>button]:hover:text-slate-100">
-        <div className="p-6">
-          {/* Brand */}
-          <div className="mb-5 flex items-center gap-2">
+      <DialogContent className="max-w-md rounded-2xl border border-white/[0.08] bg-[#0d0d1a] p-0 shadow-2xl [&>button]:text-slate-400 [&>button]:hover:text-slate-100">
+        <div className="rounded-t-2xl border-b border-white/[0.08] bg-gradient-to-r from-indigo-500/14 via-violet-500/9 to-pink-500/12 p-5">
+          <div className="mb-2 flex items-center gap-2">
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 text-sm">
               ⚡
             </div>
-            <span className="text-xs font-bold uppercase tracking-[0.12em] text-indigo-400">
+            <span className="text-xs font-bold uppercase tracking-[0.12em] text-indigo-300">
               Agile Suite
             </span>
           </div>
+          <div className="text-base font-semibold text-slate-100">{titleByTab[tab]}</div>
+          <p className="mt-1 text-xs text-slate-400">
+            {tab === "login"
+              ? "Retrouve tes sessions et tes templates."
+              : tab === "register"
+                ? "Configure ton profil et accède à tout l'espace AgileSuite."
+                : "On t'envoie un lien sécurisé pour définir un nouveau mot de passe."}
+          </p>
+        </div>
 
-          {/* Tabs */}
-          <div className="mb-5 flex gap-1 rounded-xl border border-white/[0.06] bg-white/[0.02] p-1">
+        <div className="p-5">
+          <div className="mb-4 flex gap-1 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-1">
             {(["login", "register", "forgot"] as AuthTab[]).map((t) => (
               <button
                 key={t}
                 type="button"
                 onClick={() => handleTab(t)}
                 className={cn(
-                  "flex-1 rounded-lg py-2 text-xs font-semibold transition-all",
+                  "flex-1 rounded-xl py-2 text-xs font-semibold transition-all",
                   tab === t
                     ? "bg-indigo-500 text-white shadow-sm"
                     : "text-slate-500 hover:text-slate-300",
@@ -221,52 +235,68 @@ const AuthModal = ({
             ))}
           </div>
 
-          {/* Messages */}
           {error && (
-            <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm text-red-300">
+            <div className="mb-4 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm text-red-300">
               {error}
             </div>
           )}
           {info && (
-            <div className="mb-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5 text-sm text-emerald-300">
+            <div className="mb-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5 text-sm text-emerald-300">
               {info}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-3">
             {tab === "register" && (
-              <input
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="Ton nom d'affichage"
-                className={inputCls}
-                autoFocus
-              />
+              <div className="space-y-1">
+                <label className="block text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500">
+                  Nom d'affichage
+                </label>
+                <input
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="Ton nom"
+                  className={inputCls}
+                  autoFocus
+                />
+              </div>
             )}
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Adresse e-mail"
-              required
-              className={inputCls}
-              autoFocus={tab !== "register"}
-            />
-            {tab !== "forgot" && (
+
+            <div className="space-y-1">
+              <label className="block text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500">
+                Adresse e-mail
+              </label>
               <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Mot de passe (min. 8 caractères)"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="nom@entreprise.com"
                 required
                 className={inputCls}
+                autoFocus={tab !== "register"}
               />
+            </div>
+
+            {tab !== "forgot" && (
+              <div className="space-y-1">
+                <label className="block text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500">
+                  Mot de passe
+                </label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Au moins 8 caractères"
+                  required
+                  className={inputCls}
+                />
+              </div>
             )}
 
             <button
               type="submit"
               disabled={loading}
-              className="mt-1 h-11 w-full rounded-xl bg-indigo-500 text-sm font-bold text-white transition hover:bg-indigo-400 disabled:opacity-50"
+              className="mt-1 h-11 w-full rounded-2xl bg-indigo-500 text-sm font-bold text-white transition hover:bg-indigo-400 disabled:opacity-50"
               style={{ boxShadow: "0 4px 16px rgba(99,102,241,0.35)" }}
             >
               {loading
@@ -822,71 +852,164 @@ const ToolCard = ({
         )}
       >
         <div className="overflow-hidden">
-          <div className="m-3 mt-0 rounded-xl border border-white/[0.08] bg-white/[0.03] p-3">
-            <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
-              Code Room
-            </label>
-            <input
-              value={code}
-              onChange={(e) => onCodeChange(tool.id, e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && canJoin) onJoin(tool.id, code);
-              }}
-              placeholder="Ex: AB12"
-              className="mb-3 h-10 w-full rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 font-mono text-sm tracking-widest text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-white/[0.18] focus:ring-1 focus:ring-indigo-400/60"
-            />
+          <div className="m-3 mt-0 space-y-2.5">
+            <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3">
+              <div className="mb-2">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                  Rejoindre une session
+                </p>
+                <p className="mt-0.5 text-[11px] text-slate-500">
+                  Saisis le code partagé par l'animateur.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto]">
+                <div
+                  className={cn(
+                    "flex h-10 items-center gap-2 rounded-2xl border px-2.5 transition",
+                    "bg-white/[0.04]",
+                    canJoin
+                      ? "border-white/[0.2] shadow-[0_0_0_1px_rgba(99,102,241,0.28)]"
+                      : "border-white/[0.08]",
+                  )}
+                >
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/[0.12] bg-white/[0.05] font-mono text-[11px] font-semibold text-slate-400">
+                    #
+                  </span>
+                  <input
+                    value={code}
+                    onChange={(e) => onCodeChange(tool.id, e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && canJoin) onJoin(tool.id, code);
+                    }}
+                    placeholder="AB12"
+                    autoComplete="off"
+                    inputMode="text"
+                    className="h-full w-full border-none bg-transparent px-0 font-mono text-sm tracking-widest text-slate-100 outline-none placeholder:tracking-[0.08em] placeholder:text-slate-600"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => canJoin && onJoin(tool.id, code)}
+                  disabled={!canJoin}
+                  className={cn(
+                    "h-10 rounded-2xl px-4 text-[13px] font-semibold transition",
+                    canJoin
+                      ? "text-white hover:brightness-110"
+                      : "cursor-not-allowed bg-white/5 text-slate-600",
+                  )}
+                  style={canJoin ? { background: tool.color } : undefined}
+                >
+                  Rejoindre
+                </button>
+              </div>
+              <p className="mt-1 text-[11px] text-slate-500">Code court (4 à 6 caractères)</p>
+            </div>
 
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-              <button
-                type="button"
-                onClick={() =>
-                  canPrepare ? (isLoggedIn ? onPrepare() : onLoginRequired()) : undefined
-                }
-                disabled={!canPrepare}
-                className={cn(
-                  "h-10 rounded-lg border text-[13px] font-semibold transition",
-                  canPrepare
-                    ? "border-white/[0.12] bg-white/[0.05] text-slate-200 hover:border-white/[0.2] hover:bg-white/[0.08]"
-                    : "cursor-not-allowed border-white/[0.06] bg-white/[0.02] text-slate-600",
+            <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3">
+              <div className="mb-2">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                  Démarrer une nouvelle session
+                </p>
+                <p className="mt-0.5 text-[11px] text-slate-500">
+                  {canPrepare
+                    ? "Lance tout de suite ou prépare d'abord ton atelier."
+                    : "Crée une salle et invite ton équipe en quelques secondes."}
+                </p>
+              </div>
+
+              <div className={cn("grid grid-cols-1 gap-2", canPrepare && "sm:grid-cols-2")}>
+                <button
+                  type="button"
+                  onClick={() => canCreate && onCreate(tool.id)}
+                  disabled={!canCreate}
+                  className={cn(
+                    "flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-2xl px-4 text-[13px] font-semibold transition",
+                    canCreate
+                      ? "text-white hover:brightness-110"
+                      : "cursor-not-allowed bg-white/5 text-slate-600",
+                  )}
+                  style={
+                    canCreate
+                      ? {
+                          background: `linear-gradient(135deg, ${tool.color}, ${tool.color}cc)`,
+                          boxShadow: `0 4px 12px ${tool.glow}`,
+                        }
+                      : undefined
+                  }
+                >
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/25 bg-white/10">
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.2"
+                      className="leading-none"
+                    >
+                      <path d="M12 5v14" />
+                      <path d="M5 12h14" />
+                    </svg>
+                  </span>
+                  <span className="leading-none">Créer une session</span>
+                </button>
+
+                {canPrepare && (
+                  <button
+                    type="button"
+                    onClick={() => (isLoggedIn ? onPrepare() : onLoginRequired())}
+                    className={cn(
+                      "flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-2xl border px-4 text-[13px] font-semibold transition",
+                      isLoggedIn
+                        ? "border-white/[0.12] bg-white/[0.05] text-slate-200 hover:border-white/[0.2] hover:bg-white/[0.08]"
+                        : "border-indigo-400/35 bg-indigo-500/10 text-indigo-200 hover:border-indigo-300/55 hover:bg-indigo-500/18",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "flex h-6 w-6 shrink-0 items-center justify-center rounded-full",
+                        isLoggedIn
+                          ? "border border-white/[0.18] bg-white/[0.08] text-slate-300"
+                          : "border border-indigo-300/35 bg-indigo-500/15 text-indigo-200",
+                      )}
+                    >
+                      {isLoggedIn ? (
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.2"
+                          className="leading-none"
+                        >
+                          <path d="m5 12 4 4 10-10" />
+                        </svg>
+                      ) : (
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.2"
+                          className="leading-none"
+                        >
+                          <rect x="5" y="11" width="14" height="10" rx="2" />
+                          <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+                        </svg>
+                      )}
+                    </span>
+                    <span className="leading-none">Préparer une partie</span>
+                  </button>
                 )}
-              >
-                Préparer
-              </button>
-              <button
-                type="button"
-                onClick={() => canJoin && onJoin(tool.id, code)}
-                disabled={!canJoin}
-                className={cn(
-                  "h-10 rounded-lg text-[13px] font-semibold transition",
-                  canJoin
-                    ? "text-white hover:brightness-110"
-                    : "cursor-not-allowed bg-white/5 text-slate-600",
-                )}
-                style={canJoin ? { background: tool.color } : undefined}
-              >
-                Rejoindre
-              </button>
-              <button
-                type="button"
-                onClick={() => canCreate && onCreate(tool.id)}
-                disabled={!canCreate}
-                className={cn(
-                  "h-10 rounded-lg text-[13px] font-semibold transition",
-                  canCreate
-                    ? "text-white hover:brightness-110"
-                    : "cursor-not-allowed bg-white/5 text-slate-600",
-                )}
-                style={
-                  canCreate
-                    ? {
-                        background: `linear-gradient(135deg, ${tool.color}, ${tool.color}cc)`,
-                        boxShadow: `0 4px 12px ${tool.glow}`,
-                      }
-                    : undefined
-                }
-              >
-                + Créer
-              </button>
+              </div>
+
+              {canPrepare && !isLoggedIn && (
+                <p className="mt-2 text-[11px] text-slate-500">
+                  Connexion requise pour accéder à la préparation.
+                </p>
+              )}
             </div>
           </div>
         </div>
