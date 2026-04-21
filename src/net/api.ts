@@ -6,9 +6,11 @@ export type HostUser = {
   displayName: string;
 };
 
+export type SuiteModuleId = "retro-party" | "planning-poker" | "radar-party" | "skills-matrix";
+
 export type DashboardActivity = {
   id: string;
-  moduleId: "retro-party" | "planning-poker" | "radar-party";
+  moduleId: SuiteModuleId;
   moduleLabel: string;
   moduleIcon: string;
   activityType: "session" | "template";
@@ -23,7 +25,7 @@ export type DashboardActivity = {
 };
 
 export type DashboardModuleActivity = {
-  moduleId: "retro-party" | "planning-poker" | "radar-party";
+  moduleId: SuiteModuleId;
   moduleLabel: string;
   moduleIcon: string;
   totalActivities: number;
@@ -125,6 +127,130 @@ export type RadarParticipant = {
   createdAt?: string;
   submittedAt?: string | null;
   result?: RadarIndividualResult | null;
+};
+
+export type SkillsMatrixSession = {
+  id: string;
+  code: string;
+  title: string;
+  scaleMin: number;
+  scaleMax: number;
+  status: "lobby" | "started";
+  startedAt: string | null;
+  createdByUserId: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type SkillsMatrixParticipant = {
+  id: string;
+  userId: string;
+  displayName: string;
+  avatar: number;
+  isAdmin: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type SkillsMatrixCategory = {
+  id: string;
+  sessionId: string;
+  name: string;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type SkillsMatrixSkill = {
+  id: string;
+  sessionId: string;
+  categoryId: string | null;
+  name: string;
+  sortOrder: number;
+  requiredLevel: number;
+  requiredPeople: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type SkillsMatrixAssessment = {
+  id: string;
+  sessionId: string;
+  skillId: string;
+  participantId: string;
+  currentLevel: number | null;
+  targetLevel: number | null;
+  wantsToProgress: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type SkillsMatrixRowCell = {
+  participantId: string;
+  currentLevel: number | null;
+  targetLevel: number | null;
+  wantsToProgress: boolean;
+};
+
+export type SkillsMatrixRow = {
+  skillId: string;
+  skillName: string;
+  categoryId: string | null;
+  categoryName: string;
+  requiredLevel: number;
+  requiredPeople: number;
+  coverageCount: number;
+  missingCount: number;
+  cells: SkillsMatrixRowCell[];
+};
+
+export type SkillsMatrixDashboardSkill = {
+  skillId: string;
+  skillName: string;
+  categoryName: string;
+  requiredLevel: number;
+  requiredPeople: number;
+  coverageCount: number;
+  missingCount: number;
+};
+
+export type SkillsMatrixMentoringBySkill = {
+  skillId: string;
+  skillName: string;
+  categoryName: string;
+  helpers: Array<{
+    participantId: string;
+    displayName: string;
+    currentLevel: number;
+  }>;
+  learners: Array<{
+    participantId: string;
+    displayName: string;
+    currentLevel: number | null;
+    targetLevel: number | null;
+    wantsToProgress: boolean;
+  }>;
+};
+
+export type SkillsMatrixSnapshot = {
+  session: SkillsMatrixSession;
+  me: { participantId: string; isAdmin: boolean } | null;
+  participants: SkillsMatrixParticipant[];
+  categories: SkillsMatrixCategory[];
+  skills: SkillsMatrixSkill[];
+  assessments: SkillsMatrixAssessment[];
+  matrix: SkillsMatrixRow[];
+  dashboard: {
+    summary: {
+      totalSkills: number;
+      riskySkillsCount: number;
+      coveredSkillsCount: number;
+      totalMissingPeople: number;
+    };
+    riskySkills: SkillsMatrixDashboardSkill[];
+    coveredSkills: SkillsMatrixDashboardSkill[];
+    mentoringBySkill: SkillsMatrixMentoringBySkill[];
+  };
 };
 
 type ApiError = { error?: string };
@@ -385,4 +511,127 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload),
     }),
+
+  skillsMatrixCreateSession: (payload: {
+    title?: string;
+    scaleMin?: number;
+    scaleMax?: number;
+    displayName?: string;
+    avatar?: number;
+  }) =>
+    request<SkillsMatrixSnapshot>("/skills-matrix/sessions", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  skillsMatrixJoinSession: (code: string, payload?: { displayName?: string; avatar?: number }) =>
+    request<SkillsMatrixSnapshot>(`/skills-matrix/sessions/${encodeURIComponent(code)}/join`, {
+      method: "POST",
+      body: JSON.stringify(payload ?? {}),
+    }),
+  skillsMatrixGetSession: (code: string) =>
+    request<SkillsMatrixSnapshot>(`/skills-matrix/sessions/${encodeURIComponent(code)}`, {
+      method: "GET",
+    }),
+  skillsMatrixStartSession: (code: string) =>
+    request<SkillsMatrixSnapshot>(`/skills-matrix/sessions/${encodeURIComponent(code)}/start`, {
+      method: "POST",
+      body: JSON.stringify({}),
+    }),
+  skillsMatrixApplyTemplate: (code: string, payload: { templateId: string }) =>
+    request<SkillsMatrixSnapshot>(
+      `/skills-matrix/sessions/${encodeURIComponent(code)}/apply-template`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      },
+    ),
+  skillsMatrixUpdateSession: (
+    code: string,
+    payload: Partial<{ title: string; scaleMin: number; scaleMax: number }>,
+  ) =>
+    request<SkillsMatrixSnapshot>(`/skills-matrix/sessions/${encodeURIComponent(code)}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }),
+  skillsMatrixCreateCategory: (code: string, payload: { name: string }) =>
+    request<SkillsMatrixSnapshot>(
+      `/skills-matrix/sessions/${encodeURIComponent(code)}/categories`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      },
+    ),
+  skillsMatrixPatchCategory: (
+    code: string,
+    categoryId: string,
+    payload: Partial<{ name: string; sortOrder: number }>,
+  ) =>
+    request<SkillsMatrixSnapshot>(
+      `/skills-matrix/sessions/${encodeURIComponent(code)}/categories/${encodeURIComponent(categoryId)}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+      },
+    ),
+  skillsMatrixDeleteCategory: (code: string, categoryId: string) =>
+    request<SkillsMatrixSnapshot>(
+      `/skills-matrix/sessions/${encodeURIComponent(code)}/categories/${encodeURIComponent(categoryId)}`,
+      {
+        method: "DELETE",
+      },
+    ),
+  skillsMatrixCreateSkill: (
+    code: string,
+    payload: {
+      name: string;
+      categoryId?: string | null;
+      requiredLevel?: number;
+      requiredPeople?: number;
+    },
+  ) =>
+    request<SkillsMatrixSnapshot>(`/skills-matrix/sessions/${encodeURIComponent(code)}/skills`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  skillsMatrixPatchSkill: (
+    code: string,
+    skillId: string,
+    payload: Partial<{
+      name: string;
+      categoryId: string | null;
+      requiredLevel: number;
+      requiredPeople: number;
+      sortOrder: number;
+    }>,
+  ) =>
+    request<SkillsMatrixSnapshot>(
+      `/skills-matrix/sessions/${encodeURIComponent(code)}/skills/${encodeURIComponent(skillId)}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+      },
+    ),
+  skillsMatrixDeleteSkill: (code: string, skillId: string) =>
+    request<SkillsMatrixSnapshot>(
+      `/skills-matrix/sessions/${encodeURIComponent(code)}/skills/${encodeURIComponent(skillId)}`,
+      {
+        method: "DELETE",
+      },
+    ),
+  skillsMatrixUpsertAssessment: (
+    code: string,
+    skillId: string,
+    payload: {
+      currentLevel: number | null;
+      targetLevel: number | null;
+      wantsToProgress: boolean;
+    },
+  ) =>
+    request<SkillsMatrixSnapshot>(
+      `/skills-matrix/sessions/${encodeURIComponent(code)}/assessments/${encodeURIComponent(skillId)}`,
+      {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      },
+    ),
 };

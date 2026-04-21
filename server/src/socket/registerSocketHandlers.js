@@ -16,6 +16,7 @@ export function registerSocketHandlers(deps) {
     attachSocketToExistingPokerPlayer,
     POKER_MAX_PLAYERS,
     syncPokerHostFlags,
+    syncHostFlags,
     removePokerPlayerNow,
     createRuntimeRoom,
     socketToRoom,

@@ -6,18 +6,31 @@ import { cn } from "@/lib/utils";
 const Slider = React.forwardRef<
   React.ElementRef<typeof SliderPrimitive.Root>,
   React.ComponentPropsWithoutRef<typeof SliderPrimitive.Root>
->(({ className, ...props }, ref) => (
-  <SliderPrimitive.Root
-    ref={ref}
-    className={cn("relative flex w-full touch-none select-none items-center", className)}
-    {...props}
-  >
-    <SliderPrimitive.Track className="relative h-2 w-full grow overflow-hidden rounded-full border border-cyan-300/25 bg-slate-800/80">
-      <SliderPrimitive.Range className="absolute h-full bg-cyan-400/90" />
-    </SliderPrimitive.Track>
-    <SliderPrimitive.Thumb className="block h-5 w-5 rounded-full border-2 border-cyan-300 bg-slate-900 shadow-[0_0_0_1px_rgba(34,211,238,0.35),0_0_12px_rgba(34,211,238,0.22)] ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50" />
-  </SliderPrimitive.Root>
-));
+>(({ className, ...props }, ref) => {
+  const thumbValues = (Array.isArray(props.value) && props.value.length > 0
+    ? props.value
+    : Array.isArray(props.defaultValue) && props.defaultValue.length > 0
+      ? props.defaultValue
+      : [props.min ?? 0]) ?? [props.min ?? 0];
+
+  return (
+    <SliderPrimitive.Root
+      ref={ref}
+      className={cn("relative flex w-full touch-none select-none items-center", className)}
+      {...props}
+    >
+      <SliderPrimitive.Track className="relative h-2 w-full grow overflow-hidden rounded-full border border-cyan-300/25 bg-slate-800/80">
+        <SliderPrimitive.Range className="absolute h-full bg-cyan-400/90" />
+      </SliderPrimitive.Track>
+      {thumbValues.map((value, index) => (
+        <SliderPrimitive.Thumb
+          key={`thumb-${index}-${value}`}
+          className="block h-5 w-5 rounded-full border-2 border-cyan-300 bg-slate-900 shadow-[0_0_0_1px_rgba(34,211,238,0.35),0_0_12px_rgba(34,211,238,0.22)] ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+        />
+      ))}
+    </SliderPrimitive.Root>
+  );
+});
 Slider.displayName = SliderPrimitive.Root.displayName;
 
 export { Slider };

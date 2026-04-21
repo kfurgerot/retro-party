@@ -1250,6 +1250,7 @@ registerSocketHandlers({
   attachSocketToExistingPokerPlayer,
   POKER_MAX_PLAYERS,
   syncPokerHostFlags,
+  syncHostFlags,
   removePokerPlayerNow,
   createRuntimeRoom,
   socketToRoom,

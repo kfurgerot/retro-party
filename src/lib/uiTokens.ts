@@ -80,6 +80,12 @@ export const TOOL_ACCENT = {
     ambientColor: "rgba(16,185,129,0.08)",
     ambientGlow: "rgba(16,185,129,0.04)",
   },
+  "skills-matrix": {
+    color: "#0ea5e9",
+    glow: "rgba(14,165,233,0.3)",
+    ambientColor: "rgba(14,165,233,0.08)",
+    ambientGlow: "rgba(14,165,233,0.04)",
+  },
 } as const;
 
 export type ToolAccentKey = keyof typeof TOOL_ACCENT;

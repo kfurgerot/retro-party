@@ -2,10 +2,13 @@ const MODULE_META = {
   "retro-party": { id: "retro-party", label: "Retro Party", icon: "🎲" },
   "planning-poker": { id: "planning-poker", label: "Planning Poker", icon: "🃏" },
   "radar-party": { id: "radar-party", label: "Radar Party", icon: "📡" },
+  "skills-matrix": { id: "skills-matrix", label: "Matrice de Compétences", icon: "🧩" },
 };
 
 function normalizeModuleId(value) {
-  return value === "planning-poker" || value === "radar-party" ? value : "retro-party";
+  return value === "planning-poker" || value === "radar-party" || value === "skills-matrix"
+    ? value
+    : "retro-party";
 }
 
 function normalizeJsonObject(value) {
@@ -105,6 +108,28 @@ function mapTemplateToActivity(row) {
   };
 }
 
+function mapSkillsMatrixToActivity(row) {
+  const moduleMeta = MODULE_META["skills-matrix"];
+  const title =
+    typeof row.title === "string" && row.title.trim() ? row.title.trim() : "Matrice de Compétences";
+
+  return {
+    id: `skills-matrix:${row.id}`,
+    moduleId: "skills-matrix",
+    moduleLabel: moduleMeta.label,
+    moduleIcon: moduleMeta.icon,
+    activityType: "session",
+    activityLabel: "Session Skills Matrix",
+    title,
+    details: row.session_code ? `Code ${row.session_code}` : null,
+    status: row.status || "lobby",
+    occurredAt: row.started_at || row.updated_at || row.created_at,
+    createdAt: row.created_at,
+    startedAt: row.started_at || null,
+    endedAt: null,
+  };
+}
+
 function toTimestamp(value) {
   if (!value) return 0;
   const time = Date.parse(value);
@@ -117,7 +142,7 @@ export function registerDashboardRoutes(context) {
   app.get("/api/dashboard/activities", requireAuth, async (req, res, next) => {
     try {
       const userId = req.currentUser.id;
-      const [roomsResult, radarResult, templatesResult] = await Promise.all([
+      const [roomsResult, radarResult, templatesResult, skillsMatrixResult] = await Promise.all([
         pool.query(
           `
             SELECT
@@ -172,12 +197,30 @@ export function registerDashboardRoutes(context) {
           `,
           [userId],
         ),
+        pool.query(
+          `
+            SELECT
+              id,
+              session_code,
+              title,
+              status,
+              started_at,
+              created_at,
+              updated_at
+            FROM skills_matrix_sessions
+            WHERE created_by_user_id = $1
+            ORDER BY updated_at DESC
+            LIMIT 200
+          `,
+          [userId],
+        ),
       ]);
 
       const activities = [
         ...roomsResult.rows.map(mapRoomToActivity),
         ...radarResult.rows.map(mapRadarToActivity),
         ...templatesResult.rows.map(mapTemplateToActivity),
+        ...skillsMatrixResult.rows.map(mapSkillsMatrixToActivity),
       ].sort((a, b) => toTimestamp(b.occurredAt) - toTimestamp(a.occurredAt));
 
       const modules = Object.values(MODULE_META).map((moduleMeta) => {
