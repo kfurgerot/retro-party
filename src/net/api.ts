@@ -181,6 +181,7 @@ export type SkillsMatrixAssessment = {
   currentLevel: number | null;
   targetLevel: number | null;
   wantsToProgress: boolean;
+  wantsToMentor: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -190,6 +191,7 @@ export type SkillsMatrixRowCell = {
   currentLevel: number | null;
   targetLevel: number | null;
   wantsToProgress: boolean;
+  wantsToMentor: boolean;
 };
 
 export type SkillsMatrixRow = {
@@ -222,6 +224,7 @@ export type SkillsMatrixMentoringBySkill = {
     participantId: string;
     displayName: string;
     currentLevel: number;
+    wantsToMentor: boolean;
   }>;
   learners: Array<{
     participantId: string;
@@ -528,56 +531,66 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload ?? {}),
     }),
-  skillsMatrixGetSession: (code: string) =>
-    request<SkillsMatrixSnapshot>(`/skills-matrix/sessions/${encodeURIComponent(code)}`, {
-      method: "GET",
-    }),
-  skillsMatrixStartSession: (code: string) =>
+  skillsMatrixGetSession: (code: string, participantId: string) =>
+    request<SkillsMatrixSnapshot>(
+      `/skills-matrix/sessions/${encodeURIComponent(code)}?participantId=${encodeURIComponent(participantId)}`,
+      {
+        method: "GET",
+      },
+    ),
+  skillsMatrixStartSession: (code: string, participantId: string) =>
     request<SkillsMatrixSnapshot>(`/skills-matrix/sessions/${encodeURIComponent(code)}/start`, {
       method: "POST",
-      body: JSON.stringify({}),
+      body: JSON.stringify({ participantId }),
     }),
-  skillsMatrixApplyTemplate: (code: string, payload: { templateId: string }) =>
+  skillsMatrixApplyTemplate: (
+    code: string,
+    payload: { templateId: string },
+    participantId: string,
+  ) =>
     request<SkillsMatrixSnapshot>(
       `/skills-matrix/sessions/${encodeURIComponent(code)}/apply-template`,
       {
         method: "POST",
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ ...payload, participantId }),
       },
     ),
   skillsMatrixUpdateSession: (
     code: string,
     payload: Partial<{ title: string; scaleMin: number; scaleMax: number }>,
+    participantId: string,
   ) =>
     request<SkillsMatrixSnapshot>(`/skills-matrix/sessions/${encodeURIComponent(code)}`, {
       method: "PATCH",
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ ...payload, participantId }),
     }),
-  skillsMatrixCreateCategory: (code: string, payload: { name: string }) =>
+  skillsMatrixCreateCategory: (code: string, payload: { name: string }, participantId: string) =>
     request<SkillsMatrixSnapshot>(
       `/skills-matrix/sessions/${encodeURIComponent(code)}/categories`,
       {
         method: "POST",
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ ...payload, participantId }),
       },
     ),
   skillsMatrixPatchCategory: (
     code: string,
     categoryId: string,
     payload: Partial<{ name: string; sortOrder: number }>,
+    participantId: string,
   ) =>
     request<SkillsMatrixSnapshot>(
       `/skills-matrix/sessions/${encodeURIComponent(code)}/categories/${encodeURIComponent(categoryId)}`,
       {
         method: "PATCH",
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ ...payload, participantId }),
       },
     ),
-  skillsMatrixDeleteCategory: (code: string, categoryId: string) =>
+  skillsMatrixDeleteCategory: (code: string, categoryId: string, participantId: string) =>
     request<SkillsMatrixSnapshot>(
       `/skills-matrix/sessions/${encodeURIComponent(code)}/categories/${encodeURIComponent(categoryId)}`,
       {
         method: "DELETE",
+        body: JSON.stringify({ participantId }),
       },
     ),
   skillsMatrixCreateSkill: (
@@ -588,10 +601,11 @@ export const api = {
       requiredLevel?: number;
       requiredPeople?: number;
     },
+    participantId: string,
   ) =>
     request<SkillsMatrixSnapshot>(`/skills-matrix/sessions/${encodeURIComponent(code)}/skills`, {
       method: "POST",
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ ...payload, participantId }),
     }),
   skillsMatrixPatchSkill: (
     code: string,
@@ -603,19 +617,21 @@ export const api = {
       requiredPeople: number;
       sortOrder: number;
     }>,
+    participantId: string,
   ) =>
     request<SkillsMatrixSnapshot>(
       `/skills-matrix/sessions/${encodeURIComponent(code)}/skills/${encodeURIComponent(skillId)}`,
       {
         method: "PATCH",
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ ...payload, participantId }),
       },
     ),
-  skillsMatrixDeleteSkill: (code: string, skillId: string) =>
+  skillsMatrixDeleteSkill: (code: string, skillId: string, participantId: string) =>
     request<SkillsMatrixSnapshot>(
       `/skills-matrix/sessions/${encodeURIComponent(code)}/skills/${encodeURIComponent(skillId)}`,
       {
         method: "DELETE",
+        body: JSON.stringify({ participantId }),
       },
     ),
   skillsMatrixUpsertAssessment: (
@@ -625,13 +641,15 @@ export const api = {
       currentLevel: number | null;
       targetLevel: number | null;
       wantsToProgress: boolean;
+      wantsToMentor: boolean;
     },
+    participantId: string,
   ) =>
     request<SkillsMatrixSnapshot>(
       `/skills-matrix/sessions/${encodeURIComponent(code)}/assessments/${encodeURIComponent(skillId)}`,
       {
         method: "PUT",
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ ...payload, participantId }),
       },
     ),
 };

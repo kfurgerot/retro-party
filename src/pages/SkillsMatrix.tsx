@@ -2,6 +2,14 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { OnlineLobbyScreen } from "@/components/screens/OnlineLobbyScreen";
 import { OnlineOnboardingScreen } from "@/components/screens/OnlineOnboardingScreen";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Slider } from "@/components/ui/slider";
 import { Card, PrimaryButton, SecondaryButton } from "@/components/app-shell";
 import { cn } from "@/lib/utils";
@@ -20,8 +28,56 @@ type SkillDraft = {
   requiredPeople: number;
 };
 
+type MatrixCellEditorState = {
+  skillId: string;
+  skillName: string;
+  requiredLevel: number;
+  currentLevel: number | null;
+  targetLevel: number | null;
+  wantsToProgress: boolean;
+  wantsToMentor: boolean;
+};
+
+type MatrixCellTone = {
+  surfaceClass: string;
+  valueClass: string;
+  badgeClass: string;
+  badgeLabel: string;
+};
+
+type RadarSkillMetric = {
+  skillId: string;
+  skillName: string;
+  requiredLevel: number;
+  currentLevel: number | null;
+  scorePct: number;
+};
+
+type RadarCategoryMetric = {
+  categoryKey: string;
+  categoryName: string;
+  scorePct: number;
+  averageCurrentLevel: number | null;
+  averageRequiredLevel: number;
+  skills: RadarSkillMetric[];
+};
+
+type SkillsRadarModel = {
+  categories: RadarCategoryMetric[];
+  averageScorePct: number;
+  completedSkills: number;
+  totalSkills: number;
+};
+
 const AUTO_REFRESH_MS = 10000;
 const SKILLS_ACCENT = TOOL_ACCENT["skills-matrix"];
+const SKILLS_MATRIX_SESSION_STORAGE_KEY = "retro-party:skills-matrix:session";
+const EMPTY_RADAR_MODEL: SkillsRadarModel = {
+  categories: [],
+  averageScorePct: 0,
+  completedSkills: 0,
+  totalSkills: 0,
+};
 
 function cleanName(value: string) {
   return value.replace(/\s+/g, " ").trim().slice(0, 16);
@@ -29,6 +85,323 @@ function cleanName(value: string) {
 
 function assessmentKey(skillId: string, participantId: string) {
   return `${skillId}:${participantId}`;
+}
+
+type SkillsMatrixPersistedSession = {
+  code: string;
+  participantId: string;
+  profile: { name: string; avatar: number };
+  updatedAt: number;
+};
+
+function loadPersistedSkillsMatrixSession(): SkillsMatrixPersistedSession | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(SKILLS_MATRIX_SESSION_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<SkillsMatrixPersistedSession> | null;
+    if (!parsed || typeof parsed !== "object") return null;
+    const code = typeof parsed.code === "string" ? parsed.code.trim().toUpperCase() : "";
+    const participantId =
+      typeof parsed.participantId === "string" ? parsed.participantId.trim() : "";
+    if (!code || !participantId) return null;
+    const profileRaw = parsed.profile ?? {};
+    const name = typeof profileRaw.name === "string" ? cleanName(profileRaw.name) : "";
+    const avatarRaw = Number(profileRaw.avatar);
+    const avatar = Number.isFinite(avatarRaw)
+      ? Math.max(0, Math.min(AVATARS.length - 1, Math.floor(avatarRaw)))
+      : 0;
+    const updatedAtRaw = Number(parsed.updatedAt);
+    const updatedAt = Number.isFinite(updatedAtRaw) ? updatedAtRaw : Date.now();
+    return {
+      code,
+      participantId,
+      profile: { name, avatar },
+      updatedAt,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function persistSkillsMatrixSession(session: SkillsMatrixPersistedSession | null) {
+  if (typeof window === "undefined") return;
+  if (!session) {
+    window.localStorage.removeItem(SKILLS_MATRIX_SESSION_STORAGE_KEY);
+    return;
+  }
+  window.localStorage.setItem(SKILLS_MATRIX_SESSION_STORAGE_KEY, JSON.stringify(session));
+}
+
+function clampNumber(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function averageFiniteNumbers(values: number[]) {
+  if (values.length === 0) return null;
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function toCoveragePercent(currentLevel: number | null, requiredLevel: number) {
+  if (!Number.isFinite(currentLevel)) return 0;
+  if (requiredLevel <= 0) return 100;
+  return clampNumber((Number(currentLevel) / requiredLevel) * 100, 0, 100);
+}
+
+function toDisplayLevel(level: number | null) {
+  if (!Number.isFinite(level)) return "—";
+  const rounded = Math.round(Number(level) * 10) / 10;
+  return Number.isInteger(rounded) ? `N${rounded}` : `N${rounded.toFixed(1)}`;
+}
+
+function resolveMatrixCellTone(currentLevel: number | null, requiredLevel: number): MatrixCellTone {
+  if (!Number.isFinite(currentLevel)) {
+    return {
+      surfaceClass: "border-slate-500/30 bg-slate-500/10",
+      valueClass: "text-slate-200",
+      badgeClass: "border-slate-400/30 bg-slate-500/15 text-slate-200",
+      badgeLabel: "Non renseigné",
+    };
+  }
+
+  const gap = Number(currentLevel) - requiredLevel;
+  if (gap <= -2) {
+    return {
+      surfaceClass: "border-rose-400/40 bg-rose-500/15",
+      valueClass: "text-rose-100",
+      badgeClass: "border-rose-300/40 bg-rose-600/20 text-rose-100",
+      badgeLabel: "Lacune critique",
+    };
+  }
+  if (gap === -1) {
+    return {
+      surfaceClass: "border-orange-300/40 bg-orange-500/15",
+      valueClass: "text-orange-100",
+      badgeClass: "border-orange-200/40 bg-orange-600/20 text-orange-100",
+      badgeLabel: "Lacune",
+    };
+  }
+  if (gap === 0) {
+    return {
+      surfaceClass: "border-yellow-300/40 bg-yellow-500/15",
+      valueClass: "text-yellow-100",
+      badgeClass: "border-yellow-200/40 bg-yellow-600/20 text-yellow-100",
+      badgeLabel: "Cible atteinte",
+    };
+  }
+  if (gap === 1) {
+    return {
+      surfaceClass: "border-lime-300/40 bg-lime-500/15",
+      valueClass: "text-lime-100",
+      badgeClass: "border-lime-200/40 bg-lime-600/20 text-lime-100",
+      badgeLabel: "Force",
+    };
+  }
+  return {
+    surfaceClass: "border-emerald-300/40 bg-emerald-500/15",
+    valueClass: "text-emerald-100",
+    badgeClass: "border-emerald-200/40 bg-emerald-600/20 text-emerald-100",
+    badgeLabel: "Force forte",
+  };
+}
+
+type SkillsRadarPanelProps = {
+  title: string;
+  subtitle: string;
+  model: SkillsRadarModel;
+};
+
+function SkillsRadarPanel({ title, subtitle, model }: SkillsRadarPanelProps) {
+  const categories = model.categories;
+  const axisCount = categories.length;
+  const canRenderRadar = axisCount >= 3;
+  const ringTicks = [20, 40, 60, 80, 100];
+  const size = 420;
+  const center = size / 2;
+  const radius = 128;
+  const labelRadius = 165;
+
+  const axes = canRenderRadar
+    ? categories.map((category, index) => {
+        const angleRad = (index / axisCount) * Math.PI * 2 - Math.PI / 2;
+        const axisX = center + Math.cos(angleRad) * radius;
+        const axisY = center + Math.sin(angleRad) * radius;
+        const labelX = center + Math.cos(angleRad) * labelRadius;
+        const labelY = center + Math.sin(angleRad) * labelRadius;
+        const cosine = Math.cos(angleRad);
+        return {
+          ...category,
+          angleRad,
+          axisX,
+          axisY,
+          labelX,
+          labelY,
+          anchor:
+            cosine > 0.4
+              ? ("start" as const)
+              : cosine < -0.4
+                ? ("end" as const)
+                : ("middle" as const),
+        };
+      })
+    : [];
+
+  const radarPoints = axes.map((axis) => {
+    const pointRadius = (axis.scorePct / 100) * radius;
+    const x = center + Math.cos(axis.angleRad) * pointRadius;
+    const y = center + Math.sin(axis.angleRad) * pointRadius;
+    return { ...axis, x, y };
+  });
+
+  const radarPath =
+    radarPoints.length > 0
+      ? `${radarPoints
+          .map(
+            (point, index) =>
+              `${index === 0 ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`,
+          )
+          .join(" ")} Z`
+      : "";
+
+  const completedRatio =
+    model.totalSkills > 0 ? Math.round((model.completedSkills / model.totalSkills) * 100) : 0;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h3 className="text-sm font-semibold text-slate-100">{title}</h3>
+          <p className="mt-1 text-xs text-slate-400">{subtitle}</p>
+        </div>
+        <div className="flex items-center gap-1.5 text-[11px]">
+          <span className="rounded-full border border-cyan-300/35 bg-cyan-500/14 px-2 py-0.5 text-cyan-100">
+            Couverture {Math.round(model.averageScorePct)}%
+          </span>
+          <span className="rounded-full border border-white/[0.14] bg-white/[0.04] px-2 py-0.5 text-slate-300">
+            Compétences remplies {completedRatio}%
+          </span>
+        </div>
+      </div>
+
+      {canRenderRadar ? (
+        <div className="rounded-2xl border border-white/[0.09] bg-white/[0.02] p-2 sm:p-3">
+          <div className="h-[300px] w-full sm:h-[340px]">
+            <svg viewBox={`0 0 ${size} ${size}`} className="h-full w-full">
+              {ringTicks.map((ring, index) => {
+                const ringRadius = (ring / 100) * radius;
+                const vertices = axes.map((axis) => {
+                  const x = center + Math.cos(axis.angleRad) * ringRadius;
+                  const y = center + Math.sin(axis.angleRad) * ringRadius;
+                  return `${x.toFixed(2)},${y.toFixed(2)}`;
+                });
+                return (
+                  <polygon
+                    key={`ring-${ring}`}
+                    points={vertices.join(" ")}
+                    fill={index % 2 === 0 ? "rgba(56,189,248,0.05)" : "rgba(15,23,42,0.32)"}
+                    stroke="rgba(148,163,184,0.32)"
+                    strokeWidth={ring === 100 ? 1.4 : 1}
+                  />
+                );
+              })}
+
+              {axes.map((axis) => (
+                <line
+                  key={`axis-${axis.categoryKey}`}
+                  x1={center}
+                  y1={center}
+                  x2={axis.axisX}
+                  y2={axis.axisY}
+                  stroke="rgba(148,163,184,0.32)"
+                  strokeWidth={1}
+                />
+              ))}
+
+              {radarPath ? (
+                <>
+                  <path
+                    d={radarPath}
+                    fill="rgba(14,165,233,0.24)"
+                    stroke="rgba(56,189,248,0.95)"
+                    strokeWidth={2.2}
+                  />
+                  {radarPoints.map((point) => (
+                    <circle
+                      key={`point-${point.categoryKey}`}
+                      cx={point.x}
+                      cy={point.y}
+                      r={4}
+                      fill="rgba(56,189,248,1)"
+                      stroke="rgba(224,242,254,0.95)"
+                      strokeWidth={1.2}
+                    />
+                  ))}
+                </>
+              ) : null}
+
+              {axes.map((axis) => (
+                <text
+                  key={`label-${axis.categoryKey}`}
+                  x={axis.labelX}
+                  y={axis.labelY}
+                  fill="rgba(226,232,240,0.95)"
+                  fontSize="11"
+                  fontWeight="600"
+                  textAnchor={axis.anchor}
+                  dominantBaseline="middle"
+                >
+                  {axis.categoryName}
+                </text>
+              ))}
+            </svg>
+          </div>
+          <div className="mt-2 text-[11px] text-slate-500">
+            100% = niveau requis atteint en moyenne sur la catégorie.
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-white/[0.09] bg-white/[0.02] p-3 text-xs text-slate-400">
+          Ajoute au moins 3 catégories pour afficher un radar.
+        </div>
+      )}
+
+      <div className="max-h-[320px] space-y-2 overflow-y-auto pr-1">
+        {categories.map((category) => (
+          <div
+            key={category.categoryKey}
+            className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-2.5"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-xs font-semibold text-slate-200">{category.categoryName}</div>
+              <div className="text-[11px] text-slate-400">
+                {toDisplayLevel(category.averageCurrentLevel)} /{" "}
+                {toDisplayLevel(category.averageRequiredLevel)}
+              </div>
+            </div>
+            <div className="mt-2 space-y-1">
+              {category.skills.map((skill) => {
+                const tone = resolveMatrixCellTone(skill.currentLevel, skill.requiredLevel);
+                return (
+                  <div
+                    key={skill.skillId}
+                    className={cn(
+                      "flex items-center justify-between gap-2 rounded-lg border px-2 py-1 text-[11px]",
+                      tone.surfaceClass,
+                    )}
+                  >
+                    <span className="min-w-0 truncate text-slate-100">{skill.skillName}</span>
+                    <span className={cn("shrink-0 font-semibold", tone.valueClass)}>
+                      {toDisplayLevel(skill.currentLevel)} / N{skill.requiredLevel}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export default function SkillsMatrixPage() {
@@ -76,6 +449,11 @@ export default function SkillsMatrixPage() {
   const [sessionSettingsScaleMin, setSessionSettingsScaleMin] = useState<number>(1);
   const [sessionSettingsScaleMax, setSessionSettingsScaleMax] = useState<number>(5);
   const [skillDrafts, setSkillDrafts] = useState<Record<string, SkillDraft>>({});
+  const [editingCell, setEditingCell] = useState<MatrixCellEditorState | null>(null);
+  const [savingCell, setSavingCell] = useState(false);
+  const [selectedRadarParticipantId, setSelectedRadarParticipantId] = useState<string | null>(null);
+  const [participantId, setParticipantId] = useState<string>("");
+  const [isRestoringSession, setIsRestoringSession] = useState(true);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -89,6 +467,9 @@ export default function SkillsMatrixPage() {
 
   const applySnapshot = useCallback((nextSnapshot: SkillsMatrixSnapshot) => {
     setSnapshot(nextSnapshot);
+    if (nextSnapshot.me?.participantId) {
+      setParticipantId(nextSnapshot.me.participantId);
+    }
     setError(null);
   }, []);
 
@@ -106,19 +487,93 @@ export default function SkillsMatrixPage() {
 
   const roomCode = snapshot?.session.code ?? null;
   const isLobbyStage = !snapshot || snapshot.session.status === "lobby";
-  const isAdmin = snapshot?.me?.isAdmin === true;
-  const myParticipantId = snapshot?.me?.participantId ?? null;
+  const myParticipantId = participantId || snapshot?.me?.participantId || null;
+  const selfParticipant =
+    myParticipantId && snapshot
+      ? (snapshot.participants.find((participant) => participant.id === myParticipantId) ?? null)
+      : null;
+  const isAdmin = selfParticipant?.isAdmin === true;
 
   useEffect(() => {
     if (!templateFromQuery) return;
     setSelectedTemplateId(templateFromQuery);
   }, [templateFromQuery]);
 
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      setIsRestoringSession(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const restoreSession = async () => {
+      const persisted = loadPersistedSkillsMatrixSession();
+      if (!persisted) {
+        if (!cancelled) setIsRestoringSession(false);
+        return;
+      }
+
+      try {
+        const restored = await api.skillsMatrixGetSession(persisted.code, persisted.participantId);
+        if (cancelled) return;
+        const restoredSelf =
+          restored.participants.find((participant) => participant.id === persisted.participantId) ??
+          null;
+        setParticipantId(persisted.participantId);
+        setProfile({
+          name:
+            persisted.profile.name ||
+            cleanName(restoredSelf?.displayName || user.displayName || "Equipe"),
+          avatar:
+            Number.isFinite(persisted.profile.avatar) && persisted.profile.avatar >= 0
+              ? persisted.profile.avatar
+              : Number.isFinite(restoredSelf?.avatar)
+                ? Number(restoredSelf?.avatar)
+                : 0,
+        });
+        applySnapshot(restored);
+        setShowOnlineOnboarding(false);
+      } catch {
+        persistSkillsMatrixSession(null);
+        if (!cancelled) {
+          setParticipantId("");
+          setSnapshot(null);
+        }
+      } finally {
+        if (!cancelled) setIsRestoringSession(false);
+      }
+    };
+
+    void restoreSession();
+    return () => {
+      cancelled = true;
+    };
+  }, [applySnapshot, authLoading, user]);
+
+  useEffect(() => {
+    if (isRestoringSession) return;
+    if (!roomCode || !participantId) {
+      persistSkillsMatrixSession(null);
+      return;
+    }
+    persistSkillsMatrixSession({
+      code: roomCode,
+      participantId,
+      profile: {
+        name: cleanName(profile.name || ""),
+        avatar: Number.isFinite(profile.avatar) ? profile.avatar : 0,
+      },
+      updatedAt: Date.now(),
+    });
+  }, [isRestoringSession, participantId, profile.avatar, profile.name, roomCode]);
+
   const refreshSession = useCallback(async () => {
-    if (!roomCode) return;
-    const next = await api.skillsMatrixGetSession(roomCode);
+    if (!roomCode || !participantId) return;
+    const next = await api.skillsMatrixGetSession(roomCode, participantId);
     applySnapshot(next);
-  }, [applySnapshot, roomCode]);
+  }, [applySnapshot, participantId, roomCode]);
 
   const loadTemplateOptions = useCallback(async () => {
     if (!user) return;
@@ -143,15 +598,19 @@ export default function SkillsMatrixPage() {
 
   const applyTemplate = useCallback(
     async (templateId: string) => {
-      if (!snapshot || !templateId) return;
+      if (!snapshot || !templateId || !participantId) return;
       setApplyingTemplate(true);
       await withLoading(async () => {
-        const next = await api.skillsMatrixApplyTemplate(snapshot.session.code, { templateId });
+        const next = await api.skillsMatrixApplyTemplate(
+          snapshot.session.code,
+          { templateId },
+          participantId,
+        );
         applySnapshot(next);
       });
       setApplyingTemplate(false);
     },
-    [applySnapshot, snapshot, withLoading],
+    [applySnapshot, participantId, snapshot, withLoading],
   );
 
   useEffect(() => {
@@ -174,10 +633,10 @@ export default function SkillsMatrixPage() {
   ]);
 
   useEffect(() => {
-    if (!roomCode) return;
+    if (!roomCode || !participantId) return;
     const timer = window.setInterval(() => {
       void api
-        .skillsMatrixGetSession(roomCode)
+        .skillsMatrixGetSession(roomCode, participantId)
         .then((next) => {
           applySnapshot(next);
         })
@@ -187,7 +646,7 @@ export default function SkillsMatrixPage() {
     }, AUTO_REFRESH_MS);
 
     return () => window.clearInterval(timer);
-  }, [applySnapshot, roomCode]);
+  }, [applySnapshot, participantId, roomCode]);
 
   const handleHost = useCallback(
     (name: string, avatar: number) => {
@@ -197,6 +656,7 @@ export default function SkillsMatrixPage() {
           avatar,
         });
         setProfile({ name: cleanName(name), avatar });
+        setParticipantId(created.me?.participantId ?? "");
         applySnapshot(created);
       });
     },
@@ -211,6 +671,7 @@ export default function SkillsMatrixPage() {
           avatar,
         });
         setProfile({ name: cleanName(name), avatar });
+        setParticipantId(joined.me?.participantId ?? "");
         applySnapshot(joined);
       });
     },
@@ -218,14 +679,16 @@ export default function SkillsMatrixPage() {
   );
 
   const handleStartSession = useCallback(() => {
-    if (!roomCode) return;
+    if (!roomCode || !participantId) return;
     void withLoading(async () => {
-      const started = await api.skillsMatrixStartSession(roomCode);
+      const started = await api.skillsMatrixStartSession(roomCode, participantId);
       applySnapshot(started);
     });
-  }, [applySnapshot, roomCode, withLoading]);
+  }, [applySnapshot, participantId, roomCode, withLoading]);
 
   const handleLeaveLobby = useCallback(() => {
+    persistSkillsMatrixSession(null);
+    setParticipantId("");
     setSnapshot(null);
     setError(null);
     setShowOnlineOnboarding(true);
@@ -251,15 +714,6 @@ export default function SkillsMatrixPage() {
       return acc;
     }, {});
     setSkillDrafts(nextDrafts);
-  }, [snapshot]);
-
-  const levelOptions = useMemo(() => {
-    if (!snapshot) return [];
-    const options = [];
-    for (let level = snapshot.session.scaleMin; level <= snapshot.session.scaleMax; level += 1) {
-      options.push(level);
-    }
-    return options;
   }, [snapshot]);
 
   const assessmentByCellKey = useMemo(() => {
@@ -292,76 +746,214 @@ export default function SkillsMatrixPage() {
     return Array.from(byCategory.values());
   }, [snapshot]);
 
-  const updateAssessment = useCallback(
-    async (
-      skillId: string,
-      patch: Partial<{
-        currentLevel: number | null;
-        targetLevel: number | null;
-        wantsToProgress: boolean;
-      }>,
-    ) => {
-      if (!snapshot || !myParticipantId) return;
+  useEffect(() => {
+    const participantIds = snapshot?.participants.map((participant) => participant.id) ?? [];
+    if (participantIds.length === 0) {
+      setSelectedRadarParticipantId(null);
+      return;
+    }
+    setSelectedRadarParticipantId((previous) =>
+      previous && participantIds.includes(previous) ? previous : participantIds[0],
+    );
+  }, [snapshot]);
+
+  const buildRadarModel = useCallback(
+    (resolveCurrentLevel: (row: SkillsMatrixSnapshot["matrix"][number]) => number | null) => {
+      const categories = matrixRowsByCategory
+        .map<RadarCategoryMetric>((group) => {
+          const skills = group.rows.map<RadarSkillMetric>((row) => {
+            const currentLevel = resolveCurrentLevel(row);
+            return {
+              skillId: row.skillId,
+              skillName: row.skillName,
+              requiredLevel: row.requiredLevel,
+              currentLevel,
+              scorePct: toCoveragePercent(currentLevel, row.requiredLevel),
+            };
+          });
+
+          const categorySkillScores = skills.map((skill) => skill.scorePct);
+          const categorySkillLevels = skills
+            .map((skill) => skill.currentLevel)
+            .filter((value): value is number => Number.isFinite(value));
+          const categoryRequiredLevels = skills.map((skill) => skill.requiredLevel);
+          const categoryScore = averageFiniteNumbers(categorySkillScores) ?? 0;
+          const averageCurrentLevel = averageFiniteNumbers(categorySkillLevels);
+          const averageRequiredLevel = averageFiniteNumbers(categoryRequiredLevels) ?? 0;
+
+          return {
+            categoryKey: group.categoryId ?? `uncategorized-${group.categoryName}`,
+            categoryName: group.categoryName,
+            scorePct: categoryScore,
+            averageCurrentLevel,
+            averageRequiredLevel,
+            skills,
+          };
+        })
+        .filter((category) => category.skills.length > 0);
+
+      const totalSkills = categories.reduce((sum, category) => sum + category.skills.length, 0);
+      const completedSkills = categories.reduce(
+        (sum, category) =>
+          sum + category.skills.filter((skill) => Number.isFinite(skill.currentLevel)).length,
+        0,
+      );
+      const averageScorePct =
+        averageFiniteNumbers(categories.map((category) => category.scorePct)) ?? 0;
+
+      return {
+        categories,
+        averageScorePct,
+        completedSkills,
+        totalSkills,
+      };
+    },
+    [matrixRowsByCategory],
+  );
+
+  const groupRadarModel = useMemo(
+    () =>
+      buildRadarModel((row) => {
+        const levels = row.cells
+          .map((cell) => cell.currentLevel)
+          .filter((value): value is number => Number.isFinite(value));
+        return averageFiniteNumbers(levels);
+      }),
+    [buildRadarModel],
+  );
+
+  const participantRadarModels = useMemo(() => {
+    if (!snapshot) return new Map<string, SkillsRadarModel>();
+    const models = new Map<string, SkillsRadarModel>();
+    snapshot.participants.forEach((participant) => {
+      models.set(
+        participant.id,
+        buildRadarModel((row) => {
+          const cell = row.cells.find((entry) => entry.participantId === participant.id);
+          return cell?.currentLevel ?? null;
+        }),
+      );
+    });
+    return models;
+  }, [buildRadarModel, snapshot]);
+
+  const selectedRadarParticipant =
+    snapshot?.participants.find((participant) => participant.id === selectedRadarParticipantId) ??
+    null;
+  const selectedParticipantRadarModel =
+    (selectedRadarParticipant && participantRadarModels.get(selectedRadarParticipant.id)) ??
+    EMPTY_RADAR_MODEL;
+
+  const matrixFilling = useMemo(() => {
+    if (!snapshot) return { filled: 0, total: 0, ratio: 0 };
+    const total = snapshot.matrix.length * snapshot.participants.length;
+    const filled = snapshot.assessments.filter((assessment) =>
+      Number.isFinite(assessment.currentLevel),
+    ).length;
+    const ratio = total > 0 ? Math.round((filled / total) * 100) : 0;
+    return { filled, total, ratio };
+  }, [snapshot]);
+
+  const openCellEditor = useCallback(
+    (row: SkillsMatrixSnapshot["matrix"][number]) => {
+      if (!myParticipantId) return;
       const existing =
-        assessmentByCellKey.get(assessmentKey(skillId, myParticipantId)) ??
+        assessmentByCellKey.get(assessmentKey(row.skillId, myParticipantId)) ??
         ({
           currentLevel: null,
           targetLevel: null,
           wantsToProgress: false,
+          wantsToMentor: false,
         } as const);
-      const payload = {
-        currentLevel:
-          patch.currentLevel !== undefined ? patch.currentLevel : (existing.currentLevel ?? null),
-        targetLevel:
-          patch.targetLevel !== undefined ? patch.targetLevel : (existing.targetLevel ?? null),
-        wantsToProgress:
-          patch.wantsToProgress !== undefined
-            ? patch.wantsToProgress
-            : existing.wantsToProgress === true,
-      };
-
-      await withLoading(async () => {
-        const next = await api.skillsMatrixUpsertAssessment(
-          snapshot.session.code,
-          skillId,
-          payload,
-        );
-        applySnapshot(next);
+      setEditingCell({
+        skillId: row.skillId,
+        skillName: row.skillName,
+        requiredLevel: row.requiredLevel,
+        currentLevel: existing.currentLevel ?? null,
+        targetLevel: existing.targetLevel ?? null,
+        wantsToProgress: existing.wantsToProgress === true,
+        wantsToMentor: existing.wantsToMentor === true,
       });
     },
-    [applySnapshot, assessmentByCellKey, myParticipantId, snapshot, withLoading],
+    [assessmentByCellKey, myParticipantId],
+  );
+
+  const closeCellEditor = useCallback(() => {
+    if (savingCell) return;
+    setEditingCell(null);
+  }, [savingCell]);
+
+  const saveCellEditor = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      if (!snapshot || !editingCell || !participantId) return;
+      setSavingCell(true);
+      setError(null);
+      try {
+        const next = await api.skillsMatrixUpsertAssessment(
+          snapshot.session.code,
+          editingCell.skillId,
+          {
+            currentLevel: editingCell.currentLevel,
+            targetLevel: editingCell.targetLevel,
+            wantsToProgress: editingCell.wantsToProgress,
+            wantsToMentor: editingCell.wantsToMentor,
+          },
+          participantId,
+        );
+        applySnapshot(next);
+        setEditingCell(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Une erreur est survenue.");
+      } finally {
+        setSavingCell(false);
+      }
+    },
+    [applySnapshot, editingCell, participantId, snapshot],
   );
 
   const createCategory = async (event: FormEvent) => {
     event.preventDefault();
-    if (!snapshot) return;
+    if (!snapshot || !participantId) return;
     await withLoading(async () => {
-      const next = await api.skillsMatrixCreateCategory(snapshot.session.code, {
-        name: categoryNameInput,
-      });
+      const next = await api.skillsMatrixCreateCategory(
+        snapshot.session.code,
+        {
+          name: categoryNameInput,
+        },
+        participantId,
+      );
       applySnapshot(next);
       setCategoryNameInput("");
     });
   };
 
   const deleteCategory = async (categoryId: string) => {
-    if (!snapshot) return;
+    if (!snapshot || !participantId) return;
     await withLoading(async () => {
-      const next = await api.skillsMatrixDeleteCategory(snapshot.session.code, categoryId);
+      const next = await api.skillsMatrixDeleteCategory(
+        snapshot.session.code,
+        categoryId,
+        participantId,
+      );
       applySnapshot(next);
     });
   };
 
   const createSkill = async (event: FormEvent) => {
     event.preventDefault();
-    if (!snapshot) return;
+    if (!snapshot || !participantId) return;
     await withLoading(async () => {
-      const next = await api.skillsMatrixCreateSkill(snapshot.session.code, {
-        name: skillNameInput,
-        categoryId: skillCategoryInput || null,
-        requiredLevel: skillRequiredLevelInput,
-        requiredPeople: skillRequiredPeopleInput,
-      });
+      const next = await api.skillsMatrixCreateSkill(
+        snapshot.session.code,
+        {
+          name: skillNameInput,
+          categoryId: skillCategoryInput || null,
+          requiredLevel: skillRequiredLevelInput,
+          requiredPeople: skillRequiredPeopleInput,
+        },
+        participantId,
+      );
       applySnapshot(next);
       setSkillNameInput("");
       setSkillRequiredPeopleInput(1);
@@ -370,46 +962,55 @@ export default function SkillsMatrixPage() {
   };
 
   const saveSkillDraft = async (skillId: string) => {
-    if (!snapshot) return;
+    if (!snapshot || !participantId) return;
     const draft = skillDrafts[skillId];
     if (!draft) return;
     await withLoading(async () => {
-      const next = await api.skillsMatrixPatchSkill(snapshot.session.code, skillId, {
-        name: draft.name,
-        categoryId: draft.categoryId,
-        requiredLevel: draft.requiredLevel,
-        requiredPeople: draft.requiredPeople,
-      });
+      const next = await api.skillsMatrixPatchSkill(
+        snapshot.session.code,
+        skillId,
+        {
+          name: draft.name,
+          categoryId: draft.categoryId,
+          requiredLevel: draft.requiredLevel,
+          requiredPeople: draft.requiredPeople,
+        },
+        participantId,
+      );
       applySnapshot(next);
     });
   };
 
   const deleteSkill = async (skillId: string) => {
-    if (!snapshot) return;
+    if (!snapshot || !participantId) return;
     await withLoading(async () => {
-      const next = await api.skillsMatrixDeleteSkill(snapshot.session.code, skillId);
+      const next = await api.skillsMatrixDeleteSkill(snapshot.session.code, skillId, participantId);
       applySnapshot(next);
     });
   };
 
   const saveSessionSettings = async (event: FormEvent) => {
     event.preventDefault();
-    if (!snapshot) return;
+    if (!snapshot || !participantId) return;
     if (sessionSettingsScaleMin >= sessionSettingsScaleMax) {
       setError("L'échelle est invalide (min doit être strictement inférieur à max).");
       return;
     }
     await withLoading(async () => {
-      const next = await api.skillsMatrixUpdateSession(snapshot.session.code, {
-        title: sessionSettingsTitle,
-        scaleMin: sessionSettingsScaleMin,
-        scaleMax: sessionSettingsScaleMax,
-      });
+      const next = await api.skillsMatrixUpdateSession(
+        snapshot.session.code,
+        {
+          title: sessionSettingsTitle,
+          scaleMin: sessionSettingsScaleMin,
+          scaleMax: sessionSettingsScaleMax,
+        },
+        participantId,
+      );
       applySnapshot(next);
     });
   };
 
-  if (authLoading || !user) {
+  if (authLoading || !user || isRestoringSession) {
     return (
       <div className="scanlines relative flex min-h-svh items-center justify-center bg-slate-950 px-4">
         <div className="neon-surface px-4 py-3 text-sm font-semibold text-cyan-100">
@@ -867,18 +1468,18 @@ export default function SkillsMatrixPage() {
         ) : null}
 
         <div className="space-y-4">
-          <Card className="rounded-2xl p-4 sm:p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
+          <Card className="overflow-hidden rounded-3xl border border-white/[0.1] bg-[linear-gradient(160deg,rgba(15,23,42,0.95),rgba(17,24,39,0.84)_50%,rgba(13,18,36,0.94))] p-0 shadow-[0_16px_42px_rgba(2,6,23,0.42)]">
+            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-white/[0.08] px-4 py-4 sm:px-5">
               <div>
-                <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-cyan-300">
                   Session active
                 </div>
-                <div className="mt-1 text-sm text-slate-200">
-                  {snapshot.session.title} · Code{" "}
-                  <span className="font-mono">{snapshot.session.code}</span>
+                <div className="mt-1 text-sm font-semibold text-slate-100">
+                  {snapshot.session.title}
                 </div>
-                <div className="mt-1 text-xs text-slate-500">
-                  Échelle: {snapshot.session.scaleMin} à {snapshot.session.scaleMax}
+                <div className="mt-1 text-xs text-slate-400">
+                  Code <span className="font-mono">{snapshot.session.code}</span> · Échelle{" "}
+                  {snapshot.session.scaleMin} à {snapshot.session.scaleMax}
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -890,8 +1491,8 @@ export default function SkillsMatrixPage() {
                     className={cn(
                       "rounded-xl border px-3 py-1.5 text-xs font-semibold transition",
                       activeTab === tab
-                        ? "border-cyan-300/50 bg-cyan-500/20 text-cyan-100"
-                        : "border-white/[0.08] bg-white/[0.03] text-slate-300 hover:border-white/[0.15]",
+                        ? "border-cyan-200/60 bg-cyan-500/25 text-cyan-50 shadow-[0_0_0_1px_rgba(34,211,238,0.3)]"
+                        : "border-white/[0.1] bg-white/[0.04] text-slate-300 hover:border-white/[0.22]",
                     )}
                   >
                     {tab === "matrix" ? "Matrice" : "Dashboard"}
@@ -899,154 +1500,373 @@ export default function SkillsMatrixPage() {
                 ))}
               </div>
             </div>
+            <div className="grid gap-2 px-4 py-3 sm:grid-cols-3 sm:px-5">
+              <div className="rounded-xl border border-cyan-300/25 bg-cyan-500/10 px-3 py-2 text-[11px] text-cyan-100">
+                Couverture globale: {snapshot.dashboard.summary.coveredSkillsCount}/
+                {Math.max(1, snapshot.dashboard.summary.totalSkills)}
+              </div>
+              <div className="rounded-xl border border-white/[0.12] bg-white/[0.04] px-3 py-2 text-[11px] text-slate-200">
+                Cases renseignées: {matrixFilling.filled}/{Math.max(1, matrixFilling.total)} (
+                {matrixFilling.ratio}%)
+              </div>
+              <div className="rounded-xl border border-amber-300/25 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-100">
+                Compétences à risque: {snapshot.dashboard.summary.riskySkillsCount}
+              </div>
+            </div>
           </Card>
 
           {activeTab === "matrix" ? (
-            <Card className="rounded-2xl p-4 sm:p-5">
-              <div className="mb-3 text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
-                Matrice Compétences x Membres
+            <Card className="overflow-hidden rounded-3xl border border-white/[0.1] bg-[#0c1124]/95 p-0 shadow-[0_18px_40px_rgba(2,6,23,0.35)]">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/[0.08] bg-white/[0.02] px-4 py-3 sm:px-5">
+                <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-300">
+                  Matrice compétences x membres
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
+                  <span className="rounded-full border border-rose-300/35 bg-rose-500/20 px-2 py-0.5 text-rose-100">
+                    Lacunes
+                  </span>
+                  <span className="rounded-full border border-yellow-300/35 bg-yellow-500/18 px-2 py-0.5 text-yellow-100">
+                    Cible
+                  </span>
+                  <span className="rounded-full border border-emerald-300/35 bg-emerald-500/20 px-2 py-0.5 text-emerald-100">
+                    Forces
+                  </span>
+                </div>
               </div>
-              <div className="overflow-x-auto rounded-xl border border-white/[0.08]">
-                <table className="w-full min-w-[980px] text-sm">
-                  <thead className="bg-white/[0.04] text-slate-300">
-                    <tr>
-                      <th className="sticky left-0 z-10 min-w-[280px] border-b border-white/[0.08] bg-[#141426] px-3 py-2 text-left">
-                        Compétence
-                      </th>
-                      {snapshot.participants.map((participant) => (
-                        <th
-                          key={participant.id}
-                          className="min-w-[190px] border-b border-white/[0.08] px-3 py-2 text-left"
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-cyan-300/25 bg-cyan-500/10 text-base">
-                              {AVATARS[participant.avatar] ?? "?"}
-                            </span>
-                            <div>
-                              <div className="font-semibold text-slate-100">
-                                {participant.displayName}
-                              </div>
-                              <div className="text-[11px] text-slate-500">
-                                {participant.isAdmin ? "Host" : "Membre"}
-                              </div>
-                            </div>
-                          </div>
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {matrixRowsByCategory.flatMap((group) => [
-                      <tr key={`group-${group.categoryId ?? "none"}`}>
-                        <td
-                          colSpan={snapshot.participants.length + 1}
-                          className="bg-white/[0.02] px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-cyan-300"
-                        >
+
+              <div className="p-4 sm:p-5">
+                <p className="mb-3 text-[11px] text-slate-500 md:hidden">
+                  Vue mobile: complète chaque compétence via ta carte personnelle. Le détail de
+                  l'équipe reste visible juste en dessous.
+                </p>
+
+                <div className="space-y-3 md:hidden">
+                  {!myParticipantId ? (
+                    <div className="rounded-xl border border-amber-300/25 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-100">
+                      Profil non associé à la session. Recharge la page ou rejoins à nouveau la
+                      partie pour renseigner ta matrice.
+                    </div>
+                  ) : null}
+
+                  {matrixRowsByCategory.length === 0 ? (
+                    <div className="rounded-2xl border border-white/[0.08] bg-[#0a1021] px-3 py-3 text-xs text-slate-400">
+                      Aucune compétence disponible. Ajoute des compétences dans la configuration
+                      host pour compléter la matrice.
+                    </div>
+                  ) : (
+                    matrixRowsByCategory.map((group) => (
+                      <section
+                        key={`mobile-group-${group.categoryId ?? "none"}`}
+                        className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0a1021]"
+                      >
+                        <div className="border-b border-white/[0.08] bg-white/[0.03] px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-cyan-300">
                           {group.categoryName}
-                        </td>
-                      </tr>,
-                      ...group.rows.map((row) => (
-                        <tr key={row.skillId} className="border-t border-white/[0.06] align-top">
-                          <td className="sticky left-0 z-10 bg-[#101020] px-3 py-3">
-                            <div className="font-semibold text-slate-100">{row.skillName}</div>
-                            <div className="mt-1 text-xs text-slate-500">
-                              Niveau attendu: {row.requiredLevel} · Personnes attendues:{" "}
-                              {row.requiredPeople}
-                            </div>
-                            <div className="mt-1 text-xs text-slate-400">
-                              Couverture actuelle: {row.coverageCount}/{row.requiredPeople}
-                              {row.missingCount > 0
-                                ? ` · Manque: ${row.missingCount}`
-                                : " · Besoin couvert"}
-                            </div>
-                          </td>
-                          {snapshot.participants.map((participant) => {
-                            const cell =
-                              assessmentByCellKey.get(assessmentKey(row.skillId, participant.id)) ??
-                              null;
-                            const canEdit = participant.id === myParticipantId;
-                            if (!canEdit) {
-                              return (
-                                <td key={`${row.skillId}-${participant.id}`} className="px-3 py-3">
-                                  <div className="text-xs text-slate-200">
-                                    Actuel: {cell?.currentLevel ?? "-"}
-                                  </div>
-                                  <div className="text-xs text-slate-400">
-                                    Cible: {cell?.targetLevel ?? "-"}
-                                  </div>
-                                  <div className="text-xs text-slate-500">
-                                    {cell?.wantsToProgress ? "Souhaite progresser" : " "}
-                                  </div>
-                                </td>
-                              );
-                            }
+                        </div>
+                        <div className="space-y-2.5 p-3">
+                          {group.rows.map((row) => {
+                            const myCell = myParticipantId
+                              ? (assessmentByCellKey.get(
+                                  assessmentKey(row.skillId, myParticipantId),
+                                ) ?? null)
+                              : null;
+                            const myTone = resolveMatrixCellTone(
+                              myCell?.currentLevel ?? null,
+                              row.requiredLevel,
+                            );
+                            const showsProgressBadge = myCell?.wantsToProgress === true;
+                            const showsMentorBadge = myCell?.wantsToMentor === true;
+                            const otherParticipants = snapshot.participants.filter(
+                              (participant) => participant.id !== myParticipantId,
+                            );
 
                             return (
-                              <td key={`${row.skillId}-${participant.id}`} className="px-3 py-3">
-                                <div className="space-y-1.5">
-                                  <select
-                                    value={cell?.currentLevel ?? ""}
-                                    onChange={(event) => {
-                                      const raw = event.target.value;
-                                      void updateAssessment(row.skillId, {
-                                        currentLevel: raw === "" ? null : Number(raw),
-                                      });
-                                    }}
-                                    className="h-8 w-full rounded-md border border-white/[0.12] bg-white/[0.04] px-2 text-xs text-slate-100"
-                                  >
-                                    <option value="">Actuel -</option>
-                                    {levelOptions.map((level) => (
-                                      <option key={`${row.skillId}-current-${level}`} value={level}>
-                                        Actuel {level}
-                                      </option>
-                                    ))}
-                                  </select>
-                                  <select
-                                    value={cell?.targetLevel ?? ""}
-                                    onChange={(event) => {
-                                      const raw = event.target.value;
-                                      void updateAssessment(row.skillId, {
-                                        targetLevel: raw === "" ? null : Number(raw),
-                                      });
-                                    }}
-                                    className="h-8 w-full rounded-md border border-white/[0.12] bg-white/[0.04] px-2 text-xs text-slate-100"
-                                  >
-                                    <option value="">Cible -</option>
-                                    {levelOptions.map((level) => (
-                                      <option key={`${row.skillId}-target-${level}`} value={level}>
-                                        Cible {level}
-                                      </option>
-                                    ))}
-                                  </select>
-                                  <label className="flex items-center gap-2 text-xs text-slate-300">
-                                    <input
-                                      type="checkbox"
-                                      checked={cell?.wantsToProgress === true}
-                                      onChange={(event) => {
-                                        void updateAssessment(row.skillId, {
-                                          wantsToProgress: event.target.checked,
-                                        });
-                                      }}
-                                    />
-                                    Progresser
-                                  </label>
+                              <article
+                                key={`mobile-row-${row.skillId}`}
+                                className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-3"
+                              >
+                                <div className="font-semibold text-slate-100">{row.skillName}</div>
+                                <div className="mt-1 text-xs text-slate-400">
+                                  Niveau attendu: {row.requiredLevel} · Personnes attendues:{" "}
+                                  {row.requiredPeople}
                                 </div>
-                              </td>
+                                <div className="mt-1 text-xs text-slate-500">
+                                  Couverture actuelle: {row.coverageCount}/{row.requiredPeople}
+                                  {row.missingCount > 0
+                                    ? ` · Manque: ${row.missingCount}`
+                                    : " · Besoin couvert"}
+                                </div>
+
+                                {myParticipantId ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => openCellEditor(row)}
+                                    className={cn(
+                                      "mt-2.5 w-full rounded-xl border px-3 py-2 text-left transition active:scale-[0.99]",
+                                      myTone.surfaceClass,
+                                    )}
+                                  >
+                                    <div className="flex items-start justify-between gap-2">
+                                      <span
+                                        className={cn(
+                                          "rounded-full border px-1.5 py-0.5 text-[10px] font-semibold",
+                                          myTone.badgeClass,
+                                        )}
+                                      >
+                                        {myTone.badgeLabel}
+                                      </span>
+                                      <span className="text-[10px] font-semibold text-cyan-200/90">
+                                        Modifier
+                                      </span>
+                                    </div>
+                                    <div className="mt-2 flex items-end justify-between gap-2">
+                                      <div>
+                                        <div
+                                          className={cn(
+                                            "text-2xl font-extrabold",
+                                            myTone.valueClass,
+                                          )}
+                                        >
+                                          {myCell?.currentLevel ?? "—"}
+                                        </div>
+                                        <div className="text-[11px] text-slate-300">
+                                          Cible: {myCell?.targetLevel ?? "—"}
+                                        </div>
+                                      </div>
+                                      <div className="text-right text-[10px] text-slate-300">
+                                        Ta cellule
+                                      </div>
+                                    </div>
+                                    <div className="mt-2 flex min-h-[20px] flex-wrap gap-1">
+                                      {showsProgressBadge ? (
+                                        <span className="rounded-full border border-violet-300/40 bg-violet-500/20 px-2 py-0.5 text-[10px] font-semibold text-violet-100">
+                                          Souhaite être formé
+                                        </span>
+                                      ) : null}
+                                      {showsMentorBadge ? (
+                                        <span className="rounded-full border border-emerald-300/40 bg-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold text-emerald-100">
+                                          Souhaite former
+                                        </span>
+                                      ) : null}
+                                    </div>
+                                  </button>
+                                ) : null}
+
+                                {otherParticipants.length > 0 ? (
+                                  <details className="mt-2.5 group">
+                                    <summary className="cursor-pointer list-none text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500 transition group-open:text-slate-300">
+                                      Équipe ({otherParticipants.length})
+                                    </summary>
+                                    <div className="mt-1.5 space-y-1.5">
+                                      {otherParticipants.map((participant) => {
+                                        const cell =
+                                          assessmentByCellKey.get(
+                                            assessmentKey(row.skillId, participant.id),
+                                          ) ?? null;
+                                        const tone = resolveMatrixCellTone(
+                                          cell?.currentLevel ?? null,
+                                          row.requiredLevel,
+                                        );
+                                        return (
+                                          <div
+                                            key={`mobile-row-${row.skillId}-${participant.id}`}
+                                            className={cn(
+                                              "flex items-center justify-between gap-2 rounded-lg border px-2 py-1.5",
+                                              tone.surfaceClass,
+                                            )}
+                                          >
+                                            <div className="flex min-w-0 items-center gap-2">
+                                              <span className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-cyan-300/25 bg-cyan-500/10 text-sm">
+                                                {AVATARS[participant.avatar] ?? "?"}
+                                              </span>
+                                              <span className="truncate text-xs text-slate-100">
+                                                {participant.displayName}
+                                              </span>
+                                            </div>
+                                            <div
+                                              className={cn(
+                                                "text-xs font-semibold",
+                                                tone.valueClass,
+                                              )}
+                                            >
+                                              {cell?.currentLevel ?? "—"} · C
+                                              {cell?.targetLevel ?? "—"}
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </details>
+                                ) : null}
+                              </article>
                             );
                           })}
+                        </div>
+                      </section>
+                    ))
+                  )}
+                </div>
+
+                <div className="hidden md:block">
+                  <div className="overflow-x-auto rounded-2xl border border-white/[0.08] bg-[#0a1021]">
+                    <table className="w-full min-w-[900px] text-sm">
+                      <thead className="bg-white/[0.04] text-slate-300">
+                        <tr>
+                          <th className="sticky left-0 z-20 min-w-[300px] border-b border-white/[0.08] bg-[#111830] px-3 py-2 text-left">
+                            Compétence
+                          </th>
+                          {snapshot.participants.map((participant) => (
+                            <th
+                              key={participant.id}
+                              className="min-w-[200px] border-b border-white/[0.08] px-3 py-2 text-left"
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-cyan-300/25 bg-cyan-500/10 text-base">
+                                  {AVATARS[participant.avatar] ?? "?"}
+                                </span>
+                                <div className="min-w-0">
+                                  <div className="truncate font-semibold text-slate-100">
+                                    {participant.displayName}
+                                  </div>
+                                  <div className="text-[11px] text-slate-500">
+                                    {participant.isAdmin ? "Host" : "Membre"}
+                                  </div>
+                                </div>
+                              </div>
+                            </th>
+                          ))}
                         </tr>
-                      )),
-                    ])}
-                  </tbody>
-                </table>
+                      </thead>
+                      <tbody>
+                        {matrixRowsByCategory.flatMap((group) => [
+                          <tr key={`group-${group.categoryId ?? "none"}`}>
+                            <td
+                              colSpan={snapshot.participants.length + 1}
+                              className="bg-white/[0.02] px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-cyan-300"
+                            >
+                              {group.categoryName}
+                            </td>
+                          </tr>,
+                          ...group.rows.map((row) => (
+                            <tr
+                              key={row.skillId}
+                              className="border-t border-white/[0.06] align-top"
+                            >
+                              <td className="sticky left-0 z-10 bg-[#101735] px-3 py-3">
+                                <div className="font-semibold text-slate-100">{row.skillName}</div>
+                                <div className="mt-1 text-xs text-slate-500">
+                                  Niveau attendu: {row.requiredLevel} · Personnes attendues:{" "}
+                                  {row.requiredPeople}
+                                </div>
+                                <div className="mt-1 text-xs text-slate-400">
+                                  Couverture actuelle: {row.coverageCount}/{row.requiredPeople}
+                                  {row.missingCount > 0
+                                    ? ` · Manque: ${row.missingCount}`
+                                    : " · Besoin couvert"}
+                                </div>
+                              </td>
+                              {snapshot.participants.map((participant) => {
+                                const cell =
+                                  assessmentByCellKey.get(
+                                    assessmentKey(row.skillId, participant.id),
+                                  ) ?? null;
+                                const tone = resolveMatrixCellTone(
+                                  cell?.currentLevel ?? null,
+                                  row.requiredLevel,
+                                );
+                                const canEdit = participant.id === myParticipantId;
+                                const showsProgressBadge = cell?.wantsToProgress === true;
+                                const showsMentorBadge = cell?.wantsToMentor === true;
+                                const cellContent = (
+                                  <div
+                                    className={cn(
+                                      "min-h-[116px] rounded-2xl border px-3 py-2.5 text-left",
+                                      "flex flex-col justify-between gap-1.5 transition",
+                                      "bg-gradient-to-br from-white/[0.11] via-white/[0.04] to-slate-950/45 backdrop-blur-[1px]",
+                                      canEdit
+                                        ? "shadow-[0_10px_24px_rgba(2,6,23,0.32)] group-hover:shadow-[0_14px_30px_rgba(2,6,23,0.4)]"
+                                        : "",
+                                      tone.surfaceClass,
+                                    )}
+                                  >
+                                    <div className="flex items-start justify-between gap-2">
+                                      <span
+                                        className={cn(
+                                          "rounded-full border px-1.5 py-0.5 text-[10px] font-semibold",
+                                          tone.badgeClass,
+                                        )}
+                                      >
+                                        {tone.badgeLabel}
+                                      </span>
+                                      {canEdit ? (
+                                        <span className="text-[10px] font-semibold text-cyan-200/90">
+                                          Modifier
+                                        </span>
+                                      ) : null}
+                                    </div>
+
+                                    <div>
+                                      <div
+                                        className={cn(
+                                          "text-2xl font-extrabold leading-none",
+                                          tone.valueClass,
+                                        )}
+                                      >
+                                        {cell?.currentLevel ?? "—"}
+                                      </div>
+                                      <div className="mt-1 text-[11px] text-slate-300">
+                                        Cible: {cell?.targetLevel ?? "—"}
+                                      </div>
+                                    </div>
+
+                                    <div className="flex min-h-[20px] flex-wrap gap-1">
+                                      {showsProgressBadge ? (
+                                        <span className="rounded-full border border-violet-300/40 bg-violet-500/20 px-2 py-0.5 text-[10px] font-semibold text-violet-100">
+                                          Souhaite être formé
+                                        </span>
+                                      ) : null}
+                                      {showsMentorBadge ? (
+                                        <span className="rounded-full border border-emerald-300/40 bg-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold text-emerald-100">
+                                          Souhaite former
+                                        </span>
+                                      ) : null}
+                                    </div>
+                                  </div>
+                                );
+
+                                return (
+                                  <td
+                                    key={`${row.skillId}-${participant.id}`}
+                                    className="px-2 py-2 align-top"
+                                  >
+                                    {canEdit ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => openCellEditor(row)}
+                                        className="group w-full text-left transition hover:-translate-y-0.5"
+                                      >
+                                        {cellContent}
+                                      </button>
+                                    ) : (
+                                      <div>{cellContent}</div>
+                                    )}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          )),
+                        ])}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
             </Card>
           ) : null}
 
           {activeTab === "dashboard" ? (
             <div className="space-y-4">
-              <div className="grid gap-3 md:grid-cols-4">
-                <Card className="rounded-2xl p-4">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <Card className="rounded-2xl border border-white/[0.1] bg-white/[0.03] p-4">
                   <div className="text-xs uppercase tracking-[0.08em] text-slate-400">
                     Compétences
                   </div>
@@ -1054,53 +1874,129 @@ export default function SkillsMatrixPage() {
                     {snapshot.dashboard.summary.totalSkills}
                   </div>
                 </Card>
-                <Card className="rounded-2xl p-4">
-                  <div className="text-xs uppercase tracking-[0.08em] text-slate-400">À risque</div>
-                  <div className="mt-1 text-xl font-bold text-amber-300">
+                <Card className="rounded-2xl border border-amber-300/25 bg-amber-500/10 p-4">
+                  <div className="text-xs uppercase tracking-[0.08em] text-amber-100">À risque</div>
+                  <div className="mt-1 text-xl font-bold text-amber-100">
                     {snapshot.dashboard.summary.riskySkillsCount}
                   </div>
                 </Card>
-                <Card className="rounded-2xl p-4">
-                  <div className="text-xs uppercase tracking-[0.08em] text-slate-400">
+                <Card className="rounded-2xl border border-emerald-300/25 bg-emerald-500/10 p-4">
+                  <div className="text-xs uppercase tracking-[0.08em] text-emerald-100">
                     Couvertes
                   </div>
-                  <div className="mt-1 text-xl font-bold text-emerald-300">
+                  <div className="mt-1 text-xl font-bold text-emerald-100">
                     {snapshot.dashboard.summary.coveredSkillsCount}
                   </div>
                 </Card>
-                <Card className="rounded-2xl p-4">
-                  <div className="text-xs uppercase tracking-[0.08em] text-slate-400">
+                <Card className="rounded-2xl border border-rose-300/25 bg-rose-500/10 p-4">
+                  <div className="text-xs uppercase tracking-[0.08em] text-rose-100">
                     Manques (personnes)
                   </div>
-                  <div className="mt-1 text-xl font-bold text-rose-300">
+                  <div className="mt-1 text-xl font-bold text-rose-100">
                     {snapshot.dashboard.summary.totalMissingPeople}
                   </div>
                 </Card>
               </div>
 
-              <Card className="rounded-2xl p-4 sm:p-5">
-                <div className="mb-3 text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
-                  Compétences à risque
-                </div>
-                {snapshot.dashboard.riskySkills.length === 0 ? (
-                  <div className="text-sm text-emerald-300">Aucune compétence à risque.</div>
-                ) : (
-                  <div className="space-y-2">
-                    {snapshot.dashboard.riskySkills.map((skill) => (
-                      <div
-                        key={skill.skillId}
-                        className="rounded-xl border border-amber-300/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-100"
+              <div className="grid gap-4 2xl:grid-cols-2">
+                <Card className="rounded-3xl border border-white/[0.1] bg-[#0c1124]/95 p-4 sm:p-5">
+                  <SkillsRadarPanel
+                    title="Radar groupe"
+                    subtitle="Synthèse par catégorie (moyenne des niveaux de l'équipe)."
+                    model={groupRadarModel}
+                  />
+                </Card>
+
+                <Card className="rounded-3xl border border-white/[0.1] bg-[#0c1124]/95 p-4 sm:p-5">
+                  <div className="mb-3">
+                    <h3 className="text-sm font-semibold text-slate-100">Radar individuel</h3>
+                    <p className="mt-1 text-xs text-slate-400">
+                      Sélectionne un membre pour analyser ses catégories et ses compétences.
+                    </p>
+                  </div>
+                  <div className="mb-4 flex flex-wrap gap-2">
+                    {snapshot.participants.map((participant) => (
+                      <button
+                        key={participant.id}
+                        type="button"
+                        onClick={() => setSelectedRadarParticipantId(participant.id)}
+                        className={cn(
+                          "inline-flex items-center gap-2 rounded-xl border px-2.5 py-1.5 text-xs font-semibold transition",
+                          selectedRadarParticipantId === participant.id
+                            ? "border-cyan-300/55 bg-cyan-500/20 text-cyan-100"
+                            : "border-white/[0.1] bg-white/[0.04] text-slate-300 hover:border-white/[0.22]",
+                        )}
                       >
-                        <span className="font-semibold">{skill.skillName}</span> (
-                        {skill.categoryName}) · couverture {skill.coverageCount}/
-                        {skill.requiredPeople} · manque {skill.missingCount}
-                      </div>
+                        <span className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-cyan-300/25 bg-cyan-500/10 text-sm">
+                          {AVATARS[participant.avatar] ?? "?"}
+                        </span>
+                        <span className="max-w-[110px] truncate">{participant.displayName}</span>
+                      </button>
                     ))}
                   </div>
-                )}
+                  <SkillsRadarPanel
+                    title={
+                      selectedRadarParticipant
+                        ? selectedRadarParticipant.displayName
+                        : "Aucun membre"
+                    }
+                    subtitle="Lecture individuelle par catégorie et compétences."
+                    model={selectedParticipantRadarModel}
+                  />
+                </Card>
+              </div>
+
+              <Card className="rounded-3xl border border-white/[0.1] bg-[#0d1228]/92 p-4 sm:p-5">
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <div>
+                    <div className="mb-3 text-xs font-semibold uppercase tracking-[0.08em] text-amber-200">
+                      Compétences à risque
+                    </div>
+                    {snapshot.dashboard.riskySkills.length === 0 ? (
+                      <div className="text-sm text-emerald-300">Aucune compétence à risque.</div>
+                    ) : (
+                      <div className="space-y-2">
+                        {snapshot.dashboard.riskySkills.map((skill) => (
+                          <div
+                            key={skill.skillId}
+                            className="rounded-xl border border-amber-300/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-100"
+                          >
+                            <span className="font-semibold">{skill.skillName}</span> (
+                            {skill.categoryName}) · couverture {skill.coverageCount}/
+                            {skill.requiredPeople} · manque {skill.missingCount}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <div className="mb-3 text-xs font-semibold uppercase tracking-[0.08em] text-emerald-200">
+                      Compétences couvertes
+                    </div>
+                    {snapshot.dashboard.coveredSkills.length === 0 ? (
+                      <div className="text-sm text-slate-400">
+                        Aucune compétence couverte pour le moment.
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {snapshot.dashboard.coveredSkills.map((skill) => (
+                          <div
+                            key={skill.skillId}
+                            className="rounded-xl border border-emerald-300/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100"
+                          >
+                            <span className="font-semibold">{skill.skillName}</span> (
+                            {skill.categoryName}) · couverture {skill.coverageCount}/
+                            {skill.requiredPeople}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </Card>
 
-              <Card className="rounded-2xl p-4 sm:p-5">
+              <Card className="rounded-3xl border border-white/[0.1] bg-[#0d1228]/92 p-4 sm:p-5">
                 <div className="mb-3 text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
                   Qui peut aider / qui veut apprendre
                 </div>
@@ -1120,7 +2016,10 @@ export default function SkillsMatrixPage() {
                         Aider:{" "}
                         {item.helpers.length > 0
                           ? item.helpers
-                              .map((helper) => `${helper.displayName} (N${helper.currentLevel})`)
+                              .map(
+                                (helper) =>
+                                  `${helper.displayName} (N${helper.currentLevel})${helper.wantsToMentor ? " · formateur volontaire" : ""}`,
+                              )
                               .join(", ")
                           : "personne"}
                       </div>
@@ -1148,6 +2047,169 @@ export default function SkillsMatrixPage() {
             Mise à jour...
           </div>
         ) : null}
+
+        <Dialog open={Boolean(editingCell)} onOpenChange={(open) => !open && closeCellEditor()}>
+          <DialogContent className="max-w-md rounded-2xl border border-white/[0.08] bg-[#0d0d1a] p-0 text-slate-100 shadow-2xl">
+            <div className="rounded-t-2xl border-b border-white/[0.08] bg-gradient-to-r from-cyan-500/16 via-indigo-500/10 to-cyan-500/8 px-5 py-4">
+              <DialogHeader>
+                <DialogTitle className="text-base font-semibold text-slate-100">
+                  Mettre à jour une compétence
+                </DialogTitle>
+                <DialogDescription className="text-xs text-slate-300">
+                  {editingCell?.skillName} · Niveau attendu {editingCell?.requiredLevel}
+                </DialogDescription>
+              </DialogHeader>
+            </div>
+
+            <form onSubmit={saveCellEditor} className="space-y-4 px-5 py-4">
+              <div className="space-y-2 rounded-xl border border-white/[0.08] bg-white/[0.02] px-3 py-3">
+                <div className="flex items-center justify-between gap-2">
+                  <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                    Niveau actuel
+                  </label>
+                  <span className="rounded-full border border-white/[0.14] bg-white/[0.05] px-2 py-0.5 text-xs font-semibold text-slate-200">
+                    {editingCell?.currentLevel ?? "Non renseigné"}
+                  </span>
+                </div>
+                <Slider
+                  min={snapshot.session.scaleMin}
+                  max={snapshot.session.scaleMax}
+                  step={1}
+                  value={[editingCell?.currentLevel ?? snapshot.session.scaleMin]}
+                  onValueChange={(values) =>
+                    setEditingCell((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            currentLevel: values[0] ?? snapshot.session.scaleMin,
+                          }
+                        : prev,
+                    )
+                  }
+                />
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setEditingCell((prev) => (prev ? { ...prev, currentLevel: null } : prev))
+                    }
+                    className="rounded-lg border border-white/[0.14] bg-white/[0.04] px-2 py-1 text-[11px] font-semibold text-slate-300 transition hover:bg-white/[0.08]"
+                  >
+                    Non renseigné
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setEditingCell((prev) =>
+                        prev ? { ...prev, currentLevel: prev.requiredLevel } : prev,
+                      )
+                    }
+                    className="rounded-lg border border-cyan-300/30 bg-cyan-500/14 px-2 py-1 text-[11px] font-semibold text-cyan-100 transition hover:bg-cyan-500/24"
+                  >
+                    Aligner au requis
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-2 rounded-xl border border-white/[0.08] bg-white/[0.02] px-3 py-3">
+                <div className="flex items-center justify-between gap-2">
+                  <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                    Niveau cible
+                  </label>
+                  <span className="rounded-full border border-white/[0.14] bg-white/[0.05] px-2 py-0.5 text-xs font-semibold text-slate-200">
+                    {editingCell?.targetLevel ?? "Non renseigné"}
+                  </span>
+                </div>
+                <Slider
+                  min={snapshot.session.scaleMin}
+                  max={snapshot.session.scaleMax}
+                  step={1}
+                  value={[
+                    editingCell?.targetLevel ??
+                      editingCell?.currentLevel ??
+                      snapshot.session.scaleMin,
+                  ]}
+                  onValueChange={(values) =>
+                    setEditingCell((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            targetLevel: values[0] ?? snapshot.session.scaleMin,
+                          }
+                        : prev,
+                    )
+                  }
+                />
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setEditingCell((prev) => (prev ? { ...prev, targetLevel: null } : prev))
+                    }
+                    className="rounded-lg border border-white/[0.14] bg-white/[0.04] px-2 py-1 text-[11px] font-semibold text-slate-300 transition hover:bg-white/[0.08]"
+                  >
+                    Non renseigné
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setEditingCell((prev) =>
+                        prev ? { ...prev, targetLevel: prev.requiredLevel } : prev,
+                      )
+                    }
+                    className="rounded-lg border border-cyan-300/30 bg-cyan-500/14 px-2 py-1 text-[11px] font-semibold text-cyan-100 transition hover:bg-cyan-500/24"
+                  >
+                    Cible requise
+                  </button>
+                </div>
+              </div>
+
+              <label className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.02] px-3 py-2 text-sm text-slate-200">
+                <input
+                  type="checkbox"
+                  checked={editingCell?.wantsToProgress === true}
+                  onChange={(event) =>
+                    setEditingCell((prev) =>
+                      prev ? { ...prev, wantsToProgress: event.target.checked } : prev,
+                    )
+                  }
+                />
+                Je souhaite être formé sur cette compétence
+              </label>
+
+              <label className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.02] px-3 py-2 text-sm text-slate-200">
+                <input
+                  type="checkbox"
+                  checked={editingCell?.wantsToMentor === true}
+                  onChange={(event) =>
+                    setEditingCell((prev) =>
+                      prev ? { ...prev, wantsToMentor: event.target.checked } : prev,
+                    )
+                  }
+                />
+                Je souhaite former sur cette compétence
+              </label>
+
+              <DialogFooter className="pt-2">
+                <button
+                  type="button"
+                  onClick={closeCellEditor}
+                  disabled={savingCell}
+                  className="h-10 rounded-xl border border-white/[0.1] bg-white/[0.04] px-4 text-sm font-semibold text-slate-200 transition hover:bg-white/[0.08] disabled:opacity-50"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingCell}
+                  className="h-10 rounded-xl bg-cyan-500 px-4 text-sm font-bold text-slate-950 transition hover:bg-cyan-400 disabled:opacity-50"
+                >
+                  {savingCell ? "Enregistrement..." : "Enregistrer"}
+                </button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

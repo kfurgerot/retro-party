@@ -15,6 +15,25 @@ function normalizeName(rawValue, maxLength = 120) {
   return rawValue.trim().slice(0, maxLength);
 }
 
+function resolveParticipantId(req) {
+  const fromBody =
+    req.body && typeof req.body.participantId === "string" ? req.body.participantId : "";
+  const fromQuery =
+    req.query && typeof req.query.participantId === "string" ? req.query.participantId : "";
+  const headerValue = req.headers?.["x-participant-id"];
+  const fromHeader = Array.isArray(headerValue)
+    ? String(headerValue[0] ?? "")
+    : typeof headerValue === "string"
+      ? headerValue
+      : "";
+
+  return (
+    [fromBody, fromQuery, fromHeader]
+      .map((value) => String(value || "").trim())
+      .find((value) => value.length > 0) || ""
+  );
+}
+
 function parseNullableLevel(rawValue, scaleMin, scaleMax) {
   if (rawValue === null || rawValue === undefined || rawValue === "") return null;
   const value = Number(rawValue);
@@ -187,6 +206,7 @@ function serializeAssessment(row) {
     currentLevel: Number.isFinite(currentLevel) ? currentLevel : null,
     targetLevel: Number.isFinite(targetLevel) ? targetLevel : null,
     wantsToProgress: row.wants_to_progress === true,
+    wantsToMentor: row.wants_to_mentor === true,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -227,7 +247,7 @@ async function getSessionByCode(pool, code) {
   return result.rows[0] ?? null;
 }
 
-async function getParticipantByUser(pool, sessionId, userId) {
+async function getParticipantById(pool, sessionId, participantId) {
   const result = await pool.query(
     `
       SELECT
@@ -240,22 +260,22 @@ async function getParticipantByUser(pool, sessionId, userId) {
         created_at,
         updated_at
       FROM skills_matrix_participants
-      WHERE session_id = $1 AND user_id = $2
+      WHERE session_id = $1 AND id = $2
       LIMIT 1
     `,
-    [sessionId, userId],
+    [sessionId, participantId],
   );
   return result.rows[0] ?? null;
 }
 
-async function getSessionContext(pool, code, userId) {
+async function getSessionContext(pool, code, participantId) {
   const session = await getSessionByCode(pool, code);
   if (!session) return { session: null, me: null };
-  const me = await getParticipantByUser(pool, session.id, userId);
+  const me = participantId ? await getParticipantById(pool, session.id, participantId) : null;
   return { session, me };
 }
 
-async function buildSessionSnapshot({ pool, session, currentUserId }) {
+async function buildSessionSnapshot({ pool, session, currentParticipantId }) {
   const [participantsResult, categoriesResult, skillsResult, assessmentsResult] = await Promise.all(
     [
       pool.query(
@@ -318,6 +338,7 @@ async function buildSessionSnapshot({ pool, session, currentUserId }) {
           current_level,
           target_level,
           wants_to_progress,
+          wants_to_mentor,
           created_at,
           updated_at
         FROM skills_matrix_assessments
@@ -333,7 +354,7 @@ async function buildSessionSnapshot({ pool, session, currentUserId }) {
   const categories = categoriesResult.rows.map(serializeCategory);
   const skills = skillsResult.rows.map(serializeSkill);
   const assessments = assessmentsResult.rows.map(serializeAssessment);
-  const me = participants.find((participant) => participant.userId === currentUserId) ?? null;
+  const me = participants.find((participant) => participant.id === currentParticipantId) ?? null;
 
   const categoryById = new Map(categories.map((category) => [category.id, category]));
   const skillById = new Map(skills.map((skill) => [skill.id, skill]));
@@ -389,6 +410,7 @@ async function buildSessionSnapshot({ pool, session, currentUserId }) {
           participantId: participant.id,
           displayName: participant.displayName,
           currentLevel: helper.currentLevel,
+          wantsToMentor: helper.wantsToMentor === true,
         };
       })
       .filter(Boolean);
@@ -514,7 +536,7 @@ export function registerSkillsMatrixRoutes(context) {
       const payload = await buildSessionSnapshot({
         pool,
         session,
-        currentUserId: req.currentUser.id,
+        currentParticipantId: participantId,
       });
 
       return res.status(201).json(payload);
@@ -539,6 +561,7 @@ export function registerSkillsMatrixRoutes(context) {
 
       const session = await getSessionByCode(pool, code);
       if (!session) return res.status(404).json({ error: "Not found" });
+      const participantId = crypto.randomUUID();
 
       await pool.query(
         `
@@ -551,19 +574,14 @@ export function registerSkillsMatrixRoutes(context) {
             is_admin
           )
           VALUES ($1, $2, $3, $4, $5, false)
-          ON CONFLICT (session_id, user_id)
-          DO UPDATE SET
-            display_name = EXCLUDED.display_name,
-            avatar = EXCLUDED.avatar,
-            updated_at = now()
         `,
-        [crypto.randomUUID(), session.id, req.currentUser.id, participantDisplayName, avatar],
+        [participantId, session.id, req.currentUser.id, participantDisplayName, avatar],
       );
 
       const payload = await buildSessionSnapshot({
         pool,
         session,
-        currentUserId: req.currentUser.id,
+        currentParticipantId: participantId,
       });
       return res.status(200).json(payload);
     } catch (err) {
@@ -574,16 +592,18 @@ export function registerSkillsMatrixRoutes(context) {
   app.get("/api/skills-matrix/sessions/:code", requireAuth, async (req, res, next) => {
     try {
       const code = normalizeCode(req.params.code);
+      const participantId = resolveParticipantId(req);
       if (!code) return res.status(400).json({ error: "Invalid payload" });
+      if (!participantId) return res.status(400).json({ error: "Invalid payload" });
 
-      const { session, me } = await getSessionContext(pool, code, req.currentUser.id);
+      const { session, me } = await getSessionContext(pool, code, participantId);
       if (!session) return res.status(404).json({ error: "Not found" });
       if (!me) return res.status(403).json({ error: "Unauthorized" });
 
       const payload = await buildSessionSnapshot({
         pool,
         session,
-        currentUserId: req.currentUser.id,
+        currentParticipantId: participantId,
       });
       return res.status(200).json(payload);
     } catch (err) {
@@ -594,9 +614,11 @@ export function registerSkillsMatrixRoutes(context) {
   app.post("/api/skills-matrix/sessions/:code/start", requireAuth, async (req, res, next) => {
     try {
       const code = normalizeCode(req.params.code);
+      const participantId = resolveParticipantId(req);
       if (!code) return res.status(400).json({ error: "Invalid payload" });
+      if (!participantId) return res.status(400).json({ error: "Invalid payload" });
 
-      const { session, me } = await getSessionContext(pool, code, req.currentUser.id);
+      const { session, me } = await getSessionContext(pool, code, participantId);
       if (!session) return res.status(404).json({ error: "Not found" });
       if (!me || !me.is_admin) return res.status(403).json({ error: "Unauthorized" });
 
@@ -616,7 +638,7 @@ export function registerSkillsMatrixRoutes(context) {
       const payload = await buildSessionSnapshot({
         pool,
         session: nextSession,
-        currentUserId: req.currentUser.id,
+        currentParticipantId: participantId,
       });
       return res.status(200).json(payload);
     } catch (err) {
@@ -631,11 +653,13 @@ export function registerSkillsMatrixRoutes(context) {
       const client = await pool.connect();
       try {
         const code = normalizeCode(req.params.code);
+        const participantId = resolveParticipantId(req);
         const templateId =
           typeof req.body?.templateId === "string" ? req.body.templateId.trim() : "";
-        if (!code || !templateId) return res.status(400).json({ error: "Invalid payload" });
+        if (!code || !templateId || !participantId)
+          return res.status(400).json({ error: "Invalid payload" });
 
-        const { session, me } = await getSessionContext(pool, code, req.currentUser.id);
+        const { session, me } = await getSessionContext(pool, code, participantId);
         if (!session) return res.status(404).json({ error: "Not found" });
         if (!me || !me.is_admin) return res.status(403).json({ error: "Unauthorized" });
 
@@ -722,7 +746,7 @@ export function registerSkillsMatrixRoutes(context) {
         const payload = await buildSessionSnapshot({
           pool,
           session: nextSession,
-          currentUserId: req.currentUser.id,
+          currentParticipantId: participantId,
         });
         return res.status(200).json(payload);
       } catch (err) {
@@ -738,9 +762,10 @@ export function registerSkillsMatrixRoutes(context) {
     const client = await pool.connect();
     try {
       const code = normalizeCode(req.params.code);
-      if (!code) return res.status(400).json({ error: "Invalid payload" });
+      const participantId = resolveParticipantId(req);
+      if (!code || !participantId) return res.status(400).json({ error: "Invalid payload" });
 
-      const { session, me } = await getSessionContext(pool, code, req.currentUser.id);
+      const { session, me } = await getSessionContext(pool, code, participantId);
       if (!session) return res.status(404).json({ error: "Not found" });
       if (!me || !me.is_admin) return res.status(403).json({ error: "Unauthorized" });
 
@@ -813,7 +838,7 @@ export function registerSkillsMatrixRoutes(context) {
       const payload = await buildSessionSnapshot({
         pool,
         session: nextSession,
-        currentUserId: req.currentUser.id,
+        currentParticipantId: participantId,
       });
       return res.status(200).json(payload);
     } catch (err) {
@@ -827,10 +852,12 @@ export function registerSkillsMatrixRoutes(context) {
   app.post("/api/skills-matrix/sessions/:code/categories", requireAuth, async (req, res, next) => {
     try {
       const code = normalizeCode(req.params.code);
+      const participantId = resolveParticipantId(req);
       const name = normalizeName(req.body?.name, 80);
-      if (!code || name.length < 2) return res.status(400).json({ error: "Invalid payload" });
+      if (!code || !participantId || name.length < 2)
+        return res.status(400).json({ error: "Invalid payload" });
 
-      const { session, me } = await getSessionContext(pool, code, req.currentUser.id);
+      const { session, me } = await getSessionContext(pool, code, participantId);
       if (!session) return res.status(404).json({ error: "Not found" });
       if (!me || !me.is_admin) return res.status(403).json({ error: "Unauthorized" });
 
@@ -855,7 +882,7 @@ export function registerSkillsMatrixRoutes(context) {
       const payload = await buildSessionSnapshot({
         pool,
         session,
-        currentUserId: req.currentUser.id,
+        currentParticipantId: participantId,
       });
       return res.status(201).json(payload);
     } catch (err) {
@@ -869,10 +896,12 @@ export function registerSkillsMatrixRoutes(context) {
     async (req, res, next) => {
       try {
         const code = normalizeCode(req.params.code);
+        const participantId = resolveParticipantId(req);
         const categoryId = req.params.categoryId;
-        if (!code || !categoryId) return res.status(400).json({ error: "Invalid payload" });
+        if (!code || !categoryId || !participantId)
+          return res.status(400).json({ error: "Invalid payload" });
 
-        const { session, me } = await getSessionContext(pool, code, req.currentUser.id);
+        const { session, me } = await getSessionContext(pool, code, participantId);
         if (!session) return res.status(404).json({ error: "Not found" });
         if (!me || !me.is_admin) return res.status(403).json({ error: "Unauthorized" });
 
@@ -918,7 +947,7 @@ export function registerSkillsMatrixRoutes(context) {
         const payload = await buildSessionSnapshot({
           pool,
           session,
-          currentUserId: req.currentUser.id,
+          currentParticipantId: participantId,
         });
         return res.status(200).json(payload);
       } catch (err) {
@@ -933,10 +962,12 @@ export function registerSkillsMatrixRoutes(context) {
     async (req, res, next) => {
       try {
         const code = normalizeCode(req.params.code);
+        const participantId = resolveParticipantId(req);
         const categoryId = req.params.categoryId;
-        if (!code || !categoryId) return res.status(400).json({ error: "Invalid payload" });
+        if (!code || !categoryId || !participantId)
+          return res.status(400).json({ error: "Invalid payload" });
 
-        const { session, me } = await getSessionContext(pool, code, req.currentUser.id);
+        const { session, me } = await getSessionContext(pool, code, participantId);
         if (!session) return res.status(404).json({ error: "Not found" });
         if (!me || !me.is_admin) return res.status(403).json({ error: "Unauthorized" });
 
@@ -951,7 +982,7 @@ export function registerSkillsMatrixRoutes(context) {
         const payload = await buildSessionSnapshot({
           pool,
           session,
-          currentUserId: req.currentUser.id,
+          currentParticipantId: participantId,
         });
         return res.status(200).json(payload);
       } catch (err) {
@@ -963,10 +994,12 @@ export function registerSkillsMatrixRoutes(context) {
   app.post("/api/skills-matrix/sessions/:code/skills", requireAuth, async (req, res, next) => {
     try {
       const code = normalizeCode(req.params.code);
+      const participantId = resolveParticipantId(req);
       const name = normalizeName(req.body?.name, 120);
-      if (!code || name.length < 2) return res.status(400).json({ error: "Invalid payload" });
+      if (!code || !participantId || name.length < 2)
+        return res.status(400).json({ error: "Invalid payload" });
 
-      const { session, me } = await getSessionContext(pool, code, req.currentUser.id);
+      const { session, me } = await getSessionContext(pool, code, participantId);
       if (!session) return res.status(404).json({ error: "Not found" });
       if (!me || !me.is_admin) return res.status(403).json({ error: "Unauthorized" });
 
@@ -1040,7 +1073,7 @@ export function registerSkillsMatrixRoutes(context) {
       const payload = await buildSessionSnapshot({
         pool,
         session,
-        currentUserId: req.currentUser.id,
+        currentParticipantId: participantId,
       });
       return res.status(201).json(payload);
     } catch (err) {
@@ -1054,10 +1087,12 @@ export function registerSkillsMatrixRoutes(context) {
     async (req, res, next) => {
       try {
         const code = normalizeCode(req.params.code);
+        const participantId = resolveParticipantId(req);
         const skillId = req.params.skillId;
-        if (!code || !skillId) return res.status(400).json({ error: "Invalid payload" });
+        if (!code || !skillId || !participantId)
+          return res.status(400).json({ error: "Invalid payload" });
 
-        const { session, me } = await getSessionContext(pool, code, req.currentUser.id);
+        const { session, me } = await getSessionContext(pool, code, participantId);
         if (!session) return res.status(404).json({ error: "Not found" });
         if (!me || !me.is_admin) return res.status(403).json({ error: "Unauthorized" });
 
@@ -1156,7 +1191,7 @@ export function registerSkillsMatrixRoutes(context) {
         const payload = await buildSessionSnapshot({
           pool,
           session,
-          currentUserId: req.currentUser.id,
+          currentParticipantId: participantId,
         });
         return res.status(200).json(payload);
       } catch (err) {
@@ -1171,10 +1206,12 @@ export function registerSkillsMatrixRoutes(context) {
     async (req, res, next) => {
       try {
         const code = normalizeCode(req.params.code);
+        const participantId = resolveParticipantId(req);
         const skillId = req.params.skillId;
-        if (!code || !skillId) return res.status(400).json({ error: "Invalid payload" });
+        if (!code || !skillId || !participantId)
+          return res.status(400).json({ error: "Invalid payload" });
 
-        const { session, me } = await getSessionContext(pool, code, req.currentUser.id);
+        const { session, me } = await getSessionContext(pool, code, participantId);
         if (!session) return res.status(404).json({ error: "Not found" });
         if (!me || !me.is_admin) return res.status(403).json({ error: "Unauthorized" });
 
@@ -1189,7 +1226,7 @@ export function registerSkillsMatrixRoutes(context) {
         const payload = await buildSessionSnapshot({
           pool,
           session,
-          currentUserId: req.currentUser.id,
+          currentParticipantId: participantId,
         });
         return res.status(200).json(payload);
       } catch (err) {
@@ -1204,10 +1241,12 @@ export function registerSkillsMatrixRoutes(context) {
     async (req, res, next) => {
       try {
         const code = normalizeCode(req.params.code);
+        const participantId = resolveParticipantId(req);
         const skillId = req.params.skillId;
-        if (!code || !skillId) return res.status(400).json({ error: "Invalid payload" });
+        if (!code || !skillId || !participantId)
+          return res.status(400).json({ error: "Invalid payload" });
 
-        const { session, me } = await getSessionContext(pool, code, req.currentUser.id);
+        const { session, me } = await getSessionContext(pool, code, participantId);
         if (!session) return res.status(404).json({ error: "Not found" });
         if (!me) return res.status(403).json({ error: "Unauthorized" });
 
@@ -1237,6 +1276,7 @@ export function registerSkillsMatrixRoutes(context) {
         }
 
         const wantsToProgress = req.body?.wantsToProgress === true;
+        const wantsToMentor = req.body?.wantsToMentor === true;
 
         await pool.query(
           `
@@ -1247,14 +1287,16 @@ export function registerSkillsMatrixRoutes(context) {
               participant_id,
               current_level,
               target_level,
-              wants_to_progress
+              wants_to_progress,
+              wants_to_mentor
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             ON CONFLICT (skill_id, participant_id)
             DO UPDATE SET
               current_level = EXCLUDED.current_level,
               target_level = EXCLUDED.target_level,
               wants_to_progress = EXCLUDED.wants_to_progress,
+              wants_to_mentor = EXCLUDED.wants_to_mentor,
               updated_at = now()
           `,
           [
@@ -1265,13 +1307,14 @@ export function registerSkillsMatrixRoutes(context) {
             currentLevel,
             targetLevel,
             wantsToProgress,
+            wantsToMentor,
           ],
         );
 
         const payload = await buildSessionSnapshot({
           pool,
           session,
-          currentUserId: req.currentUser.id,
+          currentParticipantId: participantId,
         });
         return res.status(200).json(payload);
       } catch (err) {

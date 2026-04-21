@@ -35,6 +35,7 @@ export function computeSkillsMatrixInsights({ skills, participants, assessments 
         currentLevel: normalizeNullableLevel(assessment?.currentLevel),
         targetLevel: normalizeNullableLevel(assessment?.targetLevel),
         wantsToProgress: assessment?.wantsToProgress === true,
+        wantsToMentor: assessment?.wantsToMentor === true,
       };
     });
 
@@ -43,6 +44,7 @@ export function computeSkillsMatrixInsights({ skills, participants, assessments 
       .map((cell) => ({
         participantId: cell.participantId,
         currentLevel: Number(cell.currentLevel),
+        wantsToMentor: cell.wantsToMentor,
       }));
 
     const learners = cells

@@ -29,7 +29,11 @@ export default function SkillsMatrixPreparePage() {
           displayName: hostName,
           avatar: 0,
         });
-        await api.skillsMatrixApplyTemplate(created.session.code, { templateId });
+        const participantId = created.me?.participantId ?? "";
+        if (!participantId) {
+          throw new Error("Impossible d'identifier le participant host.");
+        }
+        await api.skillsMatrixApplyTemplate(created.session.code, { templateId }, participantId);
         navigate(
           `/skills-matrix?mode=join&code=${encodeURIComponent(created.session.code)}&name=${encodeURIComponent(
             hostName,

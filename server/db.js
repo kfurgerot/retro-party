@@ -236,10 +236,12 @@ export async function initDatabase() {
       avatar INT NOT NULL DEFAULT 0,
       is_admin BOOLEAN NOT NULL DEFAULT false,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-      UNIQUE (session_id, user_id)
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
   `);
+  await pool.query(
+    "ALTER TABLE skills_matrix_participants DROP CONSTRAINT IF EXISTS skills_matrix_participants_session_id_user_id_key;",
+  );
   await pool.query(
     "ALTER TABLE skills_matrix_participants ADD COLUMN IF NOT EXISTS avatar INT NOT NULL DEFAULT 0;",
   );
@@ -295,11 +297,15 @@ export async function initDatabase() {
       current_level INT NULL,
       target_level INT NULL,
       wants_to_progress BOOLEAN NOT NULL DEFAULT false,
+      wants_to_mentor BOOLEAN NOT NULL DEFAULT false,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
       UNIQUE (skill_id, participant_id)
     );
   `);
+  await pool.query(
+    "ALTER TABLE skills_matrix_assessments ADD COLUMN IF NOT EXISTS wants_to_mentor BOOLEAN NOT NULL DEFAULT false;",
+  );
   await pool.query(
     "CREATE INDEX IF NOT EXISTS idx_skills_matrix_assessments_session_id ON skills_matrix_assessments(session_id);",
   );
