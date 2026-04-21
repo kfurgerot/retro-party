@@ -1,6 +1,8 @@
 export const C2S_EVENTS: {
   readonly JOIN_RADAR_ROOM: "join_radar_room";
   readonly LEAVE_RADAR_ROOM: "leave_radar_room";
+  readonly JOIN_SKILLS_MATRIX_ROOM: "join_skills_matrix_room";
+  readonly LEAVE_SKILLS_MATRIX_ROOM: "leave_skills_matrix_room";
   readonly CREATE_POKER_ROOM: "create_poker_room";
   readonly JOIN_POKER_ROOM: "join_poker_room";
   readonly RECONNECT_POKER_ROOM: "reconnect_poker_room";
@@ -46,6 +48,7 @@ export const C2S_EVENTS: {
 export const S2C_EVENTS: {
   readonly SERVER_HELLO: "server_hello";
   readonly RADAR_ROOM_JOINED: "radar_room_joined";
+  readonly SKILLS_MATRIX_ROOM_JOINED: "skills_matrix_room_joined";
   readonly POKER_ROOM_CREATED: "poker_room_created";
   readonly POKER_ERROR_MESSAGE: "poker_error_msg";
   readonly POKER_ROOM_RECONNECTED: "poker_room_reconnected";
@@ -65,6 +68,7 @@ export const S2C_EVENTS: {
   readonly LOBBY_UPDATE: "lobby_update";
   readonly ROOM_CLOSED: "room_closed";
   readonly RADAR_SESSION_UPDATE: "radar_session_update";
+  readonly SKILLS_MATRIX_SESSION_UPDATE: "skills_matrix_session_update";
 };
 
 export type ClientToServerEvent = (typeof C2S_EVENTS)[keyof typeof C2S_EVENTS];

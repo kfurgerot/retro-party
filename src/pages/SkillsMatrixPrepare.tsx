@@ -35,9 +35,9 @@ export default function SkillsMatrixPreparePage() {
         }
         await api.skillsMatrixApplyTemplate(created.session.code, { templateId }, participantId);
         navigate(
-          `/skills-matrix?mode=join&code=${encodeURIComponent(created.session.code)}&name=${encodeURIComponent(
-            hostName,
-          )}&avatar=0&auto=1`,
+          `/skills-matrix?mode=join&code=${encodeURIComponent(created.session.code)}&participantId=${encodeURIComponent(
+            participantId,
+          )}&name=${encodeURIComponent(hostName)}&avatar=0&auto=1`,
         );
       }}
       theme={{

@@ -4,6 +4,8 @@ export function registerSocketHandlers(deps) {
     io,
     attachSocketToRadarRoom,
     detachSocketFromRadarRoom,
+    attachSocketToSkillsMatrixRoom,
+    detachSocketFromSkillsMatrixRoom,
     makeUniqueRoomCode,
     makeSessionId,
     createPokerRoom,
@@ -61,6 +63,7 @@ export function registerSocketHandlers(deps) {
     resetGame,
     clearPointDuelTimers,
     socketToRadarRoom,
+    socketToSkillsMatrixRoom,
     schedulePokerDisconnectCleanup,
     scheduleDisconnectCleanup,
     removePlayerNow,
@@ -77,6 +80,16 @@ export function registerSocketHandlers(deps) {
 
     socket.on(C2S_EVENTS.LEAVE_RADAR_ROOM, ({ code } = {}) => {
       detachSocketFromRadarRoom(socket, code);
+    });
+
+    socket.on(C2S_EVENTS.JOIN_SKILLS_MATRIX_ROOM, ({ code }) => {
+      const joined = attachSocketToSkillsMatrixRoom(socket, code);
+      if (!joined) return;
+      socket.emit(S2C_EVENTS.SKILLS_MATRIX_ROOM_JOINED, { code: joined });
+    });
+
+    socket.on(C2S_EVENTS.LEAVE_SKILLS_MATRIX_ROOM, ({ code } = {}) => {
+      detachSocketFromSkillsMatrixRoom(socket, code);
     });
 
     socket.on(C2S_EVENTS.CREATE_POKER_ROOM, ({ name, avatar, role, voteSystem, sessionId }) => {
@@ -977,6 +990,7 @@ export function registerSocketHandlers(deps) {
 
     socket.on("disconnect", () => {
       socketToRadarRoom.delete(socket.id);
+      socketToSkillsMatrixRoom.delete(socket.id);
 
       const pokerCode = socketToPokerRoom.get(socket.id);
       if (pokerCode) {

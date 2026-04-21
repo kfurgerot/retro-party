@@ -1,5 +1,6 @@
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { C2S_EVENTS, S2C_EVENTS } from "@shared/contracts/socketEvents.js";
 import { OnlineLobbyScreen } from "@/components/screens/OnlineLobbyScreen";
 import { OnlineOnboardingScreen } from "@/components/screens/OnlineOnboardingScreen";
 import {
@@ -18,6 +19,7 @@ import { isSkillsMatrixTemplate } from "@/features/skillsMatrix/templateConfig";
 import { TOOL_ACCENT } from "@/lib/uiTokens";
 import { AVATARS } from "@/types/game";
 import { api, type SkillsMatrixSnapshot, type TemplateItem } from "@/net/api";
+import { socket } from "@/net/socket";
 
 type WorkspaceTab = "matrix" | "dashboard";
 
@@ -69,7 +71,7 @@ type SkillsRadarModel = {
   totalSkills: number;
 };
 
-const AUTO_REFRESH_MS = 10000;
+const AUTO_REFRESH_MS = 4000;
 const SKILLS_ACCENT = TOOL_ACCENT["skills-matrix"];
 const SKILLS_MATRIX_SESSION_STORAGE_KEY = "retro-party:skills-matrix:session";
 const EMPTY_RADAR_MODEL: SkillsRadarModel = {
@@ -412,6 +414,7 @@ export default function SkillsMatrixPage() {
   const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const initialMode = searchParams.get("mode") === "join" ? "join" : "host";
   const initialCode = (searchParams.get("code") || "").trim().toUpperCase();
+  const initialParticipantIdFromQuery = (searchParams.get("participantId") || "").trim();
   const templateFromQuery = (searchParams.get("template") || "").trim();
   const initialName = cleanName(searchParams.get("name") || "");
   const rawInitialAvatar = Number(searchParams.get("avatar"));
@@ -454,16 +457,15 @@ export default function SkillsMatrixPage() {
   const [selectedRadarParticipantId, setSelectedRadarParticipantId] = useState<string | null>(null);
   const [participantId, setParticipantId] = useState<string>("");
   const [isRestoringSession, setIsRestoringSession] = useState(true);
+  const refreshInFlightRef = useRef(false);
+  const refreshQueuedRef = useRef(false);
+  const refreshTicketRef = useRef(0);
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      navigate("/", { replace: true });
-      return;
-    }
     if (user && !profile.name) {
       setProfile((prev) => ({ ...prev, name: cleanName(user.displayName || "Equipe") }));
     }
-  }, [authLoading, navigate, profile.name, user]);
+  }, [profile.name, user]);
 
   const applySnapshot = useCallback((nextSnapshot: SkillsMatrixSnapshot) => {
     setSnapshot(nextSnapshot);
@@ -501,14 +503,52 @@ export default function SkillsMatrixPage() {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!user) {
-      setIsRestoringSession(false);
-      return;
-    }
 
     let cancelled = false;
 
     const restoreSession = async () => {
+      if (initialCode && initialParticipantIdFromQuery) {
+        try {
+          const restored = await api.skillsMatrixGetSession(
+            initialCode,
+            initialParticipantIdFromQuery,
+          );
+          if (cancelled) return;
+          const restoredSelf =
+            restored.participants.find(
+              (participant) => participant.id === initialParticipantIdFromQuery,
+            ) ?? null;
+          setParticipantId(initialParticipantIdFromQuery);
+          setProfile({
+            name:
+              initialName || cleanName(restoredSelf?.displayName || user?.displayName || "Equipe"),
+            avatar:
+              Number.isFinite(rawInitialAvatar) && rawInitialAvatar >= 0
+                ? initialAvatar
+                : Number.isFinite(restoredSelf?.avatar)
+                  ? Number(restoredSelf?.avatar)
+                  : 0,
+          });
+          applySnapshot(restored);
+          setShowOnlineOnboarding(false);
+          return;
+        } catch {
+          persistSkillsMatrixSession(null);
+          if (!cancelled) {
+            setParticipantId("");
+            setSnapshot(null);
+          }
+        } finally {
+          if (!cancelled) setIsRestoringSession(false);
+        }
+        return;
+      }
+
+      if (initialCode) {
+        if (!cancelled) setIsRestoringSession(false);
+        return;
+      }
+
       const persisted = loadPersistedSkillsMatrixSession();
       if (!persisted) {
         if (!cancelled) setIsRestoringSession(false);
@@ -525,7 +565,7 @@ export default function SkillsMatrixPage() {
         setProfile({
           name:
             persisted.profile.name ||
-            cleanName(restoredSelf?.displayName || user.displayName || "Equipe"),
+            cleanName(restoredSelf?.displayName || user?.displayName || "Equipe"),
           avatar:
             Number.isFinite(persisted.profile.avatar) && persisted.profile.avatar >= 0
               ? persisted.profile.avatar
@@ -550,7 +590,16 @@ export default function SkillsMatrixPage() {
     return () => {
       cancelled = true;
     };
-  }, [applySnapshot, authLoading, user]);
+  }, [
+    applySnapshot,
+    authLoading,
+    initialAvatar,
+    initialCode,
+    initialName,
+    initialParticipantIdFromQuery,
+    rawInitialAvatar,
+    user,
+  ]);
 
   useEffect(() => {
     if (isRestoringSession) return;
@@ -571,9 +620,85 @@ export default function SkillsMatrixPage() {
 
   const refreshSession = useCallback(async () => {
     if (!roomCode || !participantId) return;
-    const next = await api.skillsMatrixGetSession(roomCode, participantId);
-    applySnapshot(next);
+    const requestedTicket = ++refreshTicketRef.current;
+    if (refreshInFlightRef.current) {
+      refreshQueuedRef.current = true;
+      return;
+    }
+
+    refreshInFlightRef.current = true;
+    let activeTicket = requestedTicket;
+    try {
+      while (true) {
+        const next = await api.skillsMatrixGetSession(roomCode, participantId);
+        if (activeTicket === refreshTicketRef.current) {
+          applySnapshot(next);
+        }
+        if (!refreshQueuedRef.current) break;
+        refreshQueuedRef.current = false;
+        activeTicket = refreshTicketRef.current;
+      }
+    } catch {
+      // Keep the latest local snapshot; realtime + polling will retry.
+    } finally {
+      refreshInFlightRef.current = false;
+    }
   }, [applySnapshot, participantId, roomCode]);
+
+  useEffect(() => {
+    refreshTicketRef.current += 1;
+    refreshQueuedRef.current = false;
+  }, [participantId, roomCode]);
+
+  useEffect(() => {
+    if (!roomCode || !participantId) return;
+    const code = roomCode;
+
+    const subscribe = () => socket.emit(C2S_EVENTS.JOIN_SKILLS_MATRIX_ROOM, { code });
+    const onConnect = () => {
+      subscribe();
+      void refreshSession();
+    };
+    const onSessionUpdate = (payload: { code?: string }) => {
+      const updatedCode =
+        typeof payload?.code === "string" ? payload.code.trim().toUpperCase() : "";
+      if (!updatedCode || updatedCode !== code) return;
+      void refreshSession();
+    };
+    const onRoomJoined = (payload: { code?: string }) => {
+      const joinedCode = typeof payload?.code === "string" ? payload.code.trim().toUpperCase() : "";
+      if (!joinedCode || joinedCode !== code) return;
+      void refreshSession();
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState !== "visible") return;
+      subscribe();
+      void refreshSession();
+    };
+    const onWindowFocus = () => {
+      subscribe();
+      void refreshSession();
+    };
+
+    if (!socket.connected) socket.connect();
+    subscribe();
+    socket.on("connect", onConnect);
+    socket.on(S2C_EVENTS.SKILLS_MATRIX_ROOM_JOINED, onRoomJoined);
+    socket.on(S2C_EVENTS.SKILLS_MATRIX_SESSION_UPDATE, onSessionUpdate);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("focus", onWindowFocus);
+    window.addEventListener("online", onWindowFocus);
+
+    return () => {
+      socket.off("connect", onConnect);
+      socket.off(S2C_EVENTS.SKILLS_MATRIX_ROOM_JOINED, onRoomJoined);
+      socket.off(S2C_EVENTS.SKILLS_MATRIX_SESSION_UPDATE, onSessionUpdate);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("focus", onWindowFocus);
+      window.removeEventListener("online", onWindowFocus);
+      socket.emit(C2S_EVENTS.LEAVE_SKILLS_MATRIX_ROOM, { code });
+    };
+  }, [participantId, refreshSession, roomCode]);
 
   const loadTemplateOptions = useCallback(async () => {
     if (!user) return;
@@ -635,18 +760,11 @@ export default function SkillsMatrixPage() {
   useEffect(() => {
     if (!roomCode || !participantId) return;
     const timer = window.setInterval(() => {
-      void api
-        .skillsMatrixGetSession(roomCode, participantId)
-        .then((next) => {
-          applySnapshot(next);
-        })
-        .catch(() => {
-          // Keep last known state if polling fails.
-        });
+      void refreshSession();
     }, AUTO_REFRESH_MS);
 
     return () => window.clearInterval(timer);
-  }, [applySnapshot, participantId, roomCode]);
+  }, [participantId, refreshSession, roomCode]);
 
   const handleHost = useCallback(
     (name: string, avatar: number) => {
@@ -1010,7 +1128,7 @@ export default function SkillsMatrixPage() {
     });
   };
 
-  if (authLoading || !user || isRestoringSession) {
+  if (authLoading || isRestoringSession) {
     return (
       <div className="scanlines relative flex min-h-svh items-center justify-center bg-slate-950 px-4">
         <div className="neon-surface px-4 py-3 text-sm font-semibold text-cyan-100">
@@ -1536,8 +1654,8 @@ export default function SkillsMatrixPage() {
 
               <div className="p-4 sm:p-5">
                 <p className="mb-3 text-[11px] text-slate-500 md:hidden">
-                  Vue mobile: complète chaque compétence via ta carte personnelle. Le détail de
-                  l'équipe reste visible juste en dessous.
+                  Vue mobile: fais glisser horizontalement pour voir tous les membres. Ta colonne
+                  reste modifiable directement dans la matrice compacte.
                 </p>
 
                 <div className="space-y-3 md:hidden">
@@ -1554,182 +1672,137 @@ export default function SkillsMatrixPage() {
                       host pour compléter la matrice.
                     </div>
                   ) : (
-                    matrixRowsByCategory.map((group) => (
-                      <section
-                        key={`mobile-group-${group.categoryId ?? "none"}`}
-                        className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0a1021]"
-                      >
-                        <div className="border-b border-white/[0.08] bg-white/[0.03] px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-cyan-300">
-                          {group.categoryName}
-                        </div>
-                        <div className="space-y-2.5 p-3">
-                          {group.rows.map((row) => {
-                            const myCell = myParticipantId
-                              ? (assessmentByCellKey.get(
-                                  assessmentKey(row.skillId, myParticipantId),
-                                ) ?? null)
-                              : null;
-                            const myTone = resolveMatrixCellTone(
-                              myCell?.currentLevel ?? null,
-                              row.requiredLevel,
-                            );
-                            const showsProgressBadge = myCell?.wantsToProgress === true;
-                            const showsMentorBadge = myCell?.wantsToMentor === true;
-                            const otherParticipants = snapshot.participants.filter(
-                              (participant) => participant.id !== myParticipantId,
-                            );
-
-                            return (
-                              <article
-                                key={`mobile-row-${row.skillId}`}
-                                className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-3"
+                    <div className="overflow-x-auto rounded-2xl border border-white/[0.08] bg-[#0a1021]">
+                      <table className="w-full min-w-[520px] text-[11px]">
+                        <thead className="bg-white/[0.04] text-slate-300">
+                          <tr>
+                            <th className="sticky left-0 z-20 min-w-[122px] border-b border-white/[0.08] bg-[#111830] px-2 py-2 text-left">
+                              Compétence
+                            </th>
+                            {snapshot.participants.map((participant) => (
+                              <th
+                                key={`mobile-head-${participant.id}`}
+                                className="min-w-[64px] border-b border-white/[0.08] px-1 py-2 text-center"
                               >
-                                <div className="font-semibold text-slate-100">{row.skillName}</div>
-                                <div className="mt-1 text-xs text-slate-400">
-                                  Niveau attendu: {row.requiredLevel} · Personnes attendues:{" "}
-                                  {row.requiredPeople}
+                                <div className="flex flex-col items-center gap-1">
+                                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-cyan-300/25 bg-cyan-500/10 text-xs">
+                                    {AVATARS[participant.avatar] ?? "?"}
+                                  </span>
+                                  <span className="max-w-[56px] truncate text-[9px] font-semibold text-slate-100">
+                                    {participant.displayName}
+                                  </span>
+                                  {participant.id === myParticipantId ? (
+                                    <span className="rounded-full border border-cyan-300/40 bg-cyan-500/18 px-1.5 py-0.5 text-[9px] font-semibold text-cyan-100">
+                                      Moi
+                                    </span>
+                                  ) : null}
                                 </div>
-                                <div className="mt-1 text-xs text-slate-500">
-                                  Couverture actuelle: {row.coverageCount}/{row.requiredPeople}
-                                  {row.missingCount > 0
-                                    ? ` · Manque: ${row.missingCount}`
-                                    : " · Besoin couvert"}
-                                </div>
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {matrixRowsByCategory.flatMap((group) => [
+                            <tr key={`mobile-group-${group.categoryId ?? "none"}`}>
+                              <td
+                                colSpan={snapshot.participants.length + 1}
+                                className="bg-white/[0.02] px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-cyan-300"
+                              >
+                                {group.categoryName}
+                              </td>
+                            </tr>,
+                            ...group.rows.map((row) => (
+                              <tr
+                                key={`mobile-skill-${row.skillId}`}
+                                className="border-t border-white/[0.06] align-top"
+                              >
+                                <td className="sticky left-0 z-10 bg-[#101735] px-2 py-1.5">
+                                  <div className="truncate text-[10px] font-semibold leading-tight text-slate-100">
+                                    {row.skillName}
+                                  </div>
+                                  <div className="mt-0.5 text-[9px] text-slate-500">
+                                    N{row.requiredLevel}
+                                  </div>
+                                </td>
+                                {snapshot.participants.map((participant) => {
+                                  const cell =
+                                    assessmentByCellKey.get(
+                                      assessmentKey(row.skillId, participant.id),
+                                    ) ?? null;
+                                  const tone = resolveMatrixCellTone(
+                                    cell?.currentLevel ?? null,
+                                    row.requiredLevel,
+                                  );
+                                  const canEdit = participant.id === myParticipantId;
 
-                                {myParticipantId ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => openCellEditor(row)}
-                                    className={cn(
-                                      "mt-2.5 w-full rounded-xl border px-3 py-2 text-left transition active:scale-[0.99]",
-                                      myTone.surfaceClass,
-                                    )}
-                                  >
-                                    <div className="flex items-start justify-between gap-2">
+                                  const compactCell = (
+                                    <div
+                                      className={cn(
+                                        "mx-auto flex h-9 w-9 items-center justify-center rounded-full border",
+                                        tone.surfaceClass,
+                                      )}
+                                    >
                                       <span
                                         className={cn(
-                                          "rounded-full border px-1.5 py-0.5 text-[10px] font-semibold",
-                                          myTone.badgeClass,
+                                          "text-[11px] font-bold leading-none",
+                                          tone.valueClass,
                                         )}
                                       >
-                                        {myTone.badgeLabel}
-                                      </span>
-                                      <span className="text-[10px] font-semibold text-cyan-200/90">
-                                        Modifier
+                                        {cell?.currentLevel ?? "—"}
                                       </span>
                                     </div>
-                                    <div className="mt-2 flex items-end justify-between gap-2">
-                                      <div>
-                                        <div
-                                          className={cn(
-                                            "text-2xl font-extrabold",
-                                            myTone.valueClass,
-                                          )}
-                                        >
-                                          {myCell?.currentLevel ?? "—"}
-                                        </div>
-                                        <div className="text-[11px] text-slate-300">
-                                          Cible: {myCell?.targetLevel ?? "—"}
-                                        </div>
-                                      </div>
-                                      <div className="text-right text-[10px] text-slate-300">
-                                        Ta cellule
-                                      </div>
-                                    </div>
-                                    <div className="mt-2 flex min-h-[20px] flex-wrap gap-1">
-                                      {showsProgressBadge ? (
-                                        <span className="rounded-full border border-violet-300/40 bg-violet-500/20 px-2 py-0.5 text-[10px] font-semibold text-violet-100">
-                                          Souhaite être formé
-                                        </span>
-                                      ) : null}
-                                      {showsMentorBadge ? (
-                                        <span className="rounded-full border border-emerald-300/40 bg-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold text-emerald-100">
-                                          Souhaite former
-                                        </span>
-                                      ) : null}
-                                    </div>
-                                  </button>
-                                ) : null}
+                                  );
 
-                                {otherParticipants.length > 0 ? (
-                                  <details className="mt-2.5 group">
-                                    <summary className="cursor-pointer list-none text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500 transition group-open:text-slate-300">
-                                      Équipe ({otherParticipants.length})
-                                    </summary>
-                                    <div className="mt-1.5 space-y-1.5">
-                                      {otherParticipants.map((participant) => {
-                                        const cell =
-                                          assessmentByCellKey.get(
-                                            assessmentKey(row.skillId, participant.id),
-                                          ) ?? null;
-                                        const tone = resolveMatrixCellTone(
-                                          cell?.currentLevel ?? null,
-                                          row.requiredLevel,
-                                        );
-                                        return (
-                                          <div
-                                            key={`mobile-row-${row.skillId}-${participant.id}`}
-                                            className={cn(
-                                              "flex items-center justify-between gap-2 rounded-lg border px-2 py-1.5",
-                                              tone.surfaceClass,
-                                            )}
-                                          >
-                                            <div className="flex min-w-0 items-center gap-2">
-                                              <span className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-cyan-300/25 bg-cyan-500/10 text-sm">
-                                                {AVATARS[participant.avatar] ?? "?"}
-                                              </span>
-                                              <span className="truncate text-xs text-slate-100">
-                                                {participant.displayName}
-                                              </span>
-                                            </div>
-                                            <div
-                                              className={cn(
-                                                "text-xs font-semibold",
-                                                tone.valueClass,
-                                              )}
-                                            >
-                                              {cell?.currentLevel ?? "—"} · C
-                                              {cell?.targetLevel ?? "—"}
-                                            </div>
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-                                  </details>
-                                ) : null}
-                              </article>
-                            );
-                          })}
-                        </div>
-                      </section>
-                    ))
+                                  return (
+                                    <td
+                                      key={`mobile-cell-${row.skillId}-${participant.id}`}
+                                      className="min-w-[64px] px-1 py-1.5 align-middle"
+                                    >
+                                      {canEdit ? (
+                                        <button
+                                          type="button"
+                                          onClick={() => openCellEditor(row)}
+                                          className="w-full text-center transition hover:scale-[1.03] active:scale-[0.99]"
+                                        >
+                                          {compactCell}
+                                        </button>
+                                      ) : (
+                                        <div>{compactCell}</div>
+                                      )}
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            )),
+                          ])}
+                        </tbody>
+                      </table>
+                    </div>
                   )}
                 </div>
 
                 <div className="hidden md:block">
                   <div className="overflow-x-auto rounded-2xl border border-white/[0.08] bg-[#0a1021]">
-                    <table className="w-full min-w-[900px] text-sm">
+                    <table className="w-full min-w-[860px] text-xs">
                       <thead className="bg-white/[0.04] text-slate-300">
                         <tr>
-                          <th className="sticky left-0 z-20 min-w-[300px] border-b border-white/[0.08] bg-[#111830] px-3 py-2 text-left">
+                          <th className="sticky left-0 z-20 min-w-[170px] border-b border-white/[0.08] bg-[#111830] px-2.5 py-2 text-left">
                             Compétence
                           </th>
                           {snapshot.participants.map((participant) => (
                             <th
                               key={participant.id}
-                              className="min-w-[200px] border-b border-white/[0.08] px-3 py-2 text-left"
+                              className="min-w-[88px] border-b border-white/[0.08] px-1 py-2 text-center"
                             >
-                              <div className="flex items-center gap-2">
-                                <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-cyan-300/25 bg-cyan-500/10 text-base">
+                              <div className="flex flex-col items-center gap-1">
+                                <span className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-cyan-300/25 bg-cyan-500/10 text-xs">
                                   {AVATARS[participant.avatar] ?? "?"}
                                 </span>
-                                <div className="min-w-0">
-                                  <div className="truncate font-semibold text-slate-100">
-                                    {participant.displayName}
-                                  </div>
-                                  <div className="text-[11px] text-slate-500">
-                                    {participant.isAdmin ? "Host" : "Membre"}
-                                  </div>
+                                <div className="max-w-[72px] truncate text-[10px] font-semibold text-slate-100">
+                                  {participant.displayName}
+                                </div>
+                                <div className="text-[9px] text-slate-500">
+                                  {participant.isAdmin ? "Host" : "Membre"}
                                 </div>
                               </div>
                             </th>
@@ -1751,17 +1824,12 @@ export default function SkillsMatrixPage() {
                               key={row.skillId}
                               className="border-t border-white/[0.06] align-top"
                             >
-                              <td className="sticky left-0 z-10 bg-[#101735] px-3 py-3">
-                                <div className="font-semibold text-slate-100">{row.skillName}</div>
-                                <div className="mt-1 text-xs text-slate-500">
-                                  Niveau attendu: {row.requiredLevel} · Personnes attendues:{" "}
-                                  {row.requiredPeople}
+                              <td className="sticky left-0 z-10 bg-[#101735] px-2.5 py-2">
+                                <div className="truncate text-xs font-semibold text-slate-100">
+                                  {row.skillName}
                                 </div>
-                                <div className="mt-1 text-xs text-slate-400">
-                                  Couverture actuelle: {row.coverageCount}/{row.requiredPeople}
-                                  {row.missingCount > 0
-                                    ? ` · Manque: ${row.missingCount}`
-                                    : " · Besoin couvert"}
+                                <div className="mt-0.5 text-[10px] text-slate-500">
+                                  N{row.requiredLevel}
                                 </div>
                               </td>
                               {snapshot.participants.map((participant) => {
@@ -1774,75 +1842,34 @@ export default function SkillsMatrixPage() {
                                   row.requiredLevel,
                                 );
                                 const canEdit = participant.id === myParticipantId;
-                                const showsProgressBadge = cell?.wantsToProgress === true;
-                                const showsMentorBadge = cell?.wantsToMentor === true;
                                 const cellContent = (
                                   <div
                                     className={cn(
-                                      "min-h-[116px] rounded-2xl border px-3 py-2.5 text-left",
-                                      "flex flex-col justify-between gap-1.5 transition",
-                                      "bg-gradient-to-br from-white/[0.11] via-white/[0.04] to-slate-950/45 backdrop-blur-[1px]",
-                                      canEdit
-                                        ? "shadow-[0_10px_24px_rgba(2,6,23,0.32)] group-hover:shadow-[0_14px_30px_rgba(2,6,23,0.4)]"
-                                        : "",
+                                      "mx-auto flex h-10 w-10 items-center justify-center rounded-full border",
                                       tone.surfaceClass,
                                     )}
                                   >
-                                    <div className="flex items-start justify-between gap-2">
-                                      <span
-                                        className={cn(
-                                          "rounded-full border px-1.5 py-0.5 text-[10px] font-semibold",
-                                          tone.badgeClass,
-                                        )}
-                                      >
-                                        {tone.badgeLabel}
-                                      </span>
-                                      {canEdit ? (
-                                        <span className="text-[10px] font-semibold text-cyan-200/90">
-                                          Modifier
-                                        </span>
-                                      ) : null}
-                                    </div>
-
-                                    <div>
-                                      <div
-                                        className={cn(
-                                          "text-2xl font-extrabold leading-none",
-                                          tone.valueClass,
-                                        )}
-                                      >
-                                        {cell?.currentLevel ?? "—"}
-                                      </div>
-                                      <div className="mt-1 text-[11px] text-slate-300">
-                                        Cible: {cell?.targetLevel ?? "—"}
-                                      </div>
-                                    </div>
-
-                                    <div className="flex min-h-[20px] flex-wrap gap-1">
-                                      {showsProgressBadge ? (
-                                        <span className="rounded-full border border-violet-300/40 bg-violet-500/20 px-2 py-0.5 text-[10px] font-semibold text-violet-100">
-                                          Souhaite être formé
-                                        </span>
-                                      ) : null}
-                                      {showsMentorBadge ? (
-                                        <span className="rounded-full border border-emerald-300/40 bg-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold text-emerald-100">
-                                          Souhaite former
-                                        </span>
-                                      ) : null}
-                                    </div>
+                                    <span
+                                      className={cn(
+                                        "text-xs font-bold leading-none",
+                                        tone.valueClass,
+                                      )}
+                                    >
+                                      {cell?.currentLevel ?? "—"}
+                                    </span>
                                   </div>
                                 );
 
                                 return (
                                   <td
                                     key={`${row.skillId}-${participant.id}`}
-                                    className="px-2 py-2 align-top"
+                                    className="px-1 py-1.5 align-middle text-center"
                                   >
                                     {canEdit ? (
                                       <button
                                         type="button"
                                         onClick={() => openCellEditor(row)}
-                                        className="group w-full text-left transition hover:-translate-y-0.5"
+                                        className="w-full text-center transition hover:scale-[1.03] active:scale-[0.99]"
                                       >
                                         {cellContent}
                                       </button>

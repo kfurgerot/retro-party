@@ -460,9 +460,16 @@ async function buildSessionSnapshot({ pool, session, currentParticipantId }) {
 }
 
 export function registerSkillsMatrixRoutes(context) {
-  const { app, pool, crypto, makeCode, requireAuth } = context;
+  const {
+    app,
+    pool,
+    crypto,
+    makeCode,
+    requireAuth,
+    emitSkillsMatrixSessionUpdate = () => {},
+  } = context;
 
-  app.post("/api/skills-matrix/sessions", requireAuth, async (req, res, next) => {
+  app.post("/api/skills-matrix/sessions", async (req, res, next) => {
     const client = await pool.connect();
     try {
       const title = normalizeName(req.body?.title, 120);
@@ -486,8 +493,10 @@ export function registerSkillsMatrixRoutes(context) {
         return res.status(400).json({ error: "Invalid payload" });
       }
       const avatar = Number(avatarRaw);
+      const currentUserId = req.currentUser?.id ?? null;
+      const currentDisplayName = normalizeName(req.currentUser?.displayName ?? "Equipe", 80);
       const participantDisplayName =
-        displayName.length >= 2 ? displayName : req.currentUser.displayName;
+        displayName.length >= 2 ? displayName : currentDisplayName || "Equipe";
 
       const code = await generateUniqueSkillsMatrixCode({ pool, makeCode });
       const sessionId = crypto.randomUUID();
@@ -507,14 +516,7 @@ export function registerSkillsMatrixRoutes(context) {
           )
           VALUES ($1, $2, $3, $4, $5, 'lobby', $6)
         `,
-        [
-          sessionId,
-          code,
-          title || "Matrice de competences",
-          scaleMin,
-          scaleMax,
-          req.currentUser.id,
-        ],
+        [sessionId, code, title || "Matrice de competences", scaleMin, scaleMax, currentUserId],
       );
       await client.query(
         `
@@ -528,7 +530,7 @@ export function registerSkillsMatrixRoutes(context) {
           )
           VALUES ($1, $2, $3, $4, $5, true)
         `,
-        [participantId, sessionId, req.currentUser.id, participantDisplayName, avatar],
+        [participantId, sessionId, currentUserId, participantDisplayName, avatar],
       );
       await client.query("COMMIT");
 
@@ -539,6 +541,7 @@ export function registerSkillsMatrixRoutes(context) {
         currentParticipantId: participantId,
       });
 
+      emitSkillsMatrixSessionUpdate(code, "session_created");
       return res.status(201).json(payload);
     } catch (err) {
       await client.query("ROLLBACK");
@@ -548,7 +551,7 @@ export function registerSkillsMatrixRoutes(context) {
     }
   });
 
-  app.post("/api/skills-matrix/sessions/:code/join", requireAuth, async (req, res, next) => {
+  app.post("/api/skills-matrix/sessions/:code/join", async (req, res, next) => {
     try {
       const code = normalizeCode(req.params.code);
       const displayName = normalizeName(req.body?.displayName, 80);
@@ -556,8 +559,10 @@ export function registerSkillsMatrixRoutes(context) {
       if (!code) return res.status(400).json({ error: "Invalid payload" });
       if (!Number.isFinite(avatarRaw)) return res.status(400).json({ error: "Invalid payload" });
       const avatar = Number(avatarRaw);
+      const currentUserId = req.currentUser?.id ?? null;
+      const currentDisplayName = normalizeName(req.currentUser?.displayName ?? "Equipe", 80);
       const participantDisplayName =
-        displayName.length >= 2 ? displayName : req.currentUser.displayName;
+        displayName.length >= 2 ? displayName : currentDisplayName || "Equipe";
 
       const session = await getSessionByCode(pool, code);
       if (!session) return res.status(404).json({ error: "Not found" });
@@ -575,7 +580,7 @@ export function registerSkillsMatrixRoutes(context) {
           )
           VALUES ($1, $2, $3, $4, $5, false)
         `,
-        [participantId, session.id, req.currentUser.id, participantDisplayName, avatar],
+        [participantId, session.id, currentUserId, participantDisplayName, avatar],
       );
 
       const payload = await buildSessionSnapshot({
@@ -583,13 +588,14 @@ export function registerSkillsMatrixRoutes(context) {
         session,
         currentParticipantId: participantId,
       });
+      emitSkillsMatrixSessionUpdate(code, "participant_joined");
       return res.status(200).json(payload);
     } catch (err) {
       next(err);
     }
   });
 
-  app.get("/api/skills-matrix/sessions/:code", requireAuth, async (req, res, next) => {
+  app.get("/api/skills-matrix/sessions/:code", async (req, res, next) => {
     try {
       const code = normalizeCode(req.params.code);
       const participantId = resolveParticipantId(req);
@@ -611,7 +617,7 @@ export function registerSkillsMatrixRoutes(context) {
     }
   });
 
-  app.post("/api/skills-matrix/sessions/:code/start", requireAuth, async (req, res, next) => {
+  app.post("/api/skills-matrix/sessions/:code/start", async (req, res, next) => {
     try {
       const code = normalizeCode(req.params.code);
       const participantId = resolveParticipantId(req);
@@ -640,6 +646,7 @@ export function registerSkillsMatrixRoutes(context) {
         session: nextSession,
         currentParticipantId: participantId,
       });
+      emitSkillsMatrixSessionUpdate(code, "session_started");
       return res.status(200).json(payload);
     } catch (err) {
       next(err);
@@ -748,6 +755,7 @@ export function registerSkillsMatrixRoutes(context) {
           session: nextSession,
           currentParticipantId: participantId,
         });
+        emitSkillsMatrixSessionUpdate(code, "template_applied");
         return res.status(200).json(payload);
       } catch (err) {
         await client.query("ROLLBACK");
@@ -758,7 +766,7 @@ export function registerSkillsMatrixRoutes(context) {
     },
   );
 
-  app.patch("/api/skills-matrix/sessions/:code", requireAuth, async (req, res, next) => {
+  app.patch("/api/skills-matrix/sessions/:code", async (req, res, next) => {
     const client = await pool.connect();
     try {
       const code = normalizeCode(req.params.code);
@@ -840,6 +848,7 @@ export function registerSkillsMatrixRoutes(context) {
         session: nextSession,
         currentParticipantId: participantId,
       });
+      emitSkillsMatrixSessionUpdate(code, "session_updated");
       return res.status(200).json(payload);
     } catch (err) {
       await client.query("ROLLBACK");
@@ -849,7 +858,7 @@ export function registerSkillsMatrixRoutes(context) {
     }
   });
 
-  app.post("/api/skills-matrix/sessions/:code/categories", requireAuth, async (req, res, next) => {
+  app.post("/api/skills-matrix/sessions/:code/categories", async (req, res, next) => {
     try {
       const code = normalizeCode(req.params.code);
       const participantId = resolveParticipantId(req);
@@ -884,56 +893,54 @@ export function registerSkillsMatrixRoutes(context) {
         session,
         currentParticipantId: participantId,
       });
+      emitSkillsMatrixSessionUpdate(code, "category_created");
       return res.status(201).json(payload);
     } catch (err) {
       next(err);
     }
   });
 
-  app.patch(
-    "/api/skills-matrix/sessions/:code/categories/:categoryId",
-    requireAuth,
-    async (req, res, next) => {
-      try {
-        const code = normalizeCode(req.params.code);
-        const participantId = resolveParticipantId(req);
-        const categoryId = req.params.categoryId;
-        if (!code || !categoryId || !participantId)
-          return res.status(400).json({ error: "Invalid payload" });
+  app.patch("/api/skills-matrix/sessions/:code/categories/:categoryId", async (req, res, next) => {
+    try {
+      const code = normalizeCode(req.params.code);
+      const participantId = resolveParticipantId(req);
+      const categoryId = req.params.categoryId;
+      if (!code || !categoryId || !participantId)
+        return res.status(400).json({ error: "Invalid payload" });
 
-        const { session, me } = await getSessionContext(pool, code, participantId);
-        if (!session) return res.status(404).json({ error: "Not found" });
-        if (!me || !me.is_admin) return res.status(403).json({ error: "Unauthorized" });
+      const { session, me } = await getSessionContext(pool, code, participantId);
+      if (!session) return res.status(404).json({ error: "Not found" });
+      if (!me || !me.is_admin) return res.status(403).json({ error: "Unauthorized" });
 
-        const categoryResult = await pool.query(
-          `
+      const categoryResult = await pool.query(
+        `
             SELECT id
             FROM skills_matrix_categories
             WHERE id = $1 AND session_id = $2
             LIMIT 1
           `,
-          [categoryId, session.id],
-        );
-        if (!categoryResult.rows[0]) return res.status(404).json({ error: "Not found" });
+        [categoryId, session.id],
+      );
+      if (!categoryResult.rows[0]) return res.status(404).json({ error: "Not found" });
 
-        const nextName =
-          req.body && Object.prototype.hasOwnProperty.call(req.body, "name")
-            ? normalizeName(req.body.name, 80)
-            : null;
-        const nextSortOrder = parseInteger(
-          req.body && Object.prototype.hasOwnProperty.call(req.body, "sortOrder")
-            ? req.body.sortOrder
-            : null,
-          { min: 0, max: 10000 },
-        );
+      const nextName =
+        req.body && Object.prototype.hasOwnProperty.call(req.body, "name")
+          ? normalizeName(req.body.name, 80)
+          : null;
+      const nextSortOrder = parseInteger(
+        req.body && Object.prototype.hasOwnProperty.call(req.body, "sortOrder")
+          ? req.body.sortOrder
+          : null,
+        { min: 0, max: 10000 },
+      );
 
-        if (nextName !== null && nextName.length < 2) {
-          return res.status(400).json({ error: "Invalid payload" });
-        }
-        if (Number.isNaN(nextSortOrder)) return res.status(400).json({ error: "Invalid payload" });
+      if (nextName !== null && nextName.length < 2) {
+        return res.status(400).json({ error: "Invalid payload" });
+      }
+      if (Number.isNaN(nextSortOrder)) return res.status(400).json({ error: "Invalid payload" });
 
-        await pool.query(
-          `
+      await pool.query(
+        `
             UPDATE skills_matrix_categories
             SET
               name = COALESCE($3, name),
@@ -941,57 +948,54 @@ export function registerSkillsMatrixRoutes(context) {
               updated_at = now()
             WHERE id = $1 AND session_id = $2
           `,
-          [categoryId, session.id, nextName, nextSortOrder],
-        );
+        [categoryId, session.id, nextName, nextSortOrder],
+      );
 
-        const payload = await buildSessionSnapshot({
-          pool,
-          session,
-          currentParticipantId: participantId,
-        });
-        return res.status(200).json(payload);
-      } catch (err) {
-        next(err);
-      }
-    },
-  );
+      const payload = await buildSessionSnapshot({
+        pool,
+        session,
+        currentParticipantId: participantId,
+      });
+      emitSkillsMatrixSessionUpdate(code, "category_updated");
+      return res.status(200).json(payload);
+    } catch (err) {
+      next(err);
+    }
+  });
 
-  app.delete(
-    "/api/skills-matrix/sessions/:code/categories/:categoryId",
-    requireAuth,
-    async (req, res, next) => {
-      try {
-        const code = normalizeCode(req.params.code);
-        const participantId = resolveParticipantId(req);
-        const categoryId = req.params.categoryId;
-        if (!code || !categoryId || !participantId)
-          return res.status(400).json({ error: "Invalid payload" });
+  app.delete("/api/skills-matrix/sessions/:code/categories/:categoryId", async (req, res, next) => {
+    try {
+      const code = normalizeCode(req.params.code);
+      const participantId = resolveParticipantId(req);
+      const categoryId = req.params.categoryId;
+      if (!code || !categoryId || !participantId)
+        return res.status(400).json({ error: "Invalid payload" });
 
-        const { session, me } = await getSessionContext(pool, code, participantId);
-        if (!session) return res.status(404).json({ error: "Not found" });
-        if (!me || !me.is_admin) return res.status(403).json({ error: "Unauthorized" });
+      const { session, me } = await getSessionContext(pool, code, participantId);
+      if (!session) return res.status(404).json({ error: "Not found" });
+      if (!me || !me.is_admin) return res.status(403).json({ error: "Unauthorized" });
 
-        await pool.query(
-          `
+      await pool.query(
+        `
             DELETE FROM skills_matrix_categories
             WHERE id = $1 AND session_id = $2
           `,
-          [categoryId, session.id],
-        );
+        [categoryId, session.id],
+      );
 
-        const payload = await buildSessionSnapshot({
-          pool,
-          session,
-          currentParticipantId: participantId,
-        });
-        return res.status(200).json(payload);
-      } catch (err) {
-        next(err);
-      }
-    },
-  );
+      const payload = await buildSessionSnapshot({
+        pool,
+        session,
+        currentParticipantId: participantId,
+      });
+      emitSkillsMatrixSessionUpdate(code, "category_deleted");
+      return res.status(200).json(payload);
+    } catch (err) {
+      next(err);
+    }
+  });
 
-  app.post("/api/skills-matrix/sessions/:code/skills", requireAuth, async (req, res, next) => {
+  app.post("/api/skills-matrix/sessions/:code/skills", async (req, res, next) => {
     try {
       const code = normalizeCode(req.params.code);
       const participantId = resolveParticipantId(req);
@@ -1075,97 +1079,95 @@ export function registerSkillsMatrixRoutes(context) {
         session,
         currentParticipantId: participantId,
       });
+      emitSkillsMatrixSessionUpdate(code, "skill_created");
       return res.status(201).json(payload);
     } catch (err) {
       next(err);
     }
   });
 
-  app.patch(
-    "/api/skills-matrix/sessions/:code/skills/:skillId",
-    requireAuth,
-    async (req, res, next) => {
-      try {
-        const code = normalizeCode(req.params.code);
-        const participantId = resolveParticipantId(req);
-        const skillId = req.params.skillId;
-        if (!code || !skillId || !participantId)
-          return res.status(400).json({ error: "Invalid payload" });
+  app.patch("/api/skills-matrix/sessions/:code/skills/:skillId", async (req, res, next) => {
+    try {
+      const code = normalizeCode(req.params.code);
+      const participantId = resolveParticipantId(req);
+      const skillId = req.params.skillId;
+      if (!code || !skillId || !participantId)
+        return res.status(400).json({ error: "Invalid payload" });
 
-        const { session, me } = await getSessionContext(pool, code, participantId);
-        if (!session) return res.status(404).json({ error: "Not found" });
-        if (!me || !me.is_admin) return res.status(403).json({ error: "Unauthorized" });
+      const { session, me } = await getSessionContext(pool, code, participantId);
+      if (!session) return res.status(404).json({ error: "Not found" });
+      if (!me || !me.is_admin) return res.status(403).json({ error: "Unauthorized" });
 
-        const skillResult = await pool.query(
-          `
+      const skillResult = await pool.query(
+        `
           SELECT id
           FROM skills_matrix_skills
           WHERE id = $1 AND session_id = $2
           LIMIT 1
         `,
-          [skillId, session.id],
-        );
-        if (!skillResult.rows[0]) return res.status(404).json({ error: "Not found" });
+        [skillId, session.id],
+      );
+      if (!skillResult.rows[0]) return res.status(404).json({ error: "Not found" });
 
-        const nextName =
-          req.body && Object.prototype.hasOwnProperty.call(req.body, "name")
-            ? normalizeName(req.body.name, 120)
+      const nextName =
+        req.body && Object.prototype.hasOwnProperty.call(req.body, "name")
+          ? normalizeName(req.body.name, 120)
+          : null;
+      if (nextName !== null && nextName.length < 2) {
+        return res.status(400).json({ error: "Invalid payload" });
+      }
+
+      let nextCategoryId = null;
+      let shouldUpdateCategory = false;
+      if (req.body && Object.prototype.hasOwnProperty.call(req.body, "categoryId")) {
+        shouldUpdateCategory = true;
+        const rawCategoryId = req.body.categoryId;
+        nextCategoryId =
+          typeof rawCategoryId === "string" && rawCategoryId.trim().length > 0
+            ? rawCategoryId.trim()
             : null;
-        if (nextName !== null && nextName.length < 2) {
-          return res.status(400).json({ error: "Invalid payload" });
-        }
-
-        let nextCategoryId = null;
-        let shouldUpdateCategory = false;
-        if (req.body && Object.prototype.hasOwnProperty.call(req.body, "categoryId")) {
-          shouldUpdateCategory = true;
-          const rawCategoryId = req.body.categoryId;
-          nextCategoryId =
-            typeof rawCategoryId === "string" && rawCategoryId.trim().length > 0
-              ? rawCategoryId.trim()
-              : null;
-          if (nextCategoryId) {
-            const categoryResult = await pool.query(
-              `
+        if (nextCategoryId) {
+          const categoryResult = await pool.query(
+            `
               SELECT id
               FROM skills_matrix_categories
               WHERE id = $1 AND session_id = $2
               LIMIT 1
             `,
-              [nextCategoryId, session.id],
-            );
-            if (!categoryResult.rows[0]) return res.status(400).json({ error: "Invalid payload" });
-          }
+            [nextCategoryId, session.id],
+          );
+          if (!categoryResult.rows[0]) return res.status(400).json({ error: "Invalid payload" });
         }
+      }
 
-        const nextRequiredLevel = parseInteger(
-          req.body && Object.prototype.hasOwnProperty.call(req.body, "requiredLevel")
-            ? req.body.requiredLevel
-            : null,
-          { min: Number(session.scale_min), max: Number(session.scale_max) },
-        );
-        if (Number.isNaN(nextRequiredLevel))
-          return res.status(400).json({ error: "Invalid payload" });
+      const nextRequiredLevel = parseInteger(
+        req.body && Object.prototype.hasOwnProperty.call(req.body, "requiredLevel")
+          ? req.body.requiredLevel
+          : null,
+        { min: Number(session.scale_min), max: Number(session.scale_max) },
+      );
+      if (Number.isNaN(nextRequiredLevel))
+        return res.status(400).json({ error: "Invalid payload" });
 
-        const nextRequiredPeople = parseInteger(
-          req.body && Object.prototype.hasOwnProperty.call(req.body, "requiredPeople")
-            ? req.body.requiredPeople
-            : null,
-          { min: 0, max: 500 },
-        );
-        if (Number.isNaN(nextRequiredPeople))
-          return res.status(400).json({ error: "Invalid payload" });
+      const nextRequiredPeople = parseInteger(
+        req.body && Object.prototype.hasOwnProperty.call(req.body, "requiredPeople")
+          ? req.body.requiredPeople
+          : null,
+        { min: 0, max: 500 },
+      );
+      if (Number.isNaN(nextRequiredPeople))
+        return res.status(400).json({ error: "Invalid payload" });
 
-        const nextSortOrder = parseInteger(
-          req.body && Object.prototype.hasOwnProperty.call(req.body, "sortOrder")
-            ? req.body.sortOrder
-            : null,
-          { min: 0, max: 10000 },
-        );
-        if (Number.isNaN(nextSortOrder)) return res.status(400).json({ error: "Invalid payload" });
+      const nextSortOrder = parseInteger(
+        req.body && Object.prototype.hasOwnProperty.call(req.body, "sortOrder")
+          ? req.body.sortOrder
+          : null,
+        { min: 0, max: 10000 },
+      );
+      if (Number.isNaN(nextSortOrder)) return res.status(400).json({ error: "Invalid payload" });
 
-        await pool.query(
-          `
+      await pool.query(
+        `
           UPDATE skills_matrix_skills
           SET
             name = COALESCE($3, name),
@@ -1176,110 +1178,104 @@ export function registerSkillsMatrixRoutes(context) {
             updated_at = now()
           WHERE id = $1 AND session_id = $2
         `,
-          [
-            skillId,
-            session.id,
-            nextName,
-            shouldUpdateCategory,
-            nextCategoryId,
-            nextRequiredLevel,
-            nextRequiredPeople,
-            nextSortOrder,
-          ],
-        );
+        [
+          skillId,
+          session.id,
+          nextName,
+          shouldUpdateCategory,
+          nextCategoryId,
+          nextRequiredLevel,
+          nextRequiredPeople,
+          nextSortOrder,
+        ],
+      );
 
-        const payload = await buildSessionSnapshot({
-          pool,
-          session,
-          currentParticipantId: participantId,
-        });
-        return res.status(200).json(payload);
-      } catch (err) {
-        next(err);
-      }
-    },
-  );
+      const payload = await buildSessionSnapshot({
+        pool,
+        session,
+        currentParticipantId: participantId,
+      });
+      emitSkillsMatrixSessionUpdate(code, "skill_updated");
+      return res.status(200).json(payload);
+    } catch (err) {
+      next(err);
+    }
+  });
 
-  app.delete(
-    "/api/skills-matrix/sessions/:code/skills/:skillId",
-    requireAuth,
-    async (req, res, next) => {
-      try {
-        const code = normalizeCode(req.params.code);
-        const participantId = resolveParticipantId(req);
-        const skillId = req.params.skillId;
-        if (!code || !skillId || !participantId)
-          return res.status(400).json({ error: "Invalid payload" });
+  app.delete("/api/skills-matrix/sessions/:code/skills/:skillId", async (req, res, next) => {
+    try {
+      const code = normalizeCode(req.params.code);
+      const participantId = resolveParticipantId(req);
+      const skillId = req.params.skillId;
+      if (!code || !skillId || !participantId)
+        return res.status(400).json({ error: "Invalid payload" });
 
-        const { session, me } = await getSessionContext(pool, code, participantId);
-        if (!session) return res.status(404).json({ error: "Not found" });
-        if (!me || !me.is_admin) return res.status(403).json({ error: "Unauthorized" });
+      const { session, me } = await getSessionContext(pool, code, participantId);
+      if (!session) return res.status(404).json({ error: "Not found" });
+      if (!me || !me.is_admin) return res.status(403).json({ error: "Unauthorized" });
 
-        await pool.query(
-          `
+      await pool.query(
+        `
             DELETE FROM skills_matrix_skills
             WHERE id = $1 AND session_id = $2
           `,
-          [skillId, session.id],
-        );
+        [skillId, session.id],
+      );
 
-        const payload = await buildSessionSnapshot({
-          pool,
-          session,
-          currentParticipantId: participantId,
-        });
-        return res.status(200).json(payload);
-      } catch (err) {
-        next(err);
-      }
-    },
-  );
+      const payload = await buildSessionSnapshot({
+        pool,
+        session,
+        currentParticipantId: participantId,
+      });
+      emitSkillsMatrixSessionUpdate(code, "skill_deleted");
+      return res.status(200).json(payload);
+    } catch (err) {
+      next(err);
+    }
+  });
 
-  app.put(
-    "/api/skills-matrix/sessions/:code/assessments/:skillId",
-    requireAuth,
-    async (req, res, next) => {
-      try {
-        const code = normalizeCode(req.params.code);
-        const participantId = resolveParticipantId(req);
-        const skillId = req.params.skillId;
-        if (!code || !skillId || !participantId)
-          return res.status(400).json({ error: "Invalid payload" });
+  app.put("/api/skills-matrix/sessions/:code/assessments/:skillId", async (req, res, next) => {
+    try {
+      const code = normalizeCode(req.params.code);
+      const participantId = resolveParticipantId(req);
+      const skillId = req.params.skillId;
+      if (!code || !skillId || !participantId)
+        return res.status(400).json({ error: "Invalid payload" });
 
-        const { session, me } = await getSessionContext(pool, code, participantId);
-        if (!session) return res.status(404).json({ error: "Not found" });
-        if (!me) return res.status(403).json({ error: "Unauthorized" });
+      const { session, me } = await getSessionContext(pool, code, participantId);
+      if (!session) return res.status(404).json({ error: "Not found" });
+      if (!me) return res.status(403).json({ error: "Unauthorized" });
 
-        const skillResult = await pool.query(
-          `
+      const skillResult = await pool.query(
+        `
             SELECT id
             FROM skills_matrix_skills
             WHERE id = $1 AND session_id = $2
             LIMIT 1
           `,
-          [skillId, session.id],
-        );
-        if (!skillResult.rows[0]) return res.status(404).json({ error: "Not found" });
+        [skillId, session.id],
+      );
+      if (!skillResult.rows[0]) return res.status(404).json({ error: "Not found" });
 
-        const currentLevel = parseNullableLevel(
-          req.body?.currentLevel,
-          Number(session.scale_min),
-          Number(session.scale_max),
-        );
-        const targetLevel = parseNullableLevel(
-          req.body?.targetLevel,
-          Number(session.scale_min),
-          Number(session.scale_max),
-        );
-        if (Number.isNaN(currentLevel) || Number.isNaN(targetLevel)) {
-          return res.status(400).json({ error: "Invalid payload" });
-        }
+      const currentLevel = parseNullableLevel(
+        req.body?.currentLevel,
+        Number(session.scale_min),
+        Number(session.scale_max),
+      );
+      const targetLevel = parseNullableLevel(
+        req.body?.targetLevel,
+        Number(session.scale_min),
+        Number(session.scale_max),
+      );
+      if (Number.isNaN(currentLevel) || Number.isNaN(targetLevel)) {
+        return res.status(400).json({ error: "Invalid payload" });
+      }
 
-        const wantsToProgress = req.body?.wantsToProgress === true;
-        const wantsToMentor = req.body?.wantsToMentor === true;
+      const wantsToProgress = req.body?.wantsToProgress === true;
+      const wantsToMentor = req.body?.wantsToMentor === true;
 
-        await pool.query(
-          `
+      await pool.query(
+        `
             INSERT INTO skills_matrix_assessments (
               id,
               session_id,
@@ -1299,27 +1295,27 @@ export function registerSkillsMatrixRoutes(context) {
               wants_to_mentor = EXCLUDED.wants_to_mentor,
               updated_at = now()
           `,
-          [
-            crypto.randomUUID(),
-            session.id,
-            skillId,
-            me.id,
-            currentLevel,
-            targetLevel,
-            wantsToProgress,
-            wantsToMentor,
-          ],
-        );
+        [
+          crypto.randomUUID(),
+          session.id,
+          skillId,
+          me.id,
+          currentLevel,
+          targetLevel,
+          wantsToProgress,
+          wantsToMentor,
+        ],
+      );
 
-        const payload = await buildSessionSnapshot({
-          pool,
-          session,
-          currentParticipantId: participantId,
-        });
-        return res.status(200).json(payload);
-      } catch (err) {
-        next(err);
-      }
-    },
-  );
+      const payload = await buildSessionSnapshot({
+        pool,
+        session,
+        currentParticipantId: participantId,
+      });
+      emitSkillsMatrixSessionUpdate(code, "assessment_updated");
+      return res.status(200).json(payload);
+    } catch (err) {
+      next(err);
+    }
+  });
 }

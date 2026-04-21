@@ -359,6 +359,17 @@ export function registerApiRoutes({
     });
   }
 
+  function emitSkillsMatrixSessionUpdate(rawCode, reason) {
+    if (!io) return;
+    const code = typeof rawCode === "string" ? rawCode.trim().toUpperCase() : "";
+    if (!code) return;
+    io.to(`skills-matrix:${code}`).emit(S2C_EVENTS.SKILLS_MATRIX_SESSION_UPDATE, {
+      code,
+      reason,
+      at: Date.now(),
+    });
+  }
+
   registerAuthRoutes({
     app,
     pool,
@@ -432,6 +443,7 @@ export function registerApiRoutes({
     crypto,
     makeCode,
     requireAuth,
+    emitSkillsMatrixSessionUpdate,
   });
 
   app.use("/api", (err, _req, res, _next) => {

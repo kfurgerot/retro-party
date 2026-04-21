@@ -245,6 +245,7 @@ export async function initDatabase() {
   await pool.query(
     "ALTER TABLE skills_matrix_participants ADD COLUMN IF NOT EXISTS avatar INT NOT NULL DEFAULT 0;",
   );
+  await pool.query("ALTER TABLE skills_matrix_participants ALTER COLUMN user_id DROP NOT NULL;");
   await pool.query(
     "CREATE INDEX IF NOT EXISTS idx_skills_matrix_participants_session_id ON skills_matrix_participants(session_id);",
   );

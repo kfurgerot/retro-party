@@ -144,7 +144,7 @@ export type SkillsMatrixSession = {
 
 export type SkillsMatrixParticipant = {
   id: string;
-  userId: string;
+  userId: string | null;
   displayName: string;
   avatar: number;
   isAdmin: boolean;

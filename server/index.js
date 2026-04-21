@@ -192,6 +192,7 @@ const socketToRoom = new Map(); // socketId -> code
 const pokerRooms = new Map(); // code -> { code, phase, voteSystem, round, revealed, hostSocketId, clients, lobby, disconnectTimers }
 const socketToPokerRoom = new Map(); // socketId -> code
 const socketToRadarRoom = new Map(); // socketId -> code
+const socketToSkillsMatrixRoom = new Map(); // socketId -> code
 const POKER_VOTE_SYSTEMS = new Set(["fibonacci", "man-day", "tshirt"]);
 const POKER_MAX_PLAYERS = 20;
 
@@ -202,6 +203,10 @@ function normalizeSessionCode(value) {
 
 function radarRoomKey(code) {
   return `radar:${code}`;
+}
+
+function skillsMatrixRoomKey(code) {
+  return `skills-matrix:${code}`;
 }
 
 function attachSocketToRadarRoom(socket, rawCode) {
@@ -224,6 +229,29 @@ function detachSocketFromRadarRoom(socket, codeHint = null) {
   if (!code) return null;
   socket.leave(radarRoomKey(code));
   if (activeCode) socketToRadarRoom.delete(socket.id);
+  return code;
+}
+
+function attachSocketToSkillsMatrixRoom(socket, rawCode) {
+  const code = normalizeSessionCode(rawCode);
+  if (!code) return null;
+
+  const previous = socketToSkillsMatrixRoom.get(socket.id);
+  if (previous && previous !== code) {
+    socket.leave(skillsMatrixRoomKey(previous));
+  }
+
+  socketToSkillsMatrixRoom.set(socket.id, code);
+  socket.join(skillsMatrixRoomKey(code));
+  return code;
+}
+
+function detachSocketFromSkillsMatrixRoom(socket, codeHint = null) {
+  const activeCode = socketToSkillsMatrixRoom.get(socket.id);
+  const code = activeCode || normalizeSessionCode(codeHint ?? "");
+  if (!code) return null;
+  socket.leave(skillsMatrixRoomKey(code));
+  if (activeCode) socketToSkillsMatrixRoom.delete(socket.id);
   return code;
 }
 
@@ -1238,6 +1266,8 @@ registerSocketHandlers({
   io,
   attachSocketToRadarRoom,
   detachSocketFromRadarRoom,
+  attachSocketToSkillsMatrixRoom,
+  detachSocketFromSkillsMatrixRoom,
   makeUniqueRoomCode,
   makeSessionId,
   createPokerRoom,
@@ -1295,6 +1325,7 @@ registerSocketHandlers({
   resetGame,
   clearPointDuelTimers,
   socketToRadarRoom,
+  socketToSkillsMatrixRoom,
   schedulePokerDisconnectCleanup,
   scheduleDisconnectCleanup,
   removePlayerNow,
