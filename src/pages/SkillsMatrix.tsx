@@ -1,4 +1,13 @@
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Dispatch,
+  FormEvent,
+  SetStateAction,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { C2S_EVENTS, S2C_EVENTS } from "@shared/contracts/socketEvents.js";
 import { OnlineLobbyScreen } from "@/components/screens/OnlineLobbyScreen";
@@ -7,16 +16,33 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Slider } from "@/components/ui/slider";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, PrimaryButton, SecondaryButton } from "@/components/app-shell";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { isSkillsMatrixTemplate } from "@/features/skillsMatrix/templateConfig";
-import { TOOL_ACCENT } from "@/lib/uiTokens";
+import { CTA_NEON_DANGER, CTA_NEON_SECONDARY_SUBTLE, TOOL_ACCENT } from "@/lib/uiTokens";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { AVATARS } from "@/types/game";
 import { api, type SkillsMatrixSnapshot, type TemplateItem } from "@/net/api";
 import { socket } from "@/net/socket";
@@ -207,6 +233,175 @@ function resolveMatrixCellTone(currentLevel: number | null, requiredLevel: numbe
   };
 }
 
+function LevelSelector({
+  value,
+  min,
+  max,
+  requiredLevel,
+  onChange,
+}: {
+  value: number | null;
+  min: number;
+  max: number;
+  requiredLevel?: number;
+  onChange: (level: number | null) => void;
+}) {
+  const levels = Array.from({ length: max - min + 1 }, (_, i) => min + i);
+  const cols = Math.min(levels.length, 5);
+  return (
+    <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
+      {levels.map((level) => {
+        const isSelected = value === level;
+        const isRequired = level === requiredLevel;
+        const selectedTone =
+          isSelected && requiredLevel != null ? resolveMatrixCellTone(level, requiredLevel) : null;
+        return (
+          <button
+            key={level}
+            type="button"
+            onClick={() => onChange(isSelected ? null : level)}
+            className={cn(
+              "relative flex h-12 flex-col items-center justify-center gap-0.5 rounded-xl border text-sm font-bold transition active:scale-95",
+              isSelected
+                ? cn(
+                    selectedTone?.surfaceClass ?? "border-cyan-300/60 bg-cyan-500/30",
+                    selectedTone?.valueClass ?? "text-cyan-100",
+                  )
+                : isRequired
+                  ? "border-white/[0.28] bg-white/[0.06] text-slate-200"
+                  : "border-white/[0.1] bg-white/[0.04] text-slate-400 hover:border-white/[0.22] hover:bg-white/[0.08]",
+            )}
+          >
+            {level}
+            {isRequired && (
+              <span
+                className={cn(
+                  "h-1 w-1 rounded-full",
+                  isSelected ? "bg-current opacity-60" : "bg-cyan-400",
+                )}
+              />
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function CellEditorFormBody({
+  editingCell,
+  scaleMin,
+  scaleMax,
+  setEditingCell,
+}: {
+  editingCell: MatrixCellEditorState;
+  scaleMin: number;
+  scaleMax: number;
+  setEditingCell: Dispatch<SetStateAction<MatrixCellEditorState | null>>;
+}) {
+  const currentTone = resolveMatrixCellTone(editingCell.currentLevel, editingCell.requiredLevel);
+  return (
+    <>
+      {/* Niveau actuel */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+            Niveau actuel
+          </span>
+          <span
+            className={cn(
+              "rounded-full border px-2.5 py-0.5 text-xs font-bold",
+              editingCell.currentLevel != null
+                ? currentTone.badgeClass
+                : "border-slate-400/30 bg-slate-500/15 text-slate-300",
+            )}
+          >
+            {editingCell.currentLevel ?? "Non renseigné"}
+          </span>
+        </div>
+        <LevelSelector
+          value={editingCell.currentLevel}
+          min={scaleMin}
+          max={scaleMax}
+          requiredLevel={editingCell.requiredLevel}
+          onChange={(level) =>
+            setEditingCell((prev) => (prev ? { ...prev, currentLevel: level } : prev))
+          }
+        />
+        {editingCell.currentLevel != null && (
+          <button
+            type="button"
+            onClick={() =>
+              setEditingCell((prev) => (prev ? { ...prev, currentLevel: null } : prev))
+            }
+            className="text-[11px] text-slate-500 underline underline-offset-2 hover:text-slate-300"
+          >
+            Effacer
+          </button>
+        )}
+      </div>
+
+      {/* Niveau cible */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+            Niveau cible (optionnel)
+          </span>
+          <span className="rounded-full border border-white/[0.14] bg-white/[0.05] px-2.5 py-0.5 text-xs font-semibold text-slate-300">
+            {editingCell.targetLevel ?? "—"}
+          </span>
+        </div>
+        <LevelSelector
+          value={editingCell.targetLevel}
+          min={scaleMin}
+          max={scaleMax}
+          requiredLevel={editingCell.requiredLevel}
+          onChange={(level) =>
+            setEditingCell((prev) => (prev ? { ...prev, targetLevel: level } : prev))
+          }
+        />
+        {editingCell.targetLevel != null && (
+          <button
+            type="button"
+            onClick={() => setEditingCell((prev) => (prev ? { ...prev, targetLevel: null } : prev))}
+            className="text-[11px] text-slate-500 underline underline-offset-2 hover:text-slate-300"
+          >
+            Effacer
+          </button>
+        )}
+      </div>
+
+      {/* Intentions */}
+      <div className="space-y-2">
+        <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-sm text-slate-200">
+          <input
+            type="checkbox"
+            checked={editingCell.wantsToProgress}
+            onChange={(e) =>
+              setEditingCell((prev) =>
+                prev ? { ...prev, wantsToProgress: e.target.checked } : prev,
+              )
+            }
+            className="h-4 w-4 shrink-0 accent-cyan-500"
+          />
+          <span>Je souhaite être formé sur cette compétence</span>
+        </label>
+        <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-sm text-slate-200">
+          <input
+            type="checkbox"
+            checked={editingCell.wantsToMentor}
+            onChange={(e) =>
+              setEditingCell((prev) => (prev ? { ...prev, wantsToMentor: e.target.checked } : prev))
+            }
+            className="h-4 w-4 shrink-0 accent-cyan-500"
+          />
+          <span>Je souhaite former sur cette compétence</span>
+        </label>
+      </div>
+    </>
+  );
+}
+
 type SkillsRadarPanelProps = {
   title: string;
   subtitle: string;
@@ -276,11 +471,11 @@ function SkillsRadarPanel({ title, subtitle, model }: SkillsRadarPanelProps) {
           <p className="mt-1 text-xs text-slate-400">{subtitle}</p>
         </div>
         <div className="flex items-center gap-1.5 text-[11px]">
-          <span className="rounded-full border border-cyan-300/35 bg-cyan-500/14 px-2 py-0.5 text-cyan-100">
-            Couverture {Math.round(model.averageScorePct)}%
+          <span className="rounded-full border border-cyan-300/35 bg-cyan-500/10 px-2.5 py-1 font-semibold text-cyan-200">
+            {Math.round(model.averageScorePct)}% couvert
           </span>
-          <span className="rounded-full border border-white/[0.14] bg-white/[0.04] px-2 py-0.5 text-slate-300">
-            Compétences remplies {completedRatio}%
+          <span className="rounded-full border border-white/[0.12] bg-white/[0.03] px-2.5 py-1 text-slate-400">
+            {completedRatio}% renseigné
           </span>
         </div>
       </div>
@@ -358,7 +553,7 @@ function SkillsRadarPanel({ title, subtitle, model }: SkillsRadarPanelProps) {
             </svg>
           </div>
           <div className="mt-2 text-[11px] text-slate-500">
-            100% = niveau requis atteint en moyenne sur la catégorie.
+            Plus la forme est large, plus l'équipe maîtrise les compétences requises.
           </div>
         </div>
       ) : (
@@ -368,39 +563,49 @@ function SkillsRadarPanel({ title, subtitle, model }: SkillsRadarPanelProps) {
       )}
 
       <div className="max-h-[320px] space-y-2 overflow-y-auto pr-1">
-        {categories.map((category) => (
-          <div
-            key={category.categoryKey}
-            className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-2.5"
-          >
-            <div className="flex items-center justify-between gap-2">
-              <div className="text-xs font-semibold text-slate-200">{category.categoryName}</div>
-              <div className="text-[11px] text-slate-400">
-                {toDisplayLevel(category.averageCurrentLevel)} /{" "}
-                {toDisplayLevel(category.averageRequiredLevel)}
+        {categories.map((category) => {
+          const catPct = Math.round(category.scorePct);
+          const catColor =
+            catPct >= 80 ? "text-emerald-400" : catPct >= 50 ? "text-cyan-400" : "text-amber-400";
+          return (
+            <div
+              key={category.categoryKey}
+              className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-xs font-semibold text-slate-100">{category.categoryName}</div>
+                <span className={cn("text-[11px] font-bold", catColor)}>{catPct}%</span>
+              </div>
+              <div className="mt-2 space-y-1.5">
+                {category.skills.map((skill) => {
+                  const tone = resolveMatrixCellTone(skill.currentLevel, skill.requiredLevel);
+                  const isFilled = skill.currentLevel != null;
+                  const meetsRequired = isFilled && skill.currentLevel! >= skill.requiredLevel;
+                  return (
+                    <div
+                      key={skill.skillId}
+                      className={cn(
+                        "flex items-center gap-2 rounded-xl border px-3 py-2 text-[11px]",
+                        tone.surfaceClass,
+                      )}
+                    >
+                      <span className="min-w-0 flex-1 truncate text-slate-100">
+                        {skill.skillName}
+                      </span>
+                      {isFilled ? (
+                        <span className={cn("shrink-0 font-bold", tone.valueClass)}>
+                          {meetsRequired ? "✓" : ""} Niv. {skill.currentLevel}
+                        </span>
+                      ) : (
+                        <span className="shrink-0 text-slate-600">—</span>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
-            <div className="mt-2 space-y-1">
-              {category.skills.map((skill) => {
-                const tone = resolveMatrixCellTone(skill.currentLevel, skill.requiredLevel);
-                return (
-                  <div
-                    key={skill.skillId}
-                    className={cn(
-                      "flex items-center justify-between gap-2 rounded-lg border px-2 py-1 text-[11px]",
-                      tone.surfaceClass,
-                    )}
-                  >
-                    <span className="min-w-0 truncate text-slate-100">{skill.skillName}</span>
-                    <span className={cn("shrink-0 font-semibold", tone.valueClass)}>
-                      {toDisplayLevel(skill.currentLevel)} / N{skill.requiredLevel}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -424,6 +629,7 @@ export default function SkillsMatrixPage() {
   const initialAutoSubmit = searchParams.get("auto") === "1";
   const initialDirectAccess = initialAutoSubmit || !!initialCode;
 
+  const isMobile = useIsMobile();
   const [snapshot, setSnapshot] = useState<SkillsMatrixSnapshot | null>(null);
   const [activeTab, setActiveTab] = useState<WorkspaceTab>("matrix");
   const [loadingAction, setLoadingAction] = useState(false);
@@ -453,6 +659,8 @@ export default function SkillsMatrixPage() {
   const [sessionSettingsScaleMax, setSessionSettingsScaleMax] = useState<number>(5);
   const [skillDrafts, setSkillDrafts] = useState<Record<string, SkillDraft>>({});
   const [editingCell, setEditingCell] = useState<MatrixCellEditorState | null>(null);
+  const [mobileMatrixView, setMobileMatrixView] = useState<"me" | "team">("me");
+  const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
   const [savingCell, setSavingCell] = useState(false);
   const [selectedRadarParticipantId, setSelectedRadarParticipantId] = useState<string | null>(null);
   const [participantId, setParticipantId] = useState<string>("");
@@ -917,7 +1125,9 @@ export default function SkillsMatrixPage() {
         0,
       );
       const averageScorePct =
-        averageFiniteNumbers(categories.map((category) => category.scorePct)) ?? 0;
+        averageFiniteNumbers(
+          categories.flatMap((category) => category.skills.map((skill) => skill.scorePct)),
+        ) ?? 0;
 
       return {
         categories,
@@ -1566,16 +1776,19 @@ export default function SkillsMatrixPage() {
               Session démarrée. Pilote la couverture des compétences et les plans de progression.
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <SecondaryButton className="h-10 min-h-0 px-3 text-xs" onClick={() => navigate("/")}>
-              Retour
-            </SecondaryButton>
-            <PrimaryButton
-              className="h-10 min-h-0 px-3 text-xs"
-              onClick={() => void refreshSession()}
+          <div className="flex items-center gap-3">
+            {roomCode && (
+              <div className="inline-flex items-center gap-1 rounded-full border border-cyan-500/25 bg-cyan-500/10 px-2.5 py-1 text-[11px] font-semibold tracking-[0.08em] text-cyan-100">
+                <span className="uppercase text-cyan-200/85">Code</span>
+                <span>{roomCode}</span>
+              </div>
+            )}
+            <SecondaryButton
+              className={cn("h-10 min-h-0 px-3 text-xs", CTA_NEON_DANGER)}
+              onClick={() => setLeaveDialogOpen(true)}
             >
-              Actualiser
-            </PrimaryButton>
+              Quitter
+            </SecondaryButton>
           </div>
         </header>
 
@@ -1586,295 +1799,609 @@ export default function SkillsMatrixPage() {
         ) : null}
 
         <div className="space-y-4">
-          <Card className="overflow-hidden rounded-3xl border border-white/[0.1] bg-[linear-gradient(160deg,rgba(15,23,42,0.95),rgba(17,24,39,0.84)_50%,rgba(13,18,36,0.94))] p-0 shadow-[0_16px_42px_rgba(2,6,23,0.42)]">
-            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-white/[0.08] px-4 py-4 sm:px-5">
-              <div>
-                <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-cyan-300">
-                  Session active
+          <div className="overflow-hidden rounded-3xl border border-white/[0.08] bg-[linear-gradient(160deg,rgba(12,18,40,0.97),rgba(14,20,42,0.92))] shadow-[0_8px_32px_rgba(2,6,23,0.35)]">
+            {/* Titre + onglets */}
+            <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500/30 to-indigo-500/20 text-lg">
+                  🧩
                 </div>
-                <div className="mt-1 text-sm font-semibold text-slate-100">
-                  {snapshot.session.title}
-                </div>
-                <div className="mt-1 text-xs text-slate-400">
-                  Code <span className="font-mono">{snapshot.session.code}</span> · Échelle{" "}
-                  {snapshot.session.scaleMin} à {snapshot.session.scaleMax}
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-bold text-slate-100">
+                    {snapshot.session.title || "Matrice de compétences"}
+                  </div>
+                  <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-slate-500">
+                    <span className="font-mono tracking-wider text-slate-400">
+                      {snapshot.session.code}
+                    </span>
+                    <span>·</span>
+                    <span>
+                      {snapshot.participants.length} participant
+                      {snapshot.participants.length !== 1 ? "s" : ""}
+                    </span>
+                    <span>·</span>
+                    <span>
+                      Niveaux {snapshot.session.scaleMin}–{snapshot.session.scaleMax}
+                    </span>
+                  </div>
                 </div>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex rounded-xl border border-white/[0.08] bg-white/[0.04] p-1">
                 {(["matrix", "dashboard"] as WorkspaceTab[]).map((tab) => (
                   <button
                     key={tab}
                     type="button"
                     onClick={() => setActiveTab(tab)}
                     className={cn(
-                      "rounded-xl border px-3 py-1.5 text-xs font-semibold transition",
+                      "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition",
                       activeTab === tab
-                        ? "border-cyan-200/60 bg-cyan-500/25 text-cyan-50 shadow-[0_0_0_1px_rgba(34,211,238,0.3)]"
-                        : "border-white/[0.1] bg-white/[0.04] text-slate-300 hover:border-white/[0.22]",
+                        ? "bg-cyan-500/25 text-cyan-50 shadow-[0_0_0_1px_rgba(34,211,238,0.25)]"
+                        : "text-slate-400 hover:text-slate-200",
                     )}
                   >
-                    {tab === "matrix" ? "Matrice" : "Dashboard"}
+                    {tab === "matrix" ? (
+                      <>
+                        <span>🗂️</span>
+                        <span>Matrice</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>📊</span>
+                        <span>Bilan</span>
+                      </>
+                    )}
                   </button>
                 ))}
               </div>
             </div>
-            <div className="grid gap-2 px-4 py-3 sm:grid-cols-3 sm:px-5">
-              <div className="rounded-xl border border-cyan-300/25 bg-cyan-500/10 px-3 py-2 text-[11px] text-cyan-100">
-                Couverture globale: {snapshot.dashboard.summary.coveredSkillsCount}/
-                {Math.max(1, snapshot.dashboard.summary.totalSkills)}
+
+            {/* KPIs */}
+            <div className="grid grid-cols-3 gap-2 border-t border-white/[0.06] px-5 py-3">
+              <div className="flex items-center gap-2.5 rounded-2xl border border-emerald-300/15 bg-emerald-500/[0.06] px-3 py-2.5">
+                <span className="shrink-0 text-lg leading-none">✅</span>
+                <div className="min-w-0">
+                  <div className="text-sm font-bold text-emerald-100">
+                    {snapshot.dashboard.summary.coveredSkillsCount}
+                    <span className="ml-1 text-[10px] font-normal text-slate-400">
+                      / {snapshot.dashboard.summary.totalSkills}
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-slate-500">couvertes</div>
+                </div>
               </div>
-              <div className="rounded-xl border border-white/[0.12] bg-white/[0.04] px-3 py-2 text-[11px] text-slate-200">
-                Cases renseignées: {matrixFilling.filled}/{Math.max(1, matrixFilling.total)} (
-                {matrixFilling.ratio}%)
+              <div className="flex items-center gap-2.5 rounded-2xl border border-cyan-300/15 bg-cyan-500/[0.06] px-3 py-2.5">
+                <span className="shrink-0 text-lg leading-none">📝</span>
+                <div className="min-w-0">
+                  <div className="text-sm font-bold text-cyan-100">{matrixFilling.ratio}%</div>
+                  <div className="text-[10px] text-slate-500">complétude</div>
+                </div>
               </div>
-              <div className="rounded-xl border border-amber-300/25 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-100">
-                Compétences à risque: {snapshot.dashboard.summary.riskySkillsCount}
+              <div className="flex items-center gap-2.5 rounded-2xl border border-amber-300/15 bg-amber-500/[0.06] px-3 py-2.5">
+                <span className="shrink-0 text-lg leading-none">⚠️</span>
+                <div className="min-w-0">
+                  <div className="text-sm font-bold text-amber-100">
+                    {snapshot.dashboard.summary.riskySkillsCount}
+                  </div>
+                  <div className="text-[10px] text-slate-500">à risque</div>
+                </div>
               </div>
             </div>
-          </Card>
+          </div>
 
           {activeTab === "matrix" ? (
-            <Card className="overflow-hidden rounded-3xl border border-white/[0.1] bg-[#0c1124]/95 p-0 shadow-[0_18px_40px_rgba(2,6,23,0.35)]">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/[0.08] bg-white/[0.02] px-4 py-3 sm:px-5">
-                <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-300">
-                  Matrice compétences x membres
-                </div>
-                <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
-                  <span className="rounded-full border border-rose-300/35 bg-rose-500/20 px-2 py-0.5 text-rose-100">
-                    Lacunes
-                  </span>
-                  <span className="rounded-full border border-yellow-300/35 bg-yellow-500/18 px-2 py-0.5 text-yellow-100">
-                    Cible
-                  </span>
-                  <span className="rounded-full border border-emerald-300/35 bg-emerald-500/20 px-2 py-0.5 text-emerald-100">
-                    Forces
-                  </span>
-                </div>
+            <div>
+              {/* ── MOBILE : toggle Moi / Équipe ─────────────────────── */}
+              <div className="mb-4 flex rounded-2xl border border-white/[0.08] bg-white/[0.04] p-1 md:hidden">
+                <button
+                  type="button"
+                  onClick={() => setMobileMatrixView("me")}
+                  className={cn(
+                    "flex-1 rounded-xl py-2.5 text-sm font-semibold transition",
+                    mobileMatrixView === "me"
+                      ? "bg-cyan-500/25 text-cyan-50 shadow-[0_0_0_1px_rgba(34,211,238,0.2)]"
+                      : "text-slate-400 hover:text-slate-200",
+                  )}
+                >
+                  Mes compétences
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMobileMatrixView("team")}
+                  className={cn(
+                    "flex-1 rounded-xl py-2.5 text-sm font-semibold transition",
+                    mobileMatrixView === "team"
+                      ? "bg-cyan-500/25 text-cyan-50 shadow-[0_0_0_1px_rgba(34,211,238,0.2)]"
+                      : "text-slate-400 hover:text-slate-200",
+                  )}
+                >
+                  Équipe ({snapshot.participants.length})
+                </button>
               </div>
 
-              <div className="p-4 sm:p-5">
-                <p className="mb-3 text-[11px] text-slate-500 md:hidden">
-                  Vue mobile: fais glisser horizontalement pour voir tous les membres. Ta colonne
-                  reste modifiable directement dans la matrice compacte.
-                </p>
-
-                <div className="space-y-3 md:hidden">
+              {/* ── MOBILE : vue "Mes compétences" ───────────────────── */}
+              {mobileMatrixView === "me" && (
+                <div className="space-y-1 md:hidden">
                   {!myParticipantId ? (
-                    <div className="rounded-xl border border-amber-300/25 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-100">
-                      Profil non associé à la session. Recharge la page ou rejoins à nouveau la
-                      partie pour renseigner ta matrice.
+                    <div className="rounded-xl border border-amber-300/25 bg-amber-500/10 px-3 py-2.5 text-[11px] text-amber-100">
+                      Profil non associé. Recharge la page ou rejoins à nouveau pour renseigner ta
+                      matrice.
                     </div>
                   ) : null}
 
                   {matrixRowsByCategory.length === 0 ? (
-                    <div className="rounded-2xl border border-white/[0.08] bg-[#0a1021] px-3 py-3 text-xs text-slate-400">
-                      Aucune compétence disponible. Ajoute des compétences dans la configuration
-                      host pour compléter la matrice.
+                    <div className="rounded-2xl border border-white/[0.08] bg-[#0a1021] px-4 py-8 text-center text-sm text-slate-400">
+                      Aucune compétence disponible.
                     </div>
                   ) : (
-                    <div className="overflow-x-auto rounded-2xl border border-white/[0.08] bg-[#0a1021]">
-                      <table className="w-full min-w-[520px] text-[11px]">
-                        <thead className="bg-white/[0.04] text-slate-300">
-                          <tr>
-                            <th className="sticky left-0 z-20 min-w-[122px] border-b border-white/[0.08] bg-[#111830] px-2 py-2 text-left">
-                              Compétence
-                            </th>
-                            {snapshot.participants.map((participant) => (
-                              <th
-                                key={`mobile-head-${participant.id}`}
-                                className="min-w-[64px] border-b border-white/[0.08] px-1 py-2 text-center"
-                              >
-                                <div className="flex flex-col items-center gap-1">
-                                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-cyan-300/25 bg-cyan-500/10 text-xs">
-                                    {AVATARS[participant.avatar] ?? "?"}
-                                  </span>
-                                  <span className="max-w-[56px] truncate text-[9px] font-semibold text-slate-100">
-                                    {participant.displayName}
-                                  </span>
-                                  {participant.id === myParticipantId ? (
-                                    <span className="rounded-full border border-cyan-300/40 bg-cyan-500/18 px-1.5 py-0.5 text-[9px] font-semibold text-cyan-100">
-                                      Moi
-                                    </span>
-                                  ) : null}
-                                </div>
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {matrixRowsByCategory.flatMap((group) => [
-                            <tr key={`mobile-group-${group.categoryId ?? "none"}`}>
-                              <td
-                                colSpan={snapshot.participants.length + 1}
-                                className="bg-white/[0.02] px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-cyan-300"
-                              >
-                                {group.categoryName}
-                              </td>
-                            </tr>,
-                            ...group.rows.map((row) => (
-                              <tr
-                                key={`mobile-skill-${row.skillId}`}
-                                className="border-t border-white/[0.06] align-top"
-                              >
-                                <td className="sticky left-0 z-10 bg-[#101735] px-2 py-1.5">
-                                  <div className="truncate text-[10px] font-semibold leading-tight text-slate-100">
-                                    {row.skillName}
-                                  </div>
-                                  <div className="mt-0.5 text-[9px] text-slate-500">
-                                    N{row.requiredLevel}
-                                  </div>
-                                </td>
-                                {snapshot.participants.map((participant) => {
-                                  const cell =
-                                    assessmentByCellKey.get(
-                                      assessmentKey(row.skillId, participant.id),
-                                    ) ?? null;
-                                  const tone = resolveMatrixCellTone(
-                                    cell?.currentLevel ?? null,
-                                    row.requiredLevel,
-                                  );
-                                  const canEdit = participant.id === myParticipantId;
+                    <div className="space-y-5">
+                      {matrixRowsByCategory.map((group) => (
+                        <div key={group.categoryId ?? "none"}>
+                          <div className="mb-2 px-1 text-[10px] font-bold uppercase tracking-[0.1em] text-cyan-400">
+                            {group.categoryName}
+                          </div>
+                          <div className="space-y-2">
+                            {group.rows.map((row) => {
+                              const myAssessment = myParticipantId
+                                ? (assessmentByCellKey.get(
+                                    assessmentKey(row.skillId, myParticipantId),
+                                  ) ?? null)
+                                : null;
+                              const isFilled = myAssessment?.currentLevel != null;
+                              const tone = resolveMatrixCellTone(
+                                isFilled ? (myAssessment!.currentLevel as number) : null,
+                                row.requiredLevel,
+                              );
+                              const levelCount =
+                                snapshot.session.scaleMax - snapshot.session.scaleMin + 1;
 
-                                  const compactCell = (
+                              return (
+                                <button
+                                  key={row.skillId}
+                                  type="button"
+                                  onClick={() => openCellEditor(row)}
+                                  disabled={!myParticipantId}
+                                  className={cn(
+                                    "w-full rounded-2xl border p-4 text-left transition active:scale-[0.99] disabled:opacity-60",
+                                    isFilled
+                                      ? tone.surfaceClass
+                                      : "border-white/[0.1] bg-white/[0.03]",
+                                  )}
+                                >
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="min-w-0 flex-1">
+                                      <div className="text-sm font-semibold leading-tight text-slate-100">
+                                        {row.skillName}
+                                      </div>
+                                      <div className="mt-0.5 text-[11px] text-slate-400">
+                                        Requis : N{row.requiredLevel}
+                                      </div>
+                                    </div>
                                     <div
                                       className={cn(
-                                        "mx-auto flex h-9 w-9 items-center justify-center rounded-full border",
-                                        tone.surfaceClass,
+                                        "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border text-sm font-bold",
+                                        isFilled
+                                          ? cn(tone.surfaceClass, tone.valueClass)
+                                          : "border-white/[0.15] bg-white/[0.05] text-slate-500",
                                       )}
                                     >
-                                      <span
-                                        className={cn(
-                                          "text-[11px] font-bold leading-none",
-                                          tone.valueClass,
-                                        )}
-                                      >
-                                        {cell?.currentLevel ?? "—"}
-                                      </span>
+                                      {isFilled ? myAssessment!.currentLevel : "—"}
                                     </div>
-                                  );
-
-                                  return (
-                                    <td
-                                      key={`mobile-cell-${row.skillId}-${participant.id}`}
-                                      className="min-w-[64px] px-1 py-1.5 align-middle"
-                                    >
-                                      {canEdit ? (
-                                        <button
-                                          type="button"
-                                          onClick={() => openCellEditor(row)}
-                                          className="w-full text-center transition hover:scale-[1.03] active:scale-[0.99]"
-                                        >
-                                          {compactCell}
-                                        </button>
-                                      ) : (
-                                        <div>{compactCell}</div>
+                                  </div>
+                                  <div className="mt-3 flex gap-1">
+                                    {Array.from({ length: levelCount }, (_, i) => {
+                                      const lvl = snapshot.session.scaleMin + i;
+                                      const isActive =
+                                        isFilled && lvl <= (myAssessment!.currentLevel as number);
+                                      const isReq = lvl === row.requiredLevel;
+                                      return (
+                                        <div
+                                          key={lvl}
+                                          className={cn(
+                                            "h-1.5 flex-1 rounded-full",
+                                            isActive
+                                              ? (myAssessment!.currentLevel as number) >=
+                                                row.requiredLevel
+                                                ? "bg-emerald-400"
+                                                : "bg-cyan-400"
+                                              : isReq
+                                                ? "bg-white/[0.25]"
+                                                : "bg-white/[0.08]",
+                                          )}
+                                        />
+                                      );
+                                    })}
+                                  </div>
+                                  {myAssessment?.wantsToProgress || myAssessment?.wantsToMentor ? (
+                                    <div className="mt-2.5 flex gap-1.5">
+                                      {myAssessment.wantsToProgress && (
+                                        <span className="inline-flex items-center gap-1 rounded-full border border-indigo-300/30 bg-indigo-500/15 px-2.5 py-1 text-[11px] font-medium text-indigo-200">
+                                          <span className="text-[13px] leading-none">🌱</span>
+                                          Veut apprendre
+                                        </span>
                                       )}
-                                    </td>
-                                  );
-                                })}
-                              </tr>
-                            )),
-                          ])}
-                        </tbody>
-                      </table>
+                                      {myAssessment.wantsToMentor && (
+                                        <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300/30 bg-emerald-500/15 px-2.5 py-1 text-[11px] font-medium text-emerald-200">
+                                          <span className="text-[13px] leading-none">🎓</span>
+                                          Peut former
+                                        </span>
+                                      )}
+                                    </div>
+                                  ) : null}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
+              )}
 
-                <div className="hidden md:block">
-                  <div className="overflow-x-auto rounded-2xl border border-white/[0.08] bg-[#0a1021]">
-                    <table className="w-full min-w-[860px] text-xs">
-                      <thead className="bg-white/[0.04] text-slate-300">
-                        <tr>
-                          <th className="sticky left-0 z-20 min-w-[170px] border-b border-white/[0.08] bg-[#111830] px-2.5 py-2 text-left">
-                            Compétence
-                          </th>
-                          {snapshot.participants.map((participant) => (
-                            <th
-                              key={participant.id}
-                              className="min-w-[88px] border-b border-white/[0.08] px-1 py-2 text-center"
-                            >
-                              <div className="flex flex-col items-center gap-1">
-                                <span className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-cyan-300/25 bg-cyan-500/10 text-xs">
-                                  {AVATARS[participant.avatar] ?? "?"}
-                                </span>
-                                <div className="max-w-[72px] truncate text-[10px] font-semibold text-slate-100">
-                                  {participant.displayName}
+              {/* ── MOBILE : vue "Équipe" ─────────────────────────────── */}
+              {mobileMatrixView === "team" && (
+                <div className="space-y-5 md:hidden">
+                  {matrixRowsByCategory.length === 0 ? (
+                    <div className="rounded-2xl border border-white/[0.08] bg-[#0a1021] px-4 py-8 text-center text-sm text-slate-400">
+                      Aucune compétence disponible.
+                    </div>
+                  ) : (
+                    matrixRowsByCategory.map((group) => (
+                      <div key={group.categoryId ?? "none"}>
+                        <div className="mb-2 px-1 text-[10px] font-bold uppercase tracking-[0.1em] text-cyan-400">
+                          {group.categoryName}
+                        </div>
+                        <div className="space-y-2">
+                          {group.rows.map((row) => {
+                            const levelCount =
+                              snapshot.session.scaleMax - snapshot.session.scaleMin + 1;
+                            return (
+                              <div
+                                key={row.skillId}
+                                className="overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02]"
+                              >
+                                <div className="flex items-center justify-between border-b border-white/[0.06] px-4 py-2.5">
+                                  <span className="text-sm font-semibold text-slate-100">
+                                    {row.skillName}
+                                  </span>
+                                  <span className="text-[11px] text-slate-400">
+                                    Requis : N{row.requiredLevel}
+                                  </span>
                                 </div>
-                                <div className="text-[9px] text-slate-500">
-                                  {participant.isAdmin ? "Host" : "Membre"}
+                                <div className="divide-y divide-white/[0.05]">
+                                  {snapshot.participants.map((participant) => {
+                                    const cell =
+                                      assessmentByCellKey.get(
+                                        assessmentKey(row.skillId, participant.id),
+                                      ) ?? null;
+                                    const isFilled = cell?.currentLevel != null;
+                                    const tone = resolveMatrixCellTone(
+                                      isFilled ? (cell!.currentLevel as number) : null,
+                                      row.requiredLevel,
+                                    );
+                                    const isMe = participant.id === myParticipantId;
+                                    return (
+                                      <div
+                                        key={participant.id}
+                                        className={cn(
+                                          "flex items-center gap-3 px-4 py-2.5",
+                                          isMe && "bg-cyan-500/[0.06]",
+                                        )}
+                                      >
+                                        <span className="text-lg leading-none">
+                                          {AVATARS[participant.avatar] ?? "?"}
+                                        </span>
+                                        <div className="min-w-0 flex-1">
+                                          <div className="flex items-center justify-between gap-2">
+                                            <span className="truncate text-xs font-semibold text-slate-200">
+                                              {participant.displayName}
+                                              {isMe && (
+                                                <span className="ml-1.5 text-[10px] font-normal text-cyan-400">
+                                                  (moi)
+                                                </span>
+                                              )}
+                                            </span>
+                                            <span
+                                              className={cn(
+                                                "shrink-0 text-xs font-bold",
+                                                isFilled ? tone.valueClass : "text-slate-500",
+                                              )}
+                                            >
+                                              {isFilled ? `N${cell!.currentLevel}` : "—"}
+                                            </span>
+                                          </div>
+                                          <div className="mt-1.5 flex gap-0.5">
+                                            {Array.from({ length: levelCount }, (_, i) => {
+                                              const lvl = snapshot.session.scaleMin + i;
+                                              const isActive =
+                                                isFilled && lvl <= (cell!.currentLevel as number);
+                                              const isReq = lvl === row.requiredLevel;
+                                              return (
+                                                <div
+                                                  key={lvl}
+                                                  className={cn(
+                                                    "h-1 flex-1 rounded-full",
+                                                    isActive
+                                                      ? (cell!.currentLevel as number) >=
+                                                        row.requiredLevel
+                                                        ? "bg-emerald-400"
+                                                        : "bg-cyan-400"
+                                                      : isReq
+                                                        ? "bg-white/[0.22]"
+                                                        : "bg-white/[0.07]",
+                                                  )}
+                                                />
+                                              );
+                                            })}
+                                          </div>
+                                        </div>
+                                        {cell?.wantsToMentor || cell?.wantsToProgress ? (
+                                          <div className="flex shrink-0 flex-col items-end gap-1">
+                                            {cell.wantsToMentor && (
+                                              <span className="inline-flex items-center gap-0.5 rounded-full border border-emerald-300/30 bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-medium text-emerald-200">
+                                                <span className="text-[11px] leading-none">🎓</span>
+                                                Former
+                                              </span>
+                                            )}
+                                            {cell.wantsToProgress && (
+                                              <span className="inline-flex items-center gap-0.5 rounded-full border border-indigo-300/30 bg-indigo-500/15 px-1.5 py-0.5 text-[9px] font-medium text-indigo-200">
+                                                <span className="text-[11px] leading-none">🌱</span>
+                                                Apprendre
+                                              </span>
+                                            )}
+                                          </div>
+                                        ) : null}
+                                      </div>
+                                    );
+                                  })}
                                 </div>
                               </div>
-                            </th>
-                          ))}
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+
+              {/* ── DESKTOP : tableau compétences × membres ─────────── */}
+              <div className="hidden md:block">
+                {matrixRowsByCategory.length === 0 ? (
+                  <div className="rounded-2xl border border-white/[0.08] bg-[#0a1021] px-4 py-10 text-center text-sm text-slate-400">
+                    Aucune compétence disponible.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto rounded-2xl border border-white/[0.07] bg-[#080d1c]">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr>
+                          {/* Cellule coin haut-gauche */}
+                          <th className="sticky left-0 z-20 min-w-[200px] border-b border-r border-white/[0.07] bg-[#0c1228] px-4 py-3 text-left align-bottom">
+                            <div className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-500">
+                              Compétence
+                            </div>
+                          </th>
+                          {/* Colonne completion équipe */}
+                          <th className="w-[52px] border-b border-r border-white/[0.07] bg-[#0c1228] px-2 py-3 text-center align-bottom">
+                            <div className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-500">
+                              Éq.
+                            </div>
+                          </th>
+                          {snapshot.participants.map((participant) => {
+                            const model = participantRadarModels.get(participant.id);
+                            const coverage = Math.round(model?.averageScorePct ?? 0);
+                            const isMe = participant.id === myParticipantId;
+                            return (
+                              <th
+                                key={participant.id}
+                                className={cn(
+                                  "min-w-[110px] border-b border-white/[0.07] px-3 py-3 text-center align-bottom",
+                                  isMe && "bg-cyan-500/[0.06]",
+                                )}
+                              >
+                                <div className="flex flex-col items-center gap-1.5">
+                                  <div
+                                    className={cn(
+                                      "flex h-10 w-10 items-center justify-center rounded-full text-xl",
+                                      isMe
+                                        ? "ring-2 ring-cyan-400 bg-cyan-500/10"
+                                        : "ring-1 ring-white/10 bg-white/[0.04]",
+                                    )}
+                                  >
+                                    {AVATARS[participant.avatar] ?? "?"}
+                                  </div>
+                                  <div className="max-w-[90px] truncate text-[11px] font-semibold text-slate-100">
+                                    {participant.displayName}
+                                  </div>
+                                  <div className="text-[9px] text-slate-500">
+                                    {participant.isAdmin ? "Host" : "Membre"}
+                                  </div>
+                                  {/* Barre de couverture */}
+                                  <div className="w-full px-1">
+                                    <div className="h-1 overflow-hidden rounded-full bg-white/[0.08]">
+                                      <div
+                                        className={cn(
+                                          "h-full rounded-full transition-all",
+                                          coverage >= 80
+                                            ? "bg-emerald-400"
+                                            : coverage >= 50
+                                              ? "bg-cyan-400"
+                                              : "bg-rose-400",
+                                        )}
+                                        style={{ width: `${coverage}%` }}
+                                      />
+                                    </div>
+                                    <div className="mt-0.5 text-center text-[9px] text-slate-500">
+                                      {coverage}%
+                                    </div>
+                                  </div>
+                                </div>
+                              </th>
+                            );
+                          })}
                         </tr>
                       </thead>
                       <tbody>
                         {matrixRowsByCategory.flatMap((group) => [
-                          <tr key={`group-${group.categoryId ?? "none"}`}>
+                          /* Ligne catégorie */
+                          <tr key={`cat-${group.categoryId ?? "none"}`}>
                             <td
-                              colSpan={snapshot.participants.length + 1}
-                              className="bg-white/[0.02] px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-cyan-300"
+                              colSpan={snapshot.participants.length + 2}
+                              className="border-b border-t border-white/[0.07] bg-white/[0.025] px-4 py-2"
                             >
-                              {group.categoryName}
+                              <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-cyan-400">
+                                {group.categoryName}
+                              </span>
                             </td>
                           </tr>,
+                          /* Lignes compétences */
                           ...group.rows.map((row) => (
                             <tr
                               key={row.skillId}
-                              className="border-t border-white/[0.06] align-top"
+                              className="border-b border-white/[0.05] transition hover:bg-white/[0.015]"
                             >
-                              <td className="sticky left-0 z-10 bg-[#101735] px-2.5 py-2">
-                                <div className="truncate text-xs font-semibold text-slate-100">
+                              {/* Colonne nom compétence */}
+                              <td className="sticky left-0 z-10 min-w-[200px] border-r border-white/[0.07] bg-[#080d1c] px-4 py-3">
+                                <div className="text-sm font-semibold text-slate-100">
                                   {row.skillName}
                                 </div>
                                 <div className="mt-0.5 text-[10px] text-slate-500">
-                                  N{row.requiredLevel}
+                                  Requis : N{row.requiredLevel}
                                 </div>
                               </td>
+                              {/* Colonne complétion équipe */}
+                              {(() => {
+                                const total = snapshot.participants.length;
+                                const filled = snapshot.participants.filter(
+                                  (p) =>
+                                    assessmentByCellKey.get(assessmentKey(row.skillId, p.id))
+                                      ?.currentLevel != null,
+                                ).length;
+                                const pct = total > 0 ? filled / total : 0;
+                                const r = 13;
+                                const circ = 2 * Math.PI * r;
+                                const dashOffset = circ * (1 - pct);
+                                const strokeColor =
+                                  pct >= 0.8
+                                    ? "#34d399"
+                                    : pct >= 0.5
+                                      ? "#22d3ee"
+                                      : pct > 0
+                                        ? "#fb923c"
+                                        : "#374151";
+                                return (
+                                  <td className="border-r border-white/[0.07] px-2 py-2 text-center align-middle">
+                                    <div className="flex items-center justify-center">
+                                      <svg width="34" height="34" viewBox="0 0 34 34">
+                                        <circle
+                                          cx="17"
+                                          cy="17"
+                                          r={r}
+                                          fill="none"
+                                          stroke="rgba(255,255,255,0.06)"
+                                          strokeWidth="3"
+                                        />
+                                        {pct > 0 && (
+                                          <circle
+                                            cx="17"
+                                            cy="17"
+                                            r={r}
+                                            fill="none"
+                                            stroke={strokeColor}
+                                            strokeWidth="3"
+                                            strokeDasharray={circ}
+                                            strokeDashoffset={dashOffset}
+                                            strokeLinecap="round"
+                                            transform="rotate(-90 17 17)"
+                                          />
+                                        )}
+                                        <text
+                                          x="17"
+                                          y="17"
+                                          textAnchor="middle"
+                                          dominantBaseline="central"
+                                          fontSize="7"
+                                          fill={pct > 0 ? strokeColor : "#6b7280"}
+                                        >
+                                          {Math.round(pct * 100)}
+                                        </text>
+                                      </svg>
+                                    </div>
+                                  </td>
+                                );
+                              })()}
+                              {/* Cellules participants */}
                               {snapshot.participants.map((participant) => {
                                 const cell =
                                   assessmentByCellKey.get(
                                     assessmentKey(row.skillId, participant.id),
                                   ) ?? null;
+                                const isFilled = cell?.currentLevel != null;
                                 const tone = resolveMatrixCellTone(
-                                  cell?.currentLevel ?? null,
+                                  isFilled ? (cell!.currentLevel as number) : null,
                                   row.requiredLevel,
                                 );
-                                const canEdit = participant.id === myParticipantId;
-                                const cellContent = (
+                                const isMe = participant.id === myParticipantId;
+
+                                const cellInner = (
                                   <div
                                     className={cn(
-                                      "mx-auto flex h-10 w-10 items-center justify-center rounded-full border",
-                                      tone.surfaceClass,
+                                      "mx-auto flex h-14 w-14 flex-col items-center justify-center gap-0.5 rounded-2xl border transition",
+                                      isFilled
+                                        ? tone.surfaceClass
+                                        : "border-white/[0.08] bg-white/[0.02]",
+                                      isMe && isFilled && "ring-2 ring-cyan-400/50",
                                     )}
                                   >
                                     <span
                                       className={cn(
-                                        "text-xs font-bold leading-none",
-                                        tone.valueClass,
+                                        "text-sm font-bold leading-none",
+                                        isFilled ? tone.valueClass : "text-slate-600",
                                       )}
                                     >
-                                      {cell?.currentLevel ?? "—"}
+                                      {isFilled ? cell!.currentLevel : "—"}
                                     </span>
+                                    <div className="flex h-3.5 items-center gap-0.5">
+                                      {cell?.wantsToMentor && (
+                                        <span
+                                          className="text-[13px] leading-none"
+                                          title="Peut former"
+                                        >
+                                          🎓
+                                        </span>
+                                      )}
+                                      {cell?.wantsToProgress && (
+                                        <span
+                                          className="text-[13px] leading-none"
+                                          title="Veut apprendre"
+                                        >
+                                          🌱
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
                                 );
 
                                 return (
                                   <td
                                     key={`${row.skillId}-${participant.id}`}
-                                    className="px-1 py-1.5 align-middle text-center"
+                                    className={cn(
+                                      "px-3 py-2.5 text-center align-middle",
+                                      isMe && "bg-cyan-500/[0.04]",
+                                    )}
                                   >
-                                    {canEdit ? (
+                                    {isMe ? (
                                       <button
                                         type="button"
                                         onClick={() => openCellEditor(row)}
-                                        className="w-full text-center transition hover:scale-[1.03] active:scale-[0.99]"
+                                        className="w-full transition hover:scale-105 active:scale-95"
+                                        title="Modifier mon niveau"
                                       >
-                                        {cellContent}
+                                        {cellInner}
                                       </button>
                                     ) : (
-                                      <div>{cellContent}</div>
+                                      cellInner
                                     )}
                                   </td>
                                 );
@@ -1885,60 +2412,79 @@ export default function SkillsMatrixPage() {
                       </tbody>
                     </table>
                   </div>
-                </div>
+                )}
               </div>
-            </Card>
+            </div>
           ) : null}
 
           {activeTab === "dashboard" ? (
-            <div className="space-y-4">
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                <Card className="rounded-2xl border border-white/[0.1] bg-white/[0.03] p-4">
-                  <div className="text-xs uppercase tracking-[0.08em] text-slate-400">
-                    Compétences
+            <div className="space-y-5">
+              {/* ── KPIs ──────────────────────────────────────────────── */}
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {[
+                  {
+                    icon: "🎯",
+                    value: snapshot.dashboard.summary.totalSkills,
+                    label: "Compétences",
+                    sub: "dans la matrice",
+                    border: "border-white/[0.08]",
+                    bg: "bg-white/[0.02]",
+                    valueColor: "text-slate-100",
+                  },
+                  {
+                    icon: "📊",
+                    value: `${matrixFilling.ratio}%`,
+                    label: "Complétude",
+                    sub: `${matrixFilling.filled} / ${matrixFilling.total} cases`,
+                    border: "border-cyan-300/20",
+                    bg: "bg-cyan-500/[0.06]",
+                    valueColor: "text-cyan-100",
+                  },
+                  {
+                    icon: "✅",
+                    value: snapshot.dashboard.summary.coveredSkillsCount,
+                    label: "Couvertes",
+                    sub: "au niveau requis",
+                    border: "border-emerald-300/20",
+                    bg: "bg-emerald-500/[0.06]",
+                    valueColor: "text-emerald-100",
+                  },
+                  {
+                    icon: "⚠️",
+                    value: snapshot.dashboard.summary.riskySkillsCount,
+                    label: "À risque",
+                    sub: `${snapshot.dashboard.summary.totalMissingPeople} profil${snapshot.dashboard.summary.totalMissingPeople !== 1 ? "s" : ""} manquant${snapshot.dashboard.summary.totalMissingPeople !== 1 ? "s" : ""}`,
+                    border: "border-amber-300/20",
+                    bg: "bg-amber-500/[0.06]",
+                    valueColor: "text-amber-100",
+                  },
+                ].map(({ icon, value, label, sub, border, bg, valueColor }) => (
+                  <div key={label} className={cn("rounded-2xl border p-4", border, bg)}>
+                    <div className="text-2xl leading-none">{icon}</div>
+                    <div className={cn("mt-3 text-3xl font-extrabold leading-none", valueColor)}>
+                      {value}
+                    </div>
+                    <div className="mt-1.5 text-xs font-semibold text-slate-200">{label}</div>
+                    <div className="mt-0.5 text-[11px] text-slate-500">{sub}</div>
                   </div>
-                  <div className="mt-1 text-xl font-bold text-slate-100">
-                    {snapshot.dashboard.summary.totalSkills}
-                  </div>
-                </Card>
-                <Card className="rounded-2xl border border-amber-300/25 bg-amber-500/10 p-4">
-                  <div className="text-xs uppercase tracking-[0.08em] text-amber-100">À risque</div>
-                  <div className="mt-1 text-xl font-bold text-amber-100">
-                    {snapshot.dashboard.summary.riskySkillsCount}
-                  </div>
-                </Card>
-                <Card className="rounded-2xl border border-emerald-300/25 bg-emerald-500/10 p-4">
-                  <div className="text-xs uppercase tracking-[0.08em] text-emerald-100">
-                    Couvertes
-                  </div>
-                  <div className="mt-1 text-xl font-bold text-emerald-100">
-                    {snapshot.dashboard.summary.coveredSkillsCount}
-                  </div>
-                </Card>
-                <Card className="rounded-2xl border border-rose-300/25 bg-rose-500/10 p-4">
-                  <div className="text-xs uppercase tracking-[0.08em] text-rose-100">
-                    Manques (personnes)
-                  </div>
-                  <div className="mt-1 text-xl font-bold text-rose-100">
-                    {snapshot.dashboard.summary.totalMissingPeople}
-                  </div>
-                </Card>
+                ))}
               </div>
 
+              {/* ── Radars ────────────────────────────────────────────── */}
               <div className="grid gap-4 2xl:grid-cols-2">
-                <Card className="rounded-3xl border border-white/[0.1] bg-[#0c1124]/95 p-4 sm:p-5">
+                <div className="rounded-3xl border border-white/[0.08] bg-[#0c1124]/95 p-5">
                   <SkillsRadarPanel
-                    title="Radar groupe"
-                    subtitle="Synthèse par catégorie (moyenne des niveaux de l'équipe)."
+                    title="Vue d'ensemble de l'équipe"
+                    subtitle="Couverture moyenne par catégorie — 100 % = niveau requis atteint."
                     model={groupRadarModel}
                   />
-                </Card>
+                </div>
 
-                <Card className="rounded-3xl border border-white/[0.1] bg-[#0c1124]/95 p-4 sm:p-5">
-                  <div className="mb-3">
-                    <h3 className="text-sm font-semibold text-slate-100">Radar individuel</h3>
-                    <p className="mt-1 text-xs text-slate-400">
-                      Sélectionne un membre pour analyser ses catégories et ses compétences.
+                <div className="rounded-3xl border border-white/[0.08] bg-[#0c1124]/95 p-5">
+                  <div className="mb-4">
+                    <h3 className="text-sm font-semibold text-slate-100">Vue individuelle</h3>
+                    <p className="mt-0.5 text-xs text-slate-400">
+                      Sélectionne un membre pour voir son profil de compétences.
                     </p>
                   </div>
                   <div className="mb-4 flex flex-wrap gap-2">
@@ -1954,7 +2500,7 @@ export default function SkillsMatrixPage() {
                             : "border-white/[0.1] bg-white/[0.04] text-slate-300 hover:border-white/[0.22]",
                         )}
                       >
-                        <span className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-cyan-300/25 bg-cyan-500/10 text-sm">
+                        <span className="text-base leading-none">
                           {AVATARS[participant.avatar] ?? "?"}
                         </span>
                         <span className="max-w-[110px] truncate">{participant.displayName}</span>
@@ -1962,109 +2508,225 @@ export default function SkillsMatrixPage() {
                     ))}
                   </div>
                   <SkillsRadarPanel
-                    title={
-                      selectedRadarParticipant
-                        ? selectedRadarParticipant.displayName
-                        : "Aucun membre"
-                    }
-                    subtitle="Lecture individuelle par catégorie et compétences."
+                    title={selectedRadarParticipant?.displayName ?? "Aucun membre"}
+                    subtitle="Niveau par catégorie et compétences."
                     model={selectedParticipantRadarModel}
                   />
-                </Card>
+                </div>
               </div>
 
-              <Card className="rounded-3xl border border-white/[0.1] bg-[#0d1228]/92 p-4 sm:p-5">
-                <div className="grid gap-4 lg:grid-cols-2">
-                  <div>
-                    <div className="mb-3 text-xs font-semibold uppercase tracking-[0.08em] text-amber-200">
-                      Compétences à risque
+              {/* ── Risques & couvertures ─────────────────────────────── */}
+              <div className="grid gap-4 lg:grid-cols-2">
+                {/* Compétences à risque */}
+                <div className="rounded-3xl border border-white/[0.08] bg-[#0d1228]/92 p-5">
+                  <div className="mb-4 flex items-center gap-3">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-amber-500/15 text-xl">
+                      ⚠️
+                    </span>
+                    <div>
+                      <h3 className="text-sm font-semibold text-slate-100">Compétences à risque</h3>
+                      <p className="text-[11px] text-slate-400">
+                        Pas assez de personnes au niveau requis
+                      </p>
                     </div>
-                    {snapshot.dashboard.riskySkills.length === 0 ? (
-                      <div className="text-sm text-emerald-300">Aucune compétence à risque.</div>
-                    ) : (
-                      <div className="space-y-2">
-                        {snapshot.dashboard.riskySkills.map((skill) => (
-                          <div
-                            key={skill.skillId}
-                            className="rounded-xl border border-amber-300/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-100"
-                          >
-                            <span className="font-semibold">{skill.skillName}</span> (
-                            {skill.categoryName}) · couverture {skill.coverageCount}/
-                            {skill.requiredPeople} · manque {skill.missingCount}
-                          </div>
-                        ))}
-                      </div>
-                    )}
                   </div>
 
-                  <div>
-                    <div className="mb-3 text-xs font-semibold uppercase tracking-[0.08em] text-emerald-200">
-                      Compétences couvertes
+                  {snapshot.dashboard.riskySkills.length === 0 ? (
+                    <div className="flex items-center gap-3 rounded-2xl border border-emerald-300/20 bg-emerald-500/[0.06] px-4 py-3">
+                      <span className="text-lg">🎉</span>
+                      <span className="text-sm text-emerald-300">
+                        Toutes les compétences sont suffisamment couvertes !
+                      </span>
                     </div>
-                    {snapshot.dashboard.coveredSkills.length === 0 ? (
-                      <div className="text-sm text-slate-400">
-                        Aucune compétence couverte pour le moment.
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {snapshot.dashboard.coveredSkills.map((skill) => (
-                          <div
-                            key={skill.skillId}
-                            className="rounded-xl border border-emerald-300/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100"
-                          >
-                            <span className="font-semibold">{skill.skillName}</span> (
-                            {skill.categoryName}) · couverture {skill.coverageCount}/
-                            {skill.requiredPeople}
+                  ) : (
+                    <div className="space-y-2">
+                      {snapshot.dashboard.riskySkills.map((skill) => (
+                        <div
+                          key={skill.skillId}
+                          className="rounded-2xl border border-amber-300/15 bg-amber-500/[0.06] p-4"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <div className="text-sm font-semibold text-slate-100">
+                                {skill.skillName}
+                              </div>
+                              <div className="mt-0.5 text-[11px] text-slate-400">
+                                {skill.categoryName}
+                              </div>
+                            </div>
+                            <span className="shrink-0 rounded-xl border border-amber-300/25 bg-amber-500/15 px-2 py-1 text-[11px] font-semibold text-amber-200">
+                              {skill.missingCount} manquant{skill.missingCount > 1 ? "s" : ""}
+                            </span>
                           </div>
-                        ))}
-                      </div>
-                    )}
+                          <div className="mt-3">
+                            <div className="mb-1.5 flex justify-between text-[10px] text-slate-400">
+                              <span>Couverture</span>
+                              <span>
+                                {skill.coverageCount} / {skill.requiredPeople} personnes
+                              </span>
+                            </div>
+                            <div className="h-2 overflow-hidden rounded-full bg-white/[0.08]">
+                              <div
+                                className="h-full rounded-full bg-amber-400 transition-all"
+                                style={{
+                                  width: `${Math.round((skill.coverageCount / Math.max(1, skill.requiredPeople)) * 100)}%`,
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Compétences couvertes */}
+                <div className="rounded-3xl border border-white/[0.08] bg-[#0d1228]/92 p-5">
+                  <div className="mb-4 flex items-center gap-3">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-emerald-500/15 text-xl">
+                      ✅
+                    </span>
+                    <div>
+                      <h3 className="text-sm font-semibold text-slate-100">
+                        Compétences couvertes
+                      </h3>
+                      <p className="text-[11px] text-slate-400">
+                        Assez de personnes au niveau requis
+                      </p>
+                    </div>
+                  </div>
+
+                  {snapshot.dashboard.coveredSkills.length === 0 ? (
+                    <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-sm text-slate-400">
+                      Aucune compétence couverte pour le moment.
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {snapshot.dashboard.coveredSkills.map((skill) => (
+                        <div
+                          key={skill.skillId}
+                          className="flex items-center gap-3 rounded-2xl border border-emerald-300/12 bg-emerald-500/[0.05] px-4 py-3"
+                        >
+                          <span className="shrink-0 text-base text-emerald-400">✓</span>
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate text-sm font-semibold text-slate-100">
+                              {skill.skillName}
+                            </div>
+                            <div className="text-[11px] text-slate-400">{skill.categoryName}</div>
+                          </div>
+                          <span className="shrink-0 rounded-lg border border-emerald-300/20 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-300">
+                            {skill.coverageCount} / {skill.requiredPeople}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* ── Échanges de compétences ───────────────────────────── */}
+              {snapshot.dashboard.mentoringBySkill.filter(
+                (item) => item.helpers.length > 0 || item.learners.length > 0,
+              ).length > 0 && (
+                <div className="rounded-3xl border border-white/[0.08] bg-[#0d1228]/92 p-5">
+                  <div className="mb-4 flex items-center gap-3">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-indigo-500/15 text-xl">
+                      🤝
+                    </span>
+                    <div>
+                      <h3 className="text-sm font-semibold text-slate-100">
+                        Échanges de compétences
+                      </h3>
+                      <p className="text-[11px] text-slate-400">
+                        Qui peut aider · qui veut apprendre
+                      </p>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    {snapshot.dashboard.mentoringBySkill
+                      .filter((item) => item.helpers.length > 0 || item.learners.length > 0)
+                      .map((item) => (
+                        <div
+                          key={item.skillId}
+                          className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4"
+                        >
+                          <div className="mb-3 flex items-center gap-2">
+                            <span className="text-sm font-semibold text-slate-100">
+                              {item.skillName}
+                            </span>
+                            <span className="text-[11px] text-slate-500">
+                              · {item.categoryName}
+                            </span>
+                          </div>
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div>
+                              <div className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+                                Peuvent aider
+                              </div>
+                              {item.helpers.length === 0 ? (
+                                <span className="text-[11px] text-slate-500">
+                                  Personne pour l'instant
+                                </span>
+                              ) : (
+                                <div className="flex flex-wrap gap-1.5">
+                                  {item.helpers.map((helper) => (
+                                    <span
+                                      key={helper.displayName}
+                                      className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-300/20 bg-emerald-500/[0.08] px-2.5 py-1.5 text-[11px]"
+                                    >
+                                      <span className="font-semibold text-slate-200">
+                                        {helper.displayName}
+                                      </span>
+                                      <span className="font-bold text-emerald-300">
+                                        N{helper.currentLevel}
+                                      </span>
+                                      {helper.wantsToMentor && (
+                                        <span
+                                          className="text-[12px] leading-none"
+                                          title="Formateur volontaire"
+                                        >
+                                          🎓
+                                        </span>
+                                      )}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            <div>
+                              <div className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-indigo-400">
+                                Veulent apprendre
+                              </div>
+                              {item.learners.length === 0 ? (
+                                <span className="text-[11px] text-slate-500">
+                                  Personne pour l'instant
+                                </span>
+                              ) : (
+                                <div className="flex flex-wrap gap-1.5">
+                                  {item.learners.map((learner) => (
+                                    <span
+                                      key={learner.displayName}
+                                      className="inline-flex items-center gap-1.5 rounded-xl border border-indigo-300/20 bg-indigo-500/[0.08] px-2.5 py-1.5 text-[11px]"
+                                    >
+                                      <span className="font-semibold text-slate-200">
+                                        {learner.displayName}
+                                      </span>
+                                      {learner.targetLevel && (
+                                        <span className="text-indigo-300">
+                                          → N{learner.targetLevel}
+                                        </span>
+                                      )}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                   </div>
                 </div>
-              </Card>
-
-              <Card className="rounded-3xl border border-white/[0.1] bg-[#0d1228]/92 p-4 sm:p-5">
-                <div className="mb-3 text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
-                  Qui peut aider / qui veut apprendre
-                </div>
-                <div className="space-y-2">
-                  {snapshot.dashboard.mentoringBySkill.map((item) => (
-                    <div
-                      key={item.skillId}
-                      className="rounded-xl border border-white/[0.08] bg-white/[0.02] px-3 py-3"
-                    >
-                      <div className="text-sm font-semibold text-slate-100">
-                        {item.skillName}{" "}
-                        <span className="text-xs font-normal text-slate-500">
-                          ({item.categoryName})
-                        </span>
-                      </div>
-                      <div className="mt-1 text-xs text-slate-300">
-                        Aider:{" "}
-                        {item.helpers.length > 0
-                          ? item.helpers
-                              .map(
-                                (helper) =>
-                                  `${helper.displayName} (N${helper.currentLevel})${helper.wantsToMentor ? " · formateur volontaire" : ""}`,
-                              )
-                              .join(", ")
-                          : "personne"}
-                      </div>
-                      <div className="mt-1 text-xs text-slate-300">
-                        Apprendre:{" "}
-                        {item.learners.length > 0
-                          ? item.learners
-                              .map(
-                                (learner) =>
-                                  `${learner.displayName}${learner.targetLevel ? ` (cible N${learner.targetLevel})` : ""}`,
-                              )
-                              .join(", ")
-                          : "personne"}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </Card>
+              )}
             </div>
           ) : null}
         </div>
@@ -2075,169 +2737,136 @@ export default function SkillsMatrixPage() {
           </div>
         ) : null}
 
-        <Dialog open={Boolean(editingCell)} onOpenChange={(open) => !open && closeCellEditor()}>
-          <DialogContent className="max-w-md rounded-2xl border border-white/[0.08] bg-[#0d0d1a] p-0 text-slate-100 shadow-2xl">
-            <div className="rounded-t-2xl border-b border-white/[0.08] bg-gradient-to-r from-cyan-500/16 via-indigo-500/10 to-cyan-500/8 px-5 py-4">
-              <DialogHeader>
-                <DialogTitle className="text-base font-semibold text-slate-100">
-                  Mettre à jour une compétence
-                </DialogTitle>
-                <DialogDescription className="text-xs text-slate-300">
-                  {editingCell?.skillName} · Niveau attendu {editingCell?.requiredLevel}
-                </DialogDescription>
-              </DialogHeader>
-            </div>
-
-            <form onSubmit={saveCellEditor} className="space-y-4 px-5 py-4">
-              <div className="space-y-2 rounded-xl border border-white/[0.08] bg-white/[0.02] px-3 py-3">
-                <div className="flex items-center justify-between gap-2">
-                  <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
-                    Niveau actuel
-                  </label>
-                  <span className="rounded-full border border-white/[0.14] bg-white/[0.05] px-2 py-0.5 text-xs font-semibold text-slate-200">
-                    {editingCell?.currentLevel ?? "Non renseigné"}
-                  </span>
-                </div>
-                <Slider
-                  min={snapshot.session.scaleMin}
-                  max={snapshot.session.scaleMax}
-                  step={1}
-                  value={[editingCell?.currentLevel ?? snapshot.session.scaleMin]}
-                  onValueChange={(values) =>
-                    setEditingCell((prev) =>
-                      prev
-                        ? {
-                            ...prev,
-                            currentLevel: values[0] ?? snapshot.session.scaleMin,
-                          }
-                        : prev,
-                    )
-                  }
-                />
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setEditingCell((prev) => (prev ? { ...prev, currentLevel: null } : prev))
-                    }
-                    className="rounded-lg border border-white/[0.14] bg-white/[0.04] px-2 py-1 text-[11px] font-semibold text-slate-300 transition hover:bg-white/[0.08]"
+        {/* Éditeur de compétence : Drawer sur mobile, Dialog sur desktop */}
+        {editingCell ? (
+          <>
+            {/* Contenu partagé via form id */}
+            {isMobile ? (
+              <Drawer open={true} onOpenChange={(open) => !open && closeCellEditor()}>
+                <DrawerContent className="border-white/[0.08] bg-[#0d0d1a] text-slate-100">
+                  <DrawerHeader className="border-b border-white/[0.08] bg-gradient-to-r from-cyan-500/[0.14] via-indigo-500/[0.08] to-transparent px-5 py-4 text-left">
+                    <DrawerTitle className="text-base font-semibold text-slate-100">
+                      {editingCell.skillName}
+                    </DrawerTitle>
+                    <DrawerDescription className="text-xs text-slate-400">
+                      Niveau requis : N{editingCell.requiredLevel} · Point cyan = cible
+                    </DrawerDescription>
+                  </DrawerHeader>
+                  <div className="overflow-y-auto">
+                    <form
+                      id="cell-editor-form"
+                      onSubmit={saveCellEditor}
+                      className="space-y-5 px-5 py-5"
+                    >
+                      <CellEditorFormBody
+                        editingCell={editingCell}
+                        scaleMin={snapshot.session.scaleMin}
+                        scaleMax={snapshot.session.scaleMax}
+                        setEditingCell={setEditingCell}
+                      />
+                    </form>
+                  </div>
+                  <div className="flex gap-3 px-5 pb-8 pt-2">
+                    <button
+                      type="button"
+                      onClick={closeCellEditor}
+                      disabled={savingCell}
+                      className="h-12 flex-1 rounded-xl border border-white/[0.1] bg-white/[0.04] text-sm font-semibold text-slate-200 transition hover:bg-white/[0.08] disabled:opacity-50"
+                    >
+                      Annuler
+                    </button>
+                    <button
+                      type="submit"
+                      form="cell-editor-form"
+                      disabled={savingCell}
+                      className="h-12 flex-1 rounded-xl bg-cyan-500 text-sm font-bold text-slate-950 transition hover:bg-cyan-400 disabled:opacity-50"
+                    >
+                      {savingCell ? "Enregistrement..." : "Enregistrer"}
+                    </button>
+                  </div>
+                </DrawerContent>
+              </Drawer>
+            ) : (
+              <Dialog open={true} onOpenChange={(open) => !open && closeCellEditor()}>
+                <DialogContent className="max-w-md rounded-2xl border border-white/[0.08] bg-[#0d0d1a] p-0 text-slate-100 shadow-2xl">
+                  <div className="rounded-t-2xl border-b border-white/[0.08] bg-gradient-to-r from-cyan-500/[0.14] via-indigo-500/[0.08] to-transparent px-5 py-4">
+                    <DialogHeader>
+                      <DialogTitle className="text-base font-semibold text-slate-100">
+                        {editingCell.skillName}
+                      </DialogTitle>
+                      <DialogDescription className="text-xs text-slate-400">
+                        Niveau requis : N{editingCell.requiredLevel} · Point cyan = cible
+                      </DialogDescription>
+                    </DialogHeader>
+                  </div>
+                  <form
+                    id="cell-editor-form"
+                    onSubmit={saveCellEditor}
+                    className="space-y-5 px-5 py-5"
                   >
-                    Non renseigné
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setEditingCell((prev) =>
-                        prev ? { ...prev, currentLevel: prev.requiredLevel } : prev,
-                      )
-                    }
-                    className="rounded-lg border border-cyan-300/30 bg-cyan-500/14 px-2 py-1 text-[11px] font-semibold text-cyan-100 transition hover:bg-cyan-500/24"
-                  >
-                    Aligner au requis
-                  </button>
-                </div>
-              </div>
-
-              <div className="space-y-2 rounded-xl border border-white/[0.08] bg-white/[0.02] px-3 py-3">
-                <div className="flex items-center justify-between gap-2">
-                  <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
-                    Niveau cible
-                  </label>
-                  <span className="rounded-full border border-white/[0.14] bg-white/[0.05] px-2 py-0.5 text-xs font-semibold text-slate-200">
-                    {editingCell?.targetLevel ?? "Non renseigné"}
-                  </span>
-                </div>
-                <Slider
-                  min={snapshot.session.scaleMin}
-                  max={snapshot.session.scaleMax}
-                  step={1}
-                  value={[
-                    editingCell?.targetLevel ??
-                      editingCell?.currentLevel ??
-                      snapshot.session.scaleMin,
-                  ]}
-                  onValueChange={(values) =>
-                    setEditingCell((prev) =>
-                      prev
-                        ? {
-                            ...prev,
-                            targetLevel: values[0] ?? snapshot.session.scaleMin,
-                          }
-                        : prev,
-                    )
-                  }
-                />
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setEditingCell((prev) => (prev ? { ...prev, targetLevel: null } : prev))
-                    }
-                    className="rounded-lg border border-white/[0.14] bg-white/[0.04] px-2 py-1 text-[11px] font-semibold text-slate-300 transition hover:bg-white/[0.08]"
-                  >
-                    Non renseigné
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setEditingCell((prev) =>
-                        prev ? { ...prev, targetLevel: prev.requiredLevel } : prev,
-                      )
-                    }
-                    className="rounded-lg border border-cyan-300/30 bg-cyan-500/14 px-2 py-1 text-[11px] font-semibold text-cyan-100 transition hover:bg-cyan-500/24"
-                  >
-                    Cible requise
-                  </button>
-                </div>
-              </div>
-
-              <label className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.02] px-3 py-2 text-sm text-slate-200">
-                <input
-                  type="checkbox"
-                  checked={editingCell?.wantsToProgress === true}
-                  onChange={(event) =>
-                    setEditingCell((prev) =>
-                      prev ? { ...prev, wantsToProgress: event.target.checked } : prev,
-                    )
-                  }
-                />
-                Je souhaite être formé sur cette compétence
-              </label>
-
-              <label className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.02] px-3 py-2 text-sm text-slate-200">
-                <input
-                  type="checkbox"
-                  checked={editingCell?.wantsToMentor === true}
-                  onChange={(event) =>
-                    setEditingCell((prev) =>
-                      prev ? { ...prev, wantsToMentor: event.target.checked } : prev,
-                    )
-                  }
-                />
-                Je souhaite former sur cette compétence
-              </label>
-
-              <DialogFooter className="pt-2">
-                <button
-                  type="button"
-                  onClick={closeCellEditor}
-                  disabled={savingCell}
-                  className="h-10 rounded-xl border border-white/[0.1] bg-white/[0.04] px-4 text-sm font-semibold text-slate-200 transition hover:bg-white/[0.08] disabled:opacity-50"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  disabled={savingCell}
-                  className="h-10 rounded-xl bg-cyan-500 px-4 text-sm font-bold text-slate-950 transition hover:bg-cyan-400 disabled:opacity-50"
-                >
-                  {savingCell ? "Enregistrement..." : "Enregistrer"}
-                </button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+                    <CellEditorFormBody
+                      editingCell={editingCell}
+                      scaleMin={snapshot.session.scaleMin}
+                      scaleMax={snapshot.session.scaleMax}
+                      setEditingCell={setEditingCell}
+                    />
+                  </form>
+                  <div className="flex gap-3 px-5 pb-5 pt-1">
+                    <button
+                      type="button"
+                      onClick={closeCellEditor}
+                      disabled={savingCell}
+                      className="h-10 flex-1 rounded-xl border border-white/[0.1] bg-white/[0.04] text-sm font-semibold text-slate-200 transition hover:bg-white/[0.08] disabled:opacity-50"
+                    >
+                      Annuler
+                    </button>
+                    <button
+                      type="submit"
+                      form="cell-editor-form"
+                      disabled={savingCell}
+                      className="h-10 flex-1 rounded-xl bg-cyan-500 text-sm font-bold text-slate-950 transition hover:bg-cyan-400 disabled:opacity-50"
+                    >
+                      {savingCell ? "Enregistrement..." : "Enregistrer"}
+                    </button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
+          </>
+        ) : null}
       </div>
+
+      {/* ── Modale de confirmation de sortie ─────────────────────── */}
+      <AlertDialog open={leaveDialogOpen} onOpenChange={setLeaveDialogOpen}>
+        <AlertDialogContent className="max-w-md rounded-2xl border border-white/[0.08] bg-[#0d0d1a] p-5 text-slate-100 shadow-[0_14px_40px_rgba(0,0,0,0.65)] sm:p-6">
+          <AlertDialogHeader className="space-y-3">
+            <AlertDialogTitle className="text-base font-semibold text-slate-100">
+              Quitter la session ?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-sm text-slate-400">
+              Tu vas quitter la matrice de compétences et revenir à l'accueil. Tes données sont
+              sauvegardées.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2 sm:space-x-0">
+            <AlertDialogCancel className={cn(CTA_NEON_SECONDARY_SUBTLE, "h-11 w-full rounded-xl")}>
+              Annuler
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className={cn(CTA_NEON_DANGER, "h-11 w-full rounded-xl")}
+              onClick={() => {
+                persistSkillsMatrixSession(null);
+                if (roomCode) {
+                  socket.emit(C2S_EVENTS.LEAVE_SKILLS_MATRIX_ROOM, { code: roomCode });
+                }
+                navigate("/");
+              }}
+            >
+              Quitter
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
