@@ -48,7 +48,7 @@ import { AVATARS } from "@/types/game";
 import { api, type SkillsMatrixSnapshot, type TemplateItem } from "@/net/api";
 import { socket } from "@/net/socket";
 
-type WorkspaceTab = "matrix" | "dashboard";
+type WorkspaceTab = "matrix" | "dashboard" | "manage";
 
 type SkillDraft = {
   name: string;
@@ -1516,15 +1516,12 @@ export default function SkillsMatrixPage() {
     [applySnapshot, editingCell, participantId, snapshot],
   );
 
-  const createCategory = async (event: FormEvent) => {
-    event.preventDefault();
+  const createCategory = async () => {
     if (!snapshot || !participantId) return;
     await withLoading(async () => {
       const next = await api.skillsMatrixCreateCategory(
         snapshot.session.code,
-        {
-          name: categoryNameInput,
-        },
+        { name: categoryNameInput },
         participantId,
       );
       applySnapshot(next);
@@ -1544,8 +1541,7 @@ export default function SkillsMatrixPage() {
     });
   };
 
-  const createSkill = async (event: FormEvent) => {
-    event.preventDefault();
+  const createSkill = async () => {
     if (!snapshot || !participantId) return;
     await withLoading(async () => {
       const next = await api.skillsMatrixCreateSkill(
@@ -1763,7 +1759,13 @@ export default function SkillsMatrixPage() {
             <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
               Catégories
             </div>
-            <form onSubmit={createCategory} className="flex flex-wrap gap-2">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                void createCategory();
+              }}
+              className="flex flex-wrap gap-2"
+            >
               <input
                 value={categoryNameInput}
                 onChange={(event) => setCategoryNameInput(event.target.value)}
@@ -1796,7 +1798,10 @@ export default function SkillsMatrixPage() {
               Compétences
             </div>
             <form
-              onSubmit={createSkill}
+              onSubmit={(e) => {
+                e.preventDefault();
+                void createSkill();
+              }}
               className="space-y-2 rounded-lg border border-white/[0.08] bg-white/[0.03] p-3"
             >
               <input
@@ -2125,7 +2130,13 @@ export default function SkillsMatrixPage() {
                 </div>
               </div>
               <div className="flex rounded-xl border border-white/[0.08] bg-white/[0.04] p-1">
-                {(["matrix", "dashboard"] as WorkspaceTab[]).map((tab) => (
+                {(
+                  [
+                    "matrix",
+                    "dashboard",
+                    ...(isAdmin && !isSessionEnded ? (["manage"] as WorkspaceTab[]) : []),
+                  ] as WorkspaceTab[]
+                ).map((tab) => (
                   <button
                     key={tab}
                     type="button"
@@ -2133,7 +2144,9 @@ export default function SkillsMatrixPage() {
                     className={cn(
                       "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition",
                       activeTab === tab
-                        ? "bg-cyan-500/25 text-cyan-50 shadow-[0_0_0_1px_rgba(34,211,238,0.25)]"
+                        ? tab === "manage"
+                          ? "bg-amber-500/20 text-amber-50 shadow-[0_0_0_1px_rgba(245,158,11,0.25)]"
+                          : "bg-cyan-500/25 text-cyan-50 shadow-[0_0_0_1px_rgba(34,211,238,0.25)]"
                         : "text-slate-400 hover:text-slate-200",
                     )}
                   >
@@ -2142,10 +2155,15 @@ export default function SkillsMatrixPage() {
                         <span>🗂️</span>
                         <span>Matrice</span>
                       </>
-                    ) : (
+                    ) : tab === "dashboard" ? (
                       <>
                         <span>📊</span>
                         <span>Bilan</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>⚙️</span>
+                        <span>Gérer</span>
                       </>
                     )}
                   </button>
@@ -3076,6 +3094,314 @@ export default function SkillsMatrixPage() {
                   </div>
                 </div>
               )}
+            </div>
+          ) : null}
+
+          {activeTab === "manage" && isAdmin ? (
+            <div className="space-y-4 p-4 sm:p-5">
+              <div className="flex items-center gap-2">
+                <span className="text-base leading-none">⚙️</span>
+                <h2 className="text-sm font-bold text-slate-100">Gestion de la matrice</h2>
+                <span className="rounded-full border border-amber-400/20 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-300">
+                  Host uniquement
+                </span>
+              </div>
+
+              <div className="grid gap-4 lg:grid-cols-2">
+                {/* ── Catégories ───────────────────────────────────── */}
+                <section className="flex flex-col gap-3 rounded-2xl border border-white/[0.07] bg-[#080d1c] p-4">
+                  <div className="text-[11px] font-bold uppercase tracking-[0.1em] text-slate-400">
+                    Catégories
+                  </div>
+
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      void createCategory();
+                    }}
+                    className="flex gap-2"
+                  >
+                    <input
+                      value={categoryNameInput}
+                      onChange={(e) => setCategoryNameInput(e.target.value)}
+                      placeholder="Nouvelle catégorie"
+                      className="h-10 min-w-0 flex-1 rounded-xl border border-white/[0.08] bg-[#0c1228] px-3 text-sm text-slate-100 placeholder:text-slate-600 outline-none focus:border-cyan-400/40"
+                    />
+                    <button
+                      type="submit"
+                      className="h-10 shrink-0 rounded-xl bg-cyan-500 px-4 text-xs font-bold text-slate-950 transition hover:bg-cyan-400"
+                    >
+                      Ajouter
+                    </button>
+                  </form>
+
+                  <div className="space-y-2">
+                    {snapshot.categories.length === 0 ? (
+                      <div className="rounded-xl border border-white/[0.05] bg-white/[0.02] px-3 py-3 text-xs text-slate-500">
+                        Aucune catégorie pour le moment.
+                      </div>
+                    ) : (
+                      snapshot.categories.map((category) => (
+                        <div
+                          key={category.id}
+                          className="flex items-center gap-2 rounded-xl border border-white/[0.07] bg-[#0a1020] px-3 py-2.5"
+                        >
+                          <span className="min-w-0 flex-1 truncate text-sm text-slate-200">
+                            {category.name}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => void deleteCategory(category.id)}
+                            title="Supprimer"
+                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-red-500/25 bg-red-500/10 text-sm text-red-300 transition hover:bg-red-500/20"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </section>
+
+                {/* ── Compétences ──────────────────────────────────── */}
+                <section className="flex flex-col gap-3 rounded-2xl border border-white/[0.07] bg-[#080d1c] p-4">
+                  <div className="text-[11px] font-bold uppercase tracking-[0.1em] text-slate-400">
+                    Compétences
+                  </div>
+
+                  {/* Formulaire ajout */}
+                  <div className="space-y-2 rounded-xl border border-amber-400/10 bg-amber-500/[0.04] p-3">
+                    <input
+                      value={skillNameInput}
+                      onChange={(e) => setSkillNameInput(e.target.value)}
+                      placeholder="Nom de la compétence"
+                      className="h-10 w-full rounded-xl border border-white/[0.08] bg-[#0c1228] px-3 text-sm text-slate-100 placeholder:text-slate-600 outline-none focus:border-cyan-400/40"
+                    />
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <label className="block text-[10px] uppercase tracking-wide text-slate-500">
+                          Catégorie
+                        </label>
+                        <select
+                          value={skillCategoryInput}
+                          onChange={(e) => setSkillCategoryInput(e.target.value)}
+                          className="h-10 w-full rounded-xl border border-white/[0.08] bg-[#0c1228] px-3 text-sm text-slate-100 outline-none focus:border-cyan-400/40"
+                        >
+                          <option value="">Sans catégorie</option>
+                          {snapshot.categories.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="block text-[10px] uppercase tracking-wide text-slate-500">
+                          Pers. requises
+                        </label>
+                        <input
+                          type="number"
+                          min={0}
+                          max={500}
+                          value={skillRequiredPeopleInput}
+                          onChange={(e) => setSkillRequiredPeopleInput(Number(e.target.value))}
+                          className="h-10 w-full rounded-xl border border-white/[0.08] bg-[#0c1228] px-3 text-sm text-slate-100 outline-none focus:border-cyan-400/40"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between text-[10px]">
+                        <span className="uppercase tracking-wide text-slate-500">
+                          Niveau requis
+                        </span>
+                        <span className="font-semibold text-cyan-300">
+                          N{skillRequiredLevelInput}
+                        </span>
+                      </div>
+                      <Slider
+                        min={snapshot.session.scaleMin}
+                        max={snapshot.session.scaleMax}
+                        step={1}
+                        value={[skillRequiredLevelInput]}
+                        onValueChange={(values) => {
+                          const next = values[0];
+                          if (!Number.isFinite(next)) return;
+                          setSkillRequiredLevelInput(Math.round(next));
+                        }}
+                        aria-label="Niveau requis nouvelle compétence"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void createSkill()}
+                      className="h-9 w-full rounded-xl border border-amber-300/25 bg-amber-500/10 text-xs font-bold text-amber-100 transition hover:bg-amber-500/18"
+                    >
+                      + Ajouter la compétence
+                    </button>
+                  </div>
+
+                  {/* Liste des compétences existantes */}
+                  <div className="max-h-[420px] space-y-2 overflow-y-auto pr-0.5">
+                    {snapshot.skills.length === 0 ? (
+                      <div className="rounded-xl border border-white/[0.05] bg-white/[0.02] px-3 py-3 text-xs text-slate-500">
+                        Aucune compétence. Ajoute-en une ci-dessus.
+                      </div>
+                    ) : (
+                      matrixRowsByCategory.flatMap((group) => [
+                        <div
+                          key={`cat-label-${group.categoryId ?? "none"}`}
+                          className="pt-1 text-[10px] font-bold uppercase tracking-[0.1em] text-cyan-400"
+                        >
+                          {group.categoryName}
+                        </div>,
+                        ...group.rows.map((row) => {
+                          const draft = skillDrafts[row.skillId];
+                          return (
+                            <div
+                              key={row.skillId}
+                              className="space-y-2.5 rounded-xl border border-white/[0.07] bg-[#0a1020] p-3"
+                            >
+                              {/* Nom + supprimer */}
+                              <div className="flex gap-2">
+                                <input
+                                  value={draft?.name ?? row.skillName}
+                                  onChange={(e) =>
+                                    setSkillDrafts((prev) => ({
+                                      ...prev,
+                                      [row.skillId]: {
+                                        ...(prev[row.skillId] ?? {
+                                          name: row.skillName,
+                                          categoryId: null,
+                                          requiredLevel: row.requiredLevel,
+                                          requiredPeople: row.requiredPeople,
+                                        }),
+                                        name: e.target.value,
+                                      },
+                                    }))
+                                  }
+                                  className="h-9 min-w-0 flex-1 rounded-lg border border-white/[0.07] bg-[#0c1228] px-3 text-sm text-slate-100 outline-none focus:border-cyan-400/40"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => void deleteSkill(row.skillId)}
+                                  title="Supprimer"
+                                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-red-500/25 bg-red-500/10 text-sm text-red-300 transition hover:bg-red-500/20"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+
+                              {/* Catégorie + personnes */}
+                              <div className="grid grid-cols-2 gap-2">
+                                <div className="space-y-1">
+                                  <label className="block text-[10px] uppercase tracking-wide text-slate-500">
+                                    Catégorie
+                                  </label>
+                                  <select
+                                    value={draft?.categoryId ?? row.categoryId ?? ""}
+                                    onChange={(e) =>
+                                      setSkillDrafts((prev) => ({
+                                        ...prev,
+                                        [row.skillId]: {
+                                          ...(prev[row.skillId] ?? {
+                                            name: row.skillName,
+                                            categoryId: null,
+                                            requiredLevel: row.requiredLevel,
+                                            requiredPeople: row.requiredPeople,
+                                          }),
+                                          categoryId: e.target.value || null,
+                                        },
+                                      }))
+                                    }
+                                    className="h-9 w-full rounded-lg border border-white/[0.07] bg-[#0c1228] px-2 text-xs text-slate-100 outline-none focus:border-cyan-400/40"
+                                  >
+                                    <option value="">Sans catégorie</option>
+                                    {snapshot.categories.map((c) => (
+                                      <option key={c.id} value={c.id}>
+                                        {c.name}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="block text-[10px] uppercase tracking-wide text-slate-500">
+                                    Pers. requises
+                                  </label>
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    max={500}
+                                    value={draft?.requiredPeople ?? row.requiredPeople}
+                                    onChange={(e) =>
+                                      setSkillDrafts((prev) => ({
+                                        ...prev,
+                                        [row.skillId]: {
+                                          ...(prev[row.skillId] ?? {
+                                            name: row.skillName,
+                                            categoryId: null,
+                                            requiredLevel: row.requiredLevel,
+                                            requiredPeople: row.requiredPeople,
+                                          }),
+                                          requiredPeople: Number(e.target.value),
+                                        },
+                                      }))
+                                    }
+                                    className="h-9 w-full rounded-lg border border-white/[0.07] bg-[#0c1228] px-2 text-xs text-slate-100 outline-none focus:border-cyan-400/40"
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Niveau requis */}
+                              <div className="space-y-1.5">
+                                <div className="flex items-center justify-between text-[10px]">
+                                  <span className="uppercase tracking-wide text-slate-500">
+                                    Niveau requis
+                                  </span>
+                                  <span className="font-semibold text-cyan-300">
+                                    N{draft?.requiredLevel ?? row.requiredLevel}
+                                  </span>
+                                </div>
+                                <Slider
+                                  min={snapshot.session.scaleMin}
+                                  max={snapshot.session.scaleMax}
+                                  step={1}
+                                  value={[draft?.requiredLevel ?? row.requiredLevel]}
+                                  onValueChange={(values) => {
+                                    const next = values[0];
+                                    if (!Number.isFinite(next)) return;
+                                    setSkillDrafts((prev) => ({
+                                      ...prev,
+                                      [row.skillId]: {
+                                        ...(prev[row.skillId] ?? {
+                                          name: row.skillName,
+                                          categoryId: null,
+                                          requiredLevel: row.requiredLevel,
+                                          requiredPeople: row.requiredPeople,
+                                        }),
+                                        requiredLevel: Math.round(next),
+                                      },
+                                    }));
+                                  }}
+                                  aria-label={`Niveau requis ${row.skillName}`}
+                                />
+                              </div>
+
+                              {/* Enregistrer */}
+                              <button
+                                type="button"
+                                onClick={() => void saveSkillDraft(row.skillId)}
+                                className="h-8 w-full rounded-lg border border-cyan-300/25 bg-cyan-500/10 text-[11px] font-semibold text-cyan-200 transition hover:bg-cyan-500/18"
+                              >
+                                Enregistrer les modifications
+                              </button>
+                            </div>
+                          );
+                        }),
+                      ])
+                    )}
+                  </div>
+                </section>
+              </div>
             </div>
           ) : null}
         </div>

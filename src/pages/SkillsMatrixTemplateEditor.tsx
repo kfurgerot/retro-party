@@ -17,6 +17,8 @@ import { api } from "@/net/api";
 const SKILLS_ACCENT = TOOL_ACCENT["skills-matrix"];
 const inputCls =
   "h-11 w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 text-sm text-slate-100 placeholder:text-slate-600 outline-none transition focus:border-white/20 focus:ring-1 focus:ring-cyan-400/60";
+const selectCls =
+  "h-10 w-full rounded-xl border border-white/[0.08] bg-[#0c1228] px-3 text-sm text-slate-100 outline-none transition focus:border-cyan-400/40 focus:ring-1 focus:ring-cyan-400/30";
 
 export default function SkillsMatrixTemplateEditorPage() {
   const { templateId } = useParams<{ templateId: string }>();
@@ -315,33 +317,46 @@ export default function SkillsMatrixTemplateEditorPage() {
         </div>
 
         <div className="grid gap-4 lg:grid-cols-2">
-          <section className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-4">
-            <div className="mb-3 text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
+          {/* ── Catégories ─────────────────────────────────────────── */}
+          <section className="flex flex-col gap-3 rounded-xl border border-white/[0.08] bg-white/[0.02] p-4">
+            <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
               Catégories
             </div>
-            <div className="mb-3 flex gap-2">
+
+            {/* Formulaire ajout */}
+            <div className="flex gap-2">
               <input
                 value={newCategoryName}
                 onChange={(event) => setNewCategoryName(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    addCategory();
+                  }
+                }}
                 placeholder="Nom de catégorie"
-                className={`${inputCls} h-10`}
+                className="h-10 min-w-0 flex-1 rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 text-sm text-slate-100 placeholder:text-slate-600 outline-none focus:border-cyan-400/40"
               />
               <button
                 type="button"
                 onClick={addCategory}
-                className="h-10 rounded-xl bg-cyan-500 px-3 text-xs font-bold text-slate-950 transition hover:bg-cyan-400"
+                className="h-10 shrink-0 rounded-xl bg-cyan-500 px-4 text-xs font-bold text-slate-950 transition hover:bg-cyan-400"
               >
                 Ajouter
               </button>
             </div>
+
+            {/* Liste */}
             <div className="space-y-2">
               {sortedCategories.length === 0 ? (
-                <div className="text-xs text-slate-500">Aucune catégorie.</div>
+                <div className="rounded-lg border border-white/[0.05] bg-white/[0.02] px-3 py-3 text-xs text-slate-500">
+                  Aucune catégorie. Ajoute-en une ci-dessus.
+                </div>
               ) : (
                 sortedCategories.map((category) => (
                   <div
                     key={category.id}
-                    className="flex items-center justify-between gap-2 rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2"
+                    className="flex items-center gap-2 rounded-xl border border-white/[0.07] bg-[#0a1020] px-3 py-2"
                   >
                     <input
                       value={category.name}
@@ -354,14 +369,15 @@ export default function SkillsMatrixTemplateEditorPage() {
                           ),
                         )
                       }
-                      className="h-8 flex-1 rounded-md border border-white/[0.08] bg-white/[0.04] px-2 text-xs text-slate-100"
+                      className="h-8 min-w-0 flex-1 rounded-lg border border-white/[0.07] bg-[#0c1228] px-2 text-sm text-slate-100 outline-none focus:border-cyan-400/40"
                     />
                     <button
                       type="button"
                       onClick={() => removeCategory(category.id)}
-                      className="rounded-md border border-red-500/30 bg-red-500/10 px-2 py-1 text-[11px] font-semibold text-red-300"
+                      title="Supprimer la catégorie"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-red-500/25 bg-red-500/10 text-sm text-red-300 transition hover:bg-red-500/20"
                     >
-                      Supprimer
+                      ✕
                     </button>
                   </div>
                 ))
@@ -369,43 +385,56 @@ export default function SkillsMatrixTemplateEditorPage() {
             </div>
           </section>
 
-          <section className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-4">
-            <div className="mb-3 text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
+          {/* ── Compétences ────────────────────────────────────────── */}
+          <section className="flex flex-col gap-3 rounded-xl border border-white/[0.08] bg-white/[0.02] p-4">
+            <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
               Compétences
             </div>
-            <div className="mb-3 space-y-2">
+
+            {/* Formulaire ajout */}
+            <div className="space-y-2 rounded-xl border border-cyan-400/10 bg-cyan-500/[0.04] p-3">
               <input
                 value={newSkillName}
                 onChange={(event) => setNewSkillName(event.target.value)}
                 placeholder="Nom de compétence"
-                className={`${inputCls} h-10`}
+                className="h-10 w-full rounded-xl border border-white/[0.08] bg-[#0c1228] px-3 text-sm text-slate-100 placeholder:text-slate-600 outline-none focus:border-cyan-400/40"
               />
-              <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
-                <select
-                  value={newSkillCategoryId}
-                  onChange={(event) => setNewSkillCategoryId(event.target.value)}
-                  className={`${inputCls} h-10`}
-                >
-                  <option value="">Sans catégorie</option>
-                  {sortedCategories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  type="number"
-                  min={0}
-                  max={500}
-                  value={newSkillRequiredPeople}
-                  onChange={(event) => setNewSkillRequiredPeople(Number(event.target.value))}
-                  className="h-10 w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 text-sm text-slate-100 sm:w-[110px]"
-                />
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <label className="block text-[10px] uppercase tracking-wide text-slate-500">
+                    Catégorie
+                  </label>
+                  <select
+                    value={newSkillCategoryId}
+                    onChange={(event) => setNewSkillCategoryId(event.target.value)}
+                    className={selectCls}
+                  >
+                    <option value="">Sans catégorie</option>
+                    {sortedCategories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-[10px] uppercase tracking-wide text-slate-500">
+                    Pers. requises
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={500}
+                    value={newSkillRequiredPeople}
+                    onChange={(event) => setNewSkillRequiredPeople(Number(event.target.value))}
+                    className="h-10 w-full rounded-xl border border-white/[0.08] bg-[#0c1228] px-3 text-sm text-slate-100 outline-none focus:border-cyan-400/40"
+                  />
+                </div>
               </div>
-              <div>
-                <div className="mb-1.5 text-[11px] text-slate-400">
-                  Niveau attendu:{" "}
-                  <span className="font-semibold text-cyan-200">{newSkillRequiredLevel}</span>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-[10px]">
+                  <span className="uppercase tracking-wide text-slate-500">Niveau requis</span>
+                  <span className="font-semibold text-cyan-300">N{newSkillRequiredLevel}</span>
                 </div>
                 <Slider
                   min={scaleMin}
@@ -423,83 +452,123 @@ export default function SkillsMatrixTemplateEditorPage() {
               <button
                 type="button"
                 onClick={addSkill}
-                className="h-10 w-full rounded-xl border border-cyan-300/35 bg-cyan-500/15 text-xs font-bold text-cyan-100 transition hover:bg-cyan-500/25"
+                className="h-9 w-full rounded-xl border border-cyan-300/30 bg-cyan-500/15 text-xs font-bold text-cyan-100 transition hover:bg-cyan-500/25"
               >
-                Ajouter la compétence
+                + Ajouter la compétence
               </button>
             </div>
 
-            <div className="space-y-2">
+            {/* Liste */}
+            <div className="max-h-[420px] space-y-2 overflow-y-auto pr-0.5">
               {sortedSkills.length === 0 ? (
-                <div className="text-xs text-slate-500">Aucune compétence.</div>
+                <div className="rounded-lg border border-white/[0.05] bg-white/[0.02] px-3 py-3 text-xs text-slate-500">
+                  Aucune compétence. Ajoute-en une ci-dessus.
+                </div>
               ) : (
-                sortedSkills.map((skill) => (
-                  <div
-                    key={skill.id}
-                    className="space-y-2 rounded-lg border border-white/[0.08] bg-white/[0.03] p-3"
-                  >
-                    <div className="grid gap-2 sm:grid-cols-[1fr_170px_90px_auto]">
-                      <input
-                        value={skill.name}
-                        onChange={(event) =>
-                          updateSkill(skill.id, { name: event.target.value.slice(0, 120) })
-                        }
-                        className="h-9 rounded-md border border-white/[0.08] bg-white/[0.04] px-2 text-xs text-slate-100"
-                      />
-                      <select
-                        value={skill.categoryId ?? ""}
-                        onChange={(event) =>
-                          updateSkill(skill.id, {
-                            categoryId: event.target.value || null,
-                          })
-                        }
-                        className="h-9 rounded-md border border-white/[0.08] bg-white/[0.04] px-2 text-xs text-slate-100"
-                      >
-                        <option value="">Sans catégorie</option>
-                        {sortedCategories.map((category) => (
-                          <option key={category.id} value={category.id}>
-                            {category.name}
-                          </option>
-                        ))}
-                      </select>
-                      <input
-                        type="number"
-                        min={0}
-                        max={500}
-                        value={skill.requiredPeople}
-                        onChange={(event) =>
-                          updateSkill(skill.id, { requiredPeople: Number(event.target.value) })
-                        }
-                        className="h-9 rounded-md border border-white/[0.08] bg-white/[0.04] px-2 text-xs text-slate-100"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeSkill(skill.id)}
-                        className="rounded-md border border-red-500/30 bg-red-500/10 px-2 py-1 text-[11px] font-semibold text-red-300"
-                      >
-                        Supprimer
-                      </button>
-                    </div>
-                    <div>
-                      <div className="mb-1 text-[11px] text-slate-400">
-                        Niveau attendu:{" "}
-                        <span className="font-semibold text-cyan-200">{skill.requiredLevel}</span>
+                sortedSkills.map((skill) => {
+                  const catName =
+                    sortedCategories.find((c) => c.id === skill.categoryId)?.name ?? null;
+                  return (
+                    <div
+                      key={skill.id}
+                      className="space-y-2.5 rounded-xl border border-white/[0.07] bg-[#0a1020] p-3"
+                    >
+                      {/* Nom + supprimer */}
+                      <div className="flex gap-2">
+                        <input
+                          value={skill.name}
+                          onChange={(event) =>
+                            updateSkill(skill.id, { name: event.target.value.slice(0, 120) })
+                          }
+                          className="h-9 min-w-0 flex-1 rounded-lg border border-white/[0.07] bg-[#0c1228] px-3 text-sm text-slate-100 outline-none focus:border-cyan-400/40"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeSkill(skill.id)}
+                          title="Supprimer"
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-red-500/25 bg-red-500/10 text-sm text-red-300 transition hover:bg-red-500/20"
+                        >
+                          ✕
+                        </button>
                       </div>
-                      <Slider
-                        min={scaleMin}
-                        max={scaleMax}
-                        step={1}
-                        value={[skill.requiredLevel]}
-                        onValueChange={(values) => {
-                          const next = values[0];
-                          if (!Number.isFinite(next)) return;
-                          updateSkill(skill.id, { requiredLevel: Math.round(next) });
-                        }}
-                        aria-label={`Niveau attendu ${skill.name}`}
-                      />
+
+                      {/* Catégorie + personnes */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <label className="block text-[10px] uppercase tracking-wide text-slate-500">
+                            Catégorie
+                          </label>
+                          <select
+                            value={skill.categoryId ?? ""}
+                            onChange={(event) =>
+                              updateSkill(skill.id, {
+                                categoryId: event.target.value || null,
+                              })
+                            }
+                            className="h-9 w-full rounded-lg border border-white/[0.07] bg-[#0c1228] px-2 text-xs text-slate-100 outline-none focus:border-cyan-400/40"
+                          >
+                            <option value="">Sans catégorie</option>
+                            {sortedCategories.map((category) => (
+                              <option key={category.id} value={category.id}>
+                                {category.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="block text-[10px] uppercase tracking-wide text-slate-500">
+                            Pers. requises
+                          </label>
+                          <input
+                            type="number"
+                            min={0}
+                            max={500}
+                            value={skill.requiredPeople}
+                            onChange={(event) =>
+                              updateSkill(skill.id, {
+                                requiredPeople: Number(event.target.value),
+                              })
+                            }
+                            className="h-9 w-full rounded-lg border border-white/[0.07] bg-[#0c1228] px-2 text-xs text-slate-100 outline-none focus:border-cyan-400/40"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Niveau */}
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between text-[10px]">
+                          <span className="uppercase tracking-wide text-slate-500">
+                            Niveau requis
+                          </span>
+                          <span className="font-semibold text-cyan-300">
+                            N{skill.requiredLevel}
+                          </span>
+                        </div>
+                        <Slider
+                          min={scaleMin}
+                          max={scaleMax}
+                          step={1}
+                          value={[skill.requiredLevel]}
+                          onValueChange={(values) => {
+                            const next = values[0];
+                            if (!Number.isFinite(next)) return;
+                            updateSkill(skill.id, { requiredLevel: Math.round(next) });
+                          }}
+                          aria-label={`Niveau attendu ${skill.name}`}
+                        />
+                      </div>
+
+                      {/* Catégorie badge */}
+                      {catName && (
+                        <div className="text-[10px] text-slate-500">
+                          <span className="rounded-full border border-white/[0.07] bg-white/[0.04] px-2 py-0.5">
+                            {catName}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </section>
