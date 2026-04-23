@@ -1,6 +1,8 @@
 export const C2S_EVENTS = Object.freeze({
   JOIN_RADAR_ROOM: "join_radar_room",
   LEAVE_RADAR_ROOM: "leave_radar_room",
+  JOIN_SKILLS_MATRIX_ROOM: "join_skills_matrix_room",
+  LEAVE_SKILLS_MATRIX_ROOM: "leave_skills_matrix_room",
   CREATE_POKER_ROOM: "create_poker_room",
   JOIN_POKER_ROOM: "join_poker_room",
   RECONNECT_POKER_ROOM: "reconnect_poker_room",
@@ -49,6 +51,7 @@ export const C2S_EVENTS = Object.freeze({
 export const S2C_EVENTS = Object.freeze({
   SERVER_HELLO: "server_hello",
   RADAR_ROOM_JOINED: "radar_room_joined",
+  SKILLS_MATRIX_ROOM_JOINED: "skills_matrix_room_joined",
   POKER_ROOM_CREATED: "poker_room_created",
   POKER_ERROR_MESSAGE: "poker_error_msg",
   POKER_ROOM_RECONNECTED: "poker_room_reconnected",
@@ -68,4 +71,5 @@ export const S2C_EVENTS = Object.freeze({
   LOBBY_UPDATE: "lobby_update",
   ROOM_CLOSED: "room_closed",
   RADAR_SESSION_UPDATE: "radar_session_update",
+  SKILLS_MATRIX_SESSION_UPDATE: "skills_matrix_session_update",
 });

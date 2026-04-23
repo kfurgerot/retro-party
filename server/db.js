@@ -198,4 +198,122 @@ export async function initDatabase() {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
   `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS skills_matrix_sessions (
+      id UUID PRIMARY KEY,
+      session_code VARCHAR(8) NOT NULL UNIQUE,
+      title TEXT NOT NULL,
+      scale_min INT NOT NULL DEFAULT 1,
+      scale_max INT NOT NULL DEFAULT 5,
+      status TEXT NOT NULL DEFAULT 'lobby' CHECK (status IN ('lobby', 'started')),
+      started_at TIMESTAMPTZ NULL,
+      created_by_user_id UUID NULL REFERENCES users(id) ON DELETE SET NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      CHECK (scale_min >= 0 AND scale_max <= 10 AND scale_min < scale_max)
+    );
+  `);
+  await pool.query(
+    "ALTER TABLE skills_matrix_sessions ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'lobby';",
+  );
+  await pool.query(
+    "ALTER TABLE skills_matrix_sessions ADD COLUMN IF NOT EXISTS started_at TIMESTAMPTZ NULL;",
+  );
+  await pool.query(
+    "CREATE INDEX IF NOT EXISTS idx_skills_matrix_sessions_created_by_user_id ON skills_matrix_sessions(created_by_user_id);",
+  );
+  await pool.query(
+    "CREATE INDEX IF NOT EXISTS idx_skills_matrix_sessions_created_at ON skills_matrix_sessions(created_at DESC);",
+  );
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS skills_matrix_participants (
+      id UUID PRIMARY KEY,
+      session_id UUID NOT NULL REFERENCES skills_matrix_sessions(id) ON DELETE CASCADE,
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      display_name TEXT NOT NULL,
+      avatar INT NOT NULL DEFAULT 0,
+      is_admin BOOLEAN NOT NULL DEFAULT false,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `);
+  await pool.query(
+    "ALTER TABLE skills_matrix_participants DROP CONSTRAINT IF EXISTS skills_matrix_participants_session_id_user_id_key;",
+  );
+  await pool.query(
+    "ALTER TABLE skills_matrix_participants ADD COLUMN IF NOT EXISTS avatar INT NOT NULL DEFAULT 0;",
+  );
+  await pool.query("ALTER TABLE skills_matrix_participants ALTER COLUMN user_id DROP NOT NULL;");
+  await pool.query(
+    "CREATE INDEX IF NOT EXISTS idx_skills_matrix_participants_session_id ON skills_matrix_participants(session_id);",
+  );
+  await pool.query(
+    "CREATE INDEX IF NOT EXISTS idx_skills_matrix_participants_user_id ON skills_matrix_participants(user_id);",
+  );
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS skills_matrix_categories (
+      id UUID PRIMARY KEY,
+      session_id UUID NOT NULL REFERENCES skills_matrix_sessions(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      sort_order INT NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `);
+  await pool.query(
+    "CREATE INDEX IF NOT EXISTS idx_skills_matrix_categories_session_id ON skills_matrix_categories(session_id);",
+  );
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS skills_matrix_skills (
+      id UUID PRIMARY KEY,
+      session_id UUID NOT NULL REFERENCES skills_matrix_sessions(id) ON DELETE CASCADE,
+      category_id UUID NULL REFERENCES skills_matrix_categories(id) ON DELETE SET NULL,
+      name TEXT NOT NULL,
+      sort_order INT NOT NULL DEFAULT 0,
+      required_level INT NOT NULL DEFAULT 1,
+      required_people INT NOT NULL DEFAULT 1,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      CHECK (required_level >= 0),
+      CHECK (required_people >= 0)
+    );
+  `);
+  await pool.query(
+    "CREATE INDEX IF NOT EXISTS idx_skills_matrix_skills_session_id ON skills_matrix_skills(session_id);",
+  );
+  await pool.query(
+    "CREATE INDEX IF NOT EXISTS idx_skills_matrix_skills_category_id ON skills_matrix_skills(category_id);",
+  );
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS skills_matrix_assessments (
+      id UUID PRIMARY KEY,
+      session_id UUID NOT NULL REFERENCES skills_matrix_sessions(id) ON DELETE CASCADE,
+      skill_id UUID NOT NULL REFERENCES skills_matrix_skills(id) ON DELETE CASCADE,
+      participant_id UUID NOT NULL REFERENCES skills_matrix_participants(id) ON DELETE CASCADE,
+      current_level INT NULL,
+      target_level INT NULL,
+      wants_to_progress BOOLEAN NOT NULL DEFAULT false,
+      wants_to_mentor BOOLEAN NOT NULL DEFAULT false,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      UNIQUE (skill_id, participant_id)
+    );
+  `);
+  await pool.query(
+    "ALTER TABLE skills_matrix_assessments ADD COLUMN IF NOT EXISTS wants_to_mentor BOOLEAN NOT NULL DEFAULT false;",
+  );
+  await pool.query(
+    "CREATE INDEX IF NOT EXISTS idx_skills_matrix_assessments_session_id ON skills_matrix_assessments(session_id);",
+  );
+  await pool.query(
+    "CREATE INDEX IF NOT EXISTS idx_skills_matrix_assessments_skill_id ON skills_matrix_assessments(skill_id);",
+  );
+  await pool.query(
+    "CREATE INDEX IF NOT EXISTS idx_skills_matrix_assessments_participant_id ON skills_matrix_assessments(participant_id);",
+  );
 }

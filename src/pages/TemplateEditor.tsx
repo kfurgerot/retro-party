@@ -394,7 +394,7 @@ const TemplateEditorPage = () => {
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={() => navigate("/prepare")}
+            onClick={() => navigate("/prepare/retro-party")}
             className="h-9 rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 text-sm font-semibold text-slate-300 transition hover:bg-white/[0.07] hover:text-white"
           >
             {fr.templateEditor.myTemplates}

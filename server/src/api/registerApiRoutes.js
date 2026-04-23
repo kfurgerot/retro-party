@@ -16,6 +16,7 @@ import { registerAuthRoutes } from "./registerAuthRoutes.js";
 import { registerTemplateRoutes } from "./registerTemplateRoutes.js";
 import { registerRadarRoutes } from "./registerRadarRoutes.js";
 import { registerDashboardRoutes } from "./registerDashboardRoutes.js";
+import { registerSkillsMatrixRoutes } from "./registerSkillsMatrixRoutes.js";
 import { S2C_EVENTS } from "../../../shared/contracts/socketEvents.js";
 const SESSION_COOKIE_NAME = process.env.SESSION_COOKIE_NAME || "rp_session";
 const SESSION_TTL_DAYS = Number(process.env.SESSION_TTL_DAYS || 7);
@@ -358,6 +359,17 @@ export function registerApiRoutes({
     });
   }
 
+  function emitSkillsMatrixSessionUpdate(rawCode, reason) {
+    if (!io) return;
+    const code = typeof rawCode === "string" ? rawCode.trim().toUpperCase() : "";
+    if (!code) return;
+    io.to(`skills-matrix:${code}`).emit(S2C_EVENTS.SKILLS_MATRIX_SESSION_UPDATE, {
+      code,
+      reason,
+      at: Date.now(),
+    });
+  }
+
   registerAuthRoutes({
     app,
     pool,
@@ -423,6 +435,15 @@ export function registerApiRoutes({
     app,
     pool,
     requireAuth,
+  });
+
+  registerSkillsMatrixRoutes({
+    app,
+    pool,
+    crypto,
+    makeCode,
+    requireAuth,
+    emitSkillsMatrixSessionUpdate,
   });
 
   app.use("/api", (err, _req, res, _next) => {

@@ -3,15 +3,19 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Navigate, Routes, Route } from "react-router-dom";
 import {
   loadPortalPage,
   loadDashboardPage,
   loadHomePage,
   loadNotFoundPage,
   loadPlayPage,
-  loadPreparePage,
+  loadPrepareRetroPage,
+  loadPreparePlanningPokerPage,
+  loadSkillsMatrixPreparePage,
+  loadSkillsMatrixTemplateEditorPage,
   loadRadarPartyPage,
+  loadSkillsMatrixPage,
   loadResetPasswordPage,
   loadTemplateEditorPage,
   loadPokerTemplateEditorPage,
@@ -23,8 +27,12 @@ const Portal = lazy(loadPortalPage);
 const Dashboard = lazy(loadDashboardPage);
 const Home = lazy(loadHomePage);
 const Index = lazy(loadPlayPage);
-const PreparePage = lazy(loadPreparePage);
+const PrepareRetroPage = lazy(loadPrepareRetroPage);
+const PreparePlanningPokerPage = lazy(loadPreparePlanningPokerPage);
+const SkillsMatrixPreparePage = lazy(loadSkillsMatrixPreparePage);
+const SkillsMatrixTemplateEditorPage = lazy(loadSkillsMatrixTemplateEditorPage);
 const RadarPartyPage = lazy(loadRadarPartyPage);
+const SkillsMatrixPage = lazy(loadSkillsMatrixPage);
 const TemplateEditorPage = lazy(loadTemplateEditorPage);
 const PokerTemplateEditorPage = lazy(loadPokerTemplateEditorPage);
 const ResetPasswordPage = lazy(loadResetPasswordPage);
@@ -56,8 +64,16 @@ const App = () => {
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/home" element={<Home />} />
                 <Route path="/play" element={<Index />} />
-                <Route path="/prepare" element={<PreparePage />} />
+                <Route path="/prepare" element={<Navigate to="/prepare/retro-party" replace />} />
+                <Route path="/prepare/retro-party" element={<PrepareRetroPage />} />
+                <Route path="/prepare/planning-poker" element={<PreparePlanningPokerPage />} />
+                <Route path="/prepare/skills-matrix" element={<SkillsMatrixPreparePage />} />
+                <Route
+                  path="/prepare/skills-matrix/:templateId"
+                  element={<SkillsMatrixTemplateEditorPage />}
+                />
                 <Route path="/radar-party" element={<RadarPartyPage />} />
+                <Route path="/skills-matrix" element={<SkillsMatrixPage />} />
                 <Route path="/prepare/templates/:templateId" element={<TemplateEditorPage />} />
                 <Route path="/prepare/poker/:templateId" element={<PokerTemplateEditorPage />} />
                 <Route path="/reset-password" element={<ResetPasswordPage />} />

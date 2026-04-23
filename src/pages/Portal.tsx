@@ -5,7 +5,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/net/api";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
-type ToolId = "planning-poker" | "retro-party" | "radar-party" | "draw-duel" | "retro-generator";
+type ToolId =
+  | "planning-poker"
+  | "retro-party"
+  | "radar-party"
+  | "skills-matrix"
+  | "draw-duel"
+  | "retro-generator";
 type ModuleCategoryId = "insight" | "action" | "pilotage";
 type ModuleCategoryFilterId = "all" | ModuleCategoryId;
 
@@ -83,6 +89,20 @@ const TOOLS: Tool[] = [
     categories: ["insight", "pilotage"],
   },
   {
+    id: "skills-matrix",
+    label: "Matrice de Compétences",
+    tagline: "Cartographiez les forces de l'équipe",
+    icon: "🧩",
+    status: "live",
+    color: "#0ea5e9",
+    glow: "rgba(14,165,233,0.3)",
+    desc: "Auto-évaluation, niveau requis et dashboard des compétences à risque.",
+    hostRoute: "/skills-matrix?from=portal&mode=host",
+    joinRoute: (code) => `/skills-matrix?mode=join&code=${code}`,
+    hasPrepare: true,
+    categories: ["insight", "pilotage"],
+  },
+  {
     id: "draw-duel",
     label: "Draw Duel",
     tagline: "Dessinez, devinez, riez",
@@ -109,6 +129,15 @@ const TOOLS: Tool[] = [
     categories: ["insight"],
   },
 ];
+
+const PREPARE_ROUTE_BY_TOOL: Record<ToolId, string | null> = {
+  "planning-poker": "/prepare/planning-poker",
+  "retro-party": "/prepare/retro-party",
+  "radar-party": null,
+  "skills-matrix": "/prepare/skills-matrix",
+  "draw-duel": null,
+  "retro-generator": null,
+};
 
 // ─── Auth modal ────────────────────────────────────────────────────────────────
 
@@ -799,8 +828,8 @@ type ToolActionsContentProps = {
   onCodeChange: (id: ToolId, value: string) => void;
   onCreate: (id: ToolId) => void;
   onJoin: (id: ToolId, code: string) => void;
-  onPrepare: () => void;
-  onLoginRequired: () => void;
+  onPrepare: (id: ToolId) => void;
+  onLoginRequired: (id: ToolId) => void;
 };
 
 const ToolActionsContent = ({
@@ -941,7 +970,7 @@ const ToolActionsContent = ({
           {canPrepare && (
             <button
               type="button"
-              onClick={() => (isLoggedIn ? onPrepare() : onLoginRequired())}
+              onClick={() => (isLoggedIn ? onPrepare(tool.id) : onLoginRequired(tool.id))}
               className={cn(
                 "flex h-10 items-center justify-center gap-2 rounded-2xl border px-4 text-center text-[13px] font-semibold transition",
                 isLoggedIn
@@ -1021,8 +1050,8 @@ const ToolCard = ({
   onCodeChange: (id: ToolId, value: string) => void;
   onCreate: (id: ToolId) => void;
   onJoin: (id: ToolId, code: string) => void;
-  onPrepare: () => void;
-  onLoginRequired: () => void;
+  onPrepare: (id: ToolId) => void;
+  onLoginRequired: (id: ToolId) => void;
 }) => {
   const [hovered, setHovered] = useState(false);
   const isLive = tool.status === "live";
@@ -1235,8 +1264,8 @@ const ToolDesktopDetailPanel = ({
   onCodeChange: (id: ToolId, value: string) => void;
   onCreate: (id: ToolId) => void;
   onJoin: (id: ToolId, code: string) => void;
-  onPrepare: () => void;
-  onLoginRequired: () => void;
+  onPrepare: (id: ToolId) => void;
+  onLoginRequired: (id: ToolId) => void;
 }) => (
   <aside className="sticky top-7 self-start">
     <article
@@ -1288,13 +1317,14 @@ export default function Portal() {
     "planning-poker": "",
     "retro-party": "",
     "radar-party": "",
+    "skills-matrix": "",
     "draw-duel": "",
     "retro-generator": "",
   });
   const [mounted, setMounted] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
-  const [pendingPrepare, setPendingPrepare] = useState(false);
+  const [pendingPrepareRoute, setPendingPrepareRoute] = useState<string | null>(null);
 
   useEffect(() => {
     const t = setTimeout(() => setMounted(true), 50);
@@ -1338,11 +1368,12 @@ export default function Portal() {
     }
   }, [openTool, selectedToolId, toolsForCategory]);
 
-  // After login succeeds from modal, go to /prepare if that was the intent
+  // After login succeeds from modal, continue to the prepare route that was requested.
   const handleAuthSuccess = () => {
-    if (pendingPrepare) {
-      setPendingPrepare(false);
-      navigate("/prepare");
+    if (pendingPrepareRoute) {
+      const route = pendingPrepareRoute;
+      setPendingPrepareRoute(null);
+      navigate(route);
     }
   };
 
@@ -1378,13 +1409,15 @@ export default function Portal() {
     }));
   };
 
-  const handlePrepare = () => {
+  const handlePrepare = (toolId: ToolId) => {
+    const route = PREPARE_ROUTE_BY_TOOL[toolId];
+    if (!route) return;
     if (user) {
-      navigate("/prepare");
-    } else {
-      setPendingPrepare(true);
-      setLoginOpen(true);
+      navigate(route);
+      return;
     }
+    setPendingPrepareRoute(route);
+    setLoginOpen(true);
   };
 
   const initials = user?.displayName
@@ -1465,7 +1498,7 @@ export default function Portal() {
                 <button
                   type="button"
                   onClick={() => {
-                    setPendingPrepare(false);
+                    setPendingPrepareRoute(null);
                     setLoginOpen(true);
                   }}
                   className="flex shrink-0 items-center gap-2 rounded-full border border-indigo-500/40 bg-indigo-500/10 px-4 py-2 text-[13px] font-semibold text-indigo-300 transition hover:bg-indigo-500/20 hover:text-indigo-200"
@@ -1611,7 +1644,7 @@ export default function Portal() {
           <div className="flex flex-col gap-1.5">
             <button
               type="button"
-              onClick={() => navigate("/prepare")}
+              onClick={() => handlePrepare("retro-party")}
               className="flex cursor-pointer items-center gap-3 rounded-xl border border-white/[0.05] bg-white/[0.02] px-3.5 py-3 text-left transition-all hover:border-white/[0.08] hover:bg-white/[0.035]"
             >
               <span className="text-lg leading-none">📋</span>
@@ -1638,7 +1671,7 @@ export default function Portal() {
             </button>
             <button
               type="button"
-              onClick={() => navigate("/prepare")}
+              onClick={() => handlePrepare("planning-poker")}
               className="flex cursor-pointer items-center gap-3 rounded-xl border border-white/[0.05] bg-white/[0.02] px-3.5 py-3 text-left transition-all hover:border-white/[0.08] hover:bg-white/[0.035]"
             >
               <span className="text-lg leading-none">🃏</span>
@@ -1663,6 +1696,33 @@ export default function Portal() {
                 <path d="m9 18 6-6-6-6" />
               </svg>
             </button>
+            <button
+              type="button"
+              onClick={() => handlePrepare("skills-matrix")}
+              className="flex cursor-pointer items-center gap-3 rounded-xl border border-white/[0.05] bg-white/[0.02] px-3.5 py-3 text-left transition-all hover:border-white/[0.08] hover:bg-white/[0.035]"
+            >
+              <span className="text-lg leading-none">🧩</span>
+              <div className="min-w-0 flex-1">
+                <div className="text-[13px] font-semibold text-slate-200">
+                  Préparer une Matrice de Compétences
+                </div>
+                <div className="text-[11px] text-slate-500">
+                  {user
+                    ? "Gérer tes templates d'échelle, catégories et compétences"
+                    : "Connexion requise · Prépare ta matrice avant l'atelier"}
+                </div>
+              </div>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#475569"
+                strokeWidth="2"
+              >
+                <path d="m9 18 6-6-6-6" />
+              </svg>
+            </button>
           </div>
         </section>
       </div>
@@ -1672,7 +1732,7 @@ export default function Portal() {
         open={loginOpen}
         onOpenChange={(v) => {
           setLoginOpen(v);
-          if (!v) setPendingPrepare(false);
+          if (!v) setPendingPrepareRoute(null);
         }}
         onSuccess={handleAuthSuccess}
       />
