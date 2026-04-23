@@ -1029,12 +1029,11 @@ export default function SkillsMatrixPage() {
         return;
       }
 
-      if (initialCode) {
+      const persisted = loadPersistedSkillsMatrixSession();
+      if (initialCode && (!persisted || persisted.code !== initialCode)) {
         if (!cancelled) setIsRestoringSession(false);
         return;
       }
-
-      const persisted = loadPersistedSkillsMatrixSession();
       if (!persisted) {
         if (!cancelled) setIsRestoringSession(false);
         return;
