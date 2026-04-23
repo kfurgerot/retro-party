@@ -2181,15 +2181,21 @@ export default function SkillsMatrixPage() {
                       <thead>
                         <tr>
                           {/* Cellule coin haut-gauche */}
-                          <th className="sticky left-0 z-20 min-w-[200px] border-b border-r border-white/[0.07] bg-[#0c1228] px-4 py-3 text-left align-bottom">
+                          <th className="sticky left-0 z-20 w-[150px] min-w-0 border-b border-r border-white/[0.07] bg-[#0c1228] px-3 py-3 text-left align-bottom">
                             <div className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-500">
                               Compétence
                             </div>
                           </th>
-                          {/* Colonne completion équipe */}
-                          <th className="w-[52px] border-b border-r border-white/[0.07] bg-[#0c1228] px-2 py-3 text-center align-bottom">
+                          {/* Colonne requis */}
+                          <th className="w-[120px] min-w-0 border-b border-r border-white/[0.07] bg-[#0c1228] px-2 py-3 text-left align-bottom">
                             <div className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-500">
-                              Éq.
+                              Requis
+                            </div>
+                          </th>
+                          {/* Colonne progression équipe */}
+                          <th className="w-[52px] min-w-0 border-b border-r border-white/[0.07] bg-[#0c1228] px-1 py-3 text-center align-bottom">
+                            <div className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-500">
+                              Prog.
                             </div>
                           </th>
                           {snapshot.participants.map((participant) => {
@@ -2251,7 +2257,7 @@ export default function SkillsMatrixPage() {
                           /* Ligne catégorie */
                           <tr key={`cat-${group.categoryId ?? "none"}`}>
                             <td
-                              colSpan={snapshot.participants.length + 2}
+                              colSpan={snapshot.participants.length + 3}
                               className="border-b border-t border-white/[0.07] bg-white/[0.025] px-4 py-2"
                             >
                               <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-cyan-400">
@@ -2266,14 +2272,59 @@ export default function SkillsMatrixPage() {
                               className="border-b border-white/[0.05] transition hover:bg-white/[0.015]"
                             >
                               {/* Colonne nom compétence */}
-                              <td className="sticky left-0 z-10 min-w-[200px] border-r border-white/[0.07] bg-[#080d1c] px-4 py-3">
-                                <div className="text-sm font-semibold text-slate-100">
+                              <td className="sticky left-0 z-10 w-[150px] min-w-0 border-r border-white/[0.07] bg-[#080d1c] px-3 py-2.5">
+                                <div className="text-xs font-semibold text-slate-100 leading-snug">
                                   {row.skillName}
                                 </div>
                                 <div className="mt-0.5 text-[10px] text-slate-500">
-                                  Requis : N{row.requiredLevel}
+                                  N{row.requiredLevel} requis
                                 </div>
                               </td>
+                              {/* Colonne requis */}
+                              {(() => {
+                                const qualifiedParticipants = snapshot.participants.filter((p) => {
+                                  const cell = assessmentByCellKey.get(
+                                    assessmentKey(row.skillId, p.id),
+                                  );
+                                  return (
+                                    cell?.currentLevel != null &&
+                                    cell.currentLevel >= row.requiredLevel
+                                  );
+                                });
+                                const isMet = qualifiedParticipants.length >= row.requiredPeople;
+                                return (
+                                  <td className="w-[120px] min-w-0 border-r border-white/[0.07] px-2 py-2 align-top">
+                                    <div className="flex flex-col gap-1">
+                                      <span
+                                        className={cn(
+                                          "text-[11px] font-bold tabular-nums",
+                                          isMet ? "text-emerald-400" : "text-amber-400",
+                                        )}
+                                      >
+                                        {qualifiedParticipants.length}/{row.requiredPeople}
+                                      </span>
+                                      {qualifiedParticipants.length > 0 && (
+                                        <div className="flex flex-col gap-0.5">
+                                          {qualifiedParticipants.map((p) => (
+                                            <div
+                                              key={p.id}
+                                              className="flex items-center gap-1"
+                                              title={p.displayName}
+                                            >
+                                              <span className="text-sm leading-none shrink-0">
+                                                {AVATARS[p.avatar] ?? "?"}
+                                              </span>
+                                              <span className="truncate text-[9px] text-slate-400 leading-none">
+                                                {p.displayName}
+                                              </span>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </td>
+                                );
+                              })()}
                               {/* Colonne complétion équipe */}
                               {(() => {
                                 const total = snapshot.participants.length;
