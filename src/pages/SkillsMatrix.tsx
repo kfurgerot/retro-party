@@ -47,6 +47,7 @@ import {
 import { AVATARS } from "@/types/game";
 import { api, type SkillsMatrixSnapshot, type TemplateItem } from "@/net/api";
 import { socket } from "@/net/socket";
+import { AuthModal } from "@/components/AuthModal";
 
 type WorkspaceTab = "matrix" | "dashboard" | "manage";
 
@@ -672,6 +673,7 @@ export default function SkillsMatrixPage() {
   const [isRestoringSession, setIsRestoringSession] = useState(true);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [endSessionDialogOpen, setEndSessionDialogOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
   const refreshInFlightRef = useRef(false);
   const refreshQueuedRef = useRef(false);
   const refreshTicketRef = useRef(0);
@@ -2040,60 +2042,83 @@ export default function SkillsMatrixPage() {
       />
 
       <div className="relative z-10 mx-auto w-full max-w-[1260px] px-4 pb-12 pt-6 sm:px-6">
-        <header className="mb-5 flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <div className="mb-2 inline-flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-indigo-500 text-sm">
+        <header className="mb-5">
+          {/* Row 1 : badge + code room + bouton Quitter */}
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-2">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-indigo-500 text-sm">
                 🧩
               </div>
               <span className="text-xs font-bold uppercase tracking-[0.12em] text-cyan-300">
                 Agile Suite
               </span>
+              {roomCode && (
+                <div className="inline-flex items-center gap-1 rounded-full border border-cyan-500/25 bg-cyan-500/10 px-2.5 py-1 text-[11px] font-semibold tracking-[0.08em] text-cyan-100">
+                  <span className="uppercase text-cyan-200/85">Code</span>
+                  <span>{roomCode}</span>
+                </div>
+              )}
             </div>
-            <h1 className="text-[clamp(22px,5vw,32px)] font-extrabold leading-none tracking-tight text-slate-50">
-              Matrice de Compétences
-            </h1>
-            <p className="mt-1.5 text-sm text-slate-400">
-              {isSessionEnded
-                ? "Session terminée. Consulte les résultats et exporte le rapport PDF."
-                : "Session démarrée. Pilote la couverture des compétences et les plans de progression."}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {roomCode && (
-              <div className="inline-flex items-center gap-1 rounded-full border border-cyan-500/25 bg-cyan-500/10 px-2.5 py-1 text-[11px] font-semibold tracking-[0.08em] text-cyan-100">
-                <span className="uppercase text-cyan-200/85">Code</span>
-                <span>{roomCode}</span>
-              </div>
-            )}
-            {canExportPdf && (
-              <SecondaryButton
-                onClick={() => void handleExportPdf()}
-                disabled={isExportingPdf}
-                className="h-9 min-h-0 rounded-full border-cyan-500/25 bg-cyan-500/10 px-3 text-[11px] font-semibold tracking-[0.08em] text-cyan-100 hover:bg-cyan-500/18"
-              >
-                <span className="inline-flex items-center gap-1.5">
-                  <FileDown className="h-3.5 w-3.5" />
-                  {isExportingPdf ? "Export..." : "Exporter PDF"}
-                </span>
-              </SecondaryButton>
-            )}
-            {canEndSession && (
-              <SecondaryButton
-                className="h-9 min-h-0 rounded-full border-amber-500/25 bg-amber-500/10 px-3 text-[11px] font-semibold tracking-[0.08em] text-amber-200 hover:bg-amber-500/18"
-                onClick={() => setEndSessionDialogOpen(true)}
-              >
-                Terminer la session
-              </SecondaryButton>
-            )}
             <SecondaryButton
-              className={cn("h-9 min-h-0 px-3 text-xs", CTA_NEON_DANGER)}
+              className={cn("h-8 shrink-0 min-h-0 px-3 text-xs", CTA_NEON_DANGER)}
               onClick={() => setLeaveDialogOpen(true)}
             >
               Quitter
             </SecondaryButton>
           </div>
+
+          {/* Row 2 : titre + description */}
+          <h1 className="text-[clamp(20px,5vw,32px)] font-extrabold leading-none tracking-tight text-slate-50">
+            Matrice de Compétences
+          </h1>
+          <p className="mt-1.5 text-sm text-slate-400">
+            {isSessionEnded
+              ? "Session terminée. Consulte les résultats et exporte le rapport PDF."
+              : "Session démarrée. Pilote la couverture des compétences et les plans de progression."}
+          </p>
+
+          {/* Row 3 : boutons d'action (optionnels) */}
+          {(canExportPdf || canEndSession) && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {canExportPdf && (
+                <SecondaryButton
+                  onClick={() => void handleExportPdf()}
+                  disabled={isExportingPdf}
+                  className="h-9 min-h-0 rounded-full border-cyan-500/25 bg-cyan-500/10 px-3 text-[11px] font-semibold tracking-[0.08em] text-cyan-100 hover:bg-cyan-500/18"
+                >
+                  <span className="inline-flex items-center gap-1.5">
+                    <FileDown className="h-3.5 w-3.5" />
+                    {isExportingPdf ? "Export..." : "Exporter PDF"}
+                  </span>
+                </SecondaryButton>
+              )}
+              {canEndSession && (
+                <SecondaryButton
+                  className="h-9 min-h-0 rounded-full border-amber-500/25 bg-amber-500/10 px-3 text-[11px] font-semibold tracking-[0.08em] text-amber-200 hover:bg-amber-500/18"
+                  onClick={() => setEndSessionDialogOpen(true)}
+                >
+                  Terminer la session
+                </SecondaryButton>
+              )}
+            </div>
+          )}
         </header>
+
+        {!user && !isSessionEnded && (
+          <div className="mb-4 rounded-2xl border border-amber-500/20 bg-amber-500/[0.06] px-4 py-3 text-xs leading-relaxed text-amber-200/80">
+            <span className="font-semibold text-amber-200">Mode invité</span> — Tes réponses sont
+            sauvegardées sur cet appareil et ce navigateur uniquement. Pour retrouver ta session
+            depuis un autre appareil ou après un changement de navigateur,{" "}
+            <button
+              type="button"
+              className="font-semibold text-amber-200 underline underline-offset-2 hover:text-amber-100"
+              onClick={() => setAuthModalOpen(true)}
+            >
+              crée un compte
+            </button>
+            .
+          </div>
+        )}
 
         {error ? (
           <Card className="mb-4 rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
@@ -3568,6 +3593,23 @@ export default function SkillsMatrixPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AuthModal
+        open={authModalOpen}
+        onOpenChange={setAuthModalOpen}
+        initialTab="register"
+        onSuccess={() => {
+          setAuthModalOpen(false);
+          // Link the guest participant to the newly authenticated account so that
+          // the user can rejoin from any device and recover their assessments.
+          if (roomCode && participantId) {
+            void api
+              .skillsMatrixClaimParticipant(roomCode, participantId)
+              .then(applySnapshot)
+              .catch(() => void refreshSession());
+          }
+        }}
+      />
     </div>
   );
 }

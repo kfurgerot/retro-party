@@ -119,7 +119,7 @@ function mapSkillsMatrixToActivity(row) {
     moduleLabel: moduleMeta.label,
     moduleIcon: moduleMeta.icon,
     activityType: "session",
-    activityLabel: "Session Skills Matrix",
+    activityLabel: row.is_admin ? "Animateur" : "Participant",
     title,
     details: row.session_code ? `Code ${row.session_code}` : null,
     sessionCode: row.session_code || null,
@@ -201,17 +201,19 @@ export function registerDashboardRoutes(context) {
         pool.query(
           `
             SELECT
-              id,
-              session_code,
-              title,
-              status,
-              started_at,
-              ended_at,
-              created_at,
-              updated_at
-            FROM skills_matrix_sessions
-            WHERE created_by_user_id = $1
-            ORDER BY updated_at DESC
+              s.id,
+              s.session_code,
+              s.title,
+              s.status,
+              s.started_at,
+              s.ended_at,
+              s.created_at,
+              s.updated_at,
+              p.is_admin
+            FROM skills_matrix_sessions s
+            INNER JOIN skills_matrix_participants p
+              ON p.session_id = s.id AND p.user_id = $1
+            ORDER BY s.updated_at DESC
             LIMIT 200
           `,
           [userId],

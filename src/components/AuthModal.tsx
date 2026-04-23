@@ -1,0 +1,202 @@
+import { FormEvent, useState } from "react";
+import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { api } from "@/net/api";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+
+type AuthTab = "login" | "register" | "forgot";
+
+export const AuthModal = ({
+  open,
+  onOpenChange,
+  onSuccess,
+  initialTab = "login",
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  onSuccess: () => void;
+  initialTab?: AuthTab;
+}) => {
+  const { login, register } = useAuth();
+  const [tab, setTab] = useState<AuthTab>(initialTab);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const reset = () => {
+    setError(null);
+    setInfo(null);
+    setPassword("");
+  };
+
+  const handleTab = (t: AuthTab) => {
+    setTab(t);
+    reset();
+  };
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setInfo(null);
+    setLoading(true);
+    try {
+      if (tab === "login") {
+        await login(email.trim(), password);
+        onSuccess();
+        onOpenChange(false);
+      } else if (tab === "register") {
+        if (!displayName.trim()) {
+          setError("Le nom d'affichage est requis.");
+          setLoading(false);
+          return;
+        }
+        await register(email.trim(), password, displayName.trim());
+        onSuccess();
+        onOpenChange(false);
+      } else {
+        if (!email.trim()) {
+          setError("Saisis ton adresse e-mail.");
+          setLoading(false);
+          return;
+        }
+        const res = await api.forgotPassword({ email: email.trim() });
+        setInfo(res.message);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Une erreur est survenue.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const inputCls =
+    "h-11 w-full rounded-2xl border border-white/[0.08] bg-white/[0.04] px-4 text-sm text-slate-100 placeholder:text-slate-600 outline-none transition focus:border-white/20 focus:ring-1 focus:ring-indigo-400/50";
+
+  const titleByTab: Record<AuthTab, string> = {
+    login: "Connexion",
+    register: "Créer un compte",
+    forgot: "Réinitialiser le mot de passe",
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md rounded-2xl border border-white/[0.08] bg-[#0d0d1a] p-0 shadow-2xl [&>button]:text-slate-400 [&>button]:hover:text-slate-100">
+        <div className="rounded-t-2xl border-b border-white/[0.08] bg-gradient-to-r from-indigo-500/14 via-violet-500/9 to-pink-500/12 p-5">
+          <div className="mb-2 flex items-center gap-2">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 text-sm">
+              ⚡
+            </div>
+            <span className="text-xs font-bold uppercase tracking-[0.12em] text-indigo-300">
+              Agile Suite
+            </span>
+          </div>
+          <div className="text-base font-semibold text-slate-100">{titleByTab[tab]}</div>
+          <p className="mt-1 text-xs text-slate-400">
+            {tab === "login"
+              ? "Retrouve tes sessions et tes templates."
+              : tab === "register"
+                ? "Configure ton profil et accède à tout l'espace AgileSuite."
+                : "On t'envoie un lien sécurisé pour définir un nouveau mot de passe."}
+          </p>
+        </div>
+
+        <div className="p-5">
+          <div className="mb-4 flex gap-1 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-1">
+            {(["login", "register", "forgot"] as AuthTab[]).map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => handleTab(t)}
+                className={cn(
+                  "flex-1 rounded-xl py-2 text-xs font-semibold transition-all",
+                  tab === t
+                    ? "bg-indigo-500 text-white shadow-sm"
+                    : "text-slate-500 hover:text-slate-300",
+                )}
+              >
+                {t === "login" ? "Connexion" : t === "register" ? "Inscription" : "Mot de passe"}
+              </button>
+            ))}
+          </div>
+
+          {error && (
+            <div className="mb-4 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm text-red-300">
+              {error}
+            </div>
+          )}
+          {info && (
+            <div className="mb-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5 text-sm text-emerald-300">
+              {info}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-3">
+            {tab === "register" && (
+              <div className="space-y-1">
+                <label className="block text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500">
+                  Nom d'affichage
+                </label>
+                <input
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="Ton nom"
+                  className={inputCls}
+                  autoFocus
+                />
+              </div>
+            )}
+
+            <div className="space-y-1">
+              <label className="block text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500">
+                Adresse e-mail
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="nom@entreprise.com"
+                required
+                className={inputCls}
+                autoFocus={tab !== "register"}
+              />
+            </div>
+
+            {tab !== "forgot" && (
+              <div className="space-y-1">
+                <label className="block text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500">
+                  Mot de passe
+                </label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Au moins 8 caractères"
+                  required
+                  className={inputCls}
+                />
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="mt-1 h-11 w-full rounded-2xl bg-indigo-500 text-sm font-bold text-white transition hover:bg-indigo-400 disabled:opacity-50"
+              style={{ boxShadow: "0 4px 16px rgba(99,102,241,0.35)" }}
+            >
+              {loading
+                ? "..."
+                : tab === "login"
+                  ? "Se connecter"
+                  : tab === "register"
+                    ? "Créer mon compte"
+                    : "Envoyer le lien"}
+            </button>
+          </form>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};

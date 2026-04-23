@@ -566,6 +566,28 @@ export function registerSkillsMatrixRoutes(context) {
 
       const session = await getSessionByCode(pool, code);
       if (!session) return res.status(404).json({ error: "Not found" });
+
+      // Idempotent join: authenticated users rejoin their existing participant
+      if (currentUserId) {
+        const existingResult = await pool.query(
+          `SELECT id FROM skills_matrix_participants WHERE session_id = $1 AND user_id = $2 LIMIT 1`,
+          [session.id, currentUserId],
+        );
+        if (existingResult.rows.length > 0) {
+          const payload = await buildSessionSnapshot({
+            pool,
+            session,
+            currentParticipantId: existingResult.rows[0].id,
+          });
+          return res.status(200).json(payload);
+        }
+      }
+
+      // New participant: cannot join an ended session
+      if (session.status === "ended") {
+        return res.status(409).json({ error: "Session ended" });
+      }
+
       const participantId = crypto.randomUUID();
 
       await pool.query(
@@ -589,6 +611,59 @@ export function registerSkillsMatrixRoutes(context) {
         currentParticipantId: participantId,
       });
       emitSkillsMatrixSessionUpdate(code, "participant_joined");
+      return res.status(200).json(payload);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Link a guest participant to the authenticated user's account.
+  // If the user already owns a participant in the session, that one is returned instead.
+  app.post("/api/skills-matrix/sessions/:code/claim-participant", async (req, res, next) => {
+    try {
+      const code = normalizeCode(req.params.code);
+      const participantId = resolveParticipantId(req);
+      const currentUserId = req.currentUser?.id ?? null;
+
+      if (!code || !participantId || !currentUserId) {
+        return res.status(400).json({ error: "Invalid payload" });
+      }
+
+      const session = await getSessionByCode(pool, code);
+      if (!session) return res.status(404).json({ error: "Not found" });
+
+      // If the authenticated user already has their own participant, return it
+      const alreadyOwned = await pool.query(
+        `SELECT id FROM skills_matrix_participants WHERE session_id = $1 AND user_id = $2 LIMIT 1`,
+        [session.id, currentUserId],
+      );
+      if (alreadyOwned.rows.length > 0) {
+        const payload = await buildSessionSnapshot({
+          pool,
+          session,
+          currentParticipantId: alreadyOwned.rows[0].id,
+        });
+        return res.status(200).json(payload);
+      }
+
+      // Link the guest participant to the authenticated account
+      const updated = await pool.query(
+        `UPDATE skills_matrix_participants
+         SET user_id = $1, updated_at = now()
+         WHERE id = $2 AND session_id = $3 AND user_id IS NULL
+         RETURNING id`,
+        [currentUserId, participantId, session.id],
+      );
+      if (updated.rows.length === 0) {
+        return res.status(403).json({ error: "Participant not found or already claimed" });
+      }
+
+      const payload = await buildSessionSnapshot({
+        pool,
+        session,
+        currentParticipantId: participantId,
+      });
+      emitSkillsMatrixSessionUpdate(code, "participant_updated");
       return res.status(200).json(payload);
     } catch (err) {
       next(err);

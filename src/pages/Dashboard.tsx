@@ -166,7 +166,8 @@ export default function Dashboard() {
                       const canReopen =
                         activity.moduleId === "skills-matrix" &&
                         activity.activityType === "session" &&
-                        !!activity.sessionCode;
+                        !!activity.sessionCode &&
+                        activity.status !== "ended";
                       return (
                         <div
                           key={activity.id}
@@ -183,11 +184,17 @@ export default function Dashboard() {
                               {canReopen && (
                                 <button
                                   type="button"
-                                  onClick={() =>
-                                    navigate(
-                                      `/skills-matrix?mode=join&code=${activity.sessionCode}`,
-                                    )
-                                  }
+                                  onClick={() => {
+                                    const params = new URLSearchParams({
+                                      mode: "join",
+                                      code: activity.sessionCode!,
+                                      auto: "1",
+                                    });
+                                    if (user?.displayName) {
+                                      params.set("name", user.displayName);
+                                    }
+                                    navigate(`/skills-matrix?${params.toString()}`);
+                                  }}
                                   className="rounded-full border border-cyan-500/25 bg-cyan-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-cyan-200 transition hover:bg-cyan-500/20"
                                 >
                                   Rouvrir
