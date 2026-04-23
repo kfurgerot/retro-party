@@ -221,6 +221,15 @@ export async function initDatabase() {
     "ALTER TABLE skills_matrix_sessions ADD COLUMN IF NOT EXISTS started_at TIMESTAMPTZ NULL;",
   );
   await pool.query(
+    "ALTER TABLE skills_matrix_sessions ADD COLUMN IF NOT EXISTS ended_at TIMESTAMPTZ NULL;",
+  );
+  await pool.query(
+    "ALTER TABLE skills_matrix_sessions DROP CONSTRAINT IF EXISTS skills_matrix_sessions_status_check;",
+  );
+  await pool.query(
+    "ALTER TABLE skills_matrix_sessions ADD CONSTRAINT skills_matrix_sessions_status_check CHECK (status IN ('lobby', 'started', 'ended'));",
+  );
+  await pool.query(
     "CREATE INDEX IF NOT EXISTS idx_skills_matrix_sessions_created_by_user_id ON skills_matrix_sessions(created_by_user_id);",
   );
   await pool.query(

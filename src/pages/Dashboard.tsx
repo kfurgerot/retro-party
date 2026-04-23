@@ -162,27 +162,48 @@ export default function Dashboard() {
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {moduleItem.activities.map((activity) => (
-                      <div
-                        key={activity.id}
-                        className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-3"
-                      >
-                        <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
-                          <div className="text-sm font-semibold text-slate-100">
-                            {activity.title}
+                    {moduleItem.activities.map((activity) => {
+                      const canReopen =
+                        activity.moduleId === "skills-matrix" &&
+                        activity.activityType === "session" &&
+                        !!activity.sessionCode;
+                      return (
+                        <div
+                          key={activity.id}
+                          className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-3"
+                        >
+                          <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+                            <div className="text-sm font-semibold text-slate-100">
+                              {activity.title}
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <div className="rounded-full border border-white/[0.08] bg-white/[0.03] px-2 py-0.5 text-[11px] text-slate-300">
+                                {statusLabel(activity.status)}
+                              </div>
+                              {canReopen && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    navigate(
+                                      `/skills-matrix?mode=join&code=${activity.sessionCode}`,
+                                    )
+                                  }
+                                  className="rounded-full border border-cyan-500/25 bg-cyan-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-cyan-200 transition hover:bg-cyan-500/20"
+                                >
+                                  Rouvrir
+                                </button>
+                              )}
+                            </div>
                           </div>
-                          <div className="rounded-full border border-white/[0.08] bg-white/[0.03] px-2 py-0.5 text-[11px] text-slate-300">
-                            {statusLabel(activity.status)}
+                          <div className="text-xs text-slate-400">
+                            {activity.activityLabel} · {formatDateTime(activity.occurredAt)}
                           </div>
+                          {activity.details ? (
+                            <div className="mt-1 text-xs text-slate-500">{activity.details}</div>
+                          ) : null}
                         </div>
-                        <div className="text-xs text-slate-400">
-                          {activity.activityLabel} · {formatDateTime(activity.occurredAt)}
-                        </div>
-                        {activity.details ? (
-                          <div className="mt-1 text-xs text-slate-500">{activity.details}</div>
-                        ) : null}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </Card>

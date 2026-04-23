@@ -28,6 +28,7 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { FileDown } from "lucide-react";
 import { Card, PrimaryButton, SecondaryButton } from "@/components/app-shell";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -669,9 +670,12 @@ export default function SkillsMatrixPage() {
   const [selectedRadarParticipantId, setSelectedRadarParticipantId] = useState<string | null>(null);
   const [participantId, setParticipantId] = useState<string>("");
   const [isRestoringSession, setIsRestoringSession] = useState(true);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [endSessionDialogOpen, setEndSessionDialogOpen] = useState(false);
   const refreshInFlightRef = useRef(false);
   const refreshQueuedRef = useRef(false);
   const refreshTicketRef = useRef(0);
+  const matrixCaptureRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (user && !profile.name) {
@@ -699,6 +703,272 @@ export default function SkillsMatrixPage() {
     }
   }, []);
 
+  const handleEndSession = useCallback(async () => {
+    const code = snapshot?.session.code;
+    if (!code || !participantId) return;
+    await withLoading(async () => {
+      const next = await api.skillsMatrixEndSession(code, participantId);
+      applySnapshot(next);
+    });
+    setEndSessionDialogOpen(false);
+  }, [applySnapshot, participantId, snapshot, withLoading]);
+
+  const handleExportPdf = useCallback(async () => {
+    if (!snapshot || isExportingPdf) return;
+    setIsExportingPdf(true);
+    try {
+      const { jsPDF } = await import("jspdf");
+
+      // ── Données ──────────────────────────────────────────────────────
+      const assessmentMap = new Map(
+        snapshot.assessments.map((a) => [`${a.skillId}:${a.participantId}`, a]),
+      );
+      const byCategory = new Map<string, { categoryName: string; rows: typeof snapshot.matrix }>();
+      for (const row of snapshot.matrix) {
+        const key = row.categoryId ?? "__none__";
+        if (!byCategory.has(key)) byCategory.set(key, { categoryName: row.categoryName, rows: [] });
+        byCategory.get(key)!.rows.push(row);
+      }
+      const groups = Array.from(byCategory.values());
+      const participants = snapshot.participants;
+
+      // ── Dimensions ───────────────────────────────────────────────────
+      const PW = 297;
+      const PH = 210;
+      const M = 10;
+      const SKILL_W = 58;
+      const REQ_W = 18;
+      const FIXED_W = SKILL_W + REQ_W;
+      const P_COL_W = 28;
+      const HEADER_H = 18;
+      const P_HEAD_H = 16;
+      const CAT_H = 8;
+      const ROW_H = 12;
+      const FOOTER_H = 8;
+      const CONTENT_W = PW - M * 2;
+      const maxPPerPage = Math.max(1, Math.floor((CONTENT_W - FIXED_W) / P_COL_W));
+
+      // ── Couleurs ─────────────────────────────────────────────────────
+      type RGB = [number, number, number];
+      const BG: RGB = [8, 13, 28];
+      const BG2: RGB = [12, 18, 40];
+      const BG_CAT: RGB = [14, 22, 52];
+      const BG_ROW_ALT: RGB = [11, 17, 36];
+      const C_ACCENT: RGB = [34, 211, 238];
+      const C_WHITE: RGB = [241, 245, 249];
+      const C_MUTED: RGB = [100, 116, 139];
+      const C_BORDER: RGB = [24, 32, 56];
+
+      function levelBg(cur: number | null, req: number): RGB {
+        if (cur === null) return [22, 30, 52];
+        const g = cur - req;
+        if (g <= -2) return [100, 20, 20];
+        if (g === -1) return [100, 45, 8];
+        if (g === 0) return [80, 60, 5];
+        if (g === 1) return [15, 70, 35];
+        return [5, 65, 48];
+      }
+      function levelFg(cur: number | null, req: number): RGB {
+        if (cur === null) return [60, 75, 100];
+        const g = cur - req;
+        if (g <= -2) return [252, 165, 165];
+        if (g === -1) return [253, 186, 116];
+        if (g === 0) return [253, 224, 71];
+        if (g === 1) return [190, 242, 100];
+        return [110, 231, 183];
+      }
+
+      // ── PDF ──────────────────────────────────────────────────────────
+      const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+      let pageNum = 0;
+      const nowStr = new Intl.DateTimeFormat("fr-FR", {
+        dateStyle: "medium",
+        timeStyle: "short",
+      }).format(new Date());
+
+      // Découpe les participants en chunks
+      const chunks: (typeof participants)[] = [];
+      for (let i = 0; i < Math.max(1, participants.length); i += maxPPerPage)
+        chunks.push(participants.slice(i, i + maxPPerPage));
+
+      function drawBg() {
+        pdf.setFillColor(...BG);
+        pdf.rect(0, 0, PW, PH, "F");
+      }
+
+      function drawHeader() {
+        pdf.setFillColor(...BG2);
+        pdf.rect(0, 0, PW, HEADER_H, "F");
+        pdf.setDrawColor(...C_ACCENT);
+        pdf.setLineWidth(0.4);
+        pdf.line(0, HEADER_H, PW, HEADER_H);
+
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(12);
+        pdf.setTextColor(...C_WHITE);
+        const title = snapshot.session.title || "Matrice de Compétences";
+        pdf.text(title, M, HEADER_H / 2 + 2.5);
+
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(7.5);
+        pdf.setTextColor(...C_ACCENT);
+        pdf.text(
+          `Code : ${snapshot.session.code}  ·  ${nowStr}  ·  Page ${pageNum}`,
+          PW - M,
+          HEADER_H / 2 + 2.5,
+          { align: "right" },
+        );
+      }
+
+      function drawParticipantHeaders(chunk: typeof participants, y: number) {
+        const tableW = FIXED_W + chunk.length * P_COL_W;
+
+        pdf.setFillColor(...BG2);
+        pdf.rect(M, y, tableW, P_HEAD_H, "F");
+
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(6.5);
+        pdf.setTextColor(...C_MUTED);
+        pdf.text("COMPÉTENCE", M + 3, y + P_HEAD_H / 2 + 2);
+        pdf.text("REQ.", M + SKILL_W + REQ_W / 2, y + P_HEAD_H / 2 + 2, { align: "center" });
+
+        chunk.forEach((p, idx) => {
+          const x = M + FIXED_W + idx * P_COL_W;
+          pdf.setDrawColor(...C_BORDER);
+          pdf.setLineWidth(0.2);
+          pdf.line(x, y, x, y + P_HEAD_H);
+
+          const name = p.displayName.length > 9 ? p.displayName.slice(0, 8) + "…" : p.displayName;
+          pdf.setFont("helvetica", "bold");
+          pdf.setFontSize(7.5);
+          pdf.setTextColor(...C_WHITE);
+          pdf.text(name, x + P_COL_W / 2, y + 6.5, { align: "center" });
+
+          pdf.setFont("helvetica", "normal");
+          pdf.setFontSize(6);
+          pdf.setTextColor(...C_MUTED);
+          pdf.text(p.isAdmin ? "Host" : "Membre", x + P_COL_W / 2, y + 12, { align: "center" });
+        });
+
+        pdf.setDrawColor(...C_ACCENT);
+        pdf.setLineWidth(0.25);
+        pdf.line(M, y + P_HEAD_H, M + tableW, y + P_HEAD_H);
+      }
+
+      function newPage(chunk: typeof participants): number {
+        if (pageNum > 0) pdf.addPage();
+        pageNum++;
+        drawBg();
+        drawHeader();
+        const y = HEADER_H + 3;
+        drawParticipantHeaders(chunk, y);
+        return y + P_HEAD_H;
+      }
+
+      function drawFooter() {
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(6.5);
+        pdf.setTextColor(...C_MUTED);
+        pdf.text("Retro Party · Agile Suite", M, PH - 3);
+        pdf.text(
+          `${participants.length} participant${participants.length !== 1 ? "s" : ""} · Échelle ${snapshot.session.scaleMin}–${snapshot.session.scaleMax}`,
+          PW - M,
+          PH - 3,
+          { align: "right" },
+        );
+      }
+
+      // ── Rendu par chunk ──────────────────────────────────────────────
+      chunks.forEach((chunk) => {
+        let curY = newPage(chunk);
+        const tableW = FIXED_W + chunk.length * P_COL_W;
+
+        groups.forEach((group) => {
+          // Nouvelle page si plus de place pour la ligne catégorie + au moins une compétence
+          if (curY + CAT_H + ROW_H > PH - FOOTER_H) {
+            drawFooter();
+            curY = newPage(chunk);
+          }
+
+          // Ligne catégorie
+          pdf.setFillColor(...BG_CAT);
+          pdf.rect(M, curY, tableW, CAT_H, "F");
+          pdf.setFont("helvetica", "bold");
+          pdf.setFontSize(7.5);
+          pdf.setTextColor(...C_ACCENT);
+          pdf.text(group.categoryName.toUpperCase(), M + 3, curY + CAT_H / 2 + 2.5);
+          curY += CAT_H;
+
+          group.rows.forEach((row, rowIdx) => {
+            if (curY + ROW_H > PH - FOOTER_H) {
+              drawFooter();
+              curY = newPage(chunk);
+            }
+
+            const rowBg: RGB = rowIdx % 2 === 0 ? BG : BG_ROW_ALT;
+            pdf.setFillColor(...rowBg);
+            pdf.rect(M, curY, tableW, ROW_H, "F");
+
+            // Séparateur bas
+            pdf.setDrawColor(...C_BORDER);
+            pdf.setLineWidth(0.15);
+            pdf.line(M, curY + ROW_H, M + tableW, curY + ROW_H);
+
+            // Nom compétence
+            const skillLabel =
+              row.skillName.length > 25 ? row.skillName.slice(0, 24) + "…" : row.skillName;
+            pdf.setFont("helvetica", "normal");
+            pdf.setFontSize(8);
+            pdf.setTextColor(...C_WHITE);
+            pdf.text(skillLabel, M + 3, curY + ROW_H / 2 + 2.5);
+
+            // Niveau requis
+            pdf.setFont("helvetica", "bold");
+            pdf.setFontSize(8.5);
+            pdf.setTextColor(...C_ACCENT);
+            pdf.text(`N${row.requiredLevel}`, M + SKILL_W + REQ_W / 2, curY + ROW_H / 2 + 2.5, {
+              align: "center",
+            });
+
+            // Cellules participants
+            chunk.forEach((p, idx) => {
+              const x = M + FIXED_W + idx * P_COL_W;
+              const level = assessmentMap.get(`${row.skillId}:${p.id}`)?.currentLevel ?? null;
+
+              pdf.setFillColor(...levelBg(level, row.requiredLevel));
+              pdf.rect(x + 1, curY + 1, P_COL_W - 2, ROW_H - 2, "F");
+
+              pdf.setFont("helvetica", "bold");
+              pdf.setFontSize(9);
+              pdf.setTextColor(...levelFg(level, row.requiredLevel));
+              pdf.text(
+                level !== null ? String(level) : "—",
+                x + P_COL_W / 2,
+                curY + ROW_H / 2 + 3,
+                { align: "center" },
+              );
+
+              pdf.setDrawColor(...C_BORDER);
+              pdf.setLineWidth(0.15);
+              pdf.line(x, curY, x, curY + ROW_H);
+            });
+
+            curY += ROW_H;
+          });
+        });
+
+        drawFooter();
+      });
+
+      const stamp = new Date().toISOString().slice(0, 16).replace("T", "-").replace(":", "h");
+      pdf.save(`skills-matrix-${snapshot.session.code.toLowerCase()}-${stamp}.pdf`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur lors de l'export PDF.");
+    } finally {
+      setIsExportingPdf(false);
+    }
+  }, [isExportingPdf, snapshot]);
+
   const roomCode = snapshot?.session.code ?? null;
   const isLobbyStage = !snapshot || snapshot.session.status === "lobby";
   const myParticipantId = participantId || snapshot?.me?.participantId || null;
@@ -707,6 +977,9 @@ export default function SkillsMatrixPage() {
       ? (snapshot.participants.find((participant) => participant.id === myParticipantId) ?? null)
       : null;
   const isAdmin = selfParticipant?.isAdmin === true;
+  const canEndSession = isAdmin && snapshot?.session.status === "started";
+  const canExportPdf = !!snapshot && snapshot.session.status === "ended";
+  const isSessionEnded = snapshot?.session.status === "ended";
 
   useEffect(() => {
     if (!templateFromQuery) return;
@@ -1777,18 +2050,40 @@ export default function SkillsMatrixPage() {
               Matrice de Compétences
             </h1>
             <p className="mt-1.5 text-sm text-slate-400">
-              Session démarrée. Pilote la couverture des compétences et les plans de progression.
+              {isSessionEnded
+                ? "Session terminée. Consulte les résultats et exporte le rapport PDF."
+                : "Session démarrée. Pilote la couverture des compétences et les plans de progression."}
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2">
             {roomCode && (
               <div className="inline-flex items-center gap-1 rounded-full border border-cyan-500/25 bg-cyan-500/10 px-2.5 py-1 text-[11px] font-semibold tracking-[0.08em] text-cyan-100">
                 <span className="uppercase text-cyan-200/85">Code</span>
                 <span>{roomCode}</span>
               </div>
             )}
+            {canExportPdf && (
+              <SecondaryButton
+                onClick={() => void handleExportPdf()}
+                disabled={isExportingPdf}
+                className="h-9 min-h-0 rounded-full border-cyan-500/25 bg-cyan-500/10 px-3 text-[11px] font-semibold tracking-[0.08em] text-cyan-100 hover:bg-cyan-500/18"
+              >
+                <span className="inline-flex items-center gap-1.5">
+                  <FileDown className="h-3.5 w-3.5" />
+                  {isExportingPdf ? "Export..." : "Exporter PDF"}
+                </span>
+              </SecondaryButton>
+            )}
+            {canEndSession && (
+              <SecondaryButton
+                className="h-9 min-h-0 rounded-full border-amber-500/25 bg-amber-500/10 px-3 text-[11px] font-semibold tracking-[0.08em] text-amber-200 hover:bg-amber-500/18"
+                onClick={() => setEndSessionDialogOpen(true)}
+              >
+                Terminer la session
+              </SecondaryButton>
+            )}
             <SecondaryButton
-              className={cn("h-10 min-h-0 px-3 text-xs", CTA_NEON_DANGER)}
+              className={cn("h-9 min-h-0 px-3 text-xs", CTA_NEON_DANGER)}
               onClick={() => setLeaveDialogOpen(true)}
             >
               Quitter
@@ -2446,7 +2741,7 @@ export default function SkillsMatrixPage() {
                                       isMe && "bg-cyan-500/[0.04]",
                                     )}
                                   >
-                                    {isMe ? (
+                                    {isMe && !isSessionEnded ? (
                                       <button
                                         type="button"
                                         onClick={() => openCellEditor(row)}
@@ -2918,6 +3213,32 @@ export default function SkillsMatrixPage() {
               }}
             >
               Quitter
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ── Modale de confirmation de fin de session ─────────────── */}
+      <AlertDialog open={endSessionDialogOpen} onOpenChange={setEndSessionDialogOpen}>
+        <AlertDialogContent className="max-w-md rounded-2xl border border-white/[0.08] bg-[#0d0d1a] p-5 text-slate-100 shadow-[0_14px_40px_rgba(0,0,0,0.65)] sm:p-6">
+          <AlertDialogHeader className="space-y-3">
+            <AlertDialogTitle className="text-base font-semibold text-slate-100">
+              Terminer la session ?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-sm text-slate-400">
+              La session sera clôturée et plus personne ne pourra modifier ses niveaux. Tu pourras
+              ensuite exporter la matrice en PDF depuis cette page ou depuis le Dashboard.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2 sm:space-x-0">
+            <AlertDialogCancel className={cn(CTA_NEON_SECONDARY_SUBTLE, "h-11 w-full rounded-xl")}>
+              Annuler
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="h-11 w-full rounded-xl border border-amber-500/30 bg-amber-500/15 text-sm font-semibold text-amber-100 hover:bg-amber-500/25"
+              onClick={() => void handleEndSession()}
+            >
+              Terminer la session
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

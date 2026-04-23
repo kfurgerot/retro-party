@@ -122,11 +122,12 @@ function mapSkillsMatrixToActivity(row) {
     activityLabel: "Session Skills Matrix",
     title,
     details: row.session_code ? `Code ${row.session_code}` : null,
+    sessionCode: row.session_code || null,
     status: row.status || "lobby",
-    occurredAt: row.started_at || row.updated_at || row.created_at,
+    occurredAt: row.ended_at || row.started_at || row.updated_at || row.created_at,
     createdAt: row.created_at,
     startedAt: row.started_at || null,
-    endedAt: null,
+    endedAt: row.ended_at || null,
   };
 }
 
@@ -205,6 +206,7 @@ export function registerDashboardRoutes(context) {
               title,
               status,
               started_at,
+              ended_at,
               created_at,
               updated_at
             FROM skills_matrix_sessions

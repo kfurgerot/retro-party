@@ -17,6 +17,7 @@ export type DashboardActivity = {
   activityLabel: string;
   title: string;
   details: string | null;
+  sessionCode: string | null;
   status: string;
   occurredAt: string | null;
   createdAt: string | null;
@@ -135,8 +136,9 @@ export type SkillsMatrixSession = {
   title: string;
   scaleMin: number;
   scaleMax: number;
-  status: "lobby" | "started";
+  status: "lobby" | "started" | "ended";
   startedAt: string | null;
+  endedAt: string | null;
   createdByUserId: string | null;
   createdAt: string;
   updatedAt: string;
@@ -540,6 +542,11 @@ export const api = {
     ),
   skillsMatrixStartSession: (code: string, participantId: string) =>
     request<SkillsMatrixSnapshot>(`/skills-matrix/sessions/${encodeURIComponent(code)}/start`, {
+      method: "POST",
+      body: JSON.stringify({ participantId }),
+    }),
+  skillsMatrixEndSession: (code: string, participantId: string) =>
+    request<SkillsMatrixSnapshot>(`/skills-matrix/sessions/${encodeURIComponent(code)}/end`, {
       method: "POST",
       body: JSON.stringify({ participantId }),
     }),

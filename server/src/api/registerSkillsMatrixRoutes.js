@@ -150,7 +150,7 @@ function serializeSession(row) {
     title: row.title,
     scaleMin: Number(row.scale_min),
     scaleMax: Number(row.scale_max),
-    status: row.status === "started" ? "started" : "lobby",
+    status: row.status === "ended" ? "ended" : row.status === "started" ? "started" : "lobby",
     startedAt: row.started_at ?? null,
     createdByUserId: row.created_by_user_id,
     createdAt: row.created_at,
@@ -647,6 +647,43 @@ export function registerSkillsMatrixRoutes(context) {
         currentParticipantId: participantId,
       });
       emitSkillsMatrixSessionUpdate(code, "session_started");
+      return res.status(200).json(payload);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.post("/api/skills-matrix/sessions/:code/end", async (req, res, next) => {
+    try {
+      const code = normalizeCode(req.params.code);
+      const participantId = resolveParticipantId(req);
+      if (!code) return res.status(400).json({ error: "Invalid payload" });
+      if (!participantId) return res.status(400).json({ error: "Invalid payload" });
+
+      const { session, me } = await getSessionContext(pool, code, participantId);
+      if (!session) return res.status(404).json({ error: "Not found" });
+      if (!me || !me.is_admin) return res.status(403).json({ error: "Unauthorized" });
+      if (session.status === "lobby") return res.status(400).json({ error: "Session not started" });
+
+      await pool.query(
+        `
+          UPDATE skills_matrix_sessions
+          SET
+            status = 'ended',
+            ended_at = COALESCE(ended_at, now()),
+            updated_at = now()
+          WHERE id = $1
+        `,
+        [session.id],
+      );
+
+      const nextSession = await getSessionByCode(pool, code);
+      const payload = await buildSessionSnapshot({
+        pool,
+        session: nextSession,
+        currentParticipantId: participantId,
+      });
+      emitSkillsMatrixSessionUpdate(code, "session_ended");
       return res.status(200).json(payload);
     } catch (err) {
       next(err);
