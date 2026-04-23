@@ -628,6 +628,10 @@ export default function SkillsMatrixPage() {
     : 0;
   const initialAutoSubmit = searchParams.get("auto") === "1";
   const initialDirectAccess = initialAutoSubmit || !!initialCode;
+  const forceProfileBeforeJoin = useMemo(
+    () => initialMode === "join" && !!initialCode && !initialAutoSubmit,
+    [initialAutoSubmit, initialCode, initialMode],
+  );
 
   const isMobile = useIsMobile();
   const [snapshot, setSnapshot] = useState<SkillsMatrixSnapshot | null>(null);
@@ -643,10 +647,10 @@ export default function SkillsMatrixPage() {
 
   const [profile, setProfile] = useState(() => ({ name: initialName, avatar: initialAvatar }));
   const [showOnlineOnboarding, setShowOnlineOnboarding] = useState(
-    () => !initialDirectAccess && initialName.length < 2,
+    () => forceProfileBeforeJoin || (!initialDirectAccess && initialName.length < 2),
   );
   const [onboardingInitialStep, setOnboardingInitialStep] = useState<1 | 2>(() =>
-    initialName.length >= 2 ? 2 : 1,
+    forceProfileBeforeJoin ? 1 : initialName.length >= 2 ? 2 : 1,
   );
 
   const [categoryNameInput, setCategoryNameInput] = useState("");
