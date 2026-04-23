@@ -2187,13 +2187,13 @@ export default function SkillsMatrixPage() {
                             </div>
                           </th>
                           {/* Colonne requis */}
-                          <th className="w-[120px] min-w-0 border-b border-r border-white/[0.07] bg-[#0c1228] px-2 py-3 text-left align-bottom">
+                          <th className="sticky left-[150px] z-20 w-[120px] min-w-0 border-b border-r border-white/[0.07] bg-[#0c1228] px-2 py-3 text-left align-bottom">
                             <div className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-500">
                               Requis
                             </div>
                           </th>
                           {/* Colonne progression équipe */}
-                          <th className="w-[52px] min-w-0 border-b border-r border-white/[0.07] bg-[#0c1228] px-1 py-3 text-center align-bottom">
+                          <th className="sticky left-[270px] z-20 w-[52px] min-w-0 border-b border-r border-white/[0.07] bg-[#0c1228] px-1 py-3 text-center align-bottom">
                             <div className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-500">
                               Prog.
                             </div>
@@ -2258,9 +2258,9 @@ export default function SkillsMatrixPage() {
                           <tr key={`cat-${group.categoryId ?? "none"}`}>
                             <td
                               colSpan={snapshot.participants.length + 3}
-                              className="border-b border-t border-white/[0.07] bg-white/[0.025] px-4 py-2"
+                              className="sticky left-0 z-10 border-b border-t border-white/[0.07] bg-[#0e1628] px-4 py-2"
                             >
-                              <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-cyan-400">
+                              <span className="text-xs font-bold uppercase tracking-[0.12em] text-cyan-300">
                                 {group.categoryName}
                               </span>
                             </td>
@@ -2293,7 +2293,7 @@ export default function SkillsMatrixPage() {
                                 });
                                 const isMet = qualifiedParticipants.length >= row.requiredPeople;
                                 return (
-                                  <td className="w-[120px] min-w-0 border-r border-white/[0.07] px-2 py-2 align-top">
+                                  <td className="sticky left-[150px] z-10 w-[120px] min-w-0 border-r border-white/[0.07] bg-[#080d1c] px-2 py-2 align-top">
                                     <div className="flex flex-col gap-1">
                                       <span
                                         className={cn(
@@ -2346,7 +2346,7 @@ export default function SkillsMatrixPage() {
                                         ? "#fb923c"
                                         : "#374151";
                                 return (
-                                  <td className="border-r border-white/[0.07] px-2 py-2 text-center align-middle">
+                                  <td className="sticky left-[270px] z-10 w-[52px] border-r border-white/[0.07] bg-[#080d1c] px-2 py-2 text-center align-middle">
                                     <div className="flex items-center justify-center">
                                       <svg width="34" height="34" viewBox="0 0 34 34">
                                         <circle
