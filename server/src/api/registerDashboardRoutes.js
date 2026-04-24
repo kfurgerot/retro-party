@@ -140,6 +140,40 @@ function toTimestamp(value) {
 export function registerDashboardRoutes(context) {
   const { app, pool, requireAuth } = context;
 
+  // Resolve any room code to its module so the client can redirect without
+  // knowing which module the code belongs to.
+  app.get("/api/resolve-room", async (req, res, next) => {
+    try {
+      const raw = typeof req.query.code === "string" ? req.query.code.trim().toUpperCase() : "";
+      if (!raw) return res.status(400).json({ error: "Missing code" });
+
+      const [smResult, radarResult, roomResult] = await Promise.all([
+        pool.query(
+          `SELECT session_code FROM skills_matrix_sessions WHERE session_code = $1 LIMIT 1`,
+          [raw],
+        ),
+        pool.query(`SELECT session_code FROM radar_sessions WHERE session_code = $1 LIMIT 1`, [
+          raw,
+        ]),
+        pool.query(`SELECT room_code FROM rooms WHERE room_code = $1 LIMIT 1`, [raw]),
+      ]);
+
+      if (smResult.rows.length > 0) {
+        return res.status(200).json({ module: "skills-matrix", code: raw });
+      }
+      if (radarResult.rows.length > 0) {
+        return res.status(200).json({ module: "radar-party", code: raw });
+      }
+      if (roomResult.rows.length > 0) {
+        return res.status(200).json({ module: "play", code: raw });
+      }
+
+      return res.status(404).json({ error: "Code introuvable" });
+    } catch (err) {
+      next(err);
+    }
+  });
+
   app.get("/api/dashboard/activities", requireAuth, async (req, res, next) => {
     try {
       const userId = req.currentUser.id;

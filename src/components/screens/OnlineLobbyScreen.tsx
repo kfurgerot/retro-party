@@ -47,6 +47,7 @@ interface OnlineLobbyScreenProps {
   shellStyle?: "default" | "transparent";
   hideRoundsControl?: boolean;
   hostSetupPanel?: React.ReactNode;
+  joinOnly?: boolean;
 }
 
 type Pending = "idle" | "hosting" | "joining" | "starting";
@@ -84,8 +85,9 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
   shellStyle = "default",
   hideRoundsControl = false,
   hostSetupPanel,
+  joinOnly = false,
 }) => {
-  const [mode, setMode] = useState<"host" | "join">(initialMode ?? "host");
+  const [mode, setMode] = useState<"host" | "join">(joinOnly ? "join" : (initialMode ?? "host"));
   const [name, setName] = useState(() => cleanName(initialName ?? ""));
   const [avatar, setAvatar] = useState(() => {
     const n = Number.isFinite(initialAvatar) ? Number(initialAvatar) : 0;
@@ -300,36 +302,38 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
             )}
           </div>
 
-          {/* Mode selector */}
-          <div className="grid grid-cols-2 gap-2">
-            {(["host", "join"] as const).map((m) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => setMode(m)}
-                disabled={pending !== "idle"}
-                className={cn(
-                  "h-11 rounded-xl border text-sm font-semibold transition-all disabled:opacity-40",
-                  mode === m
-                    ? "border-white/20 text-white"
-                    : "border-white/[0.07] bg-white/[0.03] text-slate-400 hover:bg-white/[0.06] hover:text-slate-200",
-                )}
-                style={
-                  mode === m
-                    ? {
-                        background: `linear-gradient(135deg, ${accentColor}30, ${accentColor}18)`,
-                        boxShadow: `0 0 0 1px ${accentColor}40`,
-                        color: accentColor,
-                      }
-                    : undefined
-                }
-              >
-                {m === "host" ? fr.onlineLobby.hostAction : fr.onlineLobby.joinAction}
-              </button>
-            ))}
-          </div>
+          {/* Mode selector — caché en mode joinOnly */}
+          {!joinOnly && (
+            <div className="grid grid-cols-2 gap-2">
+              {(["host", "join"] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setMode(m)}
+                  disabled={pending !== "idle"}
+                  className={cn(
+                    "h-11 rounded-xl border text-sm font-semibold transition-all disabled:opacity-40",
+                    mode === m
+                      ? "border-white/20 text-white"
+                      : "border-white/[0.07] bg-white/[0.03] text-slate-400 hover:bg-white/[0.06] hover:text-slate-200",
+                  )}
+                  style={
+                    mode === m
+                      ? {
+                          background: `linear-gradient(135deg, ${accentColor}30, ${accentColor}18)`,
+                          boxShadow: `0 0 0 1px ${accentColor}40`,
+                          color: accentColor,
+                        }
+                      : undefined
+                  }
+                >
+                  {m === "host" ? fr.onlineLobby.hostAction : fr.onlineLobby.joinAction}
+                </button>
+              ))}
+            </div>
+          )}
 
-          {mode === "join" && (
+          {(mode === "join" || joinOnly) && (
             <div>
               <input
                 value={code}

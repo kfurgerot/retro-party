@@ -2020,6 +2020,7 @@ export default function SkillsMatrixPage() {
           stepTotal={5}
           shellStyle="transparent"
           hideRoundsControl
+          joinOnly={initialMode === "join" && !!initialCode}
           titleWhenNoRoomOverride="Créer ou rejoindre une session Matrice"
           hostSetupPanel={hostSetupPanel}
         />
