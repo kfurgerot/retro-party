@@ -1,9 +1,16 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import { AuthModal } from "@/components/AuthModal";
 import { api } from "@/net/api";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 type ToolId =
   | "planning-poker"
@@ -139,9 +146,8 @@ const PREPARE_ROUTE_BY_TOOL: Record<ToolId, string | null> = {
   "retro-generator": null,
 };
 
-// ─── Auth modal ────────────────────────────────────────────────────────────────
+// ─── Account modal ─────────────────────────────────────────────────────────────
 
-type AuthTab = "login" | "register" | "forgot";
 type AccountSection = "overview" | "profile" | "security";
 
 const ACCOUNT_SECTIONS: Array<{
@@ -173,199 +179,6 @@ const ACCOUNT_SECTIONS: Array<{
     icon: "🔒",
   },
 ];
-
-const AuthModal = ({
-  open,
-  onOpenChange,
-  onSuccess,
-}: {
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
-  onSuccess: () => void;
-}) => {
-  const { login, register } = useAuth();
-  const [tab, setTab] = useState<AuthTab>("login");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [displayName, setDisplayName] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [info, setInfo] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  const reset = () => {
-    setError(null);
-    setInfo(null);
-    setPassword("");
-  };
-
-  const handleTab = (t: AuthTab) => {
-    setTab(t);
-    reset();
-  };
-
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setInfo(null);
-    setLoading(true);
-    try {
-      if (tab === "login") {
-        await login(email.trim(), password);
-        onSuccess();
-        onOpenChange(false);
-      } else if (tab === "register") {
-        if (!displayName.trim()) {
-          setError("Le nom d'affichage est requis.");
-          setLoading(false);
-          return;
-        }
-        await register(email.trim(), password, displayName.trim());
-        onSuccess();
-        onOpenChange(false);
-      } else {
-        if (!email.trim()) {
-          setError("Saisis ton adresse e-mail.");
-          setLoading(false);
-          return;
-        }
-        const res = await api.forgotPassword({ email: email.trim() });
-        setInfo(res.message);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Une erreur est survenue.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const inputCls =
-    "h-11 w-full rounded-2xl border border-white/[0.08] bg-white/[0.04] px-4 text-sm text-slate-100 placeholder:text-slate-600 outline-none transition focus:border-white/20 focus:ring-1 focus:ring-indigo-400/50";
-
-  const titleByTab: Record<AuthTab, string> = {
-    login: "Connexion",
-    register: "Créer un compte",
-    forgot: "Réinitialiser le mot de passe",
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md rounded-2xl border border-white/[0.08] bg-[#0d0d1a] p-0 shadow-2xl [&>button]:text-slate-400 [&>button]:hover:text-slate-100">
-        <div className="rounded-t-2xl border-b border-white/[0.08] bg-gradient-to-r from-indigo-500/14 via-violet-500/9 to-pink-500/12 p-5">
-          <div className="mb-2 flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 text-sm">
-              ⚡
-            </div>
-            <span className="text-xs font-bold uppercase tracking-[0.12em] text-indigo-300">
-              Agile Suite
-            </span>
-          </div>
-          <div className="text-base font-semibold text-slate-100">{titleByTab[tab]}</div>
-          <p className="mt-1 text-xs text-slate-400">
-            {tab === "login"
-              ? "Retrouve tes sessions et tes templates."
-              : tab === "register"
-                ? "Configure ton profil et accède à tout l'espace AgileSuite."
-                : "On t'envoie un lien sécurisé pour définir un nouveau mot de passe."}
-          </p>
-        </div>
-
-        <div className="p-5">
-          <div className="mb-4 flex gap-1 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-1">
-            {(["login", "register", "forgot"] as AuthTab[]).map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => handleTab(t)}
-                className={cn(
-                  "flex-1 rounded-xl py-2 text-xs font-semibold transition-all",
-                  tab === t
-                    ? "bg-indigo-500 text-white shadow-sm"
-                    : "text-slate-500 hover:text-slate-300",
-                )}
-              >
-                {t === "login" ? "Connexion" : t === "register" ? "Inscription" : "Mot de passe"}
-              </button>
-            ))}
-          </div>
-
-          {error && (
-            <div className="mb-4 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm text-red-300">
-              {error}
-            </div>
-          )}
-          {info && (
-            <div className="mb-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5 text-sm text-emerald-300">
-              {info}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-3">
-            {tab === "register" && (
-              <div className="space-y-1">
-                <label className="block text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500">
-                  Nom d'affichage
-                </label>
-                <input
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="Ton nom"
-                  className={inputCls}
-                  autoFocus
-                />
-              </div>
-            )}
-
-            <div className="space-y-1">
-              <label className="block text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500">
-                Adresse e-mail
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="nom@entreprise.com"
-                required
-                className={inputCls}
-                autoFocus={tab !== "register"}
-              />
-            </div>
-
-            {tab !== "forgot" && (
-              <div className="space-y-1">
-                <label className="block text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500">
-                  Mot de passe
-                </label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Au moins 8 caractères"
-                  required
-                  className={inputCls}
-                />
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="mt-1 h-11 w-full rounded-2xl bg-indigo-500 text-sm font-bold text-white transition hover:bg-indigo-400 disabled:opacity-50"
-              style={{ boxShadow: "0 4px 16px rgba(99,102,241,0.35)" }}
-            >
-              {loading
-                ? "..."
-                : tab === "login"
-                  ? "Se connecter"
-                  : tab === "register"
-                    ? "Créer mon compte"
-                    : "Envoyer le lien"}
-            </button>
-          </form>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-};
 
 const AccountModal = ({
   open,
@@ -1326,6 +1139,44 @@ export default function Portal() {
   const [accountOpen, setAccountOpen] = useState(false);
   const [pendingPrepareRoute, setPendingPrepareRoute] = useState<string | null>(null);
 
+  const [globalJoinOpen, setGlobalJoinOpen] = useState(false);
+  const [globalJoinCode, setGlobalJoinCode] = useState("");
+  const [globalJoinError, setGlobalJoinError] = useState<string | null>(null);
+  const [globalJoinLoading, setGlobalJoinLoading] = useState(false);
+  const globalJoinInputRef = useRef<HTMLInputElement>(null);
+
+  const handleGlobalJoin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const code = globalJoinCode.trim().toUpperCase();
+    if (code.length < 4) {
+      setGlobalJoinError("Saisis un code valide.");
+      return;
+    }
+    setGlobalJoinError(null);
+    setGlobalJoinLoading(true);
+    try {
+      const result = await api.resolveRoom(code);
+      setGlobalJoinOpen(false);
+      setGlobalJoinCode("");
+      if (result.module === "skills-matrix") {
+        const params = new URLSearchParams({ mode: "join", code: result.code });
+        if (user) {
+          params.set("auto", "1");
+          if (user.displayName) params.set("name", user.displayName);
+        }
+        navigate(`/skills-matrix?${params.toString()}`);
+      } else if (result.module === "radar-party") {
+        navigate(`/radar-party?mode=join&code=${result.code}`);
+      } else {
+        navigate(`/play?mode=join&code=${result.code}`);
+      }
+    } catch {
+      setGlobalJoinError("Code introuvable. Vérifie qu'il est correct.");
+    } finally {
+      setGlobalJoinLoading(false);
+    }
+  };
+
   useEffect(() => {
     const t = setTimeout(() => setMounted(true), 50);
     return () => clearTimeout(t);
@@ -1461,8 +1312,8 @@ export default function Portal() {
       >
         {/* Header */}
         <header className="mb-9">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0 flex-1 pr-2">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-4 sm:flex sm:items-start sm:justify-between">
+            <div className="min-w-0 flex-1">
               <div className="mb-2.5 inline-flex items-center gap-2">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 text-sm">
                   ⚡
@@ -1478,45 +1329,60 @@ export default function Portal() {
                     ? `Bonjour, ${user.displayName.split(" ")[0]} 👋`
                     : "Bienvenue 👋"}
               </h1>
-              <p className="mt-1.5 text-sm text-slate-500">
+              <p className="mt-1.5 max-w-full text-sm leading-5 text-slate-500">
                 Quelle expérience lance-t-on aujourd'hui ?
               </p>
             </div>
 
-            {/* User badge / login button */}
-            {!authLoading &&
-              (user ? (
-                <button
-                  type="button"
-                  onClick={() => setAccountOpen(true)}
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-indigo-400/40 bg-indigo-500/15 text-sm font-bold text-indigo-100 transition hover:bg-indigo-500/25 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a14]"
-                  title="Mon compte"
-                >
-                  {initials}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPendingPrepareRoute(null);
-                    setLoginOpen(true);
-                  }}
-                  className="flex shrink-0 items-center gap-2 rounded-full border border-indigo-500/40 bg-indigo-500/10 px-4 py-2 text-[13px] font-semibold text-indigo-300 transition hover:bg-indigo-500/20 hover:text-indigo-200"
-                >
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
+            {/* Actions header */}
+            <div className="flex shrink-0 flex-col items-end gap-2 justify-self-end sm:flex-row sm:items-center sm:shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setGlobalJoinCode("");
+                  setGlobalJoinError(null);
+                  setGlobalJoinOpen(true);
+                }}
+                className="flex items-center gap-1.5 rounded-full border border-white/[0.12] bg-white/[0.05] px-3.5 py-2 text-[13px] font-semibold text-slate-300 transition hover:bg-white/[0.09] hover:text-white"
+              >
+                Rejoindre
+              </button>
+
+              {/* User badge / login button */}
+              {!authLoading &&
+                (user ? (
+                  <button
+                    type="button"
+                    onClick={() => setAccountOpen(true)}
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-indigo-400/40 bg-indigo-500/15 text-sm font-bold text-indigo-100 transition hover:bg-indigo-500/25 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a14]"
+                    title="Mon compte"
                   >
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                    <circle cx="12" cy="7" r="4" />
-                  </svg>
-                  Se connecter
-                </button>
-              ))}
+                    {initials}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPendingPrepareRoute(null);
+                      setLoginOpen(true);
+                    }}
+                    className="flex shrink-0 items-center gap-2 rounded-full border border-indigo-500/40 bg-indigo-500/10 px-4 py-2 text-[13px] font-semibold text-indigo-300 transition hover:bg-indigo-500/20 hover:text-indigo-200"
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
+                    Se connecter
+                  </button>
+                ))}
+            </div>
           </div>
         </header>
 
@@ -1530,7 +1396,7 @@ export default function Portal() {
               {activeToolsInCategory} / {toolsForCategory.length} actifs
             </span>
           </div>
-          <div className="mb-4 overflow-x-auto pb-1">
+          <div className="scrollbar-none mb-4 overflow-x-auto pb-1">
             <div className="flex min-w-max items-center gap-2">
               <button
                 type="button"
@@ -1726,6 +1592,75 @@ export default function Portal() {
           </div>
         </section>
       </div>
+
+      {/* Global join modal */}
+      <Dialog
+        open={globalJoinOpen}
+        onOpenChange={(v) => {
+          setGlobalJoinOpen(v);
+          if (!v) setGlobalJoinError(null);
+        }}
+      >
+        <DialogContent
+          className="max-w-sm rounded-2xl border border-white/[0.08] bg-[#0d0d1a] p-0 shadow-2xl [&>button]:text-slate-400 [&>button]:hover:text-slate-100"
+          onOpenAutoFocus={() => globalJoinInputRef.current?.focus()}
+        >
+          <div className="rounded-t-2xl border-b border-white/[0.08] bg-gradient-to-r from-indigo-500/14 via-violet-500/9 to-pink-500/12 px-5 py-4">
+            <div className="mb-2 flex items-center gap-2">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 text-sm">
+                ⚡
+              </div>
+              <span className="text-xs font-bold uppercase tracking-[0.12em] text-indigo-300">
+                Agile Suite
+              </span>
+            </div>
+            <DialogHeader>
+              <DialogTitle className="text-base font-semibold text-slate-100">
+                Rejoindre une partie
+              </DialogTitle>
+              <DialogDescription className="mt-1 text-xs text-slate-400">
+                Entre le code room communiqué par l'animateur. Fonctionne pour tous les modules.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+
+          <form onSubmit={(e) => void handleGlobalJoin(e)} className="space-y-4 p-5">
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500">
+                Code room
+              </label>
+              <input
+                ref={globalJoinInputRef}
+                value={globalJoinCode}
+                onChange={(e) => {
+                  setGlobalJoinCode(e.target.value.toUpperCase());
+                  setGlobalJoinError(null);
+                }}
+                placeholder="Ex. ABC123"
+                maxLength={12}
+                autoComplete="off"
+                spellCheck={false}
+                className="h-12 w-full rounded-2xl border border-white/[0.08] bg-white/[0.04] px-4 text-center text-lg font-bold tracking-[0.2em] text-slate-100 placeholder:text-slate-600 outline-none transition focus:border-indigo-400/50 focus:ring-1 focus:ring-indigo-400/30"
+              />
+            </div>
+
+            {globalJoinError && (
+              <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+                {globalJoinError}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={globalJoinLoading || globalJoinCode.trim().length < 4}
+              className="h-11 w-full rounded-2xl bg-indigo-500 text-sm font-bold text-white transition hover:bg-indigo-400 disabled:opacity-40"
+              style={{ boxShadow: "0 4px 16px rgba(99,102,241,0.35)" }}
+            >
+              {globalJoinLoading ? "Recherche..." : "Rejoindre"}
+            </button>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Auth modal */}
       <AuthModal

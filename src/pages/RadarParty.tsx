@@ -1834,6 +1834,7 @@ const RadarPartyPage = () => {
           stepTotal={5}
           shellStyle="transparent"
           hideRoundsControl
+          joinOnly={initialMode === "join" && !!initialCode}
           hostSetupPanel={
             roomCode && isHost ? (
               <div className="space-y-3">

@@ -119,7 +119,7 @@ function mapSkillsMatrixToActivity(row) {
     moduleLabel: moduleMeta.label,
     moduleIcon: moduleMeta.icon,
     activityType: "session",
-    activityLabel: "Session Skills Matrix",
+    activityLabel: row.is_admin ? "Animateur" : "Participant",
     title,
     details: row.session_code ? `Code ${row.session_code}` : null,
     sessionCode: row.session_code || null,
@@ -139,6 +139,40 @@ function toTimestamp(value) {
 
 export function registerDashboardRoutes(context) {
   const { app, pool, requireAuth } = context;
+
+  // Resolve any room code to its module so the client can redirect without
+  // knowing which module the code belongs to.
+  app.get("/api/resolve-room", async (req, res, next) => {
+    try {
+      const raw = typeof req.query.code === "string" ? req.query.code.trim().toUpperCase() : "";
+      if (!raw) return res.status(400).json({ error: "Missing code" });
+
+      const [smResult, radarResult, roomResult] = await Promise.all([
+        pool.query(
+          `SELECT session_code FROM skills_matrix_sessions WHERE session_code = $1 LIMIT 1`,
+          [raw],
+        ),
+        pool.query(`SELECT session_code FROM radar_sessions WHERE session_code = $1 LIMIT 1`, [
+          raw,
+        ]),
+        pool.query(`SELECT room_code FROM rooms WHERE room_code = $1 LIMIT 1`, [raw]),
+      ]);
+
+      if (smResult.rows.length > 0) {
+        return res.status(200).json({ module: "skills-matrix", code: raw });
+      }
+      if (radarResult.rows.length > 0) {
+        return res.status(200).json({ module: "radar-party", code: raw });
+      }
+      if (roomResult.rows.length > 0) {
+        return res.status(200).json({ module: "play", code: raw });
+      }
+
+      return res.status(404).json({ error: "Code introuvable" });
+    } catch (err) {
+      next(err);
+    }
+  });
 
   app.get("/api/dashboard/activities", requireAuth, async (req, res, next) => {
     try {
@@ -201,17 +235,19 @@ export function registerDashboardRoutes(context) {
         pool.query(
           `
             SELECT
-              id,
-              session_code,
-              title,
-              status,
-              started_at,
-              ended_at,
-              created_at,
-              updated_at
-            FROM skills_matrix_sessions
-            WHERE created_by_user_id = $1
-            ORDER BY updated_at DESC
+              s.id,
+              s.session_code,
+              s.title,
+              s.status,
+              s.started_at,
+              s.ended_at,
+              s.created_at,
+              s.updated_at,
+              p.is_admin
+            FROM skills_matrix_sessions s
+            INNER JOIN skills_matrix_participants p
+              ON p.session_id = s.id AND p.user_id = $1
+            ORDER BY s.updated_at DESC
             LIMIT 200
           `,
           [userId],

@@ -160,6 +160,7 @@ const Index: React.FC = () => {
             initialMode={initialParams.mode}
             initialCode={initialParams.code}
             autoSubmitKey={autoSubmitKey}
+            joinOnly={initialParams.mode === "join" && !!initialParams.code}
             stepLabel={`${fr.onlineOnboarding.step} 5/5`}
             stepCurrent={5}
             stepTotal={5}

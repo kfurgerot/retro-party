@@ -361,6 +361,11 @@ export const api = {
     request<DashboardActivitiesResponse>("/dashboard/activities", {
       method: "GET",
     }),
+  resolveRoom: (code: string) =>
+    request<{ module: "skills-matrix" | "radar-party" | "play"; code: string }>(
+      `/resolve-room?code=${encodeURIComponent(code.trim().toUpperCase())}`,
+      { method: "GET" },
+    ),
   logout: () => request<void>("/auth/logout", { method: "POST" }),
 
   listTemplates: () => request<{ items: TemplateItem[] }>("/templates", { method: "GET" }),
@@ -657,6 +662,14 @@ export const api = {
       {
         method: "PUT",
         body: JSON.stringify({ ...payload, participantId }),
+      },
+    ),
+  skillsMatrixClaimParticipant: (code: string, participantId: string) =>
+    request<SkillsMatrixSnapshot>(
+      `/skills-matrix/sessions/${encodeURIComponent(code)}/claim-participant`,
+      {
+        method: "POST",
+        body: JSON.stringify({ participantId }),
       },
     ),
 };
