@@ -1,4 +1,5 @@
 import { FormEvent, useState } from "react";
+import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/net/api";
@@ -25,6 +26,7 @@ export const AuthModal = ({
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   const reset = () => {
     setError(null);
@@ -50,6 +52,11 @@ export const AuthModal = ({
       } else if (tab === "register") {
         if (!displayName.trim()) {
           setError("Le nom d'affichage est requis.");
+          setLoading(false);
+          return;
+        }
+        if (!termsAccepted) {
+          setError("Tu dois accepter les CGU pour créer un compte.");
           setLoading(false);
           return;
         }
@@ -180,9 +187,32 @@ export const AuthModal = ({
               </div>
             )}
 
+            {tab === "register" && (
+              <label className="flex cursor-pointer items-start gap-2.5 pt-1">
+                <input
+                  type="checkbox"
+                  checked={termsAccepted}
+                  onChange={(e) => setTermsAccepted(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 accent-indigo-500"
+                />
+                <span className="text-xs leading-relaxed text-slate-400">
+                  J'ai lu et j'accepte les{" "}
+                  <Link
+                    to="/terms"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-indigo-400 underline underline-offset-2 hover:text-indigo-300"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    Conditions Générales d'Utilisation
+                  </Link>
+                </span>
+              </label>
+            )}
+
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || (tab === "register" && !termsAccepted)}
               className="mt-1 h-11 w-full rounded-2xl bg-indigo-500 text-sm font-bold text-white transition hover:bg-indigo-400 disabled:opacity-50"
               style={{ boxShadow: "0 4px 16px rgba(99,102,241,0.35)" }}
             >

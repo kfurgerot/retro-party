@@ -19,6 +19,7 @@ import {
   loadResetPasswordPage,
   loadTemplateEditorPage,
   loadPokerTemplateEditorPage,
+  loadTermsPage,
 } from "@/lib/routeLoaders";
 import { UI_MODE } from "@/lib/uiMode";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -36,6 +37,7 @@ const SkillsMatrixPage = lazy(loadSkillsMatrixPage);
 const TemplateEditorPage = lazy(loadTemplateEditorPage);
 const PokerTemplateEditorPage = lazy(loadPokerTemplateEditorPage);
 const ResetPasswordPage = lazy(loadResetPasswordPage);
+const TermsPage = lazy(loadTermsPage);
 const NotFound = lazy(loadNotFoundPage);
 
 const queryClient = new QueryClient();
@@ -77,6 +79,7 @@ const App = () => {
                 <Route path="/prepare/templates/:templateId" element={<TemplateEditorPage />} />
                 <Route path="/prepare/poker/:templateId" element={<PokerTemplateEditorPage />} />
                 <Route path="/reset-password" element={<ResetPasswordPage />} />
+                <Route path="/terms" element={<TermsPage />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

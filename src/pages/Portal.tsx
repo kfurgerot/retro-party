@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { AuthModal } from "@/components/AuthModal";
@@ -1591,6 +1591,18 @@ export default function Portal() {
             </button>
           </div>
         </section>
+
+        {/* Footer */}
+        <footer className="mt-12 flex flex-col items-center justify-between gap-3 border-t border-white/[0.06] pt-6 sm:flex-row">
+          <span className="text-xs text-slate-600">
+            © {new Date().getFullYear()} AgileSuite — Tous droits réservés
+          </span>
+          <div className="flex items-center gap-4 text-xs text-slate-600">
+            <Link to="/terms" className="transition hover:text-slate-300">
+              Conditions Générales d'Utilisation
+            </Link>
+          </div>
+        </footer>
       </div>
 
       {/* Global join modal */}
