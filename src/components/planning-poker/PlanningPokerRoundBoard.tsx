@@ -105,7 +105,7 @@ const SeatVoteCard: React.FC<{
 
   if (!player.hasVoted) {
     return (
-      <div className="flex h-[44px] w-[30px] items-center justify-center rounded-xl border border-slate-300/70 bg-white text-[11px] font-semibold text-slate-400 shadow-[0_6px_14px_rgba(2,6,23,0.35)] sm:h-[56px] sm:w-[38px] sm:text-xs">
+      <div className="flex h-[44px] w-[30px] items-center justify-center rounded-xl border border-slate-300/70 bg-white text-[11px] font-semibold text-[#647067] shadow-[0_6px_14px_rgba(2,6,23,0.35)] sm:h-[56px] sm:w-[38px] sm:text-xs">
         ⏳
       </div>
     );
@@ -148,19 +148,19 @@ export const PlanningPokerRoundBoard: React.FC<Props> = ({
   const displayedStory = storyTitle.trim() || `Story #${round}`;
 
   return (
-    <div className="relative h-full w-full overflow-hidden rounded-2xl border border-indigo-500/20 bg-slate-950/40 p-2.5 sm:p-4 lg:p-5">
+    <div className="relative h-full w-full overflow-hidden rounded-2xl border border-[#d8e2d9] bg-white/62 p-2.5 sm:p-4 lg:p-5">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(99,102,241,0.08),_transparent_64%)]" />
 
       <div className="relative h-full w-full">
         {/* Oval table surface */}
-        <div className="absolute left-1/2 top-1/2 h-[42%] w-[70%] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/[0.06] bg-slate-900/55 sm:h-[44%] sm:w-[68%] lg:h-[50%] lg:w-[74%]" />
+        <div className="absolute left-1/2 top-1/2 h-[42%] w-[70%] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/[0.06] bg-white/62 sm:h-[44%] sm:w-[68%] lg:h-[50%] lg:w-[74%]" />
 
         {/* Story card */}
         <div className="absolute left-1/2 top-1/2 z-10 w-[74%] max-w-[460px] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-indigo-500/30 bg-indigo-500/8 px-3 py-2 text-center sm:w-[66%] sm:px-4 sm:py-3">
           <p className="mb-1 truncate text-[10px] font-semibold uppercase tracking-[0.08em] text-indigo-200/80 sm:text-[11px]">
             {displayedStory}
           </p>
-          <p className="text-xs font-medium text-slate-200 sm:text-sm">
+          <p className="text-xs font-medium text-[#24443d] sm:text-sm">
             {revealed
               ? "Revelation des votes"
               : votesOpen
@@ -178,10 +178,10 @@ export const PlanningPokerRoundBoard: React.FC<Props> = ({
           >
             <div className="flex flex-col items-center gap-1">
               <SeatVoteCard player={player} revealed={revealed} voteSystem={voteSystem} />
-              <div className="flex h-8 w-8 items-center justify-center rounded-full border border-white/[0.12] bg-slate-900/85 text-base shadow-[0_0_0_1px_rgba(99,102,241,0.1)] sm:h-10 sm:w-10 sm:text-lg">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full border border-white/[0.12] bg-white/86 text-base shadow-[0_0_0_1px_rgba(99,102,241,0.1)] sm:h-10 sm:w-10 sm:text-lg">
                 {AVATARS[player.avatar] ?? ":)"}
               </div>
-              <div className="max-w-[78px] truncate text-center text-[10px] text-slate-300 sm:max-w-[90px] sm:text-[11px]">
+              <div className="max-w-[78px] truncate text-center text-[10px] text-[#647067] sm:max-w-[90px] sm:text-[11px]">
                 {player.name}
               </div>
               {player.isHost ? <div className="text-[10px] text-indigo-400">Host</div> : null}

@@ -27,14 +27,14 @@ export const PlayerList = ({
 }: PlayerListProps) => (
   <div className="grid max-h-[40svh] gap-1.5 overflow-auto pr-1 sm:grid-cols-2">
     {players.length === 0 && (
-      <div className="rounded-xl border border-dashed border-white/[0.06] px-4 py-6 text-center text-sm text-slate-500 sm:col-span-2">
+      <div className="rounded-xl border border-dashed border-[#d8e2d9] px-4 py-6 text-center text-sm text-[#647067] sm:col-span-2">
         {emptyLabel}
       </div>
     )}
     {players.map((p, i) => (
       <div
         key={p.id ?? `${p.name}-${i}`}
-        className="flex items-center justify-between rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2.5"
+        className="flex items-center justify-between rounded-xl border border-[#d8e2d9] bg-white/62 px-3 py-2.5"
       >
         <div className="flex items-center gap-2.5">
           <div
@@ -44,9 +44,9 @@ export const PlayerList = ({
             {AVATARS[p.avatar] ?? "?"}
           </div>
           <div>
-            <div className="text-sm font-semibold text-slate-100">{p.name}</div>
+            <div className="text-sm font-semibold text-[#18211f]">{p.name}</div>
             {roleLabel && p.role && (
-              <div className="text-[11px] text-slate-500">{roleLabel(p.role)}</div>
+              <div className="text-[11px] text-[#647067]">{roleLabel(p.role)}</div>
             )}
           </div>
         </div>
@@ -77,7 +77,7 @@ export const PlayerList = ({
       </div>
     ))}
     {max !== undefined && (
-      <div className="col-span-full pt-1 text-right text-[11px] text-slate-600">
+      <div className="col-span-full pt-1 text-right text-[11px] text-[#647067]">
         {players.length} / {max} joueurs
       </div>
     )}

@@ -46,17 +46,22 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
   ];
 
   return (
-    <PageShell accentColor={`${accentColor}10`} accentGlow="rgba(99,102,241,0.04)" maxWidth="6xl">
+    <PageShell
+      tone="saas"
+      accentColor={`${accentColor}10`}
+      accentGlow="rgba(99,102,241,0.04)"
+      maxWidth="6xl"
+    >
       {/* Winner banner */}
       {winner && (
         <div
           className="mb-6 rounded-2xl border p-6 text-center"
           style={{ borderColor: `${accentColor}30`, background: `${accentColor}0c` }}
         >
-          <div className="mb-1 text-[10px] uppercase tracking-widest text-slate-500">
+          <div className="mb-1 text-[10px] uppercase tracking-widest text-[#647067]">
             {fr.results.summaryTitle}
           </div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-slate-50 sm:text-3xl">
+          <h1 className="text-2xl font-extrabold tracking-tight text-[#18211f] sm:text-3xl">
             {fr.results.title}
           </h1>
           <div className="mt-6 flex flex-col items-center gap-3">
@@ -67,14 +72,14 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
               {AVATARS[winner.avatar] ?? "?"}
             </div>
             <div>
-              <div className="text-[10px] uppercase tracking-widest text-slate-500">
+              <div className="text-[10px] uppercase tracking-widest text-[#647067]">
                 {fr.results.winner}
               </div>
-              <div className="mt-1 text-xl font-extrabold tracking-tight text-slate-50">
+              <div className="mt-1 text-xl font-extrabold tracking-tight text-[#18211f]">
                 {winner.name}
               </div>
             </div>
-            <div className="text-sm text-slate-400">
+            <div className="text-sm text-[#647067]">
               {fr.results.winnerAnnouncement.replace("{name}", winner.name)}
             </div>
           </div>
@@ -84,12 +89,12 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
             {stats.map((s) => (
               <div
                 key={s.label}
-                className="flex flex-col items-center rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-2.5"
+                className="flex flex-col items-center rounded-xl border border-[#d8e2d9] bg-white/62 px-4 py-2.5"
               >
-                <span className="text-xl font-extrabold leading-none tracking-tight text-slate-50">
+                <span className="text-xl font-extrabold leading-none tracking-tight text-[#18211f]">
                   {s.value}
                 </span>
-                <span className="mt-0.5 text-[10px] uppercase tracking-widest text-slate-500">
+                <span className="mt-0.5 text-[10px] uppercase tracking-widest text-[#647067]">
                   {s.label}
                 </span>
               </div>
@@ -101,8 +106,8 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Podium & Rankings */}
         <div className="space-y-4">
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
-            <h2 className="mb-4 text-sm font-bold uppercase tracking-widest text-slate-500">
+          <div className="rounded-2xl border border-[#d8e2d9] bg-white/62 p-5">
+            <h2 className="mb-4 text-sm font-bold uppercase tracking-widest text-[#647067]">
               {fr.results.podiumTitle}
             </h2>
             <div className="space-y-2">
@@ -127,8 +132,8 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
                     {AVATARS[p.avatar] ?? "?"}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="truncate text-sm font-semibold text-slate-100">{p.name}</div>
-                    <div className="text-xs text-slate-500">
+                    <div className="truncate text-sm font-semibold text-[#18211f]">{p.name}</div>
+                    <div className="text-xs text-[#647067]">
                       {fr.results.stars}: {p.stars} · {fr.results.points}: {p.points ?? 0}
                     </div>
                   </div>
@@ -138,21 +143,21 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
 
             {others.length > 0 && (
               <div className="mt-4">
-                <h3 className="mb-3 text-xs font-bold uppercase tracking-widest text-slate-600">
+                <h3 className="mb-3 text-xs font-bold uppercase tracking-widest text-[#8b9891]">
                   {fr.results.playersRankTitle}
                 </h3>
                 <div className="space-y-1.5 max-h-[30svh] overflow-auto pr-1">
                   {others.map((p, idx) => (
                     <div
                       key={p.id}
-                      className="flex items-center gap-3 rounded-xl border border-white/[0.05] bg-white/[0.02] px-3 py-2"
+                      className="flex items-center gap-3 rounded-xl border border-[#d8e2d9] bg-white/62 px-3 py-2"
                     >
-                      <span className="w-5 text-center text-xs text-slate-600">#{idx + 4}</span>
-                      <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.06] text-lg">
+                      <span className="w-5 text-center text-xs text-[#8b9891]">#{idx + 4}</span>
+                      <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#d8e2d9] text-lg">
                         {AVATARS[p.avatar] ?? "?"}
                       </div>
-                      <span className="flex-1 truncate text-sm text-slate-300">{p.name}</span>
-                      <span className="text-xs text-slate-500">
+                      <span className="flex-1 truncate text-sm text-[#54645d]">{p.name}</span>
+                      <span className="text-xs text-[#647067]">
                         {p.stars}⭐ · {p.points ?? 0}pts
                       </span>
                     </div>
@@ -164,23 +169,23 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
         </div>
 
         {/* Question insights */}
-        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
-          <h2 className="mb-4 text-sm font-bold uppercase tracking-widest text-slate-500">
+        <div className="rounded-2xl border border-[#d8e2d9] bg-white/62 p-5">
+          <h2 className="mb-4 text-sm font-bold uppercase tracking-widest text-[#647067]">
             {fr.results.questionInsightsTitle}
           </h2>
 
           <div className="mb-4 grid grid-cols-2 gap-2.5">
-            <div className="rounded-xl border border-white/[0.05] bg-white/[0.02] px-4 py-3">
-              <div className="text-[10px] uppercase tracking-widest text-slate-500">
+            <div className="rounded-xl border border-[#d8e2d9] bg-white/62 px-4 py-3">
+              <div className="text-[10px] uppercase tracking-widest text-[#647067]">
                 {fr.results.usefulRate}
               </div>
-              <div className="mt-1 text-2xl font-extrabold text-slate-50">{usefulRatio}%</div>
+              <div className="mt-1 text-2xl font-extrabold text-[#18211f]">{usefulRatio}%</div>
             </div>
-            <div className="rounded-xl border border-white/[0.05] bg-white/[0.02] px-4 py-3">
-              <div className="text-[10px] uppercase tracking-widest text-slate-500">
+            <div className="rounded-xl border border-[#d8e2d9] bg-white/62 px-4 py-3">
+              <div className="text-[10px] uppercase tracking-widest text-[#647067]">
                 {fr.results.totalVotes}
               </div>
-              <div className="mt-1 text-2xl font-extrabold text-slate-50">{totalVotes}</div>
+              <div className="mt-1 text-2xl font-extrabold text-[#18211f]">{totalVotes}</div>
             </div>
           </div>
 
@@ -189,11 +194,11 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
               className="mb-4 rounded-xl border p-4"
               style={{ borderColor: `${accentColor}25`, background: `${accentColor}08` }}
             >
-              <div className="text-[10px] uppercase tracking-widest text-slate-500">
+              <div className="text-[10px] uppercase tracking-widest text-[#647067]">
                 {fr.results.mostUsefulCard}
               </div>
-              <div className="mt-2 text-sm font-semibold text-slate-100">{topQuestion.text}</div>
-              <div className="mt-1.5 text-xs text-slate-500">
+              <div className="mt-2 text-sm font-semibold text-[#18211f]">{topQuestion.text}</div>
+              <div className="mt-1.5 text-xs text-[#647067]">
                 {fr.results.votesSummary
                   .replace("{up}", String(topQuestion.upVotes))
                   .replace("{down}", String(topQuestion.downVotes))}
@@ -203,24 +208,21 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
 
           <div className="space-y-2 max-h-[34svh] overflow-auto pr-1">
             {topQuestions.length === 0 ? (
-              <div className="rounded-xl border border-white/[0.05] bg-white/[0.02] px-4 py-3 text-sm text-slate-500">
+              <div className="rounded-xl border border-[#d8e2d9] bg-white/62 px-4 py-3 text-sm text-[#647067]">
                 {fr.results.noUpvoteCards}
               </div>
             ) : (
               topQuestions.map((q, idx) => (
-                <div
-                  key={q.id}
-                  className="rounded-xl border border-white/[0.05] bg-white/[0.02] p-3"
-                >
+                <div key={q.id} className="rounded-xl border border-[#d8e2d9] bg-white/62 p-3">
                   <div className="flex items-center justify-between gap-2 mb-1.5">
-                    <span className="text-[11px] font-bold text-slate-500">#{idx + 1}</span>
-                    <span className="text-[11px] text-slate-500">
+                    <span className="text-[11px] font-bold text-[#647067]">#{idx + 1}</span>
+                    <span className="text-[11px] text-[#647067]">
                       {fr.results.votesSummary
                         .replace("{up}", String(q.upVotes))
                         .replace("{down}", String(q.downVotes))}
                     </span>
                   </div>
-                  <div className="text-sm text-slate-200">{q.text}</div>
+                  <div className="text-sm text-[#24443d]">{q.text}</div>
                 </div>
               ))
             )}

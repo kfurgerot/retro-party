@@ -13,4 +13,5 @@ export const loadSkillsMatrixPage = () => import("@/pages/SkillsMatrix");
 export const loadTemplateEditorPage = () => import("@/pages/TemplateEditor");
 export const loadPokerTemplateEditorPage = () => import("@/pages/PokerTemplateEditor");
 export const loadResetPasswordPage = () => import("@/pages/ResetPassword");
+export const loadTermsPage = () => import("@/pages/Terms");
 export const loadNotFoundPage = () => import("@/pages/NotFound");

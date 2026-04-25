@@ -1,4 +1,5 @@
 import { FormEvent, useState } from "react";
+import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/net/api";
@@ -22,6 +23,7 @@ export const AuthModal = ({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -34,6 +36,7 @@ export const AuthModal = ({
 
   const handleTab = (t: AuthTab) => {
     setTab(t);
+    if (t !== "register") setAcceptedTerms(false);
     reset();
   };
 
@@ -50,6 +53,11 @@ export const AuthModal = ({
       } else if (tab === "register") {
         if (!displayName.trim()) {
           setError("Le nom d'affichage est requis.");
+          setLoading(false);
+          return;
+        }
+        if (!acceptedTerms) {
+          setError("Tu dois accepter les CGU pour créer un compte.");
           setLoading(false);
           return;
         }
@@ -73,7 +81,7 @@ export const AuthModal = ({
   };
 
   const inputCls =
-    "h-11 w-full rounded-2xl border border-white/[0.08] bg-white/[0.04] px-4 text-sm text-slate-100 placeholder:text-slate-600 outline-none transition focus:border-white/20 focus:ring-1 focus:ring-indigo-400/50";
+    "h-11 w-full rounded-2xl border border-[#cfd9d1] bg-white/80 px-4 text-sm text-[#18211f] placeholder:text-[#8b9891] outline-none transition focus:border-[#8fa49a] focus:ring-2 focus:ring-[#163832]/20";
 
   const titleByTab: Record<AuthTab, string> = {
     login: "Connexion",
@@ -83,18 +91,18 @@ export const AuthModal = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md rounded-2xl border border-white/[0.08] bg-[#0d0d1a] p-0 shadow-2xl [&>button]:text-slate-400 [&>button]:hover:text-slate-100">
-        <div className="rounded-t-2xl border-b border-white/[0.08] bg-gradient-to-r from-indigo-500/14 via-violet-500/9 to-pink-500/12 p-5">
+      <DialogContent className="max-w-md rounded-2xl border border-[#d8e2d9] bg-[#f7f8f3] p-0 shadow-2xl [&>button]:text-[#647067] [&>button]:hover:text-[#24443d]">
+        <div className="rounded-t-2xl border-b border-[#d8e2d9] bg-white/70 p-5">
           <div className="mb-2 flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 text-sm">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#163832] text-sm text-white">
               ⚡
             </div>
-            <span className="text-xs font-bold uppercase tracking-[0.12em] text-indigo-300">
+            <span className="text-xs font-black uppercase tracking-[0.12em] text-[#24443d]">
               Agile Suite
             </span>
           </div>
-          <div className="text-base font-semibold text-slate-100">{titleByTab[tab]}</div>
-          <p className="mt-1 text-xs text-slate-400">
+          <div className="text-base font-black text-[#12201d]">{titleByTab[tab]}</div>
+          <p className="mt-1 text-xs leading-5 text-[#647067]">
             {tab === "login"
               ? "Retrouve tes sessions et tes templates."
               : tab === "register"
@@ -104,7 +112,7 @@ export const AuthModal = ({
         </div>
 
         <div className="p-5">
-          <div className="mb-4 flex gap-1 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-1">
+          <div className="mb-4 flex gap-1 rounded-2xl border border-[#d8e2d9] bg-white/58 p-1">
             {(["login", "register", "forgot"] as AuthTab[]).map((t) => (
               <button
                 key={t}
@@ -113,8 +121,8 @@ export const AuthModal = ({
                 className={cn(
                   "flex-1 rounded-xl py-2 text-xs font-semibold transition-all",
                   tab === t
-                    ? "bg-indigo-500 text-white shadow-sm"
-                    : "text-slate-500 hover:text-slate-300",
+                    ? "bg-[#163832] text-white shadow-sm"
+                    : "text-[#66766f] hover:text-[#24443d]",
                 )}
               >
                 {t === "login" ? "Connexion" : t === "register" ? "Inscription" : "Mot de passe"}
@@ -123,12 +131,12 @@ export const AuthModal = ({
           </div>
 
           {error && (
-            <div className="mb-4 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm text-red-300">
+            <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-600">
               {error}
             </div>
           )}
           {info && (
-            <div className="mb-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5 text-sm text-emerald-300">
+            <div className="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700">
               {info}
             </div>
           )}
@@ -136,7 +144,7 @@ export const AuthModal = ({
           <form onSubmit={handleSubmit} className="space-y-3">
             {tab === "register" && (
               <div className="space-y-1">
-                <label className="block text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500">
+                <label className="block text-[11px] font-bold uppercase tracking-[0.08em] text-[#66766f]">
                   Nom d'affichage
                 </label>
                 <input
@@ -150,7 +158,7 @@ export const AuthModal = ({
             )}
 
             <div className="space-y-1">
-              <label className="block text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500">
+              <label className="block text-[11px] font-bold uppercase tracking-[0.08em] text-[#66766f]">
                 Adresse e-mail
               </label>
               <input
@@ -166,7 +174,7 @@ export const AuthModal = ({
 
             {tab !== "forgot" && (
               <div className="space-y-1">
-                <label className="block text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500">
+                <label className="block text-[11px] font-bold uppercase tracking-[0.08em] text-[#66766f]">
                   Mot de passe
                 </label>
                 <input
@@ -180,11 +188,34 @@ export const AuthModal = ({
               </div>
             )}
 
+            {tab === "register" && (
+              <label className="flex items-start gap-3 rounded-2xl border border-[#d8e2d9] bg-white/62 p-3 text-xs leading-5 text-[#647067]">
+                <input
+                  type="checkbox"
+                  checked={acceptedTerms}
+                  onChange={(e) => setAcceptedTerms(e.target.checked)}
+                  className="mt-1 h-4 w-4 shrink-0 accent-[#163832]"
+                  required
+                />
+                <span>
+                  J'accepte les{" "}
+                  <Link
+                    to="/cgu"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-bold text-[#24443d] underline-offset-4 hover:underline"
+                  >
+                    Conditions Générales d'Utilisation
+                  </Link>{" "}
+                  d'AgileSuite.
+                </span>
+              </label>
+            )}
+
             <button
               type="submit"
               disabled={loading}
-              className="mt-1 h-11 w-full rounded-2xl bg-indigo-500 text-sm font-bold text-white transition hover:bg-indigo-400 disabled:opacity-50"
-              style={{ boxShadow: "0 4px 16px rgba(99,102,241,0.35)" }}
+              className="mt-1 h-11 w-full rounded-2xl bg-[#163832] text-sm font-black text-white shadow-[0_12px_26px_rgba(22,56,50,0.18)] transition hover:bg-[#1f4a43] disabled:opacity-50"
             >
               {loading
                 ? "..."

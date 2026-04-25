@@ -16,9 +16,9 @@ import { api } from "@/net/api";
 
 const SKILLS_ACCENT = TOOL_ACCENT["skills-matrix"];
 const inputCls =
-  "h-11 w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 text-sm text-slate-100 placeholder:text-slate-600 outline-none transition focus:border-white/20 focus:ring-1 focus:ring-cyan-400/60";
+  "h-11 w-full rounded-xl border border-[#d8e2d9] bg-white/[0.04] px-4 text-sm text-[#18211f] placeholder:text-slate-600 outline-none transition focus:border-white/20 focus:ring-1 focus:ring-cyan-400/60";
 const selectCls =
-  "h-10 w-full rounded-xl border border-white/[0.08] bg-[#0c1228] px-3 text-sm text-slate-100 outline-none transition focus:border-cyan-400/40 focus:ring-1 focus:ring-cyan-400/30";
+  "h-10 w-full rounded-xl border border-[#d8e2d9] bg-[#0c1228] px-3 text-sm text-[#18211f] outline-none transition focus:border-cyan-400/40 focus:ring-1 focus:ring-cyan-400/30";
 
 export default function SkillsMatrixTemplateEditorPage() {
   const { templateId } = useParams<{ templateId: string }>();
@@ -203,8 +203,8 @@ export default function SkillsMatrixTemplateEditorPage() {
 
   if (authLoading || loadingTemplate) {
     return (
-      <div className="scanlines relative flex min-h-svh items-center justify-center bg-slate-950 px-4">
-        <div className="neon-surface px-4 py-3 text-sm font-semibold text-cyan-100">
+      <div className="relative flex min-h-svh items-center justify-center bg-[#f7f8f3] px-4">
+        <div className="rounded-[24px] border border-[#d8e2d9] bg-white/72 shadow-sm backdrop-blur px-4 py-3 text-sm font-semibold text-[#24443d]">
           Chargement...
         </div>
       </div>
@@ -218,11 +218,11 @@ export default function SkillsMatrixTemplateEditorPage() {
           <h1 className="text-2xl font-extrabold tracking-tight text-slate-50">
             Édition du template
           </h1>
-          <p className="mt-2 text-sm text-slate-400">Connecte-toi pour modifier ce template.</p>
+          <p className="mt-2 text-sm text-[#647067]">Connecte-toi pour modifier ce template.</p>
           <button
             type="button"
             onClick={() => navigate("/")}
-            className="mt-5 rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-2 text-sm font-semibold text-slate-200 transition hover:bg-white/[0.08]"
+            className="mt-5 rounded-xl border border-[#d8e2d9] bg-white/[0.04] px-4 py-2 text-sm font-semibold text-[#24443d] transition hover:bg-white/[0.08]"
           >
             Retour au portail
           </button>
@@ -242,14 +242,14 @@ export default function SkillsMatrixTemplateEditorPage() {
           <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-sky-600 text-sm">
             🧩
           </div>
-          <span className="text-xs font-bold uppercase tracking-[0.12em] text-cyan-300">
+          <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#24443d]">
             Matrice de Compétences
           </span>
         </div>
         <button
           type="button"
           onClick={() => navigate("/prepare/skills-matrix")}
-          className="rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-xs text-slate-400 transition hover:bg-white/[0.06] hover:text-slate-200"
+          className="rounded-full border border-[#d8e2d9] bg-white/[0.03] px-3 py-1.5 text-xs text-[#647067] transition hover:bg-white/[0.06] hover:text-[#24443d]"
         >
           Retour templates
         </button>
@@ -258,7 +258,7 @@ export default function SkillsMatrixTemplateEditorPage() {
       <h1 className="mb-1 text-2xl font-extrabold tracking-tight text-slate-50 sm:text-3xl">
         Éditer le template
       </h1>
-      <p className="mb-6 text-sm text-slate-400">
+      <p className="mb-6 text-sm text-[#647067]">
         Ajuste l'échelle, les catégories et les compétences de ce template.
       </p>
 
@@ -268,7 +268,7 @@ export default function SkillsMatrixTemplateEditorPage() {
         </div>
       )}
 
-      <div className="space-y-4 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 sm:p-5">
+      <div className="space-y-4 rounded-2xl border border-[#d8e2d9] bg-white/[0.02] p-4 sm:p-5">
         <div className="grid gap-3 md:grid-cols-2">
           <input
             value={templateName}
@@ -284,10 +284,10 @@ export default function SkillsMatrixTemplateEditorPage() {
           />
         </div>
 
-        <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-4">
-          <div className="mb-2 flex items-center justify-between text-xs text-slate-400">
+        <div className="rounded-xl border border-[#d8e2d9] bg-white/[0.02] p-4">
+          <div className="mb-2 flex items-center justify-between text-xs text-[#647067]">
             <span>Échelle des niveaux</span>
-            <span className="font-semibold text-cyan-200">
+            <span className="font-semibold text-[#24443d]">
               {scaleMin} à {scaleMax}
             </span>
           </div>
@@ -318,8 +318,8 @@ export default function SkillsMatrixTemplateEditorPage() {
 
         <div className="grid gap-4 lg:grid-cols-2">
           {/* ── Catégories ─────────────────────────────────────────── */}
-          <section className="flex flex-col gap-3 rounded-xl border border-white/[0.08] bg-white/[0.02] p-4">
-            <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
+          <section className="flex flex-col gap-3 rounded-xl border border-[#d8e2d9] bg-white/[0.02] p-4">
+            <div className="text-xs font-semibold uppercase tracking-[0.08em] text-[#647067]">
               Catégories
             </div>
 
@@ -335,7 +335,7 @@ export default function SkillsMatrixTemplateEditorPage() {
                   }
                 }}
                 placeholder="Nom de catégorie"
-                className="h-10 min-w-0 flex-1 rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 text-sm text-slate-100 placeholder:text-slate-600 outline-none focus:border-cyan-400/40"
+                className="h-10 min-w-0 flex-1 rounded-xl border border-[#d8e2d9] bg-white/[0.04] px-3 text-sm text-[#18211f] placeholder:text-slate-600 outline-none focus:border-cyan-400/40"
               />
               <button
                 type="button"
@@ -369,7 +369,7 @@ export default function SkillsMatrixTemplateEditorPage() {
                           ),
                         )
                       }
-                      className="h-8 min-w-0 flex-1 rounded-lg border border-white/[0.07] bg-[#0c1228] px-2 text-sm text-slate-100 outline-none focus:border-cyan-400/40"
+                      className="h-8 min-w-0 flex-1 rounded-lg border border-white/[0.07] bg-[#0c1228] px-2 text-sm text-[#18211f] outline-none focus:border-cyan-400/40"
                     />
                     <button
                       type="button"
@@ -386,8 +386,8 @@ export default function SkillsMatrixTemplateEditorPage() {
           </section>
 
           {/* ── Compétences ────────────────────────────────────────── */}
-          <section className="flex flex-col gap-3 rounded-xl border border-white/[0.08] bg-white/[0.02] p-4">
-            <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
+          <section className="flex flex-col gap-3 rounded-xl border border-[#d8e2d9] bg-white/[0.02] p-4">
+            <div className="text-xs font-semibold uppercase tracking-[0.08em] text-[#647067]">
               Compétences
             </div>
 
@@ -397,7 +397,7 @@ export default function SkillsMatrixTemplateEditorPage() {
                 value={newSkillName}
                 onChange={(event) => setNewSkillName(event.target.value)}
                 placeholder="Nom de compétence"
-                className="h-10 w-full rounded-xl border border-white/[0.08] bg-[#0c1228] px-3 text-sm text-slate-100 placeholder:text-slate-600 outline-none focus:border-cyan-400/40"
+                className="h-10 w-full rounded-xl border border-[#d8e2d9] bg-[#0c1228] px-3 text-sm text-[#18211f] placeholder:text-slate-600 outline-none focus:border-cyan-400/40"
               />
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
@@ -427,14 +427,14 @@ export default function SkillsMatrixTemplateEditorPage() {
                     max={500}
                     value={newSkillRequiredPeople}
                     onChange={(event) => setNewSkillRequiredPeople(Number(event.target.value))}
-                    className="h-10 w-full rounded-xl border border-white/[0.08] bg-[#0c1228] px-3 text-sm text-slate-100 outline-none focus:border-cyan-400/40"
+                    className="h-10 w-full rounded-xl border border-[#d8e2d9] bg-[#0c1228] px-3 text-sm text-[#18211f] outline-none focus:border-cyan-400/40"
                   />
                 </div>
               </div>
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between text-[10px]">
                   <span className="uppercase tracking-wide text-slate-500">Niveau requis</span>
-                  <span className="font-semibold text-cyan-300">N{newSkillRequiredLevel}</span>
+                  <span className="font-semibold text-[#24443d]">N{newSkillRequiredLevel}</span>
                 </div>
                 <Slider
                   min={scaleMin}
@@ -452,7 +452,7 @@ export default function SkillsMatrixTemplateEditorPage() {
               <button
                 type="button"
                 onClick={addSkill}
-                className="h-9 w-full rounded-xl border border-cyan-300/30 bg-cyan-500/15 text-xs font-bold text-cyan-100 transition hover:bg-cyan-500/25"
+                className="h-9 w-full rounded-xl border border-[#d8e2d9] bg-[#edf5ef] text-xs font-bold text-[#24443d] transition hover:bg-cyan-500/25"
               >
                 + Ajouter la compétence
               </button>
@@ -480,7 +480,7 @@ export default function SkillsMatrixTemplateEditorPage() {
                           onChange={(event) =>
                             updateSkill(skill.id, { name: event.target.value.slice(0, 120) })
                           }
-                          className="h-9 min-w-0 flex-1 rounded-lg border border-white/[0.07] bg-[#0c1228] px-3 text-sm text-slate-100 outline-none focus:border-cyan-400/40"
+                          className="h-9 min-w-0 flex-1 rounded-lg border border-white/[0.07] bg-[#0c1228] px-3 text-sm text-[#18211f] outline-none focus:border-cyan-400/40"
                         />
                         <button
                           type="button"
@@ -505,7 +505,7 @@ export default function SkillsMatrixTemplateEditorPage() {
                                 categoryId: event.target.value || null,
                               })
                             }
-                            className="h-9 w-full rounded-lg border border-white/[0.07] bg-[#0c1228] px-2 text-xs text-slate-100 outline-none focus:border-cyan-400/40"
+                            className="h-9 w-full rounded-lg border border-white/[0.07] bg-[#0c1228] px-2 text-xs text-[#18211f] outline-none focus:border-cyan-400/40"
                           >
                             <option value="">Sans catégorie</option>
                             {sortedCategories.map((category) => (
@@ -529,7 +529,7 @@ export default function SkillsMatrixTemplateEditorPage() {
                                 requiredPeople: Number(event.target.value),
                               })
                             }
-                            className="h-9 w-full rounded-lg border border-white/[0.07] bg-[#0c1228] px-2 text-xs text-slate-100 outline-none focus:border-cyan-400/40"
+                            className="h-9 w-full rounded-lg border border-white/[0.07] bg-[#0c1228] px-2 text-xs text-[#18211f] outline-none focus:border-cyan-400/40"
                           />
                         </div>
                       </div>
@@ -540,7 +540,7 @@ export default function SkillsMatrixTemplateEditorPage() {
                           <span className="uppercase tracking-wide text-slate-500">
                             Niveau requis
                           </span>
-                          <span className="font-semibold text-cyan-300">
+                          <span className="font-semibold text-[#24443d]">
                             N{skill.requiredLevel}
                           </span>
                         </div>

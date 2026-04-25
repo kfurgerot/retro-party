@@ -8,7 +8,7 @@ import { PrepareAuthForm } from "@/features/templates/PrepareAuthForm";
 import { isTemplateForModule, type TemplateModuleId } from "@/features/templates/templateModule";
 
 const inputCls =
-  "w-full h-11 rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 text-sm text-slate-100 placeholder:text-slate-600 outline-none focus:border-white/20 focus:ring-1 focus:ring-indigo-400/50 transition";
+  "w-full h-11 rounded-xl border border-[#cfd9d1] bg-white/80 px-4 text-sm text-[#18211f] placeholder:text-[#8b9891] outline-none focus:border-[#8fa49a] focus:ring-2 focus:ring-[#163832]/20 transition";
 
 type TemplatePrepareModuleTheme = {
   accentColor: string;
@@ -56,10 +56,10 @@ const TemplateCard = ({
   launchButtonClass: string;
   launchButtonShadow: string;
 }) => (
-  <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 transition hover:border-white/[0.09]">
+  <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[#d8e2d9] bg-white/70 p-4 shadow-sm transition hover:border-[#b9c8bd] hover:bg-white">
     <div className="min-w-0 flex-1">
-      <p className="break-words font-semibold text-slate-100">{template.name}</p>
-      <p className="mt-0.5 break-words text-xs text-slate-500">
+      <p className="break-words font-bold text-[#18211f]">{template.name}</p>
+      <p className="mt-0.5 break-words text-xs text-[#647067]">
         {template.description || fr.prepare.noDescription}
       </p>
     </div>
@@ -67,7 +67,7 @@ const TemplateCard = ({
       <button
         type="button"
         onClick={onEdit}
-        className="h-9 rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 text-sm font-semibold text-slate-300 transition hover:bg-white/[0.07] hover:text-white"
+        className="h-9 rounded-xl border border-[#cbd8cd] bg-white px-4 text-sm font-bold text-[#24443d] transition hover:border-[#aebcaf]"
       >
         {fr.prepare.edit}
       </button>
@@ -82,7 +82,7 @@ const TemplateCard = ({
       <button
         type="button"
         onClick={onDelete}
-        className="h-9 rounded-xl border border-red-500/30 bg-red-500/10 px-4 text-sm font-semibold text-red-400 transition hover:bg-red-500/20 hover:text-red-300"
+        className="h-9 rounded-xl border border-red-200 bg-red-50 px-4 text-sm font-bold text-red-600 transition hover:bg-red-100"
       >
         {fr.prepare.delete}
       </button>
@@ -202,11 +202,10 @@ export const TemplatePrepareModulePage = ({
 
   if (authLoading) {
     return (
-      <div
-        className="flex min-h-screen items-center justify-center"
-        style={{ background: "#0a0a14" }}
-      >
-        <div className="text-sm text-slate-500">{fr.prepare.loading}</div>
+      <div className="flex min-h-screen items-center justify-center bg-[#f7f8f3]">
+        <div className="rounded-2xl border border-[#d8e2d9] bg-white/70 px-4 py-3 text-sm font-bold text-[#647067] shadow-sm">
+          {fr.prepare.loading}
+        </div>
       </div>
     );
   }
@@ -217,6 +216,7 @@ export const TemplatePrepareModulePage = ({
         accentColor="rgba(99,102,241,0.08)"
         accentGlow="rgba(99,102,241,0.04)"
         maxWidth="sm"
+        tone="saas"
       >
         <div className="flex min-h-[calc(100svh-4rem)] items-center justify-center py-8">
           <PrepareAuthForm onSuccess={() => void loadTemplates()} />
@@ -226,59 +226,62 @@ export const TemplatePrepareModulePage = ({
   }
 
   return (
-    <PageShell accentColor={theme.accentColor} accentGlow={theme.accentGlow} maxWidth="4xl">
+    <PageShell
+      accentColor={theme.accentColor}
+      accentGlow={theme.accentGlow}
+      maxWidth="4xl"
+      tone="saas"
+    >
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 text-sm">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#163832] text-sm text-white shadow-sm">
             ⚡
           </div>
-          <span className="text-xs font-bold uppercase tracking-[0.12em] text-indigo-400">
+          <span className="text-xs font-black uppercase tracking-[0.12em] text-[#24443d]">
             Agile Suite
           </span>
-          <span className="text-slate-700">/</span>
-          <span
-            className={`text-xs font-bold uppercase tracking-[0.12em] ${theme.moduleTextClass}`}
-          >
+          <span className="text-[#9aa79f]">/</span>
+          <span className="text-xs font-black uppercase tracking-[0.12em] text-[#66766f]">
             Préparer
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2.5 rounded-full border border-white/[0.07] bg-white/[0.03] px-3 py-1.5">
-            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-pink-500 text-[11px] font-bold">
+          <div className="flex items-center gap-2.5 rounded-full border border-[#d8e2d9] bg-white/70 px-3 py-1.5 shadow-sm">
+            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#163832] text-[11px] font-bold text-white">
               {initials}
             </div>
-            <span className="text-xs text-slate-400">{user.displayName}</span>
+            <span className="text-xs font-semibold text-[#54645d]">{user.displayName}</span>
           </div>
           <button
             type="button"
             onClick={handleLogout}
-            className="rounded-full border border-white/[0.07] bg-white/[0.03] px-3 py-1.5 text-xs text-slate-500 transition hover:bg-white/[0.06] hover:text-slate-300"
+            className="rounded-full border border-[#d8e2d9] bg-white/70 px-3 py-1.5 text-xs font-bold text-[#66766f] transition hover:bg-white hover:text-[#24443d]"
           >
             {fr.prepare.logout}
           </button>
           <button
             type="button"
             onClick={() => navigate("/")}
-            className="rounded-full border border-white/[0.07] bg-white/[0.03] px-3 py-1.5 text-xs text-slate-500 transition hover:bg-white/[0.06] hover:text-slate-300"
+            className="rounded-full border border-[#d8e2d9] bg-white/70 px-3 py-1.5 text-xs font-bold text-[#66766f] transition hover:bg-white hover:text-[#24443d]"
           >
             {fr.prepare.home}
           </button>
         </div>
       </div>
 
-      <h1 className="mb-1.5 text-2xl font-extrabold tracking-tight text-slate-50 sm:text-3xl">
+      <h1 className="mb-1.5 text-3xl font-black tracking-tight text-[#12201d] sm:text-4xl">
         {moduleIcon} {moduleLabel}
       </h1>
-      <p className="mb-7 text-sm text-slate-500">{introText}</p>
+      <p className="mb-7 max-w-2xl text-sm leading-6 text-[#647067]">{introText}</p>
 
       {error && (
-        <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">
           {error}
         </div>
       )}
 
-      <div className="mb-6 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
-        <p className="mb-3 text-sm font-semibold text-slate-200">{newTemplateTitle}</p>
+      <div className="mb-6 rounded-[24px] border border-[#d8e2d9] bg-white/72 p-5 shadow-sm">
+        <p className="mb-3 text-sm font-black text-[#18211f]">{newTemplateTitle}</p>
         <div className="flex flex-wrap gap-3">
           <input
             value={newTemplateName}
@@ -305,22 +308,20 @@ export const TemplatePrepareModulePage = ({
       </div>
 
       <div className="mb-3 flex items-center gap-2">
-        <span className={`text-xs font-bold uppercase tracking-[0.12em] ${theme.moduleTextClass}`}>
+        <span className="text-xs font-black uppercase tracking-[0.12em] text-[#24443d]">
           {moduleLabel}
         </span>
-        <span
-          className={`rounded-full border px-2 py-0.5 text-[10px] ${theme.moduleCountBadgeClass}`}
-        >
+        <span className="rounded-full border border-[#d8e2d9] bg-white/70 px-2 py-0.5 text-[10px] font-bold text-[#647067]">
           {templates.length}
         </span>
       </div>
 
       {loadingTemplates ? (
-        <p className="py-8 text-center text-sm text-slate-500">{fr.prepare.loadingTemplates}</p>
+        <p className="py-8 text-center text-sm text-[#647067]">{fr.prepare.loadingTemplates}</p>
       ) : templates.length === 0 ? (
-        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] px-5 py-8 text-center">
+        <div className="rounded-[24px] border border-[#d8e2d9] bg-white/70 px-5 py-8 text-center shadow-sm">
           <div className="mb-2 text-2xl">{emptyStateIcon}</div>
-          <p className="text-sm text-slate-500">{emptyStateText}</p>
+          <p className="text-sm text-[#647067]">{emptyStateText}</p>
         </div>
       ) : (
         <div className="space-y-2.5">

@@ -69,7 +69,7 @@ const THEME_META: Record<ThemeKey, { label: string; color: string; bg: string; d
 const THEME_ORDER: ThemeKey[] = ["blue", "green", "red", "violet", "bonus"];
 
 const inputCls =
-  "w-full h-11 rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 text-sm text-slate-100 placeholder:text-slate-600 outline-none focus:border-white/20 focus:ring-1 focus:ring-indigo-400/50 transition";
+  "w-full h-11 rounded-xl border border-[#d8e2d9] bg-white/80 px-4 text-sm text-[#18211f] placeholder:text-[#8b9891] outline-none focus:border-[#8fa49a] focus:ring-2 focus:ring-[#163832]/20 transition";
 
 function normalizeCategory(value: string | null | undefined): ThemeTab {
   if (!value) return "other";
@@ -100,7 +100,7 @@ function isThemeKey(value: ThemeTab): value is ThemeKey {
 const CategoryChip = ({ category }: { category: ThemeTab }) => {
   if (category === "all" || category === "other") {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full border border-white/[0.08] bg-white/[0.04] px-2 py-0.5 text-[11px] font-semibold text-slate-400">
+      <span className="inline-flex items-center gap-1 rounded-full border border-[#d8e2d9] bg-white/80 px-2 py-0.5 text-[11px] font-semibold text-[#647067]">
         {category === "other" ? fr.templateEditor.other : fr.templateEditor.all}
       </span>
     );
@@ -363,10 +363,11 @@ const TemplateEditorPage = () => {
   const selectedThemeCount = selectedThemeForBulkDelete ? counts[selectedThemeForBulkDelete] : 0;
 
   const selectCls =
-    "h-11 w-full rounded-xl border border-white/[0.08] bg-[#0d0d1a] px-3 text-sm text-slate-100 outline-none focus:border-white/20 focus:ring-1 focus:ring-indigo-400/50 transition";
+    "h-11 w-full rounded-xl border border-[#d8e2d9] bg-white px-3 text-sm text-[#18211f] outline-none focus:border-[#8fa49a] focus:ring-2 focus:ring-[#163832]/20 transition";
 
   return (
     <PageShell
+      tone="saas"
       accentColor="rgba(236,72,153,0.08)"
       accentGlow="rgba(236,72,153,0.04)"
       maxWidth="5xl"
@@ -380,14 +381,14 @@ const TemplateEditorPage = () => {
           <span className="text-xs font-bold uppercase tracking-[0.12em] text-indigo-400">
             Agile Suite
           </span>
-          <span className="text-slate-700">/</span>
+          <span className="text-[#9aa79f]">/</span>
           <span className="text-xs font-bold uppercase tracking-[0.12em] text-pink-400">
             Préparer
           </span>
           {template && (
             <>
-              <span className="text-slate-700">/</span>
-              <span className="max-w-[200px] truncate text-xs text-slate-400">{template.name}</span>
+              <span className="text-[#9aa79f]">/</span>
+              <span className="max-w-[200px] truncate text-xs text-[#647067]">{template.name}</span>
             </>
           )}
         </div>
@@ -395,14 +396,14 @@ const TemplateEditorPage = () => {
           <button
             type="button"
             onClick={() => navigate("/prepare/retro-party")}
-            className="h-9 rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 text-sm font-semibold text-slate-300 transition hover:bg-white/[0.07] hover:text-white"
+            className="h-9 rounded-xl border border-[#d8e2d9] bg-white/70 px-4 text-sm font-semibold text-[#54645d] transition hover:bg-white hover:text-white"
           >
             {fr.templateEditor.myTemplates}
           </button>
           <button
             type="button"
             onClick={() => navigate("/")}
-            className="h-9 rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 text-sm font-semibold text-slate-400 transition hover:bg-white/[0.07] hover:text-slate-200"
+            className="h-9 rounded-xl border border-[#d8e2d9] bg-white/70 px-4 text-sm font-semibold text-[#647067] transition hover:bg-white hover:text-[#24443d]"
           >
             {fr.templateEditor.home}
           </button>
@@ -410,7 +411,7 @@ const TemplateEditorPage = () => {
       </div>
 
       {loading && (
-        <p className="py-8 text-center text-sm text-slate-500">{fr.templateEditor.loading}</p>
+        <p className="py-8 text-center text-sm text-[#7b8781]">{fr.templateEditor.loading}</p>
       )}
       {!validTemplateId && (
         <p className="text-sm text-red-300">{fr.templateEditor.invalidTemplate}</p>
@@ -424,8 +425,8 @@ const TemplateEditorPage = () => {
       {!loading && template && (
         <div className="space-y-5">
           {/* Template info */}
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
-            <p className="mb-4 text-sm font-semibold text-slate-200">{fr.templateEditor.title}</p>
+          <div className="rounded-2xl border border-[#d8e2d9] bg-white/60 p-5">
+            <p className="mb-4 text-sm font-semibold text-[#24443d]">{fr.templateEditor.title}</p>
             <div className="flex flex-wrap gap-3">
               <input
                 value={name}
@@ -461,8 +462,8 @@ const TemplateEditorPage = () => {
           </div>
 
           {/* Add question */}
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
-            <p className="mb-4 text-sm font-semibold text-slate-200">
+          <div className="rounded-2xl border border-[#d8e2d9] bg-white/60 p-5">
+            <p className="mb-4 text-sm font-semibold text-[#24443d]">
               {fr.templateEditor.addQuestion}
             </p>
             <div className="flex flex-wrap gap-3">
@@ -495,7 +496,7 @@ const TemplateEditorPage = () => {
                       "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-all",
                       isActive
                         ? "ring-1"
-                        : "border border-white/[0.07] bg-white/[0.02] text-slate-400 hover:bg-white/[0.06]",
+                        : "border border-[#d8e2d9] bg-white/60 text-[#647067] hover:bg-white",
                     )}
                     style={isActive ? { background: meta.bg, color: meta.color } : undefined}
                   >
@@ -508,9 +509,9 @@ const TemplateEditorPage = () => {
           </div>
 
           {/* Question list */}
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+          <div className="rounded-2xl border border-[#d8e2d9] bg-white/60 p-5">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <p className="text-sm font-semibold text-slate-200">
+              <p className="text-sm font-semibold text-[#24443d]">
                 {fr.templateEditor.existingQuestions}
               </p>
               <div className="flex flex-wrap items-center gap-2">
@@ -556,7 +557,7 @@ const TemplateEditorPage = () => {
             </div>
 
             {filteredQuestions.length === 0 ? (
-              <div className="rounded-xl border border-white/[0.05] bg-white/[0.02] px-4 py-8 text-center text-sm text-slate-500">
+              <div className="rounded-xl border border-[#d8e2d9] bg-white/60 px-4 py-8 text-center text-sm text-[#7b8781]">
                 {fr.templateEditor.noQuestionsForFilter}
               </div>
             ) : (
@@ -569,13 +570,13 @@ const TemplateEditorPage = () => {
                   return (
                     <div
                       key={question.id}
-                      className="flex flex-wrap items-center gap-3 rounded-xl border border-white/[0.05] bg-white/[0.02] px-4 py-3 transition hover:border-white/[0.08]"
+                      className="flex flex-wrap items-center gap-3 rounded-xl border border-[#d8e2d9] bg-white/60 px-4 py-3 transition hover:border-[#b9c8bd]"
                     >
                       <div className="min-w-0 flex-1">
                         <p
                           className={cn(
                             "text-sm break-words",
-                            question.isActive ? "text-slate-100" : "text-slate-500 line-through",
+                            question.isActive ? "text-[#18211f]" : "text-[#7b8781] line-through",
                           )}
                         >
                           {question.text}
@@ -587,7 +588,7 @@ const TemplateEditorPage = () => {
                               "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest",
                               question.isActive
                                 ? "border border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
-                                : "border border-white/[0.06] bg-white/[0.02] text-slate-600",
+                                : "border border-[#d8e2d9] bg-white/60 text-[#8b9891]",
                             )}
                           >
                             {question.isActive
@@ -601,14 +602,14 @@ const TemplateEditorPage = () => {
                         <DropdownMenuTrigger asChild>
                           <button
                             type="button"
-                            className="h-8 rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 text-xs font-semibold text-slate-400 transition hover:bg-white/[0.07] hover:text-slate-200"
+                            className="h-8 rounded-lg border border-[#d8e2d9] bg-white/70 px-3 text-xs font-semibold text-[#647067] transition hover:bg-white hover:text-[#24443d]"
                           >
                             {fr.templateEditor.actions} ▾
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent
                           align="end"
-                          className="w-[min(14rem,calc(100vw-2rem))] rounded-xl border border-white/[0.08] bg-[#0d0d1a] text-slate-200 shadow-xl"
+                          className="w-[min(14rem,calc(100vw-2rem))] rounded-xl border border-[#d8e2d9] bg-white text-[#24443d] shadow-xl"
                         >
                           <DropdownMenuItem
                             disabled={!canMoveUp}
@@ -675,16 +676,16 @@ const TemplateEditorPage = () => {
           }
         }}
       >
-        <DialogContent className="max-w-lg rounded-2xl border border-white/[0.08] bg-[#0d0d1a] p-6 text-slate-100 shadow-2xl">
+        <DialogContent className="max-w-lg rounded-2xl border border-[#d8e2d9] bg-white p-6 text-[#18211f] shadow-2xl">
           <DialogHeader>
-            <DialogTitle className="text-base font-bold text-slate-50">
+            <DialogTitle className="text-base font-bold text-[#12201d]">
               {fr.templateEditor.editQuestion}
             </DialogTitle>
           </DialogHeader>
           <Textarea
             value={editingQuestionText}
             onChange={(e) => setEditingQuestionText(e.target.value)}
-            className="min-h-28 rounded-xl border border-white/[0.08] bg-white/[0.04] text-slate-100 placeholder:text-slate-600 focus-visible:ring-indigo-400/50"
+            className="min-h-28 rounded-xl border border-[#d8e2d9] bg-white/80 text-[#18211f] placeholder:text-[#8b9891] focus-visible:ring-indigo-400/50"
           />
           <DialogFooter className="gap-2">
             <button
@@ -693,7 +694,7 @@ const TemplateEditorPage = () => {
                 setEditingQuestion(null);
                 setEditingQuestionText("");
               }}
-              className="h-10 rounded-xl border border-white/[0.08] bg-white/[0.03] px-5 text-sm font-semibold text-slate-300 transition hover:bg-white/[0.07]"
+              className="h-10 rounded-xl border border-[#d8e2d9] bg-white/70 px-5 text-sm font-semibold text-[#54645d] transition hover:bg-white"
             >
               {fr.templateEditor.cancel}
             </button>
@@ -714,12 +715,12 @@ const TemplateEditorPage = () => {
         open={!!bulkDeleteTheme}
         onOpenChange={(open) => !open && setBulkDeleteTheme(null)}
       >
-        <AlertDialogContent className="max-w-sm rounded-2xl border border-white/[0.08] bg-[#0d0d1a] p-6 text-slate-100 shadow-2xl">
+        <AlertDialogContent className="max-w-sm rounded-2xl border border-[#d8e2d9] bg-white p-6 text-[#18211f] shadow-2xl">
           <AlertDialogHeader className="space-y-2">
-            <AlertDialogTitle className="text-base font-bold text-slate-50">
+            <AlertDialogTitle className="text-base font-bold text-[#12201d]">
               {fr.templateEditor.deleteThemeConfirmTitle}
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-sm text-slate-400">
+            <AlertDialogDescription className="text-sm text-[#647067]">
               {bulkDeleteTheme
                 ? fr.templateEditor.deleteThemeConfirmWithCount
                     .replace("{count}", String(counts[bulkDeleteTheme]))
@@ -728,7 +729,7 @@ const TemplateEditorPage = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-2 grid grid-cols-2 gap-2 space-x-0">
-            <AlertDialogCancel className="h-11 rounded-xl border border-white/[0.08] bg-white/[0.03] text-slate-300 hover:bg-white/[0.06]">
+            <AlertDialogCancel className="h-11 rounded-xl border border-[#d8e2d9] bg-white/70 text-[#54645d] hover:bg-white">
               {fr.templateEditor.cancel}
             </AlertDialogCancel>
             <AlertDialogAction

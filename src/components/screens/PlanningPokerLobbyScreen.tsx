@@ -1,8 +1,7 @@
-﻿import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { AVATARS } from "@/types/game";
 import { PlanningPokerRole, PlanningPokerVoteSystem } from "@/types/planningPoker";
 import { fr } from "@/i18n/fr";
-import { RetroScreenBackground } from "./RetroScreenBackground";
 import { Card, Input, PrimaryButton, SecondaryButton } from "@/components/app-shell";
 import { cn } from "@/lib/utils";
 import { PLANNING_POKER_DECKS } from "@/lib/planningPoker";
@@ -148,39 +147,45 @@ export const PlanningPokerLobbyScreen: React.FC<Props> = ({
   );
 
   return (
-    <div className="scanlines relative flex min-h-svh w-full items-start justify-center overflow-hidden px-4 pb-28 pt-4 sm:pb-28 sm:pt-6">
-      <RetroScreenBackground />
+    <div className="relative flex min-h-svh w-full items-start justify-center overflow-hidden bg-[#f7f8f3] px-4 pb-28 pt-4 text-[#18211f] sm:pb-28 sm:pt-6">
+      <div className="pointer-events-none fixed inset-0 bg-[linear-gradient(135deg,rgba(14,116,144,0.13)_0%,transparent_34%),linear-gradient(225deg,rgba(245,158,11,0.12)_0%,transparent_32%),linear-gradient(180deg,#f7f8f3_0%,#eef4ef_100%)]" />
+      <div className="pointer-events-none fixed inset-x-0 top-0 h-48 bg-[repeating-linear-gradient(90deg,rgba(15,23,42,0.045)_0,rgba(15,23,42,0.045)_1px,transparent_1px,transparent_72px)]" />
 
-      <Card className="relative z-10 flex min-h-[82svh] w-full max-w-5xl flex-col p-5 sm:p-8">
-        <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.16em] text-cyan-200/80">
+      <Card
+        tone="saas"
+        className="relative z-10 flex min-h-[82svh] w-full max-w-5xl flex-col p-5 sm:p-8"
+      >
+        <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.16em] text-[#647067]">
           <span>{fr.planningPoker.brand}</span>
-          <span className="rounded-full border border-cyan-300/40 px-2 py-0.5">
+          <span className="rounded-full border border-[#d8e2d9] bg-white/62 px-2 py-0.5">
             {fr.planningPoker.lobbyBadge}
           </span>
         </div>
 
-        <h1 className="mt-4 text-center text-xl text-cyan-200 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)] sm:text-3xl">
+        <h1 className="mt-4 text-center text-xl font-black tracking-tight text-[#18211f] sm:text-3xl">
           {roomCode ? fr.planningPoker.lobbyReady : fr.planningPoker.lobbyTitle}
         </h1>
 
         {!roomCode && (
-          <Card className="mx-auto mt-6 grid w-full max-w-xl gap-3 p-4 sm:p-5">
+          <Card tone="saas" className="mx-auto mt-6 grid w-full max-w-xl gap-3 p-4 sm:p-5">
             <div className="grid grid-cols-2 gap-2">
               <SecondaryButton
+                tone="saas"
                 type="button"
                 className={cn(
                   "h-11",
-                  mode === "host" && "border-cyan-300 bg-cyan-500 text-slate-950 hover:bg-cyan-400",
+                  mode === "host" && "border-[#163832] bg-[#163832] text-white hover:bg-[#1f4a43]",
                 )}
                 onClick={() => setMode("host")}
               >
                 {fr.onlineLobby.hostAction}
               </SecondaryButton>
               <SecondaryButton
+                tone="saas"
                 type="button"
                 className={cn(
                   "h-11",
-                  mode === "join" && "border-cyan-300 bg-cyan-500 text-slate-950 hover:bg-cyan-400",
+                  mode === "join" && "border-[#163832] bg-[#163832] text-white hover:bg-[#1f4a43]",
                 )}
                 onClick={() => setMode("join")}
               >
@@ -189,26 +194,25 @@ export const PlanningPokerLobbyScreen: React.FC<Props> = ({
             </div>
 
             <Input
+              tone="saas"
               value={name}
               onChange={(event) => setName(cleanName(event.target.value))}
               placeholder={fr.onlineOnboarding.displayNamePlaceholder}
-              className="h-11 border-cyan-300/20 bg-slate-900/50 text-cyan-50 placeholder:text-slate-400"
+              className="h-11"
             />
 
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <p className="mb-1 text-xs text-slate-300">{fr.onlineOnboarding.avatarTitle}</p>
-                <div className="grid grid-cols-6 gap-1 rounded-md border border-cyan-300/20 bg-slate-900/50 p-2">
+                <p className="mb-1 text-xs text-[#647067]">{fr.onlineOnboarding.avatarTitle}</p>
+                <div className="grid grid-cols-6 gap-1 rounded-md border border-[#d8e2d9] bg-white/62 p-2">
                   {AVATARS.slice(0, 12).map((item, index) => (
                     <button
                       key={index}
                       type="button"
                       onClick={() => setAvatar(index)}
                       className={cn(
-                        "h-8 w-8 rounded border border-cyan-300/20 text-lg",
-                        avatar === index
-                          ? "bg-cyan-500/25 ring-2 ring-cyan-300"
-                          : "bg-slate-950/40",
+                        "h-8 w-8 rounded border border-[#d8e2d9] text-lg",
+                        avatar === index ? "bg-[#edf5ef] ring-2 ring-[#163832]/30" : "bg-white/62",
                       )}
                     >
                       {item}
@@ -219,23 +223,25 @@ export const PlanningPokerLobbyScreen: React.FC<Props> = ({
 
               <div className="grid gap-2">
                 <div>
-                  <p className="mb-1 text-xs text-slate-300">{fr.planningPoker.roleTitle}</p>
+                  <p className="mb-1 text-xs text-[#647067]">{fr.planningPoker.roleTitle}</p>
                   <div className="grid grid-cols-2 gap-2">
                     <SecondaryButton
+                      tone="saas"
                       type="button"
                       className={cn(
                         "h-10 text-xs",
-                        role === "player" && "border-cyan-300 bg-cyan-500 text-slate-950",
+                        role === "player" && "border-[#163832] bg-[#163832] text-white",
                       )}
                       onClick={() => setRole("player")}
                     >
                       {fr.planningPoker.rolePlayer}
                     </SecondaryButton>
                     <SecondaryButton
+                      tone="saas"
                       type="button"
                       className={cn(
                         "h-10 text-xs",
-                        role === "spectator" && "border-cyan-300 bg-cyan-500 text-slate-950",
+                        role === "spectator" && "border-[#163832] bg-[#163832] text-white",
                       )}
                       onClick={() => setRole("spectator")}
                     >
@@ -246,8 +252,8 @@ export const PlanningPokerLobbyScreen: React.FC<Props> = ({
 
                 {mode === "host" ? (
                   <div>
-                    <p className="mb-1 text-xs text-slate-300">{fr.planningPoker.voteSystem}</p>
-                    <div className="grid grid-cols-3 gap-1 rounded border border-cyan-300/25 bg-slate-900/50 p-1">
+                    <p className="mb-1 text-xs text-[#647067]">{fr.planningPoker.voteSystem}</p>
+                    <div className="grid grid-cols-3 gap-1 rounded border border-[#d8e2d9] bg-white/62 p-1">
                       {VOTE_SYSTEM_OPTIONS.map((option) => (
                         <button
                           key={option.value}
@@ -256,8 +262,8 @@ export const PlanningPokerLobbyScreen: React.FC<Props> = ({
                           className={cn(
                             "h-8 rounded px-2 text-xs transition-colors",
                             voteSystem === option.value
-                              ? "bg-cyan-500 text-slate-950"
-                              : "bg-transparent text-cyan-50 hover:bg-slate-800/70",
+                              ? "bg-[#163832] text-white"
+                              : "bg-transparent text-[#24443d] hover:bg-[#edf5ef]",
                           )}
                         >
                           {option.label}
@@ -267,13 +273,14 @@ export const PlanningPokerLobbyScreen: React.FC<Props> = ({
                   </div>
                 ) : (
                   <div>
-                    <p className="mb-1 text-xs text-slate-300">
+                    <p className="mb-1 text-xs text-[#647067]">
                       {fr.onlineLobby.roomCodePlaceholder}
                     </p>
                     <Input
+                      tone="saas"
                       value={code}
                       onChange={(event) => setCode(cleanCode(event.target.value))}
-                      className="h-10 border-cyan-300/20 bg-slate-900/50 text-cyan-50"
+                      className="h-10 border-[#d8e2d9] bg-white/62 text-[#18211f]"
                       placeholder={fr.onlineLobby.roomCodePlaceholder}
                     />
                   </div>
@@ -295,27 +302,27 @@ export const PlanningPokerLobbyScreen: React.FC<Props> = ({
 
         {roomCode && (
           <section className="mx-auto mt-6 grid w-full max-w-5xl gap-3 lg:grid-cols-[minmax(0,1fr)_300px]">
-            <Card className="p-4 sm:p-5">
+            <Card tone="saas" className="p-4 sm:p-5">
               <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-cyan-100/80">
+                <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-[#647067]">
                   {fr.onlineLobby.playersTitle}
                 </h2>
-                <span className="text-xs text-slate-300">{sortedPlayers.length}</span>
+                <span className="text-xs text-[#647067]">{sortedPlayers.length}</span>
               </div>
 
               <div className="grid max-h-[45vh] gap-2 overflow-auto pr-1">
                 {sortedPlayers.map((player) => (
                   <div
                     key={player.socketId}
-                    className="flex items-center justify-between rounded-md border border-cyan-300/20 bg-slate-900/55 px-3 py-2"
+                    className="flex items-center justify-between rounded-md border border-[#d8e2d9] bg-white/62 px-3 py-2"
                   >
                     <div className="flex items-center gap-2">
-                      <span className="inline-flex h-8 w-8 items-center justify-center rounded border border-cyan-300/30 bg-slate-950/60 text-xl">
+                      <span className="inline-flex h-8 w-8 items-center justify-center rounded border border-[#d8e2d9] bg-white/70 text-xl">
                         {AVATARS[player.avatar] ?? "??"}
                       </span>
                       <div>
-                        <div className="text-sm font-medium text-cyan-50">{player.name}</div>
-                        <div className="text-[11px] text-slate-300">
+                        <div className="text-sm font-medium text-[#18211f]">{player.name}</div>
+                        <div className="text-[11px] text-[#647067]">
                           {player.role === "player"
                             ? fr.planningPoker.rolePlayer
                             : fr.planningPoker.roleSpectator}
@@ -334,7 +341,7 @@ export const PlanningPokerLobbyScreen: React.FC<Props> = ({
                         </span>
                       )}
                       {player.isHost && (
-                        <span className="rounded-full border border-cyan-500/35 bg-cyan-500/10 px-2 py-0.5 text-cyan-200">
+                        <span className="rounded-full border border-[#163832]/25 bg-[#edf5ef] px-2 py-0.5 text-[#24443d]">
                           {fr.terms.host}
                         </span>
                       )}
@@ -344,26 +351,30 @@ export const PlanningPokerLobbyScreen: React.FC<Props> = ({
               </div>
             </Card>
 
-            <Card className="grid gap-3 p-4 sm:p-5">
-              <div className="rounded-md border border-cyan-300/25 bg-slate-900/45 p-3">
-                <div className="mb-2 text-xs uppercase tracking-[0.1em] text-cyan-100/90">
+            <Card tone="saas" className="grid gap-3 p-4 sm:p-5">
+              <div className="rounded-md border border-[#d8e2d9] bg-white/62 p-3">
+                <div className="mb-2 text-xs uppercase tracking-[0.1em] text-[#647067]">
                   {fr.onlineLobby.codeLabel}
                 </div>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="rounded bg-cyan-500/15 px-2 py-1 text-sm font-semibold tracking-[0.12em] text-cyan-200">
+                  <span className="rounded bg-[#edf5ef] px-2 py-1 text-sm font-semibold tracking-[0.12em] text-[#24443d]">
                     {roomCode}
                   </span>
-                  <SecondaryButton className="h-9 min-h-0 px-3 text-xs" onClick={copyCode}>
+                  <SecondaryButton
+                    tone="saas"
+                    className="h-9 min-h-0 px-3 text-xs"
+                    onClick={copyCode}
+                  >
                     {copied ? fr.onlineLobby.copied : fr.onlineLobby.copy}
                   </SecondaryButton>
                 </div>
               </div>
 
-              <div className="rounded-md border border-cyan-300/25 bg-slate-900/45 p-3">
-                <p className="text-xs text-slate-300">{fr.planningPoker.voteSystem}</p>
+              <div className="rounded-md border border-[#d8e2d9] bg-white/62 p-3">
+                <p className="text-xs text-[#647067]">{fr.planningPoker.voteSystem}</p>
                 <div
                   className={cn(
-                    "mt-2 grid grid-cols-3 gap-1 rounded border border-cyan-300/25 bg-slate-900/50 p-1",
+                    "mt-2 grid grid-cols-3 gap-1 rounded border border-[#d8e2d9] bg-white/62 p-1",
                     !canStart && "opacity-50",
                   )}
                 >
@@ -376,8 +387,8 @@ export const PlanningPokerLobbyScreen: React.FC<Props> = ({
                       className={cn(
                         "h-8 rounded px-2 text-xs transition-colors",
                         voteSystem === option.value
-                          ? "bg-cyan-500 text-slate-950"
-                          : "bg-transparent text-cyan-50 hover:bg-slate-800/70",
+                          ? "bg-[#163832] text-white"
+                          : "bg-transparent text-[#24443d] hover:bg-[#edf5ef]",
                       )}
                     >
                       {option.label}
@@ -388,7 +399,7 @@ export const PlanningPokerLobbyScreen: React.FC<Props> = ({
                   {PLANNING_POKER_DECKS[voteSystem].map((value) => (
                     <span
                       key={`lobby-${value}`}
-                      className="rounded border border-cyan-300/20 bg-slate-900/55 px-1.5 py-0.5 text-[10px] text-slate-300"
+                      className="rounded border border-[#d8e2d9] bg-white/62 px-1.5 py-0.5 text-[10px] text-[#647067]"
                     >
                       {displayDeckValue(value)}
                     </span>
@@ -397,7 +408,7 @@ export const PlanningPokerLobbyScreen: React.FC<Props> = ({
               </div>
 
               {onEditProfile && (
-                <SecondaryButton className="h-10" onClick={onEditProfile}>
+                <SecondaryButton tone="saas" className="h-10" onClick={onEditProfile}>
                   {fr.onlineLobby.editProfile}
                 </SecondaryButton>
               )}
@@ -407,14 +418,18 @@ export const PlanningPokerLobbyScreen: React.FC<Props> = ({
       </Card>
 
       <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
-        <Card className="pointer-events-auto mx-auto w-full max-w-5xl border-cyan-300/40 bg-slate-950/92 p-3 shadow-[0_0_0_1px_rgba(34,211,238,0.2),0_8px_28px_rgba(2,6,23,0.55)]">
+        <Card
+          tone="saas"
+          className="pointer-events-auto mx-auto w-full max-w-5xl bg-[#f7f8f3]/94 p-3 shadow-[0_-12px_38px_rgba(22,56,50,0.14)]"
+        >
           <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:justify-between">
-            <SecondaryButton className="h-11" onClick={onLeave}>
+            <SecondaryButton tone="saas" className="h-11" onClick={onLeave}>
               {roomCode ? fr.onlineLobby.leaveParty : fr.onlineOnboarding.back}
             </SecondaryButton>
 
             {!roomCode ? (
               <PrimaryButton
+                tone="saas"
                 className="h-11"
                 disabled={mode === "host" ? !canCreate : !canJoin}
                 onClick={() => {
@@ -428,7 +443,7 @@ export const PlanningPokerLobbyScreen: React.FC<Props> = ({
                 {fr.onlineOnboarding.next}
               </PrimaryButton>
             ) : (
-              <PrimaryButton className="h-11" disabled={!canStart} onClick={onStart}>
+              <PrimaryButton tone="saas" className="h-11" disabled={!canStart} onClick={onStart}>
                 {fr.planningPoker.startSession}
               </PrimaryButton>
             )}

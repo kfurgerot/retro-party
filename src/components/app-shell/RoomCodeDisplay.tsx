@@ -39,12 +39,12 @@ export const RoomCodeDisplay = ({ code, accentColor = "#6366f1", hint }: RoomCod
         <button
           type="button"
           onClick={copy}
-          className="rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 py-1.5 text-sm font-semibold text-slate-300 transition hover:bg-white/[0.08] hover:text-white"
+          className="rounded-lg border border-[#cbd8cd] bg-white/75 px-3 py-1.5 text-sm font-semibold text-[#24443d] transition hover:border-[#aebcaf] hover:bg-white"
         >
           {copied ? "✓ Copié" : "Copier"}
         </button>
       </div>
-      {hint && <p className="mt-2 text-xs text-slate-500">{hint}</p>}
+      {hint && <p className="mt-2 text-xs text-[#647067]">{hint}</p>}
     </div>
   );
 };

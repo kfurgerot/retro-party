@@ -205,14 +205,14 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
     pending !== "idle" || (roomCode ? !canLaunch : mode === "host" ? !canCreate : !canJoin);
 
   return (
-    <PageShell accentColor={`${accentColor}12`} accentGlow={accentGlow} maxWidth="5xl">
+    <PageShell tone="saas" accentColor={`${accentColor}12`} accentGlow={accentGlow} maxWidth="5xl">
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div className="text-xs font-bold uppercase tracking-widest" style={{ color: accentColor }}>
           {brandLabel ?? fr.onlineLobby.brand}
         </div>
         {!roomCode && stepLabel && (
-          <span className="rounded-full border border-white/[0.07] bg-white/[0.03] px-2.5 py-1 text-[11px] text-slate-500">
+          <span className="rounded-full border border-[#d8e2d9] bg-white/62 px-2.5 py-1 text-[11px] text-[#647067]">
             {stepLabel}
           </span>
         )}
@@ -231,13 +231,13 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
         )}
       </div>
 
-      <h1 className="text-2xl font-extrabold tracking-tight text-slate-50 sm:text-3xl">
+      <h1 className="text-2xl font-extrabold tracking-tight text-[#18211f] sm:text-3xl">
         {roomCode
           ? fr.onlineLobby.roomReady
           : (titleWhenNoRoomOverride ?? fr.onlineLobby.quickConfig)}
       </h1>
       {roomCode && (
-        <p className="mt-1.5 text-sm text-slate-500">
+        <p className="mt-1.5 text-sm text-[#647067]">
           {fr.onlineLobby.roomActive} · {roomCode}
         </p>
       )}
@@ -252,8 +252,8 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
       {!roomCode && (
         <div className="mt-7 mx-auto max-w-lg space-y-4">
           {/* Profile */}
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
-            <p className="mb-3 text-xs font-bold uppercase tracking-widest text-slate-500">
+          <div className="rounded-2xl border border-[#d8e2d9] bg-white/62 p-4">
+            <p className="mb-3 text-xs font-bold uppercase tracking-widest text-[#647067]">
               {fr.onlineLobby.profileTitle}
             </p>
             <div className="flex items-center justify-between gap-3">
@@ -265,9 +265,9 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
                   {AVATARS[avatar] ?? "?"}
                 </div>
                 <div>
-                  <div className="text-sm font-semibold text-slate-100">
+                  <div className="text-sm font-semibold text-[#18211f]">
                     {name || (
-                      <span className="text-slate-600">
+                      <span className="text-[#8b9891]">
                         {fr.onlineOnboarding.displayNamePlaceholder}
                       </span>
                     )}
@@ -289,7 +289,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
                   type="button"
                   onClick={onEditProfile}
                   disabled={pending !== "idle"}
-                  className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-xs font-semibold text-slate-300 transition hover:bg-white/[0.06] hover:text-white disabled:opacity-40"
+                  className="rounded-lg border border-[#cfd9d1] bg-white/62 px-3 py-1.5 text-xs font-semibold text-[#54645d] transition hover:bg-white hover:text-[#24443d] disabled:opacity-40"
                 >
                   {fr.onlineLobby.editProfile}
                 </button>
@@ -314,8 +314,8 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
                   className={cn(
                     "h-11 rounded-xl border text-sm font-semibold transition-all disabled:opacity-40",
                     mode === m
-                      ? "border-white/20 text-white"
-                      : "border-white/[0.07] bg-white/[0.03] text-slate-400 hover:bg-white/[0.06] hover:text-slate-200",
+                      ? "border-[#163832]/35 text-white"
+                      : "border-[#d8e2d9] bg-white/62 text-[#647067] hover:bg-white hover:text-[#24443d]",
                   )}
                   style={
                     mode === m
@@ -343,7 +343,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && canJoin) submitJoin();
                 }}
-                className="h-11 w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 font-mono text-sm tracking-widest text-slate-100 outline-none placeholder:text-slate-600 transition focus:border-white/20 disabled:opacity-40"
+                className="h-11 w-full rounded-xl border border-[#cfd9d1] bg-white/80 px-4 font-mono text-sm tracking-widest text-[#18211f] outline-none placeholder:text-[#8b9891] transition focus:border-[#163832]/35 disabled:opacity-40"
               />
               {!validCode && code.length > 0 && (
                 <p className="mt-1.5 text-xs text-amber-400">{fr.onlineLobby.minCodeHint}</p>
@@ -361,9 +361,9 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
             {canStart ? (
               <>
                 {!hideRoundsControl && (
-                  <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+                  <div className="rounded-2xl border border-[#d8e2d9] bg-white/62 p-5">
                     <div className="mb-3 flex items-center justify-between">
-                      <label className="text-sm font-semibold text-slate-200">
+                      <label className="text-sm font-semibold text-[#24443d]">
                         {fr.onlineLobby.roundsLabel}
                       </label>
                       <span
@@ -389,27 +389,27 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
                       }}
                       aria-label={fr.onlineLobby.roundsLabel}
                     />
-                    <div className="mt-2 flex justify-between text-[10px] text-slate-600">
+                    <div className="mt-2 flex justify-between text-[10px] text-[#8b9891]">
                       <span>1</span>
                       <span>30</span>
                     </div>
                   </div>
                 )}
                 {hostSetupPanel && (
-                  <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+                  <div className="rounded-2xl border border-[#d8e2d9] bg-white/62 p-4">
                     {hostSetupPanel}
                   </div>
                 )}
-                <div className="rounded-xl border border-white/[0.04] bg-white/[0.015] px-4 py-3 text-sm text-slate-500">
+                <div className="rounded-xl border border-[#d8e2d9] bg-white/50 px-4 py-3 text-sm text-[#647067]">
                   {fr.onlineLobby.hostLaunchHint}
                 </div>
               </>
             ) : (
-              <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
-                <p className="text-xs font-bold uppercase tracking-widest text-slate-500">
+              <div className="rounded-2xl border border-[#d8e2d9] bg-white/62 p-5">
+                <p className="text-xs font-bold uppercase tracking-widest text-[#647067]">
                   {fr.onlineLobby.waitingHostTitle}
                 </p>
-                <p className="mt-2 text-sm text-slate-400">
+                <p className="mt-2 text-sm text-[#647067]">
                   {fr.onlineLobby.waitingHostDescription.replace("{host}", hostPlayerName)}
                 </p>
               </div>
@@ -424,12 +424,12 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
               hint={fr.onlineLobby.inviteHint}
             />
 
-            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+            <div className="rounded-2xl border border-[#d8e2d9] bg-white/62 p-4">
               <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-slate-200">
+                <h2 className="text-sm font-semibold text-[#24443d]">
                   {fr.onlineLobby.playersTitle}
                 </h2>
-                <span className="text-xs text-slate-500">
+                <span className="text-xs text-[#647067]">
                   {lobbyPlayers.length} / {MAX_PLAYERS}
                 </span>
               </div>
@@ -444,11 +444,11 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
       )}
 
       {/* Sticky footer */}
-      <StickyFooter maxWidth="5xl">
+      <StickyFooter tone="saas" maxWidth="5xl">
         {roomCode ? (
           <div className={cn("flex items-center gap-2.5", !canStart && "flex-col sm:flex-row")}>
             {!canStart && (
-              <p className="w-full text-xs text-slate-500 sm:flex-1">
+              <p className="w-full text-xs text-[#647067] sm:flex-1">
                 {fr.onlineLobby.waitingHostDescription.replace("{host}", hostPlayerName)}
               </p>
             )}
@@ -483,7 +483,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
               type="button"
               onClick={submitLeave}
               disabled={pending !== "idle"}
-              className="h-11 rounded-xl border border-white/[0.08] bg-white/[0.03] px-5 text-sm font-semibold text-slate-300 transition hover:bg-white/[0.06] hover:text-white disabled:opacity-40"
+              className="h-11 rounded-xl border border-[#cbd8cd] bg-white/75 px-5 text-sm font-semibold text-[#24443d] transition hover:border-[#aebcaf] hover:bg-white disabled:opacity-40"
             >
               {fr.onlineOnboarding.back}
             </button>
@@ -506,17 +506,17 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
 
       {/* Leave dialog */}
       <AlertDialog open={leaveDialogOpen} onOpenChange={setLeaveDialogOpen}>
-        <AlertDialogContent className="max-w-sm rounded-2xl border border-white/[0.08] bg-[#0f0f1c] p-6 text-slate-100 shadow-2xl">
+        <AlertDialogContent className="max-w-sm rounded-2xl border border-[#d8e2d9] bg-[#f7f8f3] p-6 text-[#18211f] shadow-2xl">
           <AlertDialogHeader className="space-y-2">
-            <AlertDialogTitle className="text-base font-bold text-slate-50">
+            <AlertDialogTitle className="text-base font-bold text-[#18211f]">
               {canStart ? fr.onlineLobby.cancelPartyQuestion : fr.onlineLobby.leavePartyQuestion}
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-sm text-slate-400">
+            <AlertDialogDescription className="text-sm text-[#647067]">
               {canStart ? fr.onlineLobby.disconnectAll : fr.onlineLobby.leavingCurrent}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-2 grid grid-cols-2 gap-2 space-x-0">
-            <AlertDialogCancel className="h-11 rounded-xl border border-white/[0.08] bg-white/[0.03] text-slate-300 hover:bg-white/[0.06] hover:text-white">
+            <AlertDialogCancel className="h-11 rounded-xl border border-[#cbd8cd] bg-white/75 text-[#24443d] hover:border-[#aebcaf] hover:bg-white">
               {fr.onlineLobby.cancel}
             </AlertDialogCancel>
             <AlertDialogAction

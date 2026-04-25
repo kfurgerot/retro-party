@@ -13,7 +13,7 @@ import { PageShell } from "@/components/app-shell";
 import { useAuth } from "@/contexts/AuthContext";
 
 const inputCls =
-  "w-full h-11 rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 text-sm text-slate-100 placeholder:text-slate-600 outline-none focus:border-white/20 focus:ring-1 focus:ring-violet-400/50 transition";
+  "w-full h-11 rounded-xl border border-[#d8e2d9] bg-white/80 px-4 text-sm text-[#18211f] placeholder:text-[#8b9891] outline-none focus:border-[#8fa49a] focus:ring-2 focus:ring-[#163832]/20 transition";
 
 const VOTE_SYSTEM_OPTIONS = [
   { value: "fibonacci", label: "Fibonacci" },
@@ -477,6 +477,7 @@ const PokerTemplateEditorPage = () => {
 
   return (
     <PageShell
+      tone="saas"
       accentColor="rgba(139,92,246,0.08)"
       accentGlow="rgba(139,92,246,0.04)"
       maxWidth="4xl"
@@ -490,14 +491,14 @@ const PokerTemplateEditorPage = () => {
           <span className="text-xs font-bold uppercase tracking-[0.12em] text-indigo-400">
             Agile Suite
           </span>
-          <span className="text-slate-700">/</span>
+          <span className="text-[#9aa79f]">/</span>
           <span className="text-xs font-bold uppercase tracking-[0.12em] text-violet-400">
             Planning Poker
           </span>
           {template && (
             <>
-              <span className="text-slate-700">/</span>
-              <span className="max-w-[200px] truncate text-xs text-slate-400">{template.name}</span>
+              <span className="text-[#9aa79f]">/</span>
+              <span className="max-w-[200px] truncate text-xs text-[#647067]">{template.name}</span>
             </>
           )}
         </div>
@@ -505,21 +506,21 @@ const PokerTemplateEditorPage = () => {
           <button
             type="button"
             onClick={() => navigate("/prepare/planning-poker")}
-            className="h-9 rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 text-sm font-semibold text-slate-300 transition hover:bg-white/[0.07] hover:text-white"
+            className="h-9 rounded-xl border border-[#d8e2d9] bg-white/70 px-4 text-sm font-semibold text-[#54645d] transition hover:bg-white hover:text-white"
           >
             Mes templates
           </button>
           <button
             type="button"
             onClick={() => navigate("/")}
-            className="h-9 rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 text-sm font-semibold text-slate-400 transition hover:bg-white/[0.07] hover:text-slate-200"
+            className="h-9 rounded-xl border border-[#d8e2d9] bg-white/70 px-4 text-sm font-semibold text-[#647067] transition hover:bg-white hover:text-[#24443d]"
           >
             Accueil
           </button>
         </div>
       </div>
 
-      {loading && <p className="py-8 text-center text-sm text-slate-500">Chargement...</p>}
+      {loading && <p className="py-8 text-center text-sm text-[#7b8781]">Chargement...</p>}
       {error && (
         <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
           {error}
@@ -529,8 +530,8 @@ const PokerTemplateEditorPage = () => {
       {!loading && template && (
         <div className="space-y-5">
           {/* Template info */}
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
-            <p className="mb-4 text-sm font-semibold text-slate-200">Paramètres de la session</p>
+          <div className="rounded-2xl border border-[#d8e2d9] bg-white/60 p-5">
+            <p className="mb-4 text-sm font-semibold text-[#24443d]">Paramètres de la session</p>
             <div className="flex flex-wrap gap-3">
               <input
                 value={name}
@@ -546,7 +547,7 @@ const PokerTemplateEditorPage = () => {
               />
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-3">
-              <span className="text-xs text-slate-400">Système de vote :</span>
+              <span className="text-xs text-[#647067]">Système de vote :</span>
               <div className="flex gap-2">
                 {VOTE_SYSTEM_OPTIONS.map((opt) => (
                   <button
@@ -556,7 +557,7 @@ const PokerTemplateEditorPage = () => {
                     className={`h-8 rounded-lg border px-3 text-xs font-semibold transition-all ${
                       voteSystem === opt.value
                         ? "border-violet-400/50 bg-violet-500/20 text-violet-200"
-                        : "border-white/[0.07] bg-white/[0.02] text-slate-400 hover:bg-white/[0.06]"
+                        : "border-[#d8e2d9] bg-white/60 text-[#647067] hover:bg-white"
                     }`}
                   >
                     {opt.label}
@@ -586,8 +587,8 @@ const PokerTemplateEditorPage = () => {
           </div>
 
           {/* Add story */}
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
-            <p className="mb-4 text-sm font-semibold text-slate-200">Ajouter une story</p>
+          <div className="rounded-2xl border border-[#d8e2d9] bg-white/60 p-5">
+            <p className="mb-4 text-sm font-semibold text-[#24443d]">Ajouter une story</p>
             <div className="flex flex-wrap gap-3">
               <input
                 value={newStoryTitle}
@@ -611,15 +612,15 @@ const PokerTemplateEditorPage = () => {
                 + Ajouter
               </button>
             </div>
-            <div className="mt-4 rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-300">
+            <div className="mt-4 rounded-xl border border-[#d8e2d9] bg-white/60 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#54645d]">
                 Import CSV
               </p>
-              <p className="mt-1 text-xs text-slate-500">
-                Colonnes supportées : <span className="text-slate-300">title/titre</span> et{" "}
-                <span className="text-slate-300">description</span> (optionnel). Séparateurs
-                acceptés : <span className="text-slate-300">;</span> ou{" "}
-                <span className="text-slate-300">,</span>.
+              <p className="mt-1 text-xs text-[#7b8781]">
+                Colonnes supportées : <span className="text-[#54645d]">title/titre</span> et{" "}
+                <span className="text-[#54645d]">description</span> (optionnel). Séparateurs
+                acceptés : <span className="text-[#54645d]">;</span> ou{" "}
+                <span className="text-[#54645d]">,</span>.
               </p>
               <div className="mt-3 flex flex-wrap items-center gap-3">
                 <input
@@ -646,15 +647,15 @@ const PokerTemplateEditorPage = () => {
           </div>
 
           {/* Stories list */}
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+          <div className="rounded-2xl border border-[#d8e2d9] bg-white/60 p-5">
             <div className="mb-4 flex items-center justify-between">
-              <p className="text-sm font-semibold text-slate-200">
-                Stories à estimer <span className="ml-1 text-slate-500">({stories.length})</span>
+              <p className="text-sm font-semibold text-[#24443d]">
+                Stories à estimer <span className="ml-1 text-[#7b8781]">({stories.length})</span>
               </p>
             </div>
 
             {stories.length === 0 ? (
-              <div className="rounded-xl border border-white/[0.05] bg-white/[0.02] px-4 py-8 text-center text-sm text-slate-500">
+              <div className="rounded-xl border border-[#d8e2d9] bg-white/60 px-4 py-8 text-center text-sm text-[#7b8781]">
                 Aucune story pour l'instant. Ajoute des stories ci-dessus.
               </div>
             ) : (
@@ -662,15 +663,15 @@ const PokerTemplateEditorPage = () => {
                 {stories.map((story, index) => (
                   <div
                     key={story.id}
-                    className="flex flex-wrap items-center gap-3 rounded-xl border border-white/[0.05] bg-white/[0.02] px-4 py-3 transition hover:border-white/[0.08]"
+                    className="flex flex-wrap items-center gap-3 rounded-xl border border-[#d8e2d9] bg-white/60 px-4 py-3 transition hover:border-[#b9c8bd]"
                   >
-                    <span className="shrink-0 text-xs font-bold text-slate-600">
+                    <span className="shrink-0 text-xs font-bold text-[#8b9891]">
                       {String(index + 1).padStart(2, "0")}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-slate-100 break-words">{story.text}</p>
+                      <p className="text-sm font-medium text-[#18211f] break-words">{story.text}</p>
                       {story.category && (
-                        <p className="mt-0.5 text-xs text-slate-500 break-words">
+                        <p className="mt-0.5 text-xs text-[#7b8781] break-words">
                           {story.category}
                         </p>
                       )}
@@ -680,7 +681,7 @@ const PokerTemplateEditorPage = () => {
                         type="button"
                         onClick={() => reorderStory(story.id, -1)}
                         disabled={index === 0}
-                        className="h-8 w-8 rounded-lg border border-white/[0.07] bg-white/[0.02] text-sm text-slate-400 transition hover:bg-white/[0.07] disabled:opacity-30"
+                        className="h-8 w-8 rounded-lg border border-[#d8e2d9] bg-white/60 text-sm text-[#647067] transition hover:bg-white disabled:opacity-30"
                       >
                         ↑
                       </button>
@@ -688,14 +689,14 @@ const PokerTemplateEditorPage = () => {
                         type="button"
                         onClick={() => reorderStory(story.id, 1)}
                         disabled={index === stories.length - 1}
-                        className="h-8 w-8 rounded-lg border border-white/[0.07] bg-white/[0.02] text-sm text-slate-400 transition hover:bg-white/[0.07] disabled:opacity-30"
+                        className="h-8 w-8 rounded-lg border border-[#d8e2d9] bg-white/60 text-sm text-[#647067] transition hover:bg-white disabled:opacity-30"
                       >
                         ↓
                       </button>
                       <button
                         type="button"
                         onClick={() => openEdit(story)}
-                        className="h-8 rounded-lg border border-white/[0.07] bg-white/[0.02] px-3 text-xs font-semibold text-slate-300 transition hover:bg-white/[0.07]"
+                        className="h-8 rounded-lg border border-[#d8e2d9] bg-white/60 px-3 text-xs font-semibold text-[#54645d] transition hover:bg-white"
                       >
                         Éditer
                       </button>
@@ -722,9 +723,11 @@ const PokerTemplateEditorPage = () => {
           if (!open) setEditingStory(null);
         }}
       >
-        <DialogContent className="max-w-lg rounded-2xl border border-white/[0.08] bg-[#0d0d1a] p-6 text-slate-100 shadow-2xl">
+        <DialogContent className="max-w-lg rounded-2xl border border-[#d8e2d9] bg-white p-6 text-[#18211f] shadow-2xl">
           <DialogHeader>
-            <DialogTitle className="text-base font-bold text-slate-50">Éditer la story</DialogTitle>
+            <DialogTitle className="text-base font-bold text-[#12201d]">
+              Éditer la story
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <input
@@ -737,14 +740,14 @@ const PokerTemplateEditorPage = () => {
               value={editingDesc}
               onChange={(e) => setEditingDesc(e.target.value)}
               placeholder="Description courte (optionnel)"
-              className="min-h-20 rounded-xl border border-white/[0.08] bg-white/[0.04] text-slate-100 placeholder:text-slate-600 focus-visible:ring-violet-400/50"
+              className="min-h-20 rounded-xl border border-[#d8e2d9] bg-white/80 text-[#18211f] placeholder:text-[#8b9891] focus-visible:ring-violet-400/50"
             />
           </div>
           <DialogFooter className="gap-2">
             <button
               type="button"
               onClick={() => setEditingStory(null)}
-              className="h-10 rounded-xl border border-white/[0.08] bg-white/[0.03] px-5 text-sm font-semibold text-slate-300 transition hover:bg-white/[0.07]"
+              className="h-10 rounded-xl border border-[#d8e2d9] bg-white/70 px-5 text-sm font-semibold text-[#54645d] transition hover:bg-white"
             >
               Annuler
             </button>

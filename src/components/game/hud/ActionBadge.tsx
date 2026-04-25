@@ -13,15 +13,15 @@ type ActionBadgeTone =
   | "neutral";
 
 const toneClass: Record<ActionBadgeTone, string> = {
-  move: "border-sky-300/35 bg-sky-500/12 text-sky-100",
-  decision: "border-amber-300/35 bg-amber-500/12 text-amber-100",
-  question: "border-violet-300/35 bg-violet-500/12 text-violet-100",
-  shop: "border-orange-300/35 bg-orange-500/12 text-orange-100",
-  minigame: "border-emerald-300/35 bg-emerald-500/12 text-emerald-100",
-  system: "border-pink-400/25 bg-slate-900/35 text-pink-100/85",
-  active: "border-pink-400/45 bg-pink-500/15 text-pink-100",
-  next: "border-emerald-300/40 bg-emerald-500/12 text-emerald-100",
-  neutral: "border-pink-400/20 bg-slate-900/35 text-slate-200",
+  move: "border-sky-300/45 bg-sky-50 text-sky-800",
+  decision: "border-amber-300/45 bg-amber-50 text-amber-800",
+  question: "border-violet-300/45 bg-violet-50 text-violet-800",
+  shop: "border-orange-300/45 bg-orange-50 text-orange-800",
+  minigame: "border-emerald-300/45 bg-emerald-50 text-emerald-800",
+  system: "border-[#d8e2d9] bg-white/62 text-[#647067]",
+  active: "border-[#163832]/35 bg-[#edf5ef] text-[#163832]",
+  next: "border-emerald-300/45 bg-emerald-50 text-emerald-800",
+  neutral: "border-[#d8e2d9] bg-white/62 text-[#647067]",
 };
 
 interface ActionBadgeProps {

@@ -12,15 +12,19 @@ export const PixelCard: React.FC<PixelCardProps> = ({
   ...props
 }) => {
   const glowStyles = {
-    cyan: "shadow-[4px_4px_0px_rgba(0,0,0,0.5),0_0_20px_rgba(236,72,153,0.3)]",
-    magenta: "shadow-[4px_4px_0px_rgba(0,0,0,0.5),0_0_20px_rgba(255,0,255,0.3)]",
-    gold: "shadow-[4px_4px_0px_rgba(0,0,0,0.5),0_0_20px_rgba(255,215,0,0.3)]",
-    none: "shadow-[4px_4px_0px_rgba(0,0,0,0.5)]",
+    cyan: "shadow-[0_14px_34px_rgba(22,56,50,0.16)]",
+    magenta: "shadow-[0_14px_34px_rgba(22,56,50,0.14)]",
+    gold: "shadow-[0_14px_34px_rgba(245,158,11,0.16)]",
+    none: "shadow-sm",
   };
 
   return (
     <div
-      className={cn("relative p-4 bg-card border-4 border-border", glowStyles[glow], className)}
+      className={cn(
+        "relative rounded-2xl border border-[#d8e2d9] bg-white/70 p-4 text-[#18211f] backdrop-blur",
+        glowStyles[glow],
+        className,
+      )}
       {...props}
     >
       {children}

@@ -1,5 +1,21 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  ArrowRight,
+  BarChart3,
+  CheckCircle2,
+  ClipboardList,
+  KeyRound,
+  LogIn,
+  MessageSquareText,
+  Play,
+  Radar,
+  ShieldCheck,
+  Sparkles,
+  Users,
+  Zap,
+  type LucideIcon,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { AuthModal } from "@/components/AuthModal";
@@ -145,6 +161,61 @@ const PREPARE_ROUTE_BY_TOOL: Record<ToolId, string | null> = {
   "draw-duel": null,
   "retro-generator": null,
 };
+
+const FEATURED_USE_CASES: Array<{
+  id: ToolId;
+  eyebrow: string;
+  title: string;
+  description: string;
+  accent: string;
+  Icon: LucideIcon;
+}> = [
+  {
+    id: "planning-poker",
+    eyebrow: "Estimation",
+    title: "Planning Poker",
+    description:
+      "Votes synchronisés, révélation simultanée et décisions visibles par toute l'équipe.",
+    accent: "#2563eb",
+    Icon: BarChart3,
+  },
+  {
+    id: "retro-party",
+    eyebrow: "Rétrospective",
+    title: "Retro Party",
+    description:
+      "Un atelier rythmé pour faire émerger les sujets utiles et maintenir l'engagement.",
+    accent: "#db2777",
+    Icon: MessageSquareText,
+  },
+  {
+    id: "skills-matrix",
+    eyebrow: "Diagnostic",
+    title: "Skills Matrix",
+    description:
+      "Une lecture claire des compétences, des écarts et des priorités d'accompagnement.",
+    accent: "#0891b2",
+    Icon: Radar,
+  },
+];
+
+const WORKFLOW_STEPS = [
+  {
+    title: "Prépare",
+    description: "Choisis le module et, si besoin, personnalise tes questions ou tes stories.",
+    Icon: ClipboardList,
+  },
+  {
+    title: "Invite",
+    description: "Partage un code room simple avec les participants, sans configuration technique.",
+    Icon: Users,
+  },
+  {
+    title: "Anime",
+    description: "Pilote l'atelier en temps réel avec une interface lisible sur mobile et desktop.",
+    Icon: Sparkles,
+  },
+];
 
 // ─── Account modal ─────────────────────────────────────────────────────────────
 
@@ -1144,6 +1215,7 @@ export default function Portal() {
   const [globalJoinError, setGlobalJoinError] = useState<string | null>(null);
   const [globalJoinLoading, setGlobalJoinLoading] = useState(false);
   const globalJoinInputRef = useRef<HTMLInputElement>(null);
+  const modulesSectionRef = useRef<HTMLElement>(null);
 
   const handleGlobalJoin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1253,6 +1325,10 @@ export default function Portal() {
     setSelectedCategoryId(categoryId);
   };
 
+  const handleExploreModules = () => {
+    modulesSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   const handleCodeChange = (toolId: ToolId, value: string) => {
     setJoinCodes((prev) => ({
       ...prev,
@@ -1288,54 +1364,42 @@ export default function Portal() {
 
   return (
     <div
-      className="relative min-h-screen overflow-hidden text-slate-100"
-      style={{ background: "#0a0a14", fontFamily: "'DM Sans', sans-serif" }}
+      className="relative min-h-screen overflow-hidden bg-[#f7f8f3] text-[#18211f]"
+      style={{ fontFamily: "'DM Sans', sans-serif" }}
     >
-      {/* Ambient background glow */}
-      <div
-        className="pointer-events-none fixed inset-0 z-0"
-        style={{
-          background: `
-            radial-gradient(ellipse 60% 40% at 20% 10%, rgba(99,102,241,0.08) 0%, transparent 70%),
-            radial-gradient(ellipse 50% 30% at 80% 80%, rgba(236,72,153,0.06) 0%, transparent 70%)
-          `,
-        }}
-      />
+      <div className="pointer-events-none fixed inset-0 z-0 bg-[linear-gradient(135deg,rgba(14,116,144,0.13)_0%,transparent_34%),linear-gradient(225deg,rgba(245,158,11,0.12)_0%,transparent_32%),linear-gradient(180deg,#f7f8f3_0%,#eef4ef_100%)]" />
+      <div className="pointer-events-none fixed inset-x-0 top-0 z-0 h-48 bg-[repeating-linear-gradient(90deg,rgba(15,23,42,0.045)_0,rgba(15,23,42,0.045)_1px,transparent_1px,transparent_72px)]" />
 
       <div
-        className="relative z-10 mx-auto max-w-[1180px] px-5 pb-16 pt-7"
+        className="relative z-10 mx-auto max-w-[1180px] px-4 pb-14 pt-4 sm:px-6 lg:px-8"
         style={{
           opacity: mounted ? 1 : 0,
           transition: "opacity 0.4s ease, transform 0.4s ease",
           transform: mounted ? "translateY(0)" : "translateY(16px)",
         }}
       >
-        {/* Header */}
-        <header className="mb-9">
-          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-4 sm:flex sm:items-start sm:justify-between">
-            <div className="min-w-0 flex-1">
-              <div className="mb-2.5 inline-flex items-center gap-2">
-                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 text-sm">
-                  ⚡
-                </div>
-                <span className="text-xs font-bold uppercase tracking-[0.12em] text-indigo-400">
-                  Agile Suite
+        <header className="sticky top-0 z-30 -mx-4 mb-8 border-b border-black/5 bg-[#f7f8f3]/88 px-4 py-3 backdrop-blur-xl sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+          <div className="mx-auto flex max-w-[1180px] items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={handleExploreModules}
+              className="flex min-w-0 items-center gap-2 text-left"
+              aria-label="AgileSuite"
+            >
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#163832] text-white shadow-[0_10px_22px_rgba(22,56,50,0.22)]">
+                <Zap className="h-4 w-4" />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-sm font-black leading-tight tracking-tight text-[#163832]">
+                  AgileSuite
                 </span>
-              </div>
-              <h1 className="text-[clamp(22px,5vw,32px)] font-extrabold leading-none tracking-tight text-slate-50">
-                {authLoading
-                  ? "Chargement…"
-                  : user
-                    ? `Bonjour, ${user.displayName.split(" ")[0]} 👋`
-                    : "Bienvenue 👋"}
-              </h1>
-              <p className="mt-1.5 max-w-full text-sm leading-5 text-slate-500">
-                Quelle expérience lance-t-on aujourd'hui ?
-              </p>
-            </div>
+                <span className="hidden text-[11px] font-semibold uppercase tracking-[0.14em] text-[#647067] sm:block">
+                  Ateliers collaboratifs
+                </span>
+              </span>
+            </button>
 
-            {/* Actions header */}
-            <div className="flex shrink-0 flex-col items-end gap-2 justify-self-end sm:flex-row sm:items-center sm:shrink-0">
+            <div className="flex shrink-0 items-center gap-2">
               <button
                 type="button"
                 onClick={() => {
@@ -1343,18 +1407,18 @@ export default function Portal() {
                   setGlobalJoinError(null);
                   setGlobalJoinOpen(true);
                 }}
-                className="flex items-center gap-1.5 rounded-full border border-white/[0.12] bg-white/[0.05] px-3.5 py-2 text-[13px] font-semibold text-slate-300 transition hover:bg-white/[0.09] hover:text-white"
+                className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-[#cfd8cf] bg-white/70 px-3 text-[13px] font-extrabold text-[#24443d] shadow-sm transition hover:border-[#aebcaf] hover:bg-white"
               >
+                <LogIn className="h-4 w-4" />
                 Rejoindre
               </button>
 
-              {/* User badge / login button */}
               {!authLoading &&
                 (user ? (
                   <button
                     type="button"
                     onClick={() => setAccountOpen(true)}
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-indigo-400/40 bg-indigo-500/15 text-sm font-bold text-indigo-100 transition hover:bg-indigo-500/25 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a14]"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#b8c7bb] bg-[#163832] text-sm font-bold text-white shadow-sm transition hover:bg-[#1f4a43] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#163832]/35"
                     title="Mon compte"
                   >
                     {initials}
@@ -1366,19 +1430,9 @@ export default function Portal() {
                       setPendingPrepareRoute(null);
                       setLoginOpen(true);
                     }}
-                    className="flex shrink-0 items-center gap-2 rounded-full border border-indigo-500/40 bg-indigo-500/10 px-4 py-2 text-[13px] font-semibold text-indigo-300 transition hover:bg-indigo-500/20 hover:text-indigo-200"
+                    className="hidden h-10 shrink-0 items-center gap-2 rounded-xl bg-[#163832] px-4 text-[13px] font-extrabold text-white shadow-[0_10px_22px_rgba(22,56,50,0.18)] transition hover:bg-[#1f4a43] sm:flex"
                   >
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
-                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                      <circle cx="12" cy="7" r="4" />
-                    </svg>
+                    <KeyRound className="h-4 w-4" />
                     Se connecter
                   </button>
                 ))}
@@ -1386,211 +1440,421 @@ export default function Portal() {
           </div>
         </header>
 
-        {/* Tool grid */}
-        <section className="mb-7">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-xs font-bold uppercase tracking-[0.1em] text-slate-500">
-              Outils disponibles
-            </h2>
-            <span className="rounded-full border border-white/[0.05] bg-white/[0.04] px-2.5 py-1 text-[11px] text-slate-600">
-              {activeToolsInCategory} / {toolsForCategory.length} actifs
-            </span>
-          </div>
-          <div className="scrollbar-none mb-4 overflow-x-auto pb-1">
-            <div className="flex min-w-max items-center gap-2">
-              <button
-                type="button"
-                onClick={() => handleCategorySelect("all")}
-                className={cn(
-                  "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-semibold transition",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a14]",
-                )}
-                style={{
-                  borderColor:
-                    selectedCategoryId === "all"
-                      ? "rgba(248,250,252,0.5)"
-                      : "rgba(148,163,184,0.35)",
-                  background:
-                    selectedCategoryId === "all"
-                      ? "rgba(148,163,184,0.26)"
-                      : "rgba(148,163,184,0.1)",
-                  color: selectedCategoryId === "all" ? "#f8fafc" : "#cbd5e1",
-                }}
-              >
-                <span>All</span>
-                <span className="rounded-full border border-white/15 bg-white/10 px-1.5 py-0.5 text-[10px] text-slate-100/90">
-                  {TOOLS.length}
-                </span>
-              </button>
-              {MODULE_CATEGORIES.map((category) => {
-                const categoryCount = categoryStats[category.id].total;
-                const isActiveCategory = selectedCategoryId === category.id;
-                return (
-                  <button
-                    key={category.id}
-                    type="button"
-                    onClick={() => handleCategorySelect(category.id)}
-                    className={cn(
-                      "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-semibold transition",
-                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a14]",
-                    )}
-                    style={{
-                      borderColor: `rgba(${category.rgb}, ${isActiveCategory ? 0.62 : 0.34})`,
-                      background: `rgba(${category.rgb}, ${isActiveCategory ? 0.26 : 0.1})`,
-                      color: isActiveCategory ? "#f8fafc" : "#cbd5e1",
-                    }}
+        <main>
+          <section className="grid gap-8 lg:grid-cols-[minmax(0,1.02fr)_minmax(420px,0.98fr)] lg:items-center">
+            <div className="max-w-2xl">
+              <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#d8ddd3] bg-white/70 px-3 py-1.5 text-[12px] font-extrabold uppercase tracking-[0.12em] text-[#42645c] shadow-sm">
+                <CheckCircle2 className="h-3.5 w-3.5 text-[#0f8f72]" />
+                Suite SaaS pour équipes Agile
+              </div>
+              <h1 className="max-w-[11ch] text-[42px] font-black leading-[0.96] tracking-tight text-[#12201d] sm:max-w-[13ch] sm:text-[64px] lg:text-[76px]">
+                Animez vos ateliers Agile en ligne.
+              </h1>
+              <p className="mt-5 max-w-xl text-base leading-7 text-[#52615c] sm:text-lg">
+                Planning poker, rétrospectives et diagnostics d'équipe dans une expérience simple,
+                visuelle et synchronisée en temps réel.
+              </p>
+
+              <div className="mt-7 grid gap-3 sm:flex sm:flex-wrap">
+                <button
+                  type="button"
+                  onClick={handleExploreModules}
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-[#163832] px-5 text-sm font-black text-white shadow-[0_18px_36px_rgba(22,56,50,0.22)] transition hover:bg-[#1f4a43] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#163832]/35"
+                >
+                  Choisir un atelier
+                  <ArrowRight className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setGlobalJoinCode("");
+                    setGlobalJoinError(null);
+                    setGlobalJoinOpen(true);
+                  }}
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-[#c9d4ca] bg-white/75 px-5 text-sm font-black text-[#24443d] shadow-sm transition hover:border-[#aebcaf] hover:bg-white"
+                >
+                  <LogIn className="h-4 w-4" />
+                  Rejoindre avec un code
+                </button>
+              </div>
+
+              <div className="mt-7 grid grid-cols-3 gap-2 text-center sm:max-w-lg">
+                {[
+                  ["4", "modules live"],
+                  ["1 code", "pour inviter"],
+                  ["mobile", "et desktop"],
+                ].map(([value, label]) => (
+                  <div
+                    key={label}
+                    className="rounded-2xl border border-[#dce4db] bg-white/58 px-2 py-3 shadow-sm"
                   >
-                    <span>{category.label}</span>
-                    <span className="rounded-full border border-white/15 bg-white/10 px-1.5 py-0.5 text-[10px] text-slate-100/90">
-                      {categoryCount}
-                    </span>
-                  </button>
+                    <div className="text-lg font-black text-[#163832]">{value}</div>
+                    <div className="mt-0.5 text-[11px] font-semibold text-[#6f7a75]">{label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="relative">
+              <div className="rounded-[28px] border border-[#d5ded5] bg-[#fcfdf9] p-3 shadow-[0_24px_70px_rgba(22,56,50,0.16)]">
+                <div className="overflow-hidden rounded-[22px] border border-[#e2e8df] bg-[#f9fbf5]">
+                  <div className="flex items-center justify-between border-b border-[#e4ebe3] bg-white/75 px-4 py-3">
+                    <div>
+                      <div className="text-[11px] font-black uppercase tracking-[0.16em] text-[#698077]">
+                        Atelier en direct
+                      </div>
+                      <div className="mt-0.5 text-sm font-black text-[#15231f]">
+                        Sprint Planning
+                      </div>
+                    </div>
+                    <div className="rounded-xl border border-[#cdd9d0] bg-[#eff6ee] px-3 py-1.5 text-xs font-black text-[#24443d]">
+                      Code R4D8
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 p-4 sm:grid-cols-[1fr_170px]">
+                    <div className="space-y-3">
+                      <div className="rounded-2xl border border-[#dbe5dc] bg-white px-4 py-4 shadow-sm">
+                        <div className="mb-3 flex items-center justify-between">
+                          <span className="text-xs font-black uppercase tracking-[0.12em] text-[#789087]">
+                            Story active
+                          </span>
+                          <span className="rounded-full bg-[#e8f1ff] px-2 py-1 text-[11px] font-black text-[#2563eb]">
+                            Vote ouvert
+                          </span>
+                        </div>
+                        <p className="text-sm font-bold leading-5 text-[#1b2925]">
+                          Afficher le score d'équipe après chaque diagnostic.
+                        </p>
+                        <div className="mt-4 grid grid-cols-5 gap-2">
+                          {["1", "2", "3", "5", "8"].map((point, index) => (
+                            <span
+                              key={point}
+                              className={cn(
+                                "flex h-12 items-center justify-center rounded-xl border text-sm font-black",
+                                index === 3
+                                  ? "border-[#2563eb] bg-[#2563eb] text-white"
+                                  : "border-[#d7e0d8] bg-[#f4f7f2] text-[#49615a]",
+                              )}
+                            >
+                              {point}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="rounded-2xl border border-[#dbe5dc] bg-white px-4 py-3 shadow-sm">
+                          <div className="text-[11px] font-black uppercase tracking-[0.12em] text-[#789087]">
+                            Consensus
+                          </div>
+                          <div className="mt-2 text-3xl font-black text-[#163832]">82%</div>
+                        </div>
+                        <div className="rounded-2xl border border-[#dbe5dc] bg-white px-4 py-3 shadow-sm">
+                          <div className="text-[11px] font-black uppercase tracking-[0.12em] text-[#789087]">
+                            Participants
+                          </div>
+                          <div className="mt-2 flex -space-x-2">
+                            {["AM", "JL", "SN", "+2"].map((name) => (
+                              <span
+                                key={name}
+                                className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-[#163832] text-[11px] font-black text-white"
+                              >
+                                {name}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-[#dbe5dc] bg-white p-3 shadow-sm">
+                      <div className="mb-3 text-[11px] font-black uppercase tracking-[0.12em] text-[#789087]">
+                        Santé équipe
+                      </div>
+                      <div className="relative mx-auto flex aspect-square max-w-[160px] items-center justify-center rounded-full border border-[#dce6dd] bg-[#f4f8f2]">
+                        <div className="absolute h-[72%] w-[72%] rounded-full border border-[#cbd8ce]" />
+                        <div className="absolute h-[46%] w-[46%] rounded-full border border-[#d2ded4]" />
+                        <div className="h-[58%] w-[58%] rounded-[34%_66%_42%_58%] bg-[#0f8f72]/20 ring-2 ring-[#0f8f72]/55" />
+                      </div>
+                      <div className="mt-4 space-y-2">
+                        {[
+                          ["Clarté", "w-[86%]", "bg-[#0f8f72]"],
+                          ["Focus", "w-[68%]", "bg-[#2563eb]"],
+                          ["Flow", "w-[74%]", "bg-[#d97706]"],
+                        ].map(([label, width, color]) => (
+                          <div key={label}>
+                            <div className="mb-1 text-[11px] font-bold text-[#66766f]">{label}</div>
+                            <div className="h-2 overflow-hidden rounded-full bg-[#edf2eb]">
+                              <div className={cn("h-full rounded-full", width, color)} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="mt-12">
+            <div className="mb-4 flex items-end justify-between gap-4">
+              <div>
+                <h2 className="text-2xl font-black tracking-tight text-[#15231f]">
+                  Démarrez par votre besoin
+                </h2>
+                <p className="mt-1 text-sm leading-6 text-[#647067]">
+                  Trois entrées rapides pour lancer l'atelier adapté à votre moment d'équipe.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-3">
+              {FEATURED_USE_CASES.map(({ id, eyebrow, title, description, accent, Icon }) => {
+                const canPrepare = !!PREPARE_ROUTE_BY_TOOL[id];
+                return (
+                  <article
+                    key={id}
+                    className="rounded-[24px] border border-[#d8e2d9] bg-white/72 p-4 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_18px_42px_rgba(22,56,50,0.12)]"
+                  >
+                    <div className="mb-4 flex items-center justify-between gap-3">
+                      <span
+                        className="flex h-11 w-11 items-center justify-center rounded-2xl text-white shadow-sm"
+                        style={{ backgroundColor: accent }}
+                      >
+                        <Icon className="h-5 w-5" />
+                      </span>
+                      <span className="rounded-full border border-[#dce5dd] bg-[#f6f8f3] px-2.5 py-1 text-[11px] font-black uppercase tracking-[0.12em] text-[#66766f]">
+                        {eyebrow}
+                      </span>
+                    </div>
+                    <h3 className="text-lg font-black text-[#15231f]">{title}</h3>
+                    <p className="mt-2 min-h-[66px] text-sm leading-6 text-[#5f6f68]">
+                      {description}
+                    </p>
+                    <div className="mt-4 grid gap-2 sm:grid-cols-2 md:grid-cols-1 xl:grid-cols-2">
+                      <button
+                        type="button"
+                        onClick={() => handleCreate(id)}
+                        className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#163832] px-3 text-sm font-black text-white transition hover:bg-[#1f4a43]"
+                      >
+                        <Play className="h-4 w-4" />
+                        Lancer
+                      </button>
+                      {canPrepare ? (
+                        <button
+                          type="button"
+                          onClick={() => handlePrepare(id)}
+                          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-[#cbd8cd] bg-white px-3 text-sm font-black text-[#24443d] transition hover:border-[#aebcaf]"
+                        >
+                          Préparer
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleCreate(id)}
+                          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-[#cbd8cd] bg-white px-3 text-sm font-black text-[#24443d] transition hover:border-[#aebcaf]"
+                        >
+                          Voir
+                        </button>
+                      )}
+                    </div>
+                  </article>
                 );
               })}
             </div>
-          </div>
+          </section>
 
-          {toolsForCategory.length === 0 ? (
-            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-sm text-slate-400">
-              Aucun module n'est encore rattaché à cette catégorie.
+          <section className="mt-12 grid gap-3 md:grid-cols-3">
+            {WORKFLOW_STEPS.map(({ title, description, Icon }, index) => (
+              <div
+                key={title}
+                className="rounded-[22px] border border-[#d8e2d9] bg-white/55 p-4 shadow-sm"
+              >
+                <div className="mb-4 flex items-center justify-between">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#e8eee8] text-[#24443d]">
+                    <Icon className="h-5 w-5" />
+                  </span>
+                  <span className="text-xs font-black text-[#98a49e]">0{index + 1}</span>
+                </div>
+                <h3 className="text-base font-black text-[#15231f]">{title}</h3>
+                <p className="mt-2 text-sm leading-6 text-[#647067]">{description}</p>
+              </div>
+            ))}
+          </section>
+
+          <section ref={modulesSectionRef} className="mt-12 scroll-mt-24">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-2xl font-black tracking-tight text-[#15231f]">
+                  Modules disponibles
+                </h2>
+                <p className="mt-1 text-sm text-[#647067]">
+                  Filtrez par usage ou sélectionnez directement le module à lancer.
+                </p>
+              </div>
+              <span className="hidden rounded-full border border-[#d8e2d9] bg-white/70 px-3 py-1.5 text-xs font-black text-[#66766f] sm:inline-flex">
+                {activeToolsInCategory} / {toolsForCategory.length} actifs
+              </span>
             </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:hidden">
-                {toolsForCategory.map((tool) => (
-                  <ToolCard
-                    key={tool.id}
-                    tool={tool}
+
+            <div className="scrollbar-none mb-4 overflow-x-auto pb-1">
+              <div className="flex min-w-max items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleCategorySelect("all")}
+                  className={cn(
+                    "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[12px] font-black transition",
+                    selectedCategoryId === "all"
+                      ? "border-[#163832] bg-[#163832] text-white"
+                      : "border-[#d2ded4] bg-white/70 text-[#54645d] hover:bg-white",
+                  )}
+                >
+                  <span>Tout</span>
+                  <span
+                    className={cn(
+                      "rounded-full px-1.5 py-0.5 text-[10px]",
+                      selectedCategoryId === "all" ? "bg-white/15 text-white" : "bg-[#edf2eb]",
+                    )}
+                  >
+                    {TOOLS.length}
+                  </span>
+                </button>
+                {MODULE_CATEGORIES.map((category) => {
+                  const categoryCount = categoryStats[category.id].total;
+                  const isActiveCategory = selectedCategoryId === category.id;
+                  return (
+                    <button
+                      key={category.id}
+                      type="button"
+                      onClick={() => handleCategorySelect(category.id)}
+                      className={cn(
+                        "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[12px] font-black transition",
+                        isActiveCategory
+                          ? "text-white"
+                          : "border-[#d2ded4] bg-white/70 text-[#54645d] hover:bg-white",
+                      )}
+                      style={
+                        isActiveCategory
+                          ? {
+                              borderColor: `rgba(${category.rgb}, 0.85)`,
+                              background: `rgb(${category.rgb})`,
+                            }
+                          : undefined
+                      }
+                    >
+                      <span>{category.label}</span>
+                      <span
+                        className={cn(
+                          "rounded-full px-1.5 py-0.5 text-[10px]",
+                          isActiveCategory ? "bg-white/15 text-white" : "bg-[#edf2eb]",
+                        )}
+                      >
+                        {categoryCount}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {toolsForCategory.length === 0 ? (
+              <div className="rounded-2xl border border-[#d8e2d9] bg-white/70 px-4 py-3 text-sm text-[#647067]">
+                Aucun module n'est encore rattaché à cette catégorie.
+              </div>
+            ) : (
+              <div className="rounded-[28px] border border-[#102d27] bg-[#0a0a14] p-3 shadow-[0_24px_70px_rgba(22,56,50,0.16)] sm:p-4">
+                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:hidden">
+                  {toolsForCategory.map((tool) => (
+                    <ToolCard
+                      key={tool.id}
+                      tool={tool}
+                      activeCategoryId={highlightedCategoryId}
+                      isOpen={openTool === tool.id}
+                      code={joinCodes[tool.id]}
+                      isLoggedIn={!!user}
+                      onToggle={handleToolToggle}
+                      onCodeChange={handleCodeChange}
+                      onCreate={handleCreate}
+                      onJoin={handleJoin}
+                      onPrepare={handlePrepare}
+                      onLoginRequired={handlePrepare}
+                    />
+                  ))}
+                </div>
+                <div className="hidden lg:grid lg:grid-cols-[minmax(0,1.8fr)_minmax(360px,1fr)] lg:items-start lg:gap-4">
+                  <div className="grid content-start self-start grid-cols-2 gap-2.5 xl:grid-cols-3">
+                    {toolsForCategory.map((tool) => (
+                      <ToolDesktopCard
+                        key={tool.id}
+                        tool={tool}
+                        activeCategoryId={highlightedCategoryId}
+                        isSelected={selectedToolId === tool.id}
+                        onSelect={handleDesktopToolSelect}
+                      />
+                    ))}
+                  </div>
+                  <ToolDesktopDetailPanel
+                    tool={selectedDesktopTool}
                     activeCategoryId={highlightedCategoryId}
-                    isOpen={openTool === tool.id}
-                    code={joinCodes[tool.id]}
+                    code={joinCodes[selectedDesktopTool.id]}
                     isLoggedIn={!!user}
-                    onToggle={handleToolToggle}
                     onCodeChange={handleCodeChange}
                     onCreate={handleCreate}
                     onJoin={handleJoin}
                     onPrepare={handlePrepare}
                     onLoginRequired={handlePrepare}
                   />
-                ))}
-              </div>
-              <div className="hidden lg:grid lg:grid-cols-[minmax(0,1.8fr)_minmax(360px,1fr)] lg:items-start lg:gap-4">
-                <div className="grid content-start self-start grid-cols-2 gap-2.5 xl:grid-cols-3">
-                  {toolsForCategory.map((tool) => (
-                    <ToolDesktopCard
-                      key={tool.id}
-                      tool={tool}
-                      activeCategoryId={highlightedCategoryId}
-                      isSelected={selectedToolId === tool.id}
-                      onSelect={handleDesktopToolSelect}
-                    />
-                  ))}
                 </div>
-                <ToolDesktopDetailPanel
-                  tool={selectedDesktopTool}
-                  activeCategoryId={highlightedCategoryId}
-                  code={joinCodes[selectedDesktopTool.id]}
-                  isLoggedIn={!!user}
-                  onCodeChange={handleCodeChange}
-                  onCreate={handleCreate}
-                  onJoin={handleJoin}
-                  onPrepare={handlePrepare}
-                  onLoginRequired={handlePrepare}
-                />
               </div>
-            </>
-          )}
-        </section>
+            )}
+          </section>
 
-        {/* Recent sessions placeholder */}
-        <section className="mt-7">
-          <h2 className="mb-3 text-xs font-bold uppercase tracking-[0.1em] text-slate-500">
-            Accès rapide
-          </h2>
-          <div className="flex flex-col gap-1.5">
+          <section className="mt-12 rounded-[28px] border border-[#d8e2d9] bg-[#163832] p-5 text-white shadow-[0_24px_60px_rgba(22,56,50,0.18)] sm:p-7">
+            <div className="grid gap-5 md:grid-cols-[1fr_auto] md:items-center">
+              <div>
+                <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.14em] text-[#d7eee7]">
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                  Cadre SaaS
+                </div>
+                <h2 className="text-2xl font-black tracking-tight">
+                  Un espace prêt pour vos ateliers
+                </h2>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-[#c7d9d3]">
+                  Les sessions restent simples à rejoindre, les préparations sont rattachées à votre
+                  compte et les conditions d'utilisation sont accessibles avant inscription.
+                </p>
+              </div>
+              <Link
+                to="/cgu"
+                className="inline-flex h-11 items-center justify-center rounded-xl border border-white/20 bg-white/10 px-4 text-sm font-black text-white transition hover:bg-white/20"
+              >
+                Lire les CGU
+              </Link>
+            </div>
+          </section>
+        </main>
+
+        <footer className="mt-10 flex flex-col gap-3 border-t border-[#d8e2d9] pt-5 text-sm text-[#66766f] sm:flex-row sm:items-center sm:justify-between">
+          <span>AgileSuite © 2026 Karl FURGEROT</span>
+          <div className="flex flex-wrap gap-4">
+            <Link to="/cgu" className="font-bold text-[#24443d] hover:text-[#163832]">
+              CGU
+            </Link>
             <button
               type="button"
-              onClick={() => handlePrepare("retro-party")}
-              className="flex cursor-pointer items-center gap-3 rounded-xl border border-white/[0.05] bg-white/[0.02] px-3.5 py-3 text-left transition-all hover:border-white/[0.08] hover:bg-white/[0.035]"
+              onClick={() => {
+                setGlobalJoinCode("");
+                setGlobalJoinError(null);
+                setGlobalJoinOpen(true);
+              }}
+              className="font-bold text-[#24443d] hover:text-[#163832]"
             >
-              <span className="text-lg leading-none">📋</span>
-              <div className="min-w-0 flex-1">
-                <div className="text-[13px] font-semibold text-slate-200">
-                  Préparer une Rétro Party
-                </div>
-                <div className="text-[11px] text-slate-500">
-                  {user
-                    ? "Gérer tes templates et questions personnalisées"
-                    : "Connexion requise · Crée tes questions Agile à l'avance"}
-                </div>
-              </div>
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#475569"
-                strokeWidth="2"
-              >
-                <path d="m9 18 6-6-6-6" />
-              </svg>
-            </button>
-            <button
-              type="button"
-              onClick={() => handlePrepare("planning-poker")}
-              className="flex cursor-pointer items-center gap-3 rounded-xl border border-white/[0.05] bg-white/[0.02] px-3.5 py-3 text-left transition-all hover:border-white/[0.08] hover:bg-white/[0.035]"
-            >
-              <span className="text-lg leading-none">🃏</span>
-              <div className="min-w-0 flex-1">
-                <div className="text-[13px] font-semibold text-slate-200">
-                  Préparer un Planning Poker
-                </div>
-                <div className="text-[11px] text-slate-500">
-                  {user
-                    ? "Gérer tes templates de stories à estimer"
-                    : "Connexion requise · Prépare tes stories à l'avance"}
-                </div>
-              </div>
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#475569"
-                strokeWidth="2"
-              >
-                <path d="m9 18 6-6-6-6" />
-              </svg>
-            </button>
-            <button
-              type="button"
-              onClick={() => handlePrepare("skills-matrix")}
-              className="flex cursor-pointer items-center gap-3 rounded-xl border border-white/[0.05] bg-white/[0.02] px-3.5 py-3 text-left transition-all hover:border-white/[0.08] hover:bg-white/[0.035]"
-            >
-              <span className="text-lg leading-none">🧩</span>
-              <div className="min-w-0 flex-1">
-                <div className="text-[13px] font-semibold text-slate-200">
-                  Préparer une Matrice de Compétences
-                </div>
-                <div className="text-[11px] text-slate-500">
-                  {user
-                    ? "Gérer tes templates d'échelle, catégories et compétences"
-                    : "Connexion requise · Prépare ta matrice avant l'atelier"}
-                </div>
-              </div>
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#475569"
-                strokeWidth="2"
-              >
-                <path d="m9 18 6-6-6-6" />
-              </svg>
+              Rejoindre une session
             </button>
           </div>
-        </section>
+        </footer>
       </div>
 
       {/* Global join modal */}

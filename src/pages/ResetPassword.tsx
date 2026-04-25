@@ -5,7 +5,7 @@ import { fr } from "@/i18n/fr";
 import { PageShell } from "@/components/app-shell";
 
 const inputCls =
-  "w-full h-11 rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 text-sm text-slate-100 placeholder:text-slate-600 outline-none focus:border-white/20 focus:ring-1 focus:ring-indigo-400/50 transition";
+  "w-full h-11 rounded-xl border border-[#cfd9d1] bg-white/80 px-4 text-sm text-[#18211f] placeholder:text-[#8b9891] outline-none focus:border-[#8fa49a] focus:ring-2 focus:ring-[#163832]/20 transition";
 
 const ResetPasswordPage = () => {
   const [searchParams] = useSearchParams();
@@ -50,38 +50,43 @@ const ResetPasswordPage = () => {
   };
 
   return (
-    <PageShell accentColor="rgba(99,102,241,0.08)" accentGlow="rgba(99,102,241,0.04)" maxWidth="sm">
+    <PageShell
+      accentColor="rgba(99,102,241,0.08)"
+      accentGlow="rgba(99,102,241,0.04)"
+      maxWidth="sm"
+      tone="saas"
+    >
       <div className="flex min-h-[calc(100svh-4rem)] items-center justify-center py-8">
         <div className="w-full max-w-sm">
           {/* Brand */}
           <div className="mb-6 flex items-center justify-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 text-sm">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#163832] text-sm text-white shadow-sm">
               ⚡
             </div>
-            <span className="text-xs font-bold uppercase tracking-[0.12em] text-indigo-400">
+            <span className="text-xs font-black uppercase tracking-[0.12em] text-[#24443d]">
               Agile Suite
             </span>
           </div>
 
-          <h1 className="mb-1.5 text-center text-2xl font-extrabold tracking-tight text-slate-50">
+          <h1 className="mb-1.5 text-center text-3xl font-black tracking-tight text-[#12201d]">
             {fr.resetPassword.title}
           </h1>
-          <p className="mb-6 text-center text-sm text-slate-500">
+          <p className="mb-6 text-center text-sm leading-6 text-[#647067]">
             Choisis un nouveau mot de passe pour ton compte.
           </p>
 
           {!token && (
-            <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+            <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">
               {fr.resetPassword.invalidLink}
             </div>
           )}
           {error && (
-            <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+            <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">
               {error}
             </div>
           )}
           {success && (
-            <div className="mb-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
+            <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
               {success}
             </div>
           )}
@@ -109,8 +114,7 @@ const ResetPasswordPage = () => {
             <button
               type="submit"
               disabled={loading || !token}
-              className="h-11 w-full rounded-xl bg-indigo-500 text-sm font-bold text-white transition hover:bg-indigo-400 disabled:opacity-40"
-              style={{ boxShadow: "0 4px 16px rgba(99,102,241,0.35)" }}
+              className="h-11 w-full rounded-xl bg-[#163832] text-sm font-black text-white shadow-[0_12px_26px_rgba(22,56,50,0.18)] transition hover:bg-[#1f4a43] disabled:opacity-40"
             >
               {loading ? fr.resetPassword.sending : fr.resetPassword.validate}
             </button>
@@ -119,7 +123,7 @@ const ResetPasswordPage = () => {
           <button
             type="button"
             onClick={() => navigate("/prepare")}
-            className="mt-5 w-full text-center text-xs text-slate-600 transition hover:text-slate-400"
+            className="mt-5 w-full text-center text-xs font-bold text-[#66766f] transition hover:text-[#24443d]"
           >
             ← {fr.resetPassword.backLogin}
           </button>

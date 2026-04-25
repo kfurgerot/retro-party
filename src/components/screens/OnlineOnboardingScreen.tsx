@@ -63,13 +63,13 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
     typeof overallStepStart === "number" && typeof overallStepTotal === "number";
 
   return (
-    <PageShell accentColor={`${accentColor}12`} accentGlow={accentGlow}>
+    <PageShell tone="saas" accentColor={`${accentColor}12`} accentGlow={accentGlow}>
       {/* Top nav */}
       <div className="mb-6 flex items-center justify-between">
         <button
           type="button"
           onClick={onBack}
-          className="flex items-center gap-1.5 text-sm text-slate-500 transition hover:text-slate-200"
+          className="flex items-center gap-1.5 text-sm text-[#647067] transition hover:text-[#24443d]"
         >
           <svg
             width="16"
@@ -84,7 +84,7 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
           {fr.onlineOnboarding.back}
         </button>
         {showStepBadge && (
-          <span className="rounded-full border border-white/[0.07] bg-white/[0.03] px-2.5 py-1 text-[11px] text-slate-500">
+          <span className="rounded-full border border-[#d8e2d9] bg-white/62 px-2.5 py-1 text-[11px] text-[#647067]">
             Étape {overallStepStart} / {overallStepTotal}
           </span>
         )}
@@ -97,10 +97,10 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
       >
         {brandLabel ?? "Agile Suite"}
       </div>
-      <h1 className="text-2xl font-extrabold tracking-tight text-slate-50 sm:text-3xl">
+      <h1 className="text-2xl font-extrabold tracking-tight text-[#18211f] sm:text-3xl">
         Ton profil
       </h1>
-      <p className="mt-1.5 text-sm text-slate-500">
+      <p className="mt-1.5 text-sm text-[#647067]">
         Choisis un pseudo et un avatar pour rejoindre la session.
       </p>
 
@@ -108,8 +108,8 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
         {/* Form */}
         <div className="space-y-4">
           {/* Name */}
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
-            <label htmlFor="ds-name" className="mb-3 block text-sm font-semibold text-slate-200">
+          <div className="rounded-2xl border border-[#d8e2d9] bg-white/62 p-5">
+            <label htmlFor="ds-name" className="mb-3 block text-sm font-semibold text-[#24443d]">
               {fr.onlineOnboarding.displayNameLabel}
             </label>
             <input
@@ -121,7 +121,7 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
               autoComplete="off"
               onChange={(e) => setName(cleanName(e.target.value))}
               onKeyDown={(e) => e.key === "Enter" && canSubmit && handleSubmit()}
-              className="h-11 w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 text-sm text-slate-100 outline-none placeholder:text-slate-600 transition focus:border-white/20 focus:bg-white/[0.06]"
+              className="h-11 w-full rounded-xl border border-[#cfd9d1] bg-white/80 px-4 text-sm text-[#18211f] outline-none placeholder:text-[#8b9891] transition focus:border-[#163832]/35 focus:bg-white"
             />
             {!validName && name.length > 0 && (
               <p className="mt-2 text-xs text-amber-400">{fr.onlineOnboarding.minName}</p>
@@ -129,11 +129,8 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
           </div>
 
           {/* Avatar */}
-          <div
-            ref={avatarRef}
-            className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5"
-          >
-            <p className="mb-4 text-sm font-semibold text-slate-200">
+          <div ref={avatarRef} className="rounded-2xl border border-[#d8e2d9] bg-white/62 p-5">
+            <p className="mb-4 text-sm font-semibold text-[#24443d]">
               {fr.onlineOnboarding.avatarLabel}
             </p>
             <AvatarPicker value={avatar} onChange={setAvatar} accentColor={accentColor} />
@@ -141,8 +138,8 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
         </div>
 
         {/* Profile preview */}
-        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
-          <p className="mb-5 text-xs font-bold uppercase tracking-widest text-slate-500">Aperçu</p>
+        <div className="rounded-2xl border border-[#d8e2d9] bg-white/62 p-5">
+          <p className="mb-5 text-xs font-bold uppercase tracking-widest text-[#647067]">Aperçu</p>
           <div className="flex flex-col items-center gap-4">
             <div
               className="flex h-20 w-20 items-center justify-center rounded-2xl border text-4xl"
@@ -151,11 +148,11 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
               {AVATARS[avatar] ?? "?"}
             </div>
             <div className="text-center">
-              <div className="text-base font-bold text-slate-100">
+              <div className="text-base font-bold text-[#18211f]">
                 {validName ? (
                   name
                 ) : (
-                  <span className="text-slate-600">
+                  <span className="text-[#8b9891]">
                     {fr.onlineOnboarding.displayNamePlaceholder}
                   </span>
                 )}
@@ -179,12 +176,12 @@ export const OnlineOnboardingScreen: React.FC<OnlineOnboardingScreenProps> = ({
         </div>
       </div>
 
-      <StickyFooter>
+      <StickyFooter tone="saas">
         <div className="flex items-center gap-2.5">
           <button
             type="button"
             onClick={onBack}
-            className="h-11 rounded-xl border border-white/[0.08] bg-white/[0.03] px-5 text-sm font-semibold text-slate-300 transition hover:bg-white/[0.06] hover:text-white"
+            className="h-11 rounded-xl border border-[#cbd8cd] bg-white/75 px-5 text-sm font-semibold text-[#24443d] transition hover:border-[#aebcaf] hover:bg-white"
           >
             {fr.onlineOnboarding.back}
           </button>

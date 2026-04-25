@@ -34,12 +34,12 @@ export function IndividualRecommendationsSection({ cards }: IndividualRecommenda
   if (cards.length === 0) return null;
 
   return (
-    <Card className="rounded-3xl border-emerald-500/20 bg-slate-950/45 p-4">
+    <Card className="rounded-3xl border-[#d8e2d9] bg-white/62 p-4">
       <h4 className="text-sm font-semibold text-emerald-200">
         Recommandations suggerees (2 semaines)
       </h4>
-      <p className="mt-1 text-xs text-slate-300">Suggestions automatiques (sans IA externe).</p>
-      <p className="mt-1 text-xs text-slate-300">
+      <p className="mt-1 text-xs text-[#647067]">Suggestions automatiques (sans IA externe).</p>
+      <p className="mt-1 text-xs text-[#647067]">
         A adapter a ton contexte: ce sont des pistes, pas des obligations.
       </p>
 
@@ -60,15 +60,15 @@ export function IndividualRecommendationsSection({ cards }: IndividualRecommenda
                 >
                   {tone.label}
                 </span>
-                <span className="text-xs font-semibold text-slate-100">{card.score}/100</span>
+                <span className="text-xs font-semibold text-[#18211f]">{card.score}/100</span>
               </div>
 
-              <p className="mt-2 text-sm font-semibold text-slate-100">{card.axisLabel}</p>
-              <p className="mt-1 text-xs text-slate-200/90">
+              <p className="mt-2 text-sm font-semibold text-[#18211f]">{card.axisLabel}</p>
+              <p className="mt-1 text-xs text-[#24443d]/90">
                 <span className="font-semibold text-emerald-300">Constat:</span> {card.observation}
               </p>
 
-              <div className="mt-3 space-y-2 text-sm text-slate-100/95">
+              <div className="mt-3 space-y-2 text-sm text-[#18211f]/95">
                 <p className="break-words">
                   <span className="font-semibold text-emerald-300">{card.suggestionLabel}:</span>{" "}
                   {card.suggestion}

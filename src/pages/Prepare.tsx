@@ -8,7 +8,7 @@ import { PageShell } from "@/components/app-shell";
 type AuthTab = "login" | "register" | "forgot";
 
 const inputCls =
-  "w-full h-11 rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 text-sm text-slate-100 placeholder:text-slate-600 outline-none focus:border-white/20 focus:ring-1 focus:ring-indigo-400/50 transition";
+  "w-full h-11 rounded-xl border border-[#d8e2d9] bg-white/[0.04] px-4 text-sm text-[#18211f] placeholder:text-slate-600 outline-none focus:border-white/20 focus:ring-1 focus:ring-indigo-400/50 transition";
 
 // ─── Auth form ─────────────────────────────────────────────────────────────────
 
@@ -87,7 +87,7 @@ const AuthForm = ({ onSuccess }: { onSuccess: () => void }) => {
             className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-all ${
               tab === t
                 ? "bg-indigo-500 text-white shadow-sm"
-                : "text-slate-500 hover:text-slate-300"
+                : "text-slate-500 hover:text-[#647067]"
             }`}
           >
             {t === "login" ? "Connexion" : t === "register" ? "Inscription" : "Récupération"}
@@ -154,7 +154,7 @@ const AuthForm = ({ onSuccess }: { onSuccess: () => void }) => {
       <button
         type="button"
         onClick={() => navigate("/")}
-        className="mt-5 w-full text-center text-xs text-slate-600 transition hover:text-slate-400"
+        className="mt-5 w-full text-center text-xs text-slate-600 transition hover:text-[#647067]"
       >
         ← Retour au portail
       </button>
@@ -177,7 +177,7 @@ const TemplateCard = ({
 }) => (
   <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 transition hover:border-white/[0.09]">
     <div className="min-w-0 flex-1">
-      <p className="font-semibold text-slate-100 break-words">{template.name}</p>
+      <p className="font-semibold text-[#18211f] break-words">{template.name}</p>
       <p className="mt-0.5 text-xs text-slate-500 break-words">
         {template.description || fr.prepare.noDescription}
       </p>
@@ -186,7 +186,7 @@ const TemplateCard = ({
       <button
         type="button"
         onClick={onEdit}
-        className="h-9 rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 text-sm font-semibold text-slate-300 transition hover:bg-white/[0.07] hover:text-white"
+        className="h-9 rounded-xl border border-[#d8e2d9] bg-white/[0.03] px-4 text-sm font-semibold text-[#647067] transition hover:bg-white/[0.07] hover:text-white"
       >
         {fr.prepare.edit}
       </button>
@@ -337,10 +337,7 @@ const PreparePage = () => {
 
   if (authLoading) {
     return (
-      <div
-        className="flex min-h-screen items-center justify-center"
-        style={{ background: "#0a0a14" }}
-      >
+      <div className="flex min-h-screen items-center justify-center">
         <div className="text-sm text-slate-500">{fr.prepare.loading}</div>
       </div>
     );
@@ -383,7 +380,7 @@ const PreparePage = () => {
             Agile Suite
           </span>
           <span className="text-slate-700">/</span>
-          <span className="text-xs font-bold uppercase tracking-[0.12em] text-pink-400">
+          <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#24443d]">
             Préparer
           </span>
         </div>
@@ -392,19 +389,19 @@ const PreparePage = () => {
             <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-pink-500 text-[11px] font-bold">
               {initials}
             </div>
-            <span className="text-xs text-slate-400">{user.displayName}</span>
+            <span className="text-xs text-[#647067]">{user.displayName}</span>
           </div>
           <button
             type="button"
             onClick={handleLogout}
-            className="rounded-full border border-white/[0.07] bg-white/[0.03] px-3 py-1.5 text-xs text-slate-500 transition hover:bg-white/[0.06] hover:text-slate-300"
+            className="rounded-full border border-white/[0.07] bg-white/[0.03] px-3 py-1.5 text-xs text-slate-500 transition hover:bg-white/[0.06] hover:text-[#647067]"
           >
             {fr.prepare.logout}
           </button>
           <button
             type="button"
             onClick={() => navigate("/")}
-            className="rounded-full border border-white/[0.07] bg-white/[0.03] px-3 py-1.5 text-xs text-slate-500 transition hover:bg-white/[0.06] hover:text-slate-300"
+            className="rounded-full border border-white/[0.07] bg-white/[0.03] px-3 py-1.5 text-xs text-slate-500 transition hover:bg-white/[0.06] hover:text-[#647067]"
           >
             {fr.prepare.home}
           </button>
@@ -427,7 +424,7 @@ const PreparePage = () => {
 
       {/* New template form */}
       <div className="mb-6 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
-        <p className="mb-3 text-sm font-semibold text-slate-200">{fr.prepare.newTemplate}</p>
+        <p className="mb-3 text-sm font-semibold text-[#24443d]">{fr.prepare.newTemplate}</p>
         <div className="flex flex-wrap gap-3">
           <input
             value={newTemplateName}
@@ -460,10 +457,10 @@ const PreparePage = () => {
           {/* Retro Party templates */}
           <div className="mb-8">
             <div className="mb-3 flex items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-[0.12em] text-pink-400">
+              <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#24443d]">
                 Rétro Party
               </span>
-              <span className="rounded-full border border-pink-400/20 bg-pink-500/10 px-2 py-0.5 text-[10px] text-pink-300">
+              <span className="rounded-full border border-[#d8e2d9] bg-[#edf5ef] px-2 py-0.5 text-[10px] text-[#24443d]">
                 {templates.filter((t) => t.baseConfig?.module !== "planning-poker").length}
               </span>
             </div>
@@ -490,7 +487,7 @@ const PreparePage = () => {
 
           {/* Planning Poker templates */}
           <div className="mb-6 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
-            <p className="mb-3 text-sm font-semibold text-slate-200">
+            <p className="mb-3 text-sm font-semibold text-[#24443d]">
               Nouveau template Planning Poker
             </p>
             <div className="flex flex-wrap gap-3">

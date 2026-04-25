@@ -1,13 +1,21 @@
 import * as React from "react";
 import { Button, type ButtonProps } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { CTA_NEON_PRIMARY } from "@/lib/uiTokens";
+import { CTA_NEON_PRIMARY, CTA_SAAS_PRIMARY } from "@/lib/uiTokens";
 
-export const PrimaryButton = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, children, ...props }, ref) => (
+type PrimaryButtonProps = ButtonProps & {
+  tone?: "game" | "saas";
+};
+
+export const PrimaryButton = React.forwardRef<HTMLButtonElement, PrimaryButtonProps>(
+  ({ className, children, tone = "saas", ...props }, ref) => (
     <Button
       ref={ref}
-      className={cn("min-h-11 rounded-xl px-5 text-sm font-semibold", CTA_NEON_PRIMARY, className)}
+      className={cn(
+        "min-h-11 rounded-xl px-5 text-sm font-semibold",
+        tone === "saas" ? CTA_SAAS_PRIMARY : CTA_NEON_PRIMARY,
+        className,
+      )}
       {...props}
     >
       {children}

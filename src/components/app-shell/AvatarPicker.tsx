@@ -29,8 +29,8 @@ export const AvatarPicker = ({
         className={cn(
           "flex aspect-square items-center justify-center rounded-xl border text-xl transition-all focus-visible:outline-none",
           i === value
-            ? "border-white/25 bg-white/[0.08]"
-            : "border-white/[0.05] bg-white/[0.02] hover:border-white/15 hover:bg-white/[0.05]",
+            ? "border-[#163832]/35 bg-[#edf5ef]"
+            : "border-[#d8e2d9] bg-white/62 hover:border-[#aebcaf] hover:bg-white",
         )}
         style={i === value ? { boxShadow: `0 0 0 2px ${accentColor}` } : undefined}
       >

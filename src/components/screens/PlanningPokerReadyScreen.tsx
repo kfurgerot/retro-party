@@ -78,7 +78,12 @@ export const PlanningPokerReadyScreen: React.FC<Props> = ({
   const hostPlayerName = sortedPlayers.find((p) => p.isHost)?.name ?? fr.terms.host;
 
   return (
-    <PageShell accentColor="rgba(99,102,241,0.1)" accentGlow="rgba(99,102,241,0.04)" maxWidth="5xl">
+    <PageShell
+      tone="saas"
+      accentColor="rgba(99,102,241,0.1)"
+      accentGlow="rgba(99,102,241,0.04)"
+      maxWidth="5xl"
+    >
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div className="text-xs font-bold uppercase tracking-widest" style={{ color: ACCENT }}>
@@ -97,10 +102,10 @@ export const PlanningPokerReadyScreen: React.FC<Props> = ({
         </span>
       </div>
 
-      <h1 className="text-2xl font-extrabold tracking-tight text-slate-50 sm:text-3xl">
+      <h1 className="text-2xl font-extrabold tracking-tight text-[#18211f] sm:text-3xl">
         {fr.onlineLobby.roomReady}
       </h1>
-      <p className="mt-1.5 text-sm text-slate-500">
+      <p className="mt-1.5 text-sm text-[#647067]">
         {isHost
           ? fr.onlineLobby.hostLaunchHint
           : fr.onlineLobby.waitingHostDescription.replace("{host}", hostPlayerName)}
@@ -109,14 +114,14 @@ export const PlanningPokerReadyScreen: React.FC<Props> = ({
       <div className="mt-7 grid gap-4 lg:grid-cols-[1fr_320px]">
         {/* Config */}
         <div className="space-y-4">
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
-            <p className="mb-4 text-sm font-semibold text-slate-200">
+          <div className="rounded-2xl border border-[#d8e2d9] bg-white/62 p-5">
+            <p className="mb-4 text-sm font-semibold text-[#24443d]">
               {fr.planningPoker.myConfigTitle}
             </p>
 
             {/* Role */}
             <div className="mb-4">
-              <p className="mb-2 text-xs text-slate-500">{fr.planningPoker.roleTitle}</p>
+              <p className="mb-2 text-xs text-[#647067]">{fr.planningPoker.roleTitle}</p>
               <div className="grid grid-cols-2 gap-2">
                 {(["player", "spectator"] as PlanningPokerRole[]).map((r) => (
                   <button
@@ -126,8 +131,8 @@ export const PlanningPokerReadyScreen: React.FC<Props> = ({
                     className={cn(
                       "h-10 rounded-xl border text-sm font-semibold transition-all",
                       myRole === r
-                        ? "border-white/20 text-white"
-                        : "border-white/[0.07] bg-white/[0.03] text-slate-400 hover:bg-white/[0.06]",
+                        ? "border-[#163832]/35 text-white"
+                        : "border-[#d8e2d9] bg-white/62 text-[#647067] hover:bg-white",
                     )}
                     style={
                       myRole === r
@@ -147,7 +152,7 @@ export const PlanningPokerReadyScreen: React.FC<Props> = ({
 
             {/* Vote system */}
             <div>
-              <p className="mb-2 text-xs text-slate-500">{fr.planningPoker.voteSystem}</p>
+              <p className="mb-2 text-xs text-[#647067]">{fr.planningPoker.voteSystem}</p>
               <div
                 className={cn(
                   "grid grid-cols-3 gap-1.5",
@@ -163,8 +168,8 @@ export const PlanningPokerReadyScreen: React.FC<Props> = ({
                     className={cn(
                       "h-9 rounded-xl border text-sm font-semibold transition-all",
                       voteSystem === opt.value
-                        ? "border-white/20 text-white"
-                        : "border-white/[0.07] bg-white/[0.03] text-slate-400 hover:bg-white/[0.06]",
+                        ? "border-[#163832]/35 text-white"
+                        : "border-[#d8e2d9] bg-white/62 text-[#647067] hover:bg-white",
                     )}
                     style={
                       voteSystem === opt.value
@@ -184,7 +189,7 @@ export const PlanningPokerReadyScreen: React.FC<Props> = ({
                 {PLANNING_POKER_DECKS[voteSystem].map((value) => (
                   <span
                     key={`ready-${value}`}
-                    className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-2 py-0.5 font-mono text-[11px] text-slate-500"
+                    className="rounded-lg border border-[#d8e2d9] bg-white/62 px-2 py-0.5 font-mono text-[11px] text-[#647067]"
                   >
                     {displayDeckValue(value)}
                   </span>
@@ -201,12 +206,12 @@ export const PlanningPokerReadyScreen: React.FC<Props> = ({
         {/* Right: code + players */}
         <div className="space-y-4">
           <RoomCodeDisplay code={roomCode} accentColor={ACCENT} hint={fr.onlineLobby.inviteHint} />
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+          <div className="rounded-2xl border border-[#d8e2d9] bg-white/62 p-4">
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-slate-200">
+              <h2 className="text-sm font-semibold text-[#24443d]">
                 {fr.onlineLobby.playersTitle}
               </h2>
-              <span className="text-xs text-slate-500">{sortedPlayers.length}</span>
+              <span className="text-xs text-[#647067]">{sortedPlayers.length}</span>
             </div>
             <PlayerList
               players={sortedPlayers}
@@ -219,7 +224,7 @@ export const PlanningPokerReadyScreen: React.FC<Props> = ({
         </div>
       </div>
 
-      <StickyFooter maxWidth="5xl">
+      <StickyFooter tone="saas" maxWidth="5xl">
         <div className="flex items-center gap-2.5">
           <button
             type="button"
@@ -244,17 +249,17 @@ export const PlanningPokerReadyScreen: React.FC<Props> = ({
       </StickyFooter>
 
       <AlertDialog open={leaveDialogOpen} onOpenChange={setLeaveDialogOpen}>
-        <AlertDialogContent className="max-w-sm rounded-2xl border border-white/[0.08] bg-[#0f0f1c] p-6 text-slate-100 shadow-2xl">
+        <AlertDialogContent className="max-w-sm rounded-2xl border border-[#d8e2d9] bg-[#f7f8f3] p-6 text-[#18211f] shadow-2xl">
           <AlertDialogHeader className="space-y-2">
-            <AlertDialogTitle className="text-base font-bold text-slate-50">
+            <AlertDialogTitle className="text-base font-bold text-[#18211f]">
               {fr.onlineLobby.cancelPartyQuestion}
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-sm text-slate-400">
+            <AlertDialogDescription className="text-sm text-[#647067]">
               {fr.onlineLobby.disconnectAll}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-2 grid grid-cols-2 gap-2 space-x-0">
-            <AlertDialogCancel className="h-11 rounded-xl border border-white/[0.08] bg-white/[0.03] text-slate-300 hover:bg-white/[0.06] hover:text-white">
+            <AlertDialogCancel className="h-11 rounded-xl border border-[#cbd8cd] bg-white/75 text-[#24443d] hover:border-[#aebcaf] hover:bg-white">
               {fr.onlineLobby.cancel}
             </AlertDialogCancel>
             <AlertDialogAction

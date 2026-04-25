@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card, PrimaryButton, SecondaryButton } from "@/components/app-shell";
+import { Card, PageShell, PrimaryButton, SecondaryButton } from "@/components/app-shell";
 import { useAuth } from "@/contexts/AuthContext";
 import { api, type DashboardActivitiesResponse } from "@/net/api";
 import {
@@ -107,8 +107,8 @@ export default function Dashboard() {
 
   if (authLoading || !user) {
     return (
-      <div className="scanlines relative flex min-h-svh items-center justify-center bg-slate-950 px-4">
-        <div className="neon-surface px-4 py-3 text-sm font-semibold text-cyan-100">
+      <div className="relative flex min-h-svh items-center justify-center bg-[#f7f8f3] px-4">
+        <div className="rounded-2xl border border-[#d8e2d9] bg-white/72 px-4 py-3 text-sm font-bold text-[#647067] shadow-sm">
           Chargement...
         </div>
       </div>
@@ -116,44 +116,36 @@ export default function Dashboard() {
   }
 
   return (
-    <div
-      className="relative min-h-svh overflow-hidden bg-[#0a0a14] text-slate-100"
-      style={{ fontFamily: "'DM Sans', sans-serif" }}
-    >
-      <div
-        className="pointer-events-none fixed inset-0 z-0"
-        style={{
-          background: `
-            radial-gradient(ellipse 60% 40% at 20% 10%, rgba(99,102,241,0.08) 0%, transparent 70%),
-            radial-gradient(ellipse 50% 30% at 80% 80%, rgba(236,72,153,0.06) 0%, transparent 70%)
-          `,
-        }}
-      />
-
-      <div className="relative z-10 mx-auto w-full max-w-[960px] px-4 pb-12 pt-6 sm:px-5 sm:pt-7">
+    <PageShell tone="saas" maxWidth="5xl">
+      <div className="mx-auto w-full max-w-[960px]">
         <header className="mb-5 flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="mb-2 inline-flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 text-sm">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#163832] text-sm text-white shadow-sm">
                 ⚡
               </div>
-              <span className="text-xs font-bold uppercase tracking-[0.12em] text-indigo-400">
+              <span className="text-xs font-black uppercase tracking-[0.12em] text-[#24443d]">
                 Agile Suite
               </span>
             </div>
-            <h1 className="text-[clamp(22px,5vw,32px)] font-extrabold leading-none tracking-tight text-slate-50">
+            <h1 className="text-[clamp(26px,5vw,42px)] font-black leading-none tracking-tight text-[#12201d]">
               Dashboard
             </h1>
-            <p className="mt-1.5 text-sm text-slate-500">
+            <p className="mt-2 text-sm leading-6 text-[#647067]">
               Activités par module et historique de tes sessions/templates.
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            <SecondaryButton className="h-10 min-h-0 px-3 text-xs" onClick={() => navigate("/")}>
+            <SecondaryButton
+              tone="saas"
+              className="h-10 min-h-0 px-3 text-xs"
+              onClick={() => navigate("/")}
+            >
               Retour
             </SecondaryButton>
             <SecondaryButton
-              className="h-10 min-h-0 px-3 text-xs border-indigo-500/30 bg-indigo-500/10 text-indigo-200 hover:bg-indigo-500/20"
+              tone="saas"
+              className="h-10 min-h-0 px-3 text-xs"
               onClick={() => {
                 setJoinCode("");
                 setJoinError(null);
@@ -163,6 +155,7 @@ export default function Dashboard() {
               Rejoindre
             </SecondaryButton>
             <PrimaryButton
+              tone="saas"
               className="h-10 min-h-0 px-3 text-xs"
               onClick={() => void loadDashboard()}
             >
@@ -171,48 +164,53 @@ export default function Dashboard() {
           </div>
         </header>
 
-        <Card className="mb-4 rounded-2xl p-4 sm:p-5">
+        <Card tone="saas" className="mb-4 p-4 sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
+              <div className="text-xs font-black uppercase tracking-[0.08em] text-[#66766f]">
                 Vue d'ensemble
               </div>
-              <div className="mt-1 text-sm text-slate-200">
+              <div className="mt-1 text-sm font-semibold text-[#24443d]">
                 {totalActivities} activité{totalActivities > 1 ? "s" : ""} historisée
               </div>
             </div>
-            <div className="text-xs text-slate-500">
+            <div className="text-xs text-[#647067]">
               Dernière mise à jour : {formatDateTime(dashboard?.generatedAt ?? null)}
             </div>
           </div>
         </Card>
 
         {error && (
-          <Card className="mb-4 rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
+          <Card
+            tone="saas"
+            className="mb-4 border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-600"
+          >
             {error}
           </Card>
         )}
 
         {loading ? (
-          <Card className="rounded-2xl p-5 text-sm text-slate-300">Chargement du dashboard...</Card>
+          <Card tone="saas" className="p-5 text-sm text-[#647067]">
+            Chargement du dashboard...
+          </Card>
         ) : (
           <div className="space-y-4">
             {dashboard?.modules.map((moduleItem) => (
-              <Card key={moduleItem.moduleId} className="rounded-2xl p-4 sm:p-5">
+              <Card key={moduleItem.moduleId} tone="saas" className="p-4 sm:p-5">
                 <div className="mb-3 flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <span className="text-xl leading-none">{moduleItem.moduleIcon}</span>
-                    <div className="text-sm font-semibold text-slate-100">
+                    <div className="text-sm font-black text-[#18211f]">
                       {moduleItem.moduleLabel}
                     </div>
                   </div>
-                  <div className="rounded-full border border-white/[0.08] bg-white/[0.03] px-2 py-1 text-xs text-slate-300">
+                  <div className="rounded-full border border-[#d8e2d9] bg-white/70 px-2 py-1 text-xs font-bold text-[#647067]">
                     {moduleItem.totalActivities} activité{moduleItem.totalActivities > 1 ? "s" : ""}
                   </div>
                 </div>
 
                 {moduleItem.activities.length === 0 ? (
-                  <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-3 text-xs text-slate-500">
+                  <div className="rounded-xl border border-[#d8e2d9] bg-white/58 px-3 py-3 text-xs text-[#647067]">
                     Aucune activité pour le moment.
                   </div>
                 ) : (
@@ -226,14 +224,12 @@ export default function Dashboard() {
                       return (
                         <div
                           key={activity.id}
-                          className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-3"
+                          className="rounded-xl border border-[#d8e2d9] bg-white/58 px-3 py-3"
                         >
                           <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
-                            <div className="text-sm font-semibold text-slate-100">
-                              {activity.title}
-                            </div>
+                            <div className="text-sm font-bold text-[#18211f]">{activity.title}</div>
                             <div className="flex items-center gap-1.5">
-                              <div className="rounded-full border border-white/[0.08] bg-white/[0.03] px-2 py-0.5 text-[11px] text-slate-300">
+                              <div className="rounded-full border border-[#d8e2d9] bg-white/70 px-2 py-0.5 text-[11px] font-semibold text-[#647067]">
                                 {statusLabel(activity.status)}
                               </div>
                               {canReopen && (
@@ -250,18 +246,18 @@ export default function Dashboard() {
                                     }
                                     navigate(`/skills-matrix?${params.toString()}`);
                                   }}
-                                  className="rounded-full border border-cyan-500/25 bg-cyan-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-cyan-200 transition hover:bg-cyan-500/20"
+                                  className="rounded-full border border-[#b8d7ce] bg-[#eaf5f1] px-2.5 py-0.5 text-[11px] font-bold text-[#0f766e] transition hover:bg-[#d7eee7]"
                                 >
                                   Rouvrir
                                 </button>
                               )}
                             </div>
                           </div>
-                          <div className="text-xs text-slate-400">
+                          <div className="text-xs text-[#647067]">
                             {activity.activityLabel} · {formatDateTime(activity.occurredAt)}
                           </div>
                           {activity.details ? (
-                            <div className="mt-1 text-xs text-slate-500">{activity.details}</div>
+                            <div className="mt-1 text-xs text-[#7b8781]">{activity.details}</div>
                           ) : null}
                         </div>
                       );
@@ -271,11 +267,11 @@ export default function Dashboard() {
               </Card>
             ))}
 
-            <Card className="rounded-2xl p-4 sm:p-5">
-              <div className="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
+            <Card tone="saas" className="p-4 sm:p-5">
+              <div className="mb-2 text-xs font-black uppercase tracking-[0.08em] text-[#66766f]">
                 Évolutions prévues
               </div>
-              <ul className="space-y-1 text-sm text-slate-300">
+              <ul className="space-y-1 text-sm text-[#54645d]">
                 {(dashboard?.roadmap.upcoming ?? []).map((item) => (
                   <li key={item}>• {item}</li>
                 ))}
@@ -293,23 +289,23 @@ export default function Dashboard() {
         }}
       >
         <DialogContent
-          className="max-w-sm rounded-2xl border border-white/[0.08] bg-[#0d0d1a] p-0 shadow-2xl [&>button]:text-slate-400 [&>button]:hover:text-slate-100"
+          className="max-w-sm rounded-2xl border border-[#d8e2d9] bg-[#f7f8f3] p-0 shadow-2xl [&>button]:text-[#647067] [&>button]:hover:text-[#24443d]"
           onOpenAutoFocus={() => joinInputRef.current?.focus()}
         >
-          <div className="rounded-t-2xl border-b border-white/[0.08] bg-gradient-to-r from-indigo-500/14 via-violet-500/9 to-pink-500/12 px-5 py-4">
+          <div className="rounded-t-2xl border-b border-[#d8e2d9] bg-white/70 px-5 py-4">
             <div className="mb-2 flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 text-sm">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#163832] text-sm text-white">
                 ⚡
               </div>
-              <span className="text-xs font-bold uppercase tracking-[0.12em] text-indigo-300">
+              <span className="text-xs font-black uppercase tracking-[0.12em] text-[#24443d]">
                 Agile Suite
               </span>
             </div>
             <DialogHeader>
-              <DialogTitle className="text-base font-semibold text-slate-100">
+              <DialogTitle className="text-base font-black text-[#12201d]">
                 Rejoindre une partie
               </DialogTitle>
-              <DialogDescription className="mt-1 text-xs text-slate-400">
+              <DialogDescription className="mt-1 text-xs text-[#647067]">
                 Entre le code room communiqué par l'animateur. Fonctionne pour tous les modules.
               </DialogDescription>
             </DialogHeader>
@@ -317,7 +313,7 @@ export default function Dashboard() {
 
           <form onSubmit={(e) => void handleJoinSubmit(e)} className="p-5 space-y-4">
             <div className="space-y-1.5">
-              <label className="block text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500">
+              <label className="block text-[11px] font-bold uppercase tracking-[0.08em] text-[#66766f]">
                 Code room
               </label>
               <input
@@ -331,12 +327,12 @@ export default function Dashboard() {
                 maxLength={12}
                 autoComplete="off"
                 spellCheck={false}
-                className="h-12 w-full rounded-2xl border border-white/[0.08] bg-white/[0.04] px-4 text-center text-lg font-bold tracking-[0.2em] text-slate-100 placeholder:text-slate-600 outline-none transition focus:border-indigo-400/50 focus:ring-1 focus:ring-indigo-400/30"
+                className="h-12 w-full rounded-2xl border border-[#cfd9d1] bg-white/80 px-4 text-center text-lg font-black tracking-[0.2em] text-[#18211f] placeholder:text-[#8b9891] outline-none transition focus:border-[#8fa49a] focus:ring-2 focus:ring-[#163832]/20"
               />
             </div>
 
             {joinError && (
-              <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+              <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">
                 {joinError}
               </div>
             )}
@@ -344,14 +340,13 @@ export default function Dashboard() {
             <button
               type="submit"
               disabled={joinLoading || joinCode.trim().length < 4}
-              className="h-11 w-full rounded-2xl bg-indigo-500 text-sm font-bold text-white transition hover:bg-indigo-400 disabled:opacity-40"
-              style={{ boxShadow: "0 4px 16px rgba(99,102,241,0.35)" }}
+              className="h-11 w-full rounded-2xl bg-[#163832] text-sm font-black text-white shadow-[0_12px_26px_rgba(22,56,50,0.18)] transition hover:bg-[#1f4a43] disabled:opacity-40"
             >
               {joinLoading ? "Recherche..." : "Rejoindre"}
             </button>
           </form>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageShell>
   );
 }

@@ -158,12 +158,12 @@ export function RadarChartCard({
   );
 
   return (
-    <Card className="relative overflow-hidden rounded-3xl border border-emerald-500/20 bg-slate-950/60 p-3 sm:p-4 text-slate-100 shadow-[0_0_0_1px_rgba(16,185,129,0.15),0_14px_36px_rgba(2,6,23,0.55)]">
+    <Card className="relative overflow-hidden rounded-3xl border border-[#d8e2d9] bg-white/70 p-3 sm:p-4 text-[#18211f] shadow-[0_0_0_1px_rgba(16,185,129,0.15),0_14px_36px_rgba(2,6,23,0.55)]">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(16,185,129,0.08),transparent_45%),radial-gradient(circle_at_80%_75%,rgba(16,185,129,0.04),transparent_42%)]" />
       <h3 className="relative text-base font-semibold uppercase tracking-[0.12em] text-emerald-300">
         {title}
       </h3>
-      {subtitle ? <p className="relative mt-1 text-xs text-slate-300">{subtitle}</p> : null}
+      {subtitle ? <p className="relative mt-1 text-xs text-[#647067]">{subtitle}</p> : null}
 
       <div className="relative mt-3 h-[430px] w-full sm:mt-4 sm:h-[560px]">
         <svg
@@ -370,7 +370,7 @@ export function RadarChartCard({
       </div>
 
       {comparisonPoints ? (
-        <div className="mt-2 flex flex-wrap gap-3 text-xs text-slate-200">
+        <div className="mt-2 flex flex-wrap gap-3 text-xs text-[#24443d]">
           <span className="inline-flex items-center gap-1.5">
             <span className="inline-block h-2.5 w-2.5 rounded-full bg-emerald-400" />
             {primaryLabel}
