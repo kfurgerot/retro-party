@@ -1312,8 +1312,8 @@ export default function Portal() {
       >
         {/* Header */}
         <header className="mb-9">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0 flex-1 pr-2">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-4 sm:flex sm:items-start sm:justify-between">
+            <div className="min-w-0 flex-1">
               <div className="mb-2.5 inline-flex items-center gap-2">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 text-sm">
                   ⚡
@@ -1329,13 +1329,13 @@ export default function Portal() {
                     ? `Bonjour, ${user.displayName.split(" ")[0]} 👋`
                     : "Bienvenue 👋"}
               </h1>
-              <p className="mt-1.5 text-sm text-slate-500">
+              <p className="mt-1.5 max-w-full text-sm leading-5 text-slate-500">
                 Quelle expérience lance-t-on aujourd'hui ?
               </p>
             </div>
 
             {/* Actions header */}
-            <div className="flex shrink-0 items-center gap-2">
+            <div className="flex shrink-0 flex-col items-end gap-2 justify-self-end sm:flex-row sm:items-center sm:shrink-0">
               <button
                 type="button"
                 onClick={() => {
@@ -1396,7 +1396,7 @@ export default function Portal() {
               {activeToolsInCategory} / {toolsForCategory.length} actifs
             </span>
           </div>
-          <div className="mb-4 overflow-x-auto pb-1">
+          <div className="scrollbar-none mb-4 overflow-x-auto pb-1">
             <div className="flex min-w-max items-center gap-2">
               <button
                 type="button"
