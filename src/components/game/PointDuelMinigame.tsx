@@ -75,7 +75,7 @@ export const PointDuelMinigame: React.FC<PointDuelMinigameProps> = ({
           name={attacker?.name ?? "-"}
           highlighted={rollingPlayerId === state.attackerId}
           rightSlot={
-            <div className="text-2xl font-bold text-pink-100">{state.attackerRoll ?? "?"}</div>
+            <div className="text-2xl font-bold text-[#24443d]">{state.attackerRoll ?? "?"}</div>
           }
         />
         <PlayerBadge
@@ -83,7 +83,7 @@ export const PointDuelMinigame: React.FC<PointDuelMinigameProps> = ({
           name={defender?.name ?? "-"}
           highlighted={rollingPlayerId === state.defenderId}
           rightSlot={
-            <div className="text-2xl font-bold text-pink-100">{state.defenderRoll ?? "?"}</div>
+            <div className="text-2xl font-bold text-[#24443d]">{state.defenderRoll ?? "?"}</div>
           }
         />
       </div>
@@ -95,10 +95,10 @@ export const PointDuelMinigame: React.FC<PointDuelMinigameProps> = ({
             onClick={() => onRoll?.()}
             disabled={!canRollNow}
             className={cn(
-              "rounded-xl border px-4 py-2.5 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
+              "rounded-xl border px-4 py-2.5 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#163832]/35 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f7f8f3]",
               canRollNow
-                ? "border-pink-400 bg-pink-500 text-slate-950 hover:bg-pink-400"
-                : "cursor-not-allowed border-slate-500 bg-slate-700/60 text-slate-300",
+                ? "border-[#163832] bg-[#163832] text-white hover:bg-[#1f4a43]"
+                : "cursor-not-allowed border-[#d8e2d9] bg-white/62 text-[#647067]",
             )}
           >
             {fr.pointDuel.rollDice}
@@ -107,7 +107,7 @@ export const PointDuelMinigame: React.FC<PointDuelMinigameProps> = ({
       ) : null}
 
       {state.phase === "result" ? (
-        <div className="mt-4 rounded-xl border border-amber-300/40 bg-amber-500/10 p-3 text-sm text-amber-100">
+        <div className="mt-4 rounded-xl border border-amber-300/70 bg-amber-50 p-3 text-sm text-amber-900">
           <div className="mb-2">
             <ActionBadge tone="decision" label={fr.pointDuel.duelResult} />
           </div>

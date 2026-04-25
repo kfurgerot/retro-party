@@ -3,7 +3,7 @@ import { QuestionState, Player } from "@/types/game";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { fr } from "@/i18n/fr";
-import { CTA_NEON_PRIMARY, GAME_DIALOG_CONTENT } from "@/lib/uiTokens";
+import { CTA_SESSION_PRIMARY, SESSION_DIALOG_CONTENT } from "@/lib/uiTokens";
 
 type Props = {
   question: QuestionState;
@@ -20,38 +20,38 @@ const TYPE_THEME: Record<
   blue: {
     title: fr.questionModal.blueTitle,
     icon: "B",
-    accent: "text-sky-100",
-    chip: "border-sky-300/45 bg-sky-500/20 text-sky-100",
+    accent: "text-sky-800",
+    chip: "border-sky-300/70 bg-sky-50 text-sky-800",
   },
   green: {
     title: fr.questionModal.greenTitle,
     icon: "V",
-    accent: "text-emerald-100",
-    chip: "border-emerald-300/45 bg-emerald-500/20 text-emerald-100",
+    accent: "text-emerald-800",
+    chip: "border-emerald-300/70 bg-emerald-50 text-emerald-800",
   },
   red: {
     title: fr.questionModal.redTitle,
     icon: "R",
-    accent: "text-rose-100",
-    chip: "border-rose-300/45 bg-rose-500/20 text-rose-100",
+    accent: "text-rose-800",
+    chip: "border-rose-300/70 bg-rose-50 text-rose-800",
   },
   purple: {
     title: fr.questionModal.violetTitle,
     icon: "I",
-    accent: "text-violet-100",
-    chip: "border-violet-300/45 bg-violet-500/20 text-violet-100",
+    accent: "text-violet-800",
+    chip: "border-violet-300/70 bg-violet-50 text-violet-800",
   },
   violet: {
     title: fr.questionModal.violetTitle,
     icon: "I",
-    accent: "text-violet-100",
-    chip: "border-violet-300/45 bg-violet-500/20 text-violet-100",
+    accent: "text-violet-800",
+    chip: "border-violet-300/70 bg-violet-50 text-violet-800",
   },
   bonus: {
     title: fr.questionModal.bonusTitle,
     icon: "*",
-    accent: "text-amber-100",
-    chip: "border-amber-300/45 bg-amber-500/20 text-amber-100",
+    accent: "text-amber-900",
+    chip: "border-amber-300/80 bg-amber-50 text-amber-900",
   },
 };
 
@@ -74,7 +74,7 @@ export function QuestionModal({ question, players, myPlayerId, onVote, onValidat
       role="dialog"
       aria-modal="true"
     >
-      <div className={cn("w-full max-w-2xl", GAME_DIALOG_CONTENT)}>
+      <div className={cn("w-full max-w-2xl", SESSION_DIALOG_CONTENT)}>
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
@@ -92,21 +92,21 @@ export function QuestionModal({ question, players, myPlayerId, onVote, onValidat
                 {theme.title}
               </div>
             </div>
-            <div className="mt-2 text-sm text-cyan-100/90">
+            <div className="mt-2 text-sm text-[#647067]">
               {fr.questionModal.questionFor} <span className="font-semibold">{targetName}</span>
             </div>
           </div>
           <div className="flex items-center gap-2 text-xs">
-            <span className="rounded-full border border-emerald-300/60 bg-emerald-500/18 px-2 py-1 text-emerald-100">
+            <span className="rounded-full border border-emerald-300/70 bg-emerald-50 px-2 py-1 text-emerald-800">
               👍 {upCount}
             </span>
-            <span className="rounded-full border border-rose-300/60 bg-rose-500/18 px-2 py-1 text-rose-100">
+            <span className="rounded-full border border-rose-300/70 bg-rose-50 px-2 py-1 text-rose-800">
               👎 {downCount}
             </span>
           </div>
         </div>
 
-        <div className="mt-4 rounded-xl border border-cyan-300/25 bg-slate-900/55 p-4 text-base leading-relaxed text-cyan-50 sm:text-xl">
+        <div className="mt-4 rounded-xl border border-[#d8e2d9] bg-white/62 p-4 text-base leading-relaxed text-[#18211f] sm:text-xl">
           {question.text}
         </div>
 
@@ -115,25 +115,25 @@ export function QuestionModal({ question, players, myPlayerId, onVote, onValidat
             <div className="flex flex-wrap gap-2">
               <Button
                 onClick={() => onVote("up")}
-                className="h-11 rounded-xl border border-emerald-300/65 bg-emerald-500/22 px-4 text-sm font-semibold text-emerald-50 hover:bg-emerald-500/34"
+                className="h-11 rounded-xl border border-emerald-700 bg-emerald-700 px-4 text-sm font-semibold text-white hover:bg-emerald-800"
               >
                 👍 A creuser
               </Button>
               <Button
                 onClick={() => onVote("down")}
-                className="h-11 rounded-xl border border-rose-300/65 bg-rose-500/22 px-4 text-sm font-semibold text-rose-50 hover:bg-rose-500/34"
+                className="h-11 rounded-xl border border-rose-700 bg-rose-700 px-4 text-sm font-semibold text-white hover:bg-rose-800"
               >
                 👎 Passer
               </Button>
             </div>
           ) : (
-            <div className="text-sm text-slate-300">{fr.questionModal.answerInstruction}</div>
+            <div className="text-sm text-[#647067]">{fr.questionModal.answerInstruction}</div>
           )}
 
           {isTarget && (
             <Button
               onClick={onValidate}
-              className={cn("h-11 rounded-xl px-5 text-sm font-semibold", CTA_NEON_PRIMARY)}
+              className={cn("h-11 rounded-xl px-5 text-sm font-semibold", CTA_SESSION_PRIMARY)}
             >
               {fr.questionModal.validateAnswer}
             </Button>

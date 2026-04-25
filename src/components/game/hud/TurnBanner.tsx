@@ -58,41 +58,38 @@ export const TurnBanner: React.FC<TurnBannerProps> = ({
   if (mode === "mobile") {
     return (
       <Card className={cn(neonCardClass, "rounded-xl px-3 py-2.5")}>
-        <div className="flex items-center justify-between gap-2 text-sm font-bold text-slate-100">
+        <div className="flex items-center justify-between gap-2 text-sm font-bold text-[#18211f]">
           <div className="flex min-w-0 items-center gap-2">
-            <span className="mr-1 text-[10px] uppercase tracking-[0.1em] text-pink-100/80">
+            <span className="mr-1 text-[10px] uppercase tracking-[0.1em] text-[#647067]">
               {currentTurnLabel}
             </span>
             <span className="truncate">{currentPlayerName}</span>
           </div>
           {roomCode ? (
-            <div className="inline-flex shrink-0 items-center gap-1 rounded-full border border-pink-400/40 bg-pink-500/12 px-2 py-0.5 text-[10px] font-semibold tracking-[0.06em] text-slate-100">
-              <span className="uppercase text-pink-100/85">{roomCodeLabel ?? "Code"}</span>
+            <div className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[#163832]/25 bg-[#edf5ef] px-2 py-0.5 text-[10px] font-semibold tracking-[0.06em] text-[#18211f]">
+              <span className="uppercase text-[#647067]">{roomCodeLabel ?? "Code"}</span>
               <span>{roomCode}</span>
             </div>
           ) : null}
         </div>
         <div className="mt-2 grid grid-cols-2 gap-2">
-          <div className="rounded-lg border border-pink-400/40 bg-pink-500/14 px-2 py-1.5">
-            <div className="text-[10px] uppercase tracking-[0.08em] text-pink-100/80">
+          <div className="rounded-lg border border-[#163832]/25 bg-[#edf5ef] px-2 py-1.5">
+            <div className="text-[10px] uppercase tracking-[0.08em] text-[#647067]">
               {pointsLabel}
             </div>
-            <div className="text-lg font-black leading-none text-slate-100">{myPoints}</div>
+            <div className="text-lg font-black leading-none text-[#18211f]">{myPoints}</div>
           </div>
-          <div className="rounded-lg border border-amber-300/40 bg-amber-500/12 px-2 py-1.5">
-            <div className="text-[10px] uppercase tracking-[0.08em] text-amber-100/85">
+          <div className="rounded-lg border border-amber-300/45 bg-amber-50 px-2 py-1.5">
+            <div className="text-[10px] uppercase tracking-[0.08em] text-amber-800">
               {starsLabel}
             </div>
-            <div className="text-lg font-black leading-none text-amber-100">{myStars}</div>
+            <div className="text-lg font-black leading-none text-amber-800">{myStars}</div>
           </div>
         </div>
-        <div className="mt-2 h-1.5 w-full overflow-hidden rounded bg-slate-900/60">
-          <div
-            className="h-full rounded bg-pink-400/90"
-            style={{ width: `${roundProgressPct}%` }}
-          />
+        <div className="mt-2 h-1.5 w-full overflow-hidden rounded bg-[#d8e2d9]">
+          <div className="h-full rounded bg-[#163832]" style={{ width: `${roundProgressPct}%` }} />
         </div>
-        <div className="mt-1 text-[10px] text-slate-300">
+        <div className="mt-1 text-[10px] text-[#647067]">
           {roundLabel} {currentRound}/{maxRounds}
         </div>
       </Card>
@@ -102,8 +99,8 @@ export const TurnBanner: React.FC<TurnBannerProps> = ({
   return (
     <div className="hidden xl:flex xl:flex-wrap xl:items-center xl:justify-between xl:gap-2">
       <Card className={cn(neonCardClass, "min-w-[240px] rounded-xl px-4 py-3")}>
-        <div className="flex items-center gap-2 text-lg font-bold text-slate-100 sm:text-xl">
-          <span className="mr-1 text-[11px] uppercase tracking-[0.12em] text-pink-100/80">
+        <div className="flex items-center gap-2 text-lg font-bold text-[#18211f] sm:text-xl">
+          <span className="mr-1 text-[11px] uppercase tracking-[0.12em] text-[#647067]">
             {currentTurnLabel}
           </span>
           <span className="truncate">{currentPlayerName}</span>
@@ -111,49 +108,42 @@ export const TurnBanner: React.FC<TurnBannerProps> = ({
       </Card>
 
       <Card className={cn(neonCardClass, "min-w-[300px] flex-1 rounded-xl px-4 py-3")}>
-        <div className="mb-2 flex items-center justify-between text-[11px] uppercase tracking-[0.12em] text-pink-100/80">
+        <div className="mb-2 flex items-center justify-between text-[11px] uppercase tracking-[0.12em] text-[#647067]">
           <span>{roundLabel}</span>
           <span>
             {currentRound} / {maxRounds}
           </span>
         </div>
-        <div className="h-2 w-full overflow-hidden rounded bg-slate-900/60">
-          <div
-            className="h-full rounded bg-pink-400/90"
-            style={{ width: `${roundProgressPct}%` }}
-          />
+        <div className="h-2 w-full overflow-hidden rounded bg-[#d8e2d9]">
+          <div className="h-full rounded bg-[#163832]" style={{ width: `${roundProgressPct}%` }} />
         </div>
       </Card>
 
       <Card
         className={cn(
           neonCardClass,
-          "min-w-[140px] rounded-xl border-pink-400/45 bg-pink-500/14 px-4 py-3",
+          "min-w-[140px] rounded-xl border-[#163832]/25 bg-[#edf5ef] px-4 py-3",
         )}
       >
-        <div className="text-[11px] uppercase tracking-[0.12em] text-pink-100/85">
-          {pointsLabel}
-        </div>
-        <div className="text-2xl font-black leading-none text-slate-100">{myPoints}</div>
+        <div className="text-[11px] uppercase tracking-[0.12em] text-[#647067]">{pointsLabel}</div>
+        <div className="text-2xl font-black leading-none text-[#18211f]">{myPoints}</div>
       </Card>
 
       <Card
         className={cn(
           neonCardClass,
-          "min-w-[140px] rounded-xl border-amber-300/45 bg-amber-500/14 px-4 py-3",
+          "min-w-[140px] rounded-xl border-amber-300/45 bg-amber-50 px-4 py-3",
         )}
       >
-        <div className="text-[11px] uppercase tracking-[0.12em] text-amber-100/90">
-          {starsLabel}
-        </div>
-        <div className="text-2xl font-black leading-none text-amber-100">{myStars}</div>
+        <div className="text-[11px] uppercase tracking-[0.12em] text-amber-800">{starsLabel}</div>
+        <div className="text-2xl font-black leading-none text-amber-800">{myStars}</div>
       </Card>
 
       {roomCode || (onLeave && leaveLabel) ? (
         <div className="hidden xl:flex xl:flex-col xl:items-end xl:gap-2">
           {roomCode ? (
-            <div className="inline-flex max-w-full items-center gap-1 rounded-full border border-pink-400/40 bg-pink-500/12 px-2.5 py-1 text-[11px] font-semibold tracking-[0.08em] text-slate-100">
-              <span className="uppercase text-pink-100/85">{roomCodeLabel ?? "Code"}</span>
+            <div className="inline-flex max-w-full items-center gap-1 rounded-full border border-[#163832]/25 bg-[#edf5ef] px-2.5 py-1 text-[11px] font-semibold tracking-[0.08em] text-[#18211f]">
+              <span className="uppercase text-[#647067]">{roomCodeLabel ?? "Code"}</span>
               <span className="truncate">{roomCode}</span>
             </div>
           ) : null}

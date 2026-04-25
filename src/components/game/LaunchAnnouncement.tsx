@@ -41,10 +41,10 @@ export const LaunchAnnouncement: React.FC<LaunchAnnouncementProps> = ({
     variant === "turn"
       ? {
           glow: "shadow-[0_0_0_2px_rgba(236,72,153,0.2),0_0_44px_rgba(236,72,153,0.3)]",
-          border: "border-pink-400/45",
-          panel: "from-slate-900/95 via-slate-900/90 to-pink-950/85",
-          accent: "bg-pink-400",
-          badge: "text-pink-200 border-pink-400/40 bg-pink-500/15",
+          border: "border-[#163832]/35",
+          panel: "from-white/96 via-[#f7f8f3]/94 to-[#edf5ef]/92",
+          accent: "bg-[#163832]",
+          badge: "text-[#24443d] border-[#163832]/35 bg-[#edf5ef]",
           icon: "🎮",
           label: "Tour actif",
         }
@@ -52,34 +52,34 @@ export const LaunchAnnouncement: React.FC<LaunchAnnouncementProps> = ({
         ? {
             glow: "shadow-[0_0_0_2px_rgba(251,146,60,0.24),0_0_44px_rgba(251,146,60,0.35)]",
             border: "border-orange-300/50",
-            panel: "from-slate-900/95 via-slate-900/90 to-orange-950/85",
+            panel: "from-white/96 via-[#f7f8f3]/94 to-orange-50",
             accent: "bg-orange-400",
-            badge: "text-orange-200 border-orange-300/45 bg-orange-500/15",
+            badge: "text-orange-800 border-orange-300/70 bg-orange-50",
             icon: "🎲",
             label: "Lancer valide",
           }
         : {
             glow: "shadow-[0_0_0_2px_rgba(163,230,53,0.2),0_0_44px_rgba(163,230,53,0.28)]",
             border: "border-lime-300/40",
-            panel: "from-slate-900/95 via-slate-900/90 to-lime-950/80",
-            accent: "bg-lime-400",
-            badge: "text-lime-200 border-lime-300/45 bg-lime-500/15",
+            panel: "from-white/96 via-[#f7f8f3]/94 to-lime-50",
+            accent: "bg-lime-700",
+            badge: "text-lime-800 border-lime-300/70 bg-lime-50",
             icon: "✨",
             label: fr.launchAnnouncement.preparation,
           };
 
   return (
     <div
-      className="absolute inset-0 z-40 flex items-center justify-center overflow-hidden bg-slate-950/72 p-4 backdrop-blur-[2px]"
+      className="absolute inset-0 z-40 flex items-center justify-center overflow-hidden bg-[#f7f8f3]/80 p-4 backdrop-blur-[2px]"
       role="status"
       aria-live="polite"
       aria-atomic="true"
     >
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(148,163,184,0.2)_0%,rgba(2,6,23,0.45)_45%,rgba(2,6,23,0.75)_100%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(22,56,50,0.12)_0%,rgba(247,248,243,0.42)_45%,rgba(247,248,243,0.76)_100%)]" />
       <div
-        className={`relative w-full max-w-xl overflow-hidden rounded-2xl border ${skin.border} bg-gradient-to-br ${skin.panel} p-6 text-center text-slate-50 backdrop-blur ${skin.glow}`}
+        className={`relative w-full max-w-xl overflow-hidden rounded-2xl border ${skin.border} bg-gradient-to-br ${skin.panel} p-6 text-center text-[#18211f] backdrop-blur ${skin.glow}`}
       >
-        <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/25 px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-slate-100/90">
+        <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-[#163832]/25 bg-[#edf5ef] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-[#24443d]">
           <span className="text-base leading-none">{skin.icon}</span>
           <span>{skin.label}</span>
         </div>
@@ -90,8 +90,8 @@ export const LaunchAnnouncement: React.FC<LaunchAnnouncementProps> = ({
             <div
               className={
                 variant === "roll"
-                  ? "inline-flex items-center rounded-xl border border-orange-200/70 bg-orange-500/22 px-4 py-2 text-xl font-black tracking-wide text-orange-50 shadow-[0_0_24px_rgba(251,146,60,0.35)] sm:text-2xl"
-                  : "inline-flex items-center rounded-xl border border-pink-300/70 bg-pink-500/20 px-4 py-2 text-xl font-black tracking-wide text-slate-100 shadow-[0_0_24px_rgba(236,72,153,0.3)] sm:text-2xl"
+                  ? "inline-flex items-center rounded-xl border border-orange-300/70 bg-orange-50 px-4 py-2 text-xl font-black tracking-wide text-orange-900 shadow-[0_0_24px_rgba(251,146,60,0.25)] sm:text-2xl"
+                  : "inline-flex items-center rounded-xl border border-[#163832]/35 bg-[#edf5ef] px-4 py-2 text-xl font-black tracking-wide text-[#18211f] shadow-[0_0_24px_rgba(236,72,153,0.3)] sm:text-2xl"
               }
             >
               {emphasisText}
@@ -100,14 +100,14 @@ export const LaunchAnnouncement: React.FC<LaunchAnnouncementProps> = ({
         ) : null}
         {variant === "roll" && highlightValue != null ? (
           <div className="mt-3 flex items-center justify-center">
-            <div className="inline-flex h-20 min-w-20 items-center justify-center rounded-2xl border-2 border-orange-200/70 bg-orange-500/25 px-5 text-5xl font-black leading-none text-orange-100 shadow-[0_0_24px_rgba(251,146,60,0.35)]">
+            <div className="inline-flex h-20 min-w-20 items-center justify-center rounded-2xl border-2 border-orange-300/80 bg-orange-50 px-5 text-5xl font-black leading-none text-orange-900 shadow-[0_0_24px_rgba(251,146,60,0.22)]">
               {highlightValue}
             </div>
           </div>
         ) : null}
-        <p className="mt-2 text-sm text-slate-200 sm:text-base">{subtitle}</p>
+        <p className="mt-2 text-sm text-[#24443d] sm:text-base">{subtitle}</p>
 
-        <div className="mt-5 h-2.5 w-full rounded-full bg-black/35 p-[2px]">
+        <div className="mt-5 h-2.5 w-full rounded-full bg-[#d8e2d9] p-[2px]">
           <div
             className={`h-full rounded-full transition-[width] duration-75 ease-linear ${skin.accent}`}
             style={{ width: `${Math.max(8, progressRatio * 100)}%` }}

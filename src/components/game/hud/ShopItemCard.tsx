@@ -23,23 +23,23 @@ export const ShopItemCard: React.FC<ShopItemCardProps> = ({
   buyButtonClass,
 }) => {
   return (
-    <div className="rounded-xl border border-pink-400/25 bg-slate-900/55 p-3 shadow-[0_0_0_1px_rgba(236,72,153,0.08)]">
+    <div className="rounded-xl border border-[#d8e2d9] bg-white/62 p-3 shadow-[0_0_0_1px_rgba(236,72,153,0.08)]">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="text-sm font-semibold text-slate-100">{title}</div>
-          <div className="mt-1 text-xs text-slate-300">{description}</div>
+          <div className="text-sm font-semibold text-[#18211f]">{title}</div>
+          <div className="mt-1 text-xs text-[#647067]">{description}</div>
         </div>
-        <div className="text-sm font-bold text-amber-300">{costLabel}</div>
+        <div className="text-sm font-bold text-amber-900">{costLabel}</div>
       </div>
       <div className="mt-2 flex justify-end">
         <button
           type="button"
           disabled={!canInteract || !canBuy}
           className={cn(
-            "rounded-xl border px-3 py-2 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
+            "rounded-xl border px-3 py-2 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#163832]/35 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f7f8f3]",
             canInteract && canBuy
               ? buyButtonClass
-              : "cursor-not-allowed border-slate-500 bg-slate-700/60 text-slate-300",
+              : "cursor-not-allowed border-[#d8e2d9] bg-white/62 text-[#647067]",
           )}
           onClick={onBuy}
         >

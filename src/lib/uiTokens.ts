@@ -39,7 +39,75 @@ export const GAME_UI_THEME = {
   },
 } as const;
 
-// Portal-aligned shell tokens (used by pre-game screens)
+// SaaS shell tokens aligned with the public Portal.
+export const SAAS_PAGE_BACKGROUND = "bg-[#f7f8f3] text-[#18211f]";
+
+export const SAAS_SURFACE =
+  "rounded-[24px] border border-[#d8e2d9] bg-white/72 text-[#18211f] shadow-sm backdrop-blur";
+
+export const SAAS_SURFACE_SOFT =
+  "rounded-2xl border border-[#dfe7de] bg-white/58 text-[#18211f] shadow-sm backdrop-blur-sm";
+
+export const SAAS_INPUT =
+  "h-11 rounded-xl border border-[#cfd9d1] bg-white/80 text-[#18211f] placeholder:text-[#8b9891] focus-visible:ring-2 focus-visible:ring-[#163832]/25 focus-visible:border-[#8fa49a] transition";
+
+export const CTA_SAAS_PRIMARY =
+  "border-[#163832] bg-[#163832] text-white shadow-[0_12px_26px_rgba(22,56,50,0.18)] hover:bg-[#1f4a43]";
+
+export const CTA_SAAS_SECONDARY =
+  "border-[#cbd8cd] bg-white/75 text-[#24443d] hover:border-[#aebcaf] hover:bg-white";
+
+export const CTA_SAAS_SUBTLE =
+  "border-[#d8e2d9] bg-white/58 text-[#54645d] hover:bg-white hover:text-[#24443d]";
+
+// Shared light session shell tokens for in-game / live workshop screens.
+export const SESSION_HUD_SURFACE =
+  "rounded-2xl border border-[#d8e2d9] bg-white/78 text-[#18211f] shadow-[0_12px_34px_rgba(22,56,50,0.12)] backdrop-blur";
+
+export const SESSION_PANEL_SURFACE =
+  "rounded-2xl border border-[#d8e2d9] bg-white/70 text-[#18211f] shadow-[0_10px_28px_rgba(22,56,50,0.10)]";
+
+export const SESSION_PANEL_SURFACE_COMPACT =
+  "rounded-xl border border-[#d8e2d9] bg-white/70 text-[#18211f] shadow-[0_10px_28px_rgba(22,56,50,0.10)]";
+
+export const SESSION_SUBPANEL_SURFACE =
+  "rounded-xl border border-[#d8e2d9] bg-white/58 text-[#18211f]";
+
+export const SESSION_TAB_BUTTON =
+  "h-9 rounded-xl border border-[#d8e2d9] bg-white/62 px-3 text-xs font-semibold text-[#24443d] transition-colors hover:bg-white";
+
+export const SESSION_TAB_BUTTON_COMPACT =
+  "h-8 rounded-lg border border-[#d8e2d9] bg-white/62 px-3 text-xs font-semibold text-[#24443d] transition-colors hover:bg-white";
+
+export const SESSION_TAB_BUTTON_ACTIVE =
+  "border-[#163832]/35 bg-[#edf5ef] text-[#163832] shadow-[0_0_0_1px_rgba(22,56,50,0.14)]";
+
+export const SESSION_MOBILE_ACTION_BUTTON = "h-12 w-full rounded-xl";
+
+export const SESSION_MOBILE_ACTION_BUTTON_COMPACT = "h-11 w-full rounded-xl";
+
+export const SESSION_DRAWER_CONTENT =
+  "border-[#d8e2d9] bg-[#f7f8f3]/96 pb-[env(safe-area-inset-bottom)] text-[#18211f] lg:hidden";
+
+export const SESSION_DRAWER_CLOSE_BUTTON =
+  "h-10 text-[#24443d] hover:bg-white hover:text-[#18211f]";
+
+export const SESSION_DIALOG_CONTENT =
+  "rounded-2xl border border-[#d8e2d9] bg-[#f7f8f3] p-5 text-[#18211f] shadow-[0_18px_48px_rgba(22,56,50,0.18)] sm:p-6";
+
+export const CTA_SESSION_PRIMARY =
+  "border-[#163832] bg-[#163832] text-white shadow-[0_12px_26px_rgba(22,56,50,0.18)] hover:bg-[#1f4a43]";
+
+export const CTA_SESSION_SECONDARY =
+  "border-[#cbd8cd] bg-white/75 text-[#24443d] hover:border-[#aebcaf] hover:bg-white";
+
+export const CTA_SESSION_SUBTLE =
+  "border-[#d8e2d9] bg-white/58 text-[#54645d] hover:bg-white hover:text-[#24443d]";
+
+export const CTA_SESSION_DANGER =
+  "border-rose-300/45 bg-rose-50 text-rose-700 hover:border-rose-400/60 hover:bg-rose-100";
+
+// Legacy game shell tokens (kept for in-session game screens).
 export const APP_SHELL_SURFACE =
   "rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur";
 

@@ -117,13 +117,13 @@ export const WhoSaidItMinigame: React.FC<WhoSaidItMinigameProps> = ({
           : fr.whoSaidIt.preparation;
   const urgencyClass =
     timerSeconds <= 5
-      ? "border-rose-400/50 bg-rose-500/20 text-rose-100"
-      : "border-cyan-300/35 bg-slate-900/70 text-cyan-50";
+      ? "border-rose-300/70 bg-rose-50 text-rose-800"
+      : "border-[#d8e2d9] bg-white/72 text-[#18211f]";
   const myPlayer = myPlayerId ? (players.find((p) => p.id === myPlayerId) ?? null) : null;
 
   return (
-    <div className="absolute inset-0 z-50 flex h-full w-full flex-col overflow-hidden bg-slate-950/95 p-3 sm:p-6">
-      <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-3 text-cyan-50">
+    <div className="absolute inset-0 z-50 flex h-full w-full flex-col overflow-hidden bg-[#f7f8f3]/96 p-3 sm:p-6">
+      <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-3 text-[#18211f]">
         <ActionBadge
           tone="active"
           className="px-3 py-2 text-sm font-semibold tracking-normal"
@@ -132,7 +132,7 @@ export const WhoSaidItMinigame: React.FC<WhoSaidItMinigameProps> = ({
         <div
           className={cn(
             "rounded-xl border px-3 py-2 text-sm font-semibold",
-            phase === "answer" ? urgencyClass : "border-cyan-300/35 bg-slate-900/70",
+            phase === "answer" ? urgencyClass : "border-[#d8e2d9] bg-white/72",
           )}
         >
           {phase === "answer" ? `${phaseLabel} - ${timerSeconds}s` : phaseLabel}
@@ -168,8 +168,8 @@ export const WhoSaidItMinigame: React.FC<WhoSaidItMinigameProps> = ({
           />
         </div>
 
-        <Card className="border-cyan-300/35 bg-slate-900/70 p-4 text-center sm:p-6">
-          <p className="mx-auto max-h-[28svh] overflow-y-auto text-lg font-semibold leading-relaxed text-cyan-50 sm:max-h-[32svh] sm:text-2xl">
+        <Card className="border-[#d8e2d9] bg-white/72 p-4 text-center sm:p-6">
+          <p className="mx-auto max-h-[28svh] overflow-y-auto text-lg font-semibold leading-relaxed text-[#18211f] sm:max-h-[32svh] sm:text-2xl">
             {quoteText}
           </p>
         </Card>
@@ -177,7 +177,7 @@ export const WhoSaidItMinigame: React.FC<WhoSaidItMinigameProps> = ({
         {phase === "answer" && (
           <div className="min-h-0 flex-1 overflow-y-auto pr-1">
             {isSpectator && (
-              <Card className="mb-2 border-cyan-300/35 bg-slate-900/70 p-2 text-center text-xs text-amber-200">
+              <Card className="mb-2 border-amber-300/70 bg-amber-50 p-2 text-center text-xs text-amber-900">
                 {fr.buzzwordDuel.spectator}
               </Card>
             )}
@@ -194,15 +194,15 @@ export const WhoSaidItMinigame: React.FC<WhoSaidItMinigameProps> = ({
                     className={cn(
                       "!h-auto min-h-16 !whitespace-normal items-center justify-center px-3 py-3 text-center text-sm font-semibold sm:px-4 sm:text-base",
                       isSelected
-                        ? "border-cyan-300 bg-cyan-500 text-slate-950"
-                        : "border-cyan-300/35 bg-slate-900/75 text-cyan-50 hover:bg-slate-800",
+                        ? "border-[#163832] bg-[#163832] text-white"
+                        : "border-[#d8e2d9] bg-white/78 text-[#18211f] hover:bg-white",
                     )}
                   >
                     <span className="flex w-full items-center justify-center gap-2">
                       <span className="w-full whitespace-normal break-words text-center leading-tight">
                         {role.label}
                       </span>
-                      <span className="hidden shrink-0 rounded border border-cyan-300/35 bg-slate-950/55 px-2 py-0.5 text-xs lg:inline-flex">
+                      <span className="hidden shrink-0 rounded border border-[#d8e2d9] bg-white/70 px-2 py-0.5 text-xs lg:inline-flex">
                         {role.keyHint}
                       </span>
                     </span>
@@ -214,7 +214,7 @@ export const WhoSaidItMinigame: React.FC<WhoSaidItMinigameProps> = ({
         )}
 
         {phase === "reveal" && (
-          <Card className="border-cyan-300/35 bg-slate-900/70 p-4 text-cyan-50">
+          <Card className="border-[#d8e2d9] bg-white/72 p-4 text-[#18211f]">
             <div className="mb-2">
               <ActionBadge
                 tone="question"
@@ -233,7 +233,7 @@ export const WhoSaidItMinigame: React.FC<WhoSaidItMinigameProps> = ({
                       <span>{label}</span>
                       <span>{percent}%</span>
                     </div>
-                    <div className="h-2 overflow-hidden rounded bg-slate-800">
+                    <div className="h-2 overflow-hidden rounded bg-[#d8e2d9]">
                       <div
                         className={cn("h-full", isCorrect ? "bg-emerald-400" : "bg-cyan-400")}
                         style={{ width: `${percent}%` }}
@@ -259,7 +259,7 @@ export const WhoSaidItMinigame: React.FC<WhoSaidItMinigameProps> = ({
         )}
 
         {phase === "done" && (
-          <Card className="border-cyan-300/35 bg-slate-900/70 p-4 text-cyan-50">
+          <Card className="border-[#d8e2d9] bg-white/72 p-4 text-[#18211f]">
             <div className="text-lg font-bold">{fr.whoSaidIt.minigameFinished}</div>
             <div className="mt-2 text-sm">
               {fr.whoSaidIt.pointsGained}: +
@@ -270,7 +270,7 @@ export const WhoSaidItMinigame: React.FC<WhoSaidItMinigameProps> = ({
       </div>
 
       {phase === "answer" && selectedRole && (
-        <Card className="mx-auto mt-2 w-full max-w-4xl border-cyan-300/35 bg-slate-900/85 p-2 text-center text-sm text-cyan-100">
+        <Card className="mx-auto mt-2 w-full max-w-4xl border-[#d8e2d9] bg-white/86 p-2 text-center text-sm text-[#24443d]">
           {`${fr.whoSaidIt.sentAnswer} - ${fr.whoSaidIt.yourChoice}: ${ROLE_LABELS[selectedRole]}`}
         </Card>
       )}

@@ -54,9 +54,9 @@ export const PreRollActionPanel: React.FC<PreRollActionPanelProps> = ({
   const groupedItems = [...groupedMap.values()];
 
   return (
-    <div className="mt-2 rounded-md border border-cyan-300/30 bg-slate-900/55 p-2 shadow-[0_0_16px_rgba(34,211,238,0.1)]">
-      <div className="text-xs uppercase tracking-[0.1em] text-cyan-100/75">Debut du tour</div>
-      <div className="mt-1 text-xs text-slate-200">
+    <div className="mt-2 rounded-md border border-[#d8e2d9] bg-white/62 p-2 shadow-[0_0_16px_rgba(34,211,238,0.1)]">
+      <div className="text-xs uppercase tracking-[0.1em] text-[#647067]">Debut du tour</div>
+      <div className="mt-1 text-xs text-[#24443d]">
         Tu peux lancer normalement ou utiliser un objet.
       </div>
 
@@ -67,7 +67,7 @@ export const PreRollActionPanel: React.FC<PreRollActionPanelProps> = ({
             "rounded border px-3 py-1.5 text-xs font-semibold",
             canRoll
               ? activeBtnClass
-              : "border-slate-500 bg-slate-700/60 text-slate-300 cursor-not-allowed",
+              : "cursor-not-allowed border-[#d8e2d9] bg-white/62 text-[#647067]",
           )}
           disabled={!canRoll}
           onClick={onRoll}
@@ -83,7 +83,7 @@ export const PreRollActionPanel: React.FC<PreRollActionPanelProps> = ({
               "rounded border px-3 py-1.5 text-xs font-semibold",
               canUseAction
                 ? neutralBtnClass
-                : "border-slate-500 bg-slate-700/60 text-slate-300 cursor-not-allowed",
+                : "cursor-not-allowed border-[#d8e2d9] bg-white/62 text-[#647067]",
             )}
             disabled={!canUseAction}
             onClick={() => onUseType(item.type)}

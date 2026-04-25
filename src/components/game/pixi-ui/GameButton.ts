@@ -71,10 +71,6 @@ export function createGameButton({ label, onPress, labelFontSize }: GameButtonOp
       }),
     ),
     anchor: 0.5,
-    animations: {
-      hover: { props: { scale: { x: 1.03, y: 1.03 } }, duration: 90 },
-      pressed: { props: { scale: { x: 0.98, y: 0.98 } }, duration: 70 },
-    },
   });
 
   button.x = 0;

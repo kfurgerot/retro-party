@@ -24,22 +24,22 @@ export const ChoiceCard: React.FC<ChoiceCardProps> = ({
       type={onClick ? "button" : undefined}
       disabled={onClick ? disabled : undefined}
       className={cn(
-        "w-full rounded-xl border p-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
+        "w-full rounded-xl border p-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#163832]/35 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f7f8f3]",
         selected
-          ? "border-pink-400 bg-pink-500/20 shadow-[0_0_0_1px_rgba(236,72,153,0.24)]"
-          : "border-pink-400/25 bg-slate-900/55",
+          ? "border-pink-400 bg-[#edf5ef] shadow-[0_0_0_1px_rgba(236,72,153,0.24)]"
+          : "border-[#d8e2d9] bg-white/62",
         disabled && "cursor-not-allowed opacity-60",
-        !disabled && "hover:border-pink-400/40 hover:bg-slate-900/75",
+        !disabled && "hover:border-[#163832]/35 hover:bg-white/78",
       )}
       onClick={onClick}
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="text-sm font-semibold text-slate-100">{title}</div>
-          <div className="mt-1 text-xs text-slate-300">{description}</div>
+          <div className="text-sm font-semibold text-[#18211f]">{title}</div>
+          <div className="mt-1 text-xs text-[#647067]">{description}</div>
         </div>
         {quantityLabel ? (
-          <div className="text-sm font-bold text-pink-200">{quantityLabel}</div>
+          <div className="text-sm font-bold text-[#24443d]">{quantityLabel}</div>
         ) : null}
       </div>
     </Comp>

@@ -184,7 +184,7 @@ const DiceComponent: React.FC<DiceProps> = ({
       </button>
 
       {rollDetails && (!compact || showCompactDetails) && (
-        <div className={cn("text-pink-100 text-center", compact ? "text-[10px]" : "text-xs")}>
+        <div className={cn("text-center text-[#24443d]", compact ? "text-[10px]" : "text-xs")}>
           {rollDetails.map((line) => (
             <div key={line}>{line}</div>
           ))}
@@ -192,7 +192,7 @@ const DiceComponent: React.FC<DiceProps> = ({
       )}
 
       {import.meta.env.DEV && hasInvalidRollResult && (
-        <div className="text-[10px] text-rose-300">{fr.dice.invalidRollResult}</div>
+        <div className="text-[10px] text-rose-700">{fr.dice.invalidRollResult}</div>
       )}
     </div>
   );

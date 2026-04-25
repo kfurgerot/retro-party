@@ -13,7 +13,7 @@ import {
 import { cn } from "@/lib/utils";
 import { fr } from "@/i18n/fr";
 import { ChoiceCard } from "./hud";
-import { GAME_DIALOG_CONTENT } from "@/lib/uiTokens";
+import { SESSION_DIALOG_CONTENT } from "@/lib/uiTokens";
 
 type ItemChoice = {
   type: ShopItemType;
@@ -47,25 +47,25 @@ export const PreRollChoiceModal: React.FC<PreRollChoiceModalProps> = ({
 }) => {
   return (
     <AlertDialog open={open} onOpenChange={() => {}}>
-      <AlertDialogContent className={cn(GAME_DIALOG_CONTENT, "max-w-2xl")}>
+      <AlertDialogContent className={cn(SESSION_DIALOG_CONTENT, "max-w-2xl")}>
         <AlertDialogHeader>
-          <div className="mx-auto mb-2 inline-flex items-center gap-2 rounded-full border border-violet-300/45 bg-violet-500/15 px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-violet-100">
+          <div className="mx-auto mb-2 inline-flex items-center gap-2 rounded-full border border-violet-300/70 bg-violet-50 px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-violet-800">
             <span className="text-base leading-none">🧰</span>
             <span>Item avant lancer</span>
           </div>
           <AlertDialogTitle className="text-center text-2xl">
             {fr.preRollChoice.title}
           </AlertDialogTitle>
-          <AlertDialogDescription className="text-center text-slate-300">
+          <AlertDialogDescription className="text-center text-[#647067]">
             {fr.preRollChoice.description}
           </AlertDialogDescription>
         </AlertDialogHeader>
 
-        <div className="rounded-xl border border-cyan-300/20 bg-slate-950/30 p-2">
-          <div className="mb-2 flex items-center justify-between px-1 text-xs uppercase tracking-[0.12em] text-slate-300">
+        <div className="rounded-xl border border-[#d8e2d9] bg-white/58 p-2">
+          <div className="mb-2 flex items-center justify-between px-1 text-xs uppercase tracking-[0.12em] text-[#647067]">
             <span>Items disponibles</span>
             {selectedType ? (
-              <span className="rounded-md border border-violet-300/45 bg-violet-500/15 px-2 py-0.5 text-violet-100">
+              <span className="rounded-md border border-violet-300/70 bg-violet-50 px-2 py-0.5 text-violet-800">
                 1 selection
               </span>
             ) : null}
@@ -90,7 +90,7 @@ export const PreRollChoiceModal: React.FC<PreRollChoiceModalProps> = ({
 
         <AlertDialogFooter className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:space-x-0">
           <AlertDialogCancel
-            className={cn(neutralBtnClass, "h-11 w-full rounded-xl text-cyan-100")}
+            className={cn(neutralBtnClass, "h-11 w-full rounded-xl text-[#24443d]")}
             disabled={!canInteract}
             onClick={onContinue}
           >

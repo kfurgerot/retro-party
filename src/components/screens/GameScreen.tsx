@@ -11,6 +11,7 @@ import { BoardV2 } from "../game/BoardV2";
 import { PlayerCard } from "../game/PlayerCard";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { SessionFrame, SessionHeader } from "@/components/app-shell";
 import {
   Drawer,
   DrawerClose,
@@ -33,26 +34,20 @@ import { LaunchAnnouncement } from "../game/LaunchAnnouncement";
 import { ActionBadge, TurnBanner } from "../game/hud";
 import { SHOP_CATALOG } from "@/data/shopCatalog";
 import { fr } from "@/i18n/fr";
-const CTA_NEON_PRIMARY =
-  "border-pink-400/40 bg-pink-500 text-white shadow-[0_4px_16px_rgba(236,72,153,0.35)] hover:bg-pink-400";
-const CTA_NEON_SECONDARY_SUBTLE =
-  "border-white/[0.06] bg-white/[0.03] text-slate-300 hover:bg-white/[0.06] hover:text-white";
-const CTA_NEON_DANGER = "border-rose-400/40 bg-rose-500/15 text-rose-300 hover:bg-rose-500/25";
-const GAME_DIALOG_CONTENT =
-  "rounded-2xl border border-white/[0.08] bg-[#0d0d1a] p-5 text-slate-100 shadow-[0_14px_40px_rgba(0,0,0,0.65)] sm:p-6";
-const GAME_DRAWER_CLOSE_BUTTON = "h-10 text-slate-200 hover:bg-slate-800/60 hover:text-white";
-const GAME_DRAWER_CONTENT =
-  "border-pink-400/25 bg-slate-950/95 pb-[env(safe-area-inset-bottom)] text-slate-100 lg:hidden";
-const GAME_HUD_SURFACE =
-  "rounded-2xl border border-pink-400/28 bg-slate-950/72 text-slate-100 backdrop-blur shadow-[0_0_0_1px_rgba(236,72,153,0.11),0_10px_26px_rgba(2,6,23,0.45)]";
-const GAME_MOBILE_ACTION_BUTTON = "h-12 w-full rounded-xl";
-const GAME_PANEL_SURFACE =
-  "rounded-xl border border-pink-400/20 bg-slate-900/55 text-slate-100 shadow-[0_0_0_1px_rgba(236,72,153,0.07),0_8px_24px_rgba(2,6,23,0.34)]";
-const GAME_SUBPANEL_SURFACE = "rounded-xl border border-pink-400/15 bg-slate-950/32";
-const GAME_TAB_BUTTON =
-  "h-9 rounded-xl border border-pink-400/18 bg-slate-900/45 px-3 text-xs font-semibold text-slate-200 hover:bg-slate-900/65";
-const GAME_TAB_BUTTON_ACTIVE =
-  "border-pink-400/50 bg-pink-500/18 text-pink-100 shadow-[0_0_0_1px_rgba(236,72,153,0.20)]";
+import {
+  CTA_SESSION_DANGER,
+  CTA_SESSION_PRIMARY,
+  CTA_SESSION_SECONDARY,
+  SESSION_DIALOG_CONTENT,
+  SESSION_DRAWER_CLOSE_BUTTON,
+  SESSION_DRAWER_CONTENT,
+  SESSION_HUD_SURFACE,
+  SESSION_MOBILE_ACTION_BUTTON,
+  SESSION_PANEL_SURFACE_COMPACT,
+  SESSION_SUBPANEL_SURFACE,
+  SESSION_TAB_BUTTON,
+  SESSION_TAB_BUTTON_ACTIVE,
+} from "@/lib/uiTokens";
 import { ENABLE_BOARD_V2 } from "@/lib/uiMode";
 import { perfLog, perfMark, perfMeasure } from "@/lib/perf";
 
@@ -857,19 +852,19 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   );
 
   const turnStatusClass = gameState.currentQuestion
-    ? "border-amber-500/30 bg-amber-500/10 text-amber-200"
+    ? "border-amber-300/70 bg-amber-50 text-amber-900"
     : isMyTurn
-      ? "border-pink-400/40 bg-pink-500/15 text-pink-100"
-      : "border-pink-400/20 bg-slate-900/40 text-slate-300";
+      ? "border-[#163832]/35 bg-[#edf5ef] text-[#163832]"
+      : "border-[#d8e2d9] bg-white/62 text-[#647067]";
 
-  const neonCard = GAME_PANEL_SURFACE;
-  const neonPanel = GAME_SUBPANEL_SURFACE;
-  const neutralSecondaryBtn = CTA_NEON_SECONDARY_SUBTLE;
-  const activeCyanBtn = CTA_NEON_PRIMARY;
-  const dangerLeaveBtn = CTA_NEON_DANGER;
+  const neonCard = SESSION_PANEL_SURFACE_COMPACT;
+  const neonPanel = SESSION_SUBPANEL_SURFACE;
+  const neutralSecondaryBtn = CTA_SESSION_SECONDARY;
+  const activeCyanBtn = CTA_SESSION_PRIMARY;
+  const dangerLeaveBtn = CTA_SESSION_DANGER;
   const desktopLeaveBtn = cn(
-    GAME_TAB_BUTTON,
-    "border-rose-300/45 bg-rose-500/14 text-rose-100 hover:bg-rose-500/22 hover:text-rose-50",
+    SESSION_TAB_BUTTON,
+    "border-rose-300/45 bg-rose-50 text-rose-700 hover:bg-rose-100 hover:text-rose-800",
   );
   const roundProgressPct = Math.max(
     0,
@@ -992,117 +987,84 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   };
 
   return (
-    <div
-      className="relative min-h-svh w-full overflow-hidden"
-      style={{ background: "#0a0a14", fontFamily: "'DM Sans', sans-serif" }}
-    >
-      <div
-        className="pointer-events-none fixed inset-0 z-0"
-        style={{
-          background:
-            "radial-gradient(ellipse 70% 50% at 20% 0%, rgba(236,72,153,0.08) 0%, transparent 70%)",
-        }}
+    <SessionFrame contentClassName="flex h-svh w-full flex-col overflow-hidden p-2 sm:p-3">
+      {isOnboardingOpen && activeOnboardingStep ? (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-[#f7f8f3]/86 p-3 backdrop-blur-[2px] sm:p-5">
+          <Card
+            className={cn(
+              SESSION_HUD_SURFACE,
+              "w-full max-w-2xl rounded-2xl border-[#d8e2d9] bg-white/86 p-4 sm:p-6",
+            )}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="inline-flex items-center gap-2 rounded-full border border-[#163832]/25 bg-[#edf5ef] px-3 py-1 text-xs font-semibold text-[#24443d]">
+                <span>{activeOnboardingStep.icon}</span>
+                <span>Guide de partie</span>
+              </div>
+              <div className="text-xs text-[#647067]">
+                {(onboardingStepIndex ?? 0) + 1}/{onboardingScreens.length}
+              </div>
+            </div>
+
+            <h2 className="mt-4 text-xl font-black text-[#18211f] sm:text-2xl">
+              {activeOnboardingStep.title}
+            </h2>
+            <div className="mt-3 space-y-3 text-sm leading-relaxed text-[#18211f] sm:text-base">
+              {activeOnboardingStep.body.map((paragraph, idx) => (
+                <p key={`${onboardingStepIndex}-${idx}`}>{paragraph}</p>
+              ))}
+            </div>
+
+            <div className="mt-6 grid grid-cols-2 gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                className={cn(CTA_SESSION_SECONDARY, "h-11")}
+                disabled={onboardingStepIndex === 0}
+                onClick={goToPreviousOnboardingStep}
+              >
+                Retour
+              </Button>
+              <Button
+                type="button"
+                className={cn(CTA_SESSION_PRIMARY, "h-11")}
+                onClick={goToNextOnboardingStep}
+              >
+                {onboardingStepIndex === onboardingScreens.length - 1 ? "J'ai compris" : "Suivant"}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      ) : null}
+      {presenceNotice ? (
+        <div className="pointer-events-none absolute left-1/2 top-16 z-30 w-[min(92vw,560px)] -translate-x-1/2 sm:top-20">
+          <div
+            className={cn(
+              "flex items-center gap-2 rounded-xl border border-amber-300/70 bg-[#f7f8f3]/96 px-3 py-2 text-sm text-[#18211f] shadow-[0_0_0_1px_rgba(251,191,36,0.45),0_12px_44px_rgba(0,0,0,0.6),0_0_28px_rgba(251,191,36,0.22)] backdrop-blur",
+            )}
+          >
+            <ActionBadge label="Info" tone="decision" />
+            <span className="truncate font-bold tracking-[0.01em]">{presenceNotice.message}</span>
+          </div>
+        </div>
+      ) : null}
+      <SessionHeader
+        moduleLabel="Retro Party"
+        title="Session de rétrospective"
+        subtitle={`${fr.gameScreen.currentTurn} ${currentPlayer?.name ?? "-"} · ${fr.gameScreen.round} ${gameState.currentRound}/${gameState.maxRounds}`}
+        roomCode={roomCode}
+        roomCodeLabel={fr.onlineLobby.codeLabel}
+        onLeave={onLeave ? requestLeave : undefined}
+        leaveLabel={fr.gameScreen.leaveGame}
       />
 
-      <div className="relative z-10 flex h-svh w-full flex-col overflow-hidden p-2 sm:p-3">
-        {isOnboardingOpen && activeOnboardingStep ? (
-          <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/86 p-3 backdrop-blur-[2px] sm:p-5">
-            <Card
-              className={cn(
-                GAME_HUD_SURFACE,
-                "w-full max-w-2xl rounded-2xl border-pink-400/40 bg-slate-950/95 p-4 sm:p-6",
-              )}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="inline-flex items-center gap-2 rounded-full border border-pink-400/35 bg-pink-500/10 px-3 py-1 text-xs font-semibold text-pink-100">
-                  <span>{activeOnboardingStep.icon}</span>
-                  <span>Guide de partie</span>
-                </div>
-                <div className="text-xs text-slate-300">
-                  {(onboardingStepIndex ?? 0) + 1}/{onboardingScreens.length}
-                </div>
-              </div>
-
-              <h2 className="mt-4 text-xl font-black text-slate-100 sm:text-2xl">
-                {activeOnboardingStep.title}
-              </h2>
-              <div className="mt-3 space-y-3 text-sm leading-relaxed text-slate-100 sm:text-base">
-                {activeOnboardingStep.body.map((paragraph, idx) => (
-                  <p key={`${onboardingStepIndex}-${idx}`}>{paragraph}</p>
-                ))}
-              </div>
-
-              <div className="mt-6 grid grid-cols-2 gap-2">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className={cn(CTA_NEON_SECONDARY_SUBTLE, "h-11")}
-                  disabled={onboardingStepIndex === 0}
-                  onClick={goToPreviousOnboardingStep}
-                >
-                  Retour
-                </Button>
-                <Button
-                  type="button"
-                  className={cn(CTA_NEON_PRIMARY, "h-11")}
-                  onClick={goToNextOnboardingStep}
-                >
-                  {onboardingStepIndex === onboardingScreens.length - 1
-                    ? "J'ai compris"
-                    : "Suivant"}
-                </Button>
-              </div>
-            </Card>
-          </div>
-        ) : null}
-        {presenceNotice ? (
-          <div className="pointer-events-none absolute left-1/2 top-16 z-30 w-[min(92vw,560px)] -translate-x-1/2 sm:top-20">
-            <div
-              className={cn(
-                "flex items-center gap-2 rounded-xl border border-amber-300/70 bg-slate-950/96 px-3 py-2 text-sm text-slate-50 shadow-[0_0_0_1px_rgba(251,191,36,0.45),0_12px_44px_rgba(0,0,0,0.6),0_0_28px_rgba(251,191,36,0.22)] backdrop-blur",
-              )}
-            >
-              <ActionBadge label="Info" tone="decision" />
-              <span className="truncate font-bold tracking-[0.01em]">{presenceNotice.message}</span>
-            </div>
-          </div>
-        ) : null}
-        <div className={cn(GAME_HUD_SURFACE, "p-1.5 sm:p-2")}>
-          <div className="xl:hidden">
-            <TurnBanner
-              mode="mobile"
-              currentTurnLabel={fr.gameScreen.currentTurn}
-              currentPlayerName={currentPlayer?.name ?? "-"}
-              roomCode={roomCode}
-              roomCodeLabel={fr.onlineLobby.codeLabel}
-              primaryAction={primaryAction}
-              pointsLabel={fr.gameScreen.points}
-              starsLabel={fr.gameScreen.kudobox}
-              myPoints={myPoints}
-              myStars={myStars}
-              isMyTurn={isMyTurn}
-              youLabel={fr.gameScreen.you}
-              roundLabel={fr.gameScreen.round}
-              currentRound={gameState.currentRound}
-              maxRounds={gameState.maxRounds}
-              roundProgressPct={roundProgressPct}
-              nextUpLabel={fr.gameScreen.nextUpLabel}
-              nextPlayerName={nextPlayer?.name ?? "-"}
-              turnQueue={turnQueue.map((entry) => ({
-                id: entry.player.id,
-                name: entry.player.name,
-                isCurrent: entry.isCurrent,
-                isNext: entry.isNext,
-              }))}
-              neonCardClass={neonCard}
-            />
-          </div>
-
+      <div className={cn(SESSION_HUD_SURFACE, "p-1.5 sm:p-2")}>
+        <div className="xl:hidden">
           <TurnBanner
-            mode="desktop"
+            mode="mobile"
             currentTurnLabel={fr.gameScreen.currentTurn}
             currentPlayerName={currentPlayer?.name ?? "-"}
-            roomCode={roomCode}
+            roomCode={null}
             roomCodeLabel={fr.onlineLobby.codeLabel}
             primaryAction={primaryAction}
             pointsLabel={fr.gameScreen.points}
@@ -1124,235 +1086,260 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               isNext: entry.isNext,
             }))}
             neonCardClass={neonCard}
-            onLeave={onLeave ? requestLeave : undefined}
-            leaveLabel={fr.gameScreen.leaveGame}
-            leaveBtnClass={desktopLeaveBtn}
           />
         </div>
 
-        <div className="mt-2 grid min-h-0 flex-1 grid-cols-1 gap-2 sm:mt-3 xl:grid-cols-[minmax(0,1fr)_340px] 2xl:grid-cols-[minmax(0,1fr)_360px]">
-          <div className="flex min-h-0 flex-col gap-3">
-            <div className={cn("min-h-[38svh] flex-1 overflow-hidden p-1 xl:min-h-0", neonPanel)}>
-              {ENABLE_BOARD_V2 ? (
-                <BoardV2
-                  tiles={gameState.tiles}
-                  players={gameState.players}
-                  pendingPathChoice={pendingPathChoice}
-                  lastMoveTrace={gameState.lastMoveTrace}
-                  eventOverlayActive={isArrivalEventActive}
-                  canChoosePath={canChoosePath}
-                  onChoosePath={onChoosePath}
-                />
-              ) : (
-                <GameBoard
-                  tiles={gameState.tiles}
-                  players={gameState.players}
-                  focusPlayerId={currentPlayer?.id ?? null}
-                  activePlayerHint={!isMyTurn ? activePlayerHint : null}
-                  pendingPathChoice={pendingPathChoice}
-                  lastMoveTrace={gameState.lastMoveTrace}
-                  eventOverlayActive={isArrivalEventActive}
-                  canChoosePath={canChoosePath}
-                  onChoosePath={onChoosePath}
-                  actionOverlay={{
-                    canRoll,
-                    canMove,
-                    canOpenQuestionCard,
-                    isRolling: gameState.isRolling,
-                    diceValue: gameState.diceValue,
-                    rollResult: gameState.lastRollResult ?? null,
-                    pendingDoubleRollFirstDie,
-                    onRoll: onRollDice,
-                    onMove: handleMove,
-                    onOpenQuestionCard,
-                    playerIndex: myIndex,
-                  }}
-                  onMoveAnimationEnd={(playerId) => {
-                    if (playerId === currentPlayer?.id) setIsMoveAnimating(false);
-                  }}
-                />
-              )}
-            </div>
-          </div>
+        <TurnBanner
+          mode="desktop"
+          currentTurnLabel={fr.gameScreen.currentTurn}
+          currentPlayerName={currentPlayer?.name ?? "-"}
+          roomCode={null}
+          roomCodeLabel={fr.onlineLobby.codeLabel}
+          primaryAction={primaryAction}
+          pointsLabel={fr.gameScreen.points}
+          starsLabel={fr.gameScreen.kudobox}
+          myPoints={myPoints}
+          myStars={myStars}
+          isMyTurn={isMyTurn}
+          youLabel={fr.gameScreen.you}
+          roundLabel={fr.gameScreen.round}
+          currentRound={gameState.currentRound}
+          maxRounds={gameState.maxRounds}
+          roundProgressPct={roundProgressPct}
+          nextUpLabel={fr.gameScreen.nextUpLabel}
+          nextPlayerName={nextPlayer?.name ?? "-"}
+          turnQueue={turnQueue.map((entry) => ({
+            id: entry.player.id,
+            name: entry.player.name,
+            isCurrent: entry.isCurrent,
+            isNext: entry.isNext,
+          }))}
+          neonCardClass={neonCard}
+          onLeave={undefined}
+          leaveLabel={fr.gameScreen.leaveGame}
+          leaveBtnClass={desktopLeaveBtn}
+        />
+      </div>
 
-          <div className="hidden min-h-0 min-w-0 flex-col gap-3 xl:flex">
-            <Card className={cn(neonCard, "flex min-h-0 flex-1 flex-col rounded-2xl px-3 py-3")}>
-              <div className="flex items-center justify-between gap-2">
-                <div className="text-base font-bold">
-                  {sidebarTab === "players" ? fr.gameScreen.players : fr.gameScreen.activityFeed}
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className={cn(
-                      GAME_TAB_BUTTON,
-                      sidebarTab === "players" ? GAME_TAB_BUTTON_ACTIVE : "opacity-95",
-                    )}
-                    onClick={() => setSidebarTab("players")}
-                  >
-                    {fr.gameScreen.players}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className={cn(
-                      GAME_TAB_BUTTON,
-                      sidebarTab === "activity" ? GAME_TAB_BUTTON_ACTIVE : "opacity-95",
-                    )}
-                    onClick={() => setSidebarTab("activity")}
-                  >
-                    {fr.gameScreen.activityFeed}
-                  </Button>
-                </div>
-              </div>
-
-              {sidebarTab === "players" ? (
-                <div className="mt-3 grid min-h-0 flex-1 gap-2 overflow-auto pr-1">
-                  <div
-                    className={cn(
-                      `px-2 py-2 text-xs ${GAME_SUBPANEL_SURFACE}`,
-                      isMyTurn
-                        ? "border-pink-400/45 bg-pink-500/18 shadow-[0_0_0_1px_rgba(236,72,153,0.22)_inset]"
-                        : "",
-                    )}
-                  >
-                    <div className="flex items-center gap-2 text-pink-100/80">
-                      <span
-                        className={cn(
-                          "inline-flex h-2 w-2 rounded-full",
-                          isMyTurn ? "bg-pink-400 animate-pulse" : "bg-slate-500",
-                        )}
-                      />
-                      {fr.gameScreen.nowPlayingLabel}{" "}
-                      <span className="font-semibold text-pink-100">
-                        {currentPlayer?.name ?? "-"}
-                      </span>
-                    </div>
-                    <div className="text-slate-300">
-                      {fr.gameScreen.nextUpLabel}{" "}
-                      <span className="font-semibold text-slate-200">
-                        {nextPlayer?.name ?? "-"}
-                      </span>
-                    </div>
-                  </div>
-                  {playersByTurnOrder.map((entry) => (
-                    <div
-                      key={entry.player.id}
-                      className={cn(
-                        "grid gap-1 rounded-xl border p-1.5 transition-colors",
-                        entry.isCurrent
-                          ? "border-pink-400/35 bg-pink-500/10"
-                          : entry.isNext
-                            ? "border-emerald-300/30 bg-emerald-500/5"
-                            : "border-pink-400/10 bg-slate-950/20",
-                      )}
-                    >
-                      <div className="flex items-center justify-between px-1 text-[11px]">
-                        <span
-                          className={cn(
-                            "inline-flex rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-[0.08em]",
-                            entry.isCurrent
-                              ? "border-pink-400/45 bg-pink-500/15 text-pink-100"
-                              : entry.isNext
-                                ? "border-emerald-300/40 bg-emerald-500/10 text-emerald-100"
-                                : "border-pink-400/20 bg-slate-900/40 text-slate-300",
-                          )}
-                        >
-                          {getTurnOrderLabel(entry.turnDistance)}
-                        </span>
-                        {entry.isMe && (
-                          <span className="inline-flex rounded border border-violet-300/40 bg-violet-500/10 px-2 py-0.5 text-violet-100">
-                            {fr.gameScreen.you}
-                          </span>
-                        )}
-                      </div>
-                      <PlayerCard player={entry.player} isActive={entry.isCurrent} compact />
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="mt-3 grid min-h-0 flex-1 gap-1.5 overflow-auto pr-1 text-xs text-slate-100/90">
-                  {activityFeed.length > 0 ? (
-                    activityFeed.map((entry, index) => (
-                      <div
-                        key={`${entry.log}-${index}`}
-                        className={cn(
-                          "rounded-xl border px-2 py-1.5",
-                          index === 0
-                            ? "border-pink-400/30 bg-pink-500/10 text-pink-100"
-                            : "border-pink-400/15 bg-slate-950/25 text-slate-100/85",
-                        )}
-                      >
-                        <div className="mb-1">
-                          <ActionBadge
-                            label={activityKindLabel[entry.kind]}
-                            tone={activityKindClass[entry.kind]}
-                            className="rounded-full border px-2 py-0.5"
-                          />
-                        </div>
-                        <div>{entry.log}</div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="rounded-xl border border-pink-400/15 bg-slate-950/25 px-2 py-1.5 text-slate-300">
-                      {fr.gameScreen.noRecentActivity}
-                    </div>
-                  )}
-                </div>
-              )}
-            </Card>
+      <div className="mt-2 grid min-h-0 flex-1 grid-cols-1 gap-2 sm:mt-3 xl:grid-cols-[minmax(0,1fr)_340px] 2xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="flex min-h-0 flex-col gap-3">
+          <div className={cn("min-h-[38svh] flex-1 overflow-hidden p-1 xl:min-h-0", neonPanel)}>
+            {ENABLE_BOARD_V2 ? (
+              <BoardV2
+                tiles={gameState.tiles}
+                players={gameState.players}
+                pendingPathChoice={pendingPathChoice}
+                lastMoveTrace={gameState.lastMoveTrace}
+                eventOverlayActive={isArrivalEventActive}
+                canChoosePath={canChoosePath}
+                onChoosePath={onChoosePath}
+              />
+            ) : (
+              <GameBoard
+                tiles={gameState.tiles}
+                players={gameState.players}
+                focusPlayerId={currentPlayer?.id ?? null}
+                activePlayerHint={!isMyTurn ? activePlayerHint : null}
+                pendingPathChoice={pendingPathChoice}
+                lastMoveTrace={gameState.lastMoveTrace}
+                eventOverlayActive={isArrivalEventActive}
+                canChoosePath={canChoosePath}
+                onChoosePath={onChoosePath}
+                actionOverlay={{
+                  canRoll,
+                  canMove,
+                  canOpenQuestionCard,
+                  isRolling: gameState.isRolling,
+                  diceValue: gameState.diceValue,
+                  rollResult: gameState.lastRollResult ?? null,
+                  pendingDoubleRollFirstDie,
+                  onRoll: onRollDice,
+                  onMove: handleMove,
+                  onOpenQuestionCard,
+                  playerIndex: myIndex,
+                }}
+                onMoveAnimationEnd={(playerId) => {
+                  if (playerId === currentPlayer?.id) setIsMoveAnimating(false);
+                }}
+              />
+            )}
           </div>
         </div>
-        <div className="sticky bottom-0 z-30 mt-1 pb-[calc(env(safe-area-inset-bottom)+4px)]">
-          <Card
-            className={cn(
-              GAME_HUD_SURFACE,
-              "px-2 py-2 shadow-[0_-8px_24px_rgba(2,6,23,0.35)] xl:hidden",
-            )}
-          >
-            <div className="grid grid-cols-3 gap-2">
-              <Button
-                className={cn(GAME_MOBILE_ACTION_BUTTON, neutralSecondaryBtn)}
-                size="sm"
-                variant="secondary"
-                onClick={openPlayers}
-                aria-label={fr.gameScreen.players}
-              >
-                {fr.gameScreen.players}
-              </Button>
 
-              <Button
-                className={cn(GAME_MOBILE_ACTION_BUTTON, neutralSecondaryBtn)}
-                size="sm"
-                variant="secondary"
-                onClick={openMobileMenu}
-                aria-label={fr.gameScreen.mobileMenuAria}
-              >
-                {fr.gameScreen.mobileMenu}
-              </Button>
-
-              <Button
-                className={cn(
-                  GAME_MOBILE_ACTION_BUTTON,
-                  onLeave ? dangerLeaveBtn : neutralSecondaryBtn,
-                  !onLeave && "opacity-60",
-                )}
-                size="sm"
-                variant="secondary"
-                onClick={requestLeave}
-                aria-label={fr.gameScreen.leave}
-                disabled={!onLeave}
-              >
-                {fr.gameScreen.leave}
-              </Button>
+        <div className="hidden min-h-0 min-w-0 flex-col gap-3 xl:flex">
+          <Card className={cn(neonCard, "flex min-h-0 flex-1 flex-col rounded-2xl px-3 py-3")}>
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-base font-bold">
+                {sidebarTab === "players" ? fr.gameScreen.players : fr.gameScreen.activityFeed}
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className={cn(
+                    SESSION_TAB_BUTTON,
+                    sidebarTab === "players" ? SESSION_TAB_BUTTON_ACTIVE : "opacity-95",
+                  )}
+                  onClick={() => setSidebarTab("players")}
+                >
+                  {fr.gameScreen.players}
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className={cn(
+                    SESSION_TAB_BUTTON,
+                    sidebarTab === "activity" ? SESSION_TAB_BUTTON_ACTIVE : "opacity-95",
+                  )}
+                  onClick={() => setSidebarTab("activity")}
+                >
+                  {fr.gameScreen.activityFeed}
+                </Button>
+              </div>
             </div>
+
+            {sidebarTab === "players" ? (
+              <div className="mt-3 grid min-h-0 flex-1 gap-2 overflow-auto pr-1">
+                <div
+                  className={cn(
+                    `px-2 py-2 text-xs ${SESSION_SUBPANEL_SURFACE}`,
+                    isMyTurn
+                      ? "border-[#163832]/35 bg-[#edf5ef] shadow-[0_0_0_1px_rgba(236,72,153,0.22)_inset]"
+                      : "",
+                  )}
+                >
+                  <div className="flex items-center gap-2 text-[#647067]">
+                    <span
+                      className={cn(
+                        "inline-flex h-2 w-2 rounded-full",
+                        isMyTurn ? "bg-[#163832] animate-pulse" : "bg-[#aebcaf]",
+                      )}
+                    />
+                    {fr.gameScreen.nowPlayingLabel}{" "}
+                    <span className="font-semibold text-[#24443d]">
+                      {currentPlayer?.name ?? "-"}
+                    </span>
+                  </div>
+                  <div className="text-[#647067]">
+                    {fr.gameScreen.nextUpLabel}{" "}
+                    <span className="font-semibold text-[#24443d]">{nextPlayer?.name ?? "-"}</span>
+                  </div>
+                </div>
+                {playersByTurnOrder.map((entry) => (
+                  <div
+                    key={entry.player.id}
+                    className={cn(
+                      "grid gap-1 rounded-xl border p-1.5 transition-colors",
+                      entry.isCurrent
+                        ? "border-[#163832]/25 bg-[#edf5ef]"
+                        : entry.isNext
+                          ? "border-emerald-300/30 bg-emerald-500/5"
+                          : "border-[#d8e2d9] bg-white/50",
+                    )}
+                  >
+                    <div className="flex items-center justify-between px-1 text-[11px]">
+                      <span
+                        className={cn(
+                          "inline-flex rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-[0.08em]",
+                          entry.isCurrent
+                            ? "border-[#163832]/35 bg-[#edf5ef] text-[#24443d]"
+                            : entry.isNext
+                              ? "border-emerald-300/70 bg-emerald-50 text-emerald-800"
+                              : "border-[#d8e2d9] bg-white/62 text-[#647067]",
+                        )}
+                      >
+                        {getTurnOrderLabel(entry.turnDistance)}
+                      </span>
+                      {entry.isMe && (
+                        <span className="inline-flex rounded border border-violet-300/70 bg-violet-50 px-2 py-0.5 text-violet-800">
+                          {fr.gameScreen.you}
+                        </span>
+                      )}
+                    </div>
+                    <PlayerCard player={entry.player} isActive={entry.isCurrent} compact />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-3 grid min-h-0 flex-1 gap-1.5 overflow-auto pr-1 text-xs text-[#24443d]">
+                {activityFeed.length > 0 ? (
+                  activityFeed.map((entry, index) => (
+                    <div
+                      key={`${entry.log}-${index}`}
+                      className={cn(
+                        "rounded-xl border px-2 py-1.5",
+                        index === 0
+                          ? "border-[#d8e2d9] bg-[#edf5ef] text-[#24443d]"
+                          : "border-[#d8e2d9] bg-white/58 text-[#54645d]",
+                      )}
+                    >
+                      <div className="mb-1">
+                        <ActionBadge
+                          label={activityKindLabel[entry.kind]}
+                          tone={activityKindClass[entry.kind]}
+                          className="rounded-full border px-2 py-0.5"
+                        />
+                      </div>
+                      <div>{entry.log}</div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-xl border border-[#d8e2d9] bg-white/58 px-2 py-1.5 text-[#647067]">
+                    {fr.gameScreen.noRecentActivity}
+                  </div>
+                )}
+              </div>
+            )}
           </Card>
         </div>
       </div>
+      <div className="sticky bottom-0 z-30 mt-1 pb-[calc(env(safe-area-inset-bottom)+4px)]">
+        <Card
+          className={cn(
+            SESSION_HUD_SURFACE,
+            "px-2 py-2 shadow-[0_-8px_24px_rgba(2,6,23,0.35)] xl:hidden",
+          )}
+        >
+          <div className="grid grid-cols-3 gap-2">
+            <Button
+              className={cn(SESSION_MOBILE_ACTION_BUTTON, neutralSecondaryBtn)}
+              size="sm"
+              variant="secondary"
+              onClick={openPlayers}
+              aria-label={fr.gameScreen.players}
+            >
+              {fr.gameScreen.players}
+            </Button>
 
+            <Button
+              className={cn(SESSION_MOBILE_ACTION_BUTTON, neutralSecondaryBtn)}
+              size="sm"
+              variant="secondary"
+              onClick={openMobileMenu}
+              aria-label={fr.gameScreen.mobileMenuAria}
+            >
+              {fr.gameScreen.mobileMenu}
+            </Button>
+
+            <Button
+              className={cn(
+                SESSION_MOBILE_ACTION_BUTTON,
+                onLeave ? dangerLeaveBtn : neutralSecondaryBtn,
+                !onLeave && "opacity-60",
+              )}
+              size="sm"
+              variant="secondary"
+              onClick={requestLeave}
+              aria-label={fr.gameScreen.leave}
+              disabled={!onLeave}
+            >
+              {fr.gameScreen.leave}
+            </Button>
+          </div>
+        </Card>
+      </div>
       <Drawer open={playersOpen} onOpenChange={setPlayersOpen}>
-        <DrawerContent className={GAME_DRAWER_CONTENT}>
+        <DrawerContent className={SESSION_DRAWER_CONTENT}>
           <DrawerHeader className="pb-2">
             <div className="flex items-center justify-between gap-2">
               <DrawerTitle>{fr.gameScreen.players}</DrawerTitle>
@@ -1361,7 +1348,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                   variant="ghost"
                   size="sm"
                   aria-label={fr.gameScreen.closePlayersPanelAria}
-                  className={GAME_DRAWER_CLOSE_BUTTON}
+                  className={SESSION_DRAWER_CLOSE_BUTTON}
                 >
                   {fr.gameScreen.close}
                 </Button>
@@ -1373,25 +1360,25 @@ export const GameScreen: React.FC<GameScreenProps> = ({
             <div
               className={cn(
                 "px-2 py-2 text-xs",
-                GAME_SUBPANEL_SURFACE,
+                SESSION_SUBPANEL_SURFACE,
                 isMyTurn
-                  ? "border-pink-400/45 bg-pink-500/18 shadow-[0_0_0_1px_rgba(236,72,153,0.22)_inset]"
+                  ? "border-[#163832]/35 bg-[#edf5ef] shadow-[0_0_0_1px_rgba(236,72,153,0.22)_inset]"
                   : "",
               )}
             >
-              <div className="flex items-center gap-2 text-pink-100/80">
+              <div className="flex items-center gap-2 text-[#647067]">
                 <span
                   className={cn(
                     "inline-flex h-2 w-2 rounded-full",
-                    isMyTurn ? "bg-pink-400 animate-pulse" : "bg-slate-500",
+                    isMyTurn ? "bg-[#163832] animate-pulse" : "bg-[#aebcaf]",
                   )}
                 />
                 {fr.gameScreen.nowPlayingLabel}{" "}
-                <span className="font-semibold text-pink-100">{currentPlayer?.name ?? "-"}</span>
+                <span className="font-semibold text-[#24443d]">{currentPlayer?.name ?? "-"}</span>
               </div>
-              <div className="text-slate-300">
+              <div className="text-[#647067]">
                 {fr.gameScreen.nextUpLabel}{" "}
-                <span className="font-semibold text-slate-200">{nextPlayer?.name ?? "-"}</span>
+                <span className="font-semibold text-[#24443d]">{nextPlayer?.name ?? "-"}</span>
               </div>
             </div>
             {playersByTurnOrder.map((entry) => (
@@ -1400,10 +1387,10 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 className={cn(
                   "grid gap-1 rounded-xl border p-1.5 transition-colors",
                   entry.isCurrent
-                    ? "border-pink-400/35 bg-pink-500/10"
+                    ? "border-[#163832]/25 bg-[#edf5ef]"
                     : entry.isNext
                       ? "border-emerald-300/30 bg-emerald-500/5"
-                      : "border-pink-400/10 bg-slate-950/20",
+                      : "border-[#d8e2d9] bg-white/50",
                 )}
               >
                 <div className="flex items-center justify-between px-1 text-[11px]">
@@ -1411,16 +1398,16 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                     className={cn(
                       "inline-flex rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-[0.08em]",
                       entry.isCurrent
-                        ? "border-pink-400/45 bg-pink-500/15 text-pink-100"
+                        ? "border-[#163832]/35 bg-[#edf5ef] text-[#24443d]"
                         : entry.isNext
-                          ? "border-emerald-300/40 bg-emerald-500/10 text-emerald-100"
-                          : "border-pink-400/20 bg-slate-900/40 text-slate-300",
+                          ? "border-emerald-300/70 bg-emerald-50 text-emerald-800"
+                          : "border-[#d8e2d9] bg-white/62 text-[#647067]",
                     )}
                   >
                     {getTurnOrderLabel(entry.turnDistance)}
                   </span>
                   {entry.isMe && (
-                    <span className="inline-flex rounded border border-violet-300/40 bg-violet-500/10 px-2 py-0.5 text-violet-100">
+                    <span className="inline-flex rounded border border-violet-300/70 bg-violet-50 px-2 py-0.5 text-violet-800">
                       {fr.gameScreen.you}
                     </span>
                   )}
@@ -1433,12 +1420,12 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       </Drawer>
 
       <Drawer open={mobileInfoOpen} onOpenChange={setMobileInfoOpen}>
-        <DrawerContent className={GAME_DRAWER_CONTENT}>
+        <DrawerContent className={SESSION_DRAWER_CONTENT}>
           <DrawerHeader className="pb-2">
             <div className="flex items-center justify-between gap-2">
               <DrawerTitle>{fr.gameScreen.mobileInfoTitle}</DrawerTitle>
               <DrawerClose asChild>
-                <Button variant="ghost" size="sm" className={GAME_DRAWER_CLOSE_BUTTON}>
+                <Button variant="ghost" size="sm" className={SESSION_DRAWER_CLOSE_BUTTON}>
                   {fr.gameScreen.close}
                 </Button>
               </DrawerClose>
@@ -1446,7 +1433,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
           </DrawerHeader>
 
           <div className="grid gap-2 px-4 pb-4">
-            <div className={cn("px-3 py-2", GAME_SUBPANEL_SURFACE)}>
+            <div className={cn("px-3 py-2", SESSION_SUBPANEL_SURFACE)}>
               <div
                 className={`mb-1 inline-flex rounded-full border px-2 py-1 text-[11px] ${turnStatusClass}`}
               >
@@ -1456,26 +1443,26 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                     ? fr.gameScreen.statusYourTurn
                     : fr.gameScreen.statusWaiting}
               </div>
-              <div className="text-[10px] uppercase tracking-[0.1em] text-pink-100/70">
+              <div className="text-[10px] uppercase tracking-[0.1em] text-[#647067]">
                 {fr.gameScreen.primaryAction}
               </div>
-              <div className="text-sm font-semibold leading-snug text-pink-100">
+              <div className="text-sm font-semibold leading-snug text-[#24443d]">
                 {primaryAction}
               </div>
-              <div className="text-xs text-pink-100/90">{infoTitle}</div>
-              <div className="text-xs text-slate-300">{infoHint}</div>
+              <div className="text-xs text-[#54645d]">{infoTitle}</div>
+              <div className="text-xs text-[#647067]">{infoHint}</div>
             </div>
           </div>
         </DrawerContent>
       </Drawer>
 
       <Drawer open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-        <DrawerContent className={GAME_DRAWER_CONTENT}>
+        <DrawerContent className={SESSION_DRAWER_CONTENT}>
           <DrawerHeader className="pb-2">
             <div className="flex items-center justify-between gap-2">
               <DrawerTitle>{fr.gameScreen.mobileMenuTitle}</DrawerTitle>
               <DrawerClose asChild>
-                <Button variant="ghost" size="sm" className={GAME_DRAWER_CLOSE_BUTTON}>
+                <Button variant="ghost" size="sm" className={SESSION_DRAWER_CLOSE_BUTTON}>
                   {fr.gameScreen.close}
                 </Button>
               </DrawerClose>
@@ -1484,7 +1471,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 
           <div className="grid gap-2 px-4 pb-4">
             <Button
-              className={cn(GAME_MOBILE_ACTION_BUTTON, neutralSecondaryBtn)}
+              className={cn(SESSION_MOBILE_ACTION_BUTTON, neutralSecondaryBtn)}
               size="sm"
               variant="secondary"
               onClick={() => {
@@ -1495,7 +1482,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               {fr.gameScreen.mobileInfo}
             </Button>
             <Button
-              className={cn(GAME_MOBILE_ACTION_BUTTON, neutralSecondaryBtn)}
+              className={cn(SESSION_MOBILE_ACTION_BUTTON, neutralSecondaryBtn)}
               size="sm"
               variant="secondary"
               onClick={() => {
@@ -1510,19 +1497,19 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       </Drawer>
 
       <Drawer open={mobileActivityOpen} onOpenChange={setMobileActivityOpen}>
-        <DrawerContent className={GAME_DRAWER_CONTENT}>
+        <DrawerContent className={SESSION_DRAWER_CONTENT}>
           <DrawerHeader className="pb-2">
             <div className="flex items-center justify-between gap-2">
               <DrawerTitle>{fr.gameScreen.activityFeed}</DrawerTitle>
               <DrawerClose asChild>
-                <Button variant="ghost" size="sm" className={GAME_DRAWER_CLOSE_BUTTON}>
+                <Button variant="ghost" size="sm" className={SESSION_DRAWER_CLOSE_BUTTON}>
                   {fr.gameScreen.close}
                 </Button>
               </DrawerClose>
             </div>
           </DrawerHeader>
 
-          <div className="grid max-h-[62svh] gap-1.5 overflow-auto px-4 pb-4 text-xs text-slate-100/90">
+          <div className="grid max-h-[62svh] gap-1.5 overflow-auto px-4 pb-4 text-xs text-[#24443d]">
             {activityFeed.length > 0 ? (
               activityFeed.map((entry, index) => (
                 <div
@@ -1530,8 +1517,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                   className={cn(
                     "rounded-xl border px-2 py-1.5",
                     index === 0
-                      ? "border-pink-400/30 bg-pink-500/10 text-pink-100"
-                      : "border-pink-400/15 bg-slate-950/25 text-slate-100/85",
+                      ? "border-[#d8e2d9] bg-[#edf5ef] text-[#24443d]"
+                      : "border-[#d8e2d9] bg-white/58 text-[#54645d]",
                   )}
                 >
                   <div className="mb-1">
@@ -1545,7 +1532,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 </div>
               ))
             ) : (
-              <div className="rounded-xl border border-pink-400/15 bg-slate-950/25 px-2 py-1.5 text-slate-300">
+              <div className="rounded-xl border border-[#d8e2d9] bg-white/58 px-2 py-1.5 text-[#647067]">
                 {fr.gameScreen.noRecentActivity}
               </div>
             )}
@@ -1554,21 +1541,21 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       </Drawer>
 
       <AlertDialog open={leaveDialogOpen} onOpenChange={setLeaveDialogOpen}>
-        <AlertDialogContent className={cn(GAME_DIALOG_CONTENT, "max-w-md")}>
+        <AlertDialogContent className={cn(SESSION_DIALOG_CONTENT, "max-w-md")}>
           <AlertDialogHeader>
-            <div className="mx-auto mb-2 inline-flex items-center gap-2 rounded-full border border-rose-300/45 bg-rose-500/15 px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-rose-100">
+            <div className="mx-auto mb-2 inline-flex items-center gap-2 rounded-full border border-rose-300/70 bg-rose-50 px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-rose-800">
               <span>Quitter</span>
             </div>
             <AlertDialogTitle className="text-center text-2xl">
               {fr.gameScreen.leaveQuestionTitle}
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-center text-slate-300">
+            <AlertDialogDescription className="text-center text-[#647067]">
               {fr.game.backToOnlineLobby}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-1 grid grid-cols-1 gap-2 sm:grid-cols-2 sm:space-x-0">
             <AlertDialogCancel
-              className={cn(neutralSecondaryBtn, "h-11 w-full rounded-xl text-slate-200")}
+              className={cn(neutralSecondaryBtn, "h-11 w-full rounded-xl text-[#24443d]")}
             >
               {fr.gameScreen.cancel}
             </AlertDialogCancel>
@@ -1599,36 +1586,36 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       </Suspense>
 
       <AlertDialog open={shouldShowKudoPurchaseModal} onOpenChange={() => {}}>
-        <AlertDialogContent className={cn(GAME_DIALOG_CONTENT, "max-w-md")}>
+        <AlertDialogContent className={cn(SESSION_DIALOG_CONTENT, "max-w-md")}>
           <AlertDialogHeader>
-            <div className="mx-auto mb-2 inline-flex items-center gap-2 rounded-full border border-amber-300/45 bg-amber-500/15 px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-amber-100">
+            <div className="mx-auto mb-2 inline-flex items-center gap-2 rounded-full border border-amber-300/80 bg-amber-50 px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-amber-900">
               <span className="text-base leading-none">🎁</span>
               <span>Kudobox</span>
             </div>
             <AlertDialogTitle className="text-center text-2xl">
               {fr.gameScreen.buyKudoTitle}
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-center text-slate-300">
+            <AlertDialogDescription className="text-center text-[#647067]">
               {pendingKudoPurchase?.canAfford
                 ? fr.gameScreen.canConvertKudo
                 : fr.gameScreen.cannotAffordKudo}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="grid grid-cols-2 gap-2 rounded-xl border border-pink-400/20 bg-slate-950/30 p-2 text-center">
-            <div className="rounded-lg border border-pink-400/20 bg-pink-500/10 px-2 py-1.5">
-              <div className="text-[10px] uppercase tracking-[0.12em] text-pink-200/80">Cout</div>
-              <div className="text-lg font-bold text-pink-100">10 pts</div>
+          <div className="grid grid-cols-2 gap-2 rounded-xl border border-[#d8e2d9] bg-white/58 p-2 text-center">
+            <div className="rounded-lg border border-[#d8e2d9] bg-[#edf5ef] px-2 py-1.5">
+              <div className="text-[10px] uppercase tracking-[0.12em] text-[#647067]">Cout</div>
+              <div className="text-lg font-bold text-[#24443d]">10 pts</div>
             </div>
-            <div className="rounded-lg border border-pink-400/20 bg-pink-500/10 px-2 py-1.5">
-              <div className="text-[10px] uppercase tracking-[0.12em] text-pink-200/80">
+            <div className="rounded-lg border border-[#d8e2d9] bg-[#edf5ef] px-2 py-1.5">
+              <div className="text-[10px] uppercase tracking-[0.12em] text-[#647067]">
                 Mes points
               </div>
-              <div className="text-lg font-bold text-pink-100">{myPoints}</div>
+              <div className="text-lg font-bold text-[#24443d]">{myPoints}</div>
             </div>
           </div>
           <AlertDialogFooter className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:space-x-0">
             <AlertDialogCancel
-              className={cn(neutralSecondaryBtn, "h-11 w-full rounded-xl text-slate-200")}
+              className={cn(neutralSecondaryBtn, "h-11 w-full rounded-xl text-[#24443d]")}
               onClick={() => onResolveKudoPurchase?.(false)}
             >
               {fr.gameScreen.continue}
@@ -1727,7 +1714,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 
       <Suspense
         fallback={
-          <div className="fixed inset-0 z-[79] flex items-center justify-center bg-slate-950/55 text-sm font-semibold text-pink-100">
+          <div className="fixed inset-0 z-[79] flex items-center justify-center bg-[#f7f8f3]/70 text-sm font-semibold text-[#24443d]">
             {fr.gameScreen.waiting}
           </div>
         }
@@ -1774,6 +1761,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
           />
         )}
       </Suspense>
-    </div>
+    </SessionFrame>
   );
 };

@@ -27,16 +27,16 @@ const TILE_ICON: Record<string, string> = {
 };
 
 const TILE_BADGE_CLASS: Record<string, string> = {
-  blue: "border-sky-300/45 bg-sky-500/15 text-sky-100",
-  red: "border-rose-300/45 bg-rose-500/15 text-rose-100",
-  green: "border-emerald-300/45 bg-emerald-500/15 text-emerald-100",
-  purple: "border-violet-300/45 bg-violet-500/15 text-violet-100",
-  violet: "border-violet-300/45 bg-violet-500/15 text-violet-100",
-  star: "border-amber-300/45 bg-amber-500/15 text-amber-100",
-  yellow: "border-amber-300/45 bg-amber-500/15 text-amber-100",
-  bonus: "border-amber-300/45 bg-amber-500/15 text-amber-100",
-  shop: "border-orange-300/45 bg-orange-500/15 text-orange-100",
-  start: "border-slate-300/45 bg-slate-500/15 text-slate-100",
+  blue: "border-sky-300/70 bg-sky-50 text-sky-800",
+  red: "border-rose-300/70 bg-rose-50 text-rose-800",
+  green: "border-emerald-300/70 bg-emerald-50 text-emerald-800",
+  purple: "border-violet-300/70 bg-violet-50 text-violet-800",
+  violet: "border-violet-300/70 bg-violet-50 text-violet-800",
+  star: "border-amber-300/80 bg-amber-50 text-amber-900",
+  yellow: "border-amber-300/80 bg-amber-50 text-amber-900",
+  bonus: "border-amber-300/80 bg-amber-50 text-amber-900",
+  shop: "border-orange-300/70 bg-orange-50 text-orange-800",
+  start: "border-slate-300/45 bg-slate-500/15 text-[#18211f]",
 };
 
 function computeDepths(tiles: Tile[]) {
@@ -112,17 +112,14 @@ const BoardV2Component: React.FC<BoardV2Props> = ({
   return (
     <div
       className={cn(
-        "h-full w-full overflow-auto rounded-lg border border-pink-400/20 bg-slate-950/45 p-2 sm:p-3",
+        "h-full w-full overflow-auto rounded-lg border border-[#d8e2d9] bg-white/62 p-2 sm:p-3",
         eventOverlayActive && "ring-2 ring-pink-400/25",
       )}
     >
       <div className="grid gap-2">
         {stages.map((stage) => (
-          <section
-            key={stage.depth}
-            className="rounded-md border border-pink-400/20 bg-slate-900/45 p-2"
-          >
-            <div className="mb-2 text-[10px] uppercase tracking-[0.12em] text-pink-100/80">
+          <section key={stage.depth} className="rounded-md border border-[#d8e2d9] bg-white/62 p-2">
+            <div className="mb-2 text-[10px] uppercase tracking-[0.12em] text-[#647067]">
               {fr.gameScreen.boardV2Stage.replace("{index}", String(stage.depth + 1))}
             </div>
             <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
@@ -137,17 +134,17 @@ const BoardV2Component: React.FC<BoardV2Props> = ({
                       "rounded border px-2 py-2",
                       isPathOrigin
                         ? "border-amber-300/55 bg-amber-500/10"
-                        : "border-pink-400/20 bg-slate-950/35",
+                        : "border-[#d8e2d9] bg-white/58",
                     )}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <div className="text-[11px] text-slate-300">
+                        <div className="text-[11px] text-[#647067]">
                           {isPathOrigin || isPathOption
                             ? fr.gameScreen.boardV2Node.replace("{index}", String(tile.id + 1))
                             : fr.gameScreen.boardV2NodeSimple}
                         </div>
-                        <div className="text-sm font-semibold text-slate-100">
+                        <div className="text-sm font-semibold text-[#18211f]">
                           {fr.gameScreen.boardV2Type.replace("{type}", tile.type)}
                         </div>
                       </div>
@@ -155,7 +152,7 @@ const BoardV2Component: React.FC<BoardV2Props> = ({
                         className={cn(
                           "inline-flex h-7 w-7 items-center justify-center rounded border text-xs font-bold",
                           TILE_BADGE_CLASS[tile.type] ??
-                            "border-pink-400/45 bg-pink-500/15 text-pink-100",
+                            "border-[#163832]/35 bg-[#edf5ef] text-[#24443d]",
                         )}
                       >
                         {TILE_ICON[tile.type] ?? "?"}
@@ -164,14 +161,14 @@ const BoardV2Component: React.FC<BoardV2Props> = ({
 
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {tilePlayers.length === 0 ? (
-                        <span className="text-[11px] text-slate-400">
+                        <span className="text-[11px] text-[#647067]">
                           {fr.gameScreen.boardV2NoPlayer}
                         </span>
                       ) : (
                         tilePlayers.map((player) => (
                           <span
                             key={player.id}
-                            className="inline-flex items-center gap-1 rounded border border-pink-400/30 bg-slate-900/60 px-1.5 py-0.5 text-[11px] text-pink-100"
+                            className="inline-flex items-center gap-1 rounded border border-[#d8e2d9] bg-white/68 px-1.5 py-0.5 text-[11px] text-[#24443d]"
                           >
                             <span>{AVATARS[player.avatar] ?? "?"}</span>
                             <span className="max-w-[80px] truncate">{player.name}</span>
@@ -181,7 +178,7 @@ const BoardV2Component: React.FC<BoardV2Props> = ({
                     </div>
 
                     {isPathOrigin && (
-                      <div className="mt-2 text-[11px] text-amber-100">
+                      <div className="mt-2 text-[11px] text-amber-900">
                         {fr.gameScreen.boardV2PathOrigin}
                       </div>
                     )}
@@ -197,8 +194,8 @@ const BoardV2Component: React.FC<BoardV2Props> = ({
                         className={cn(
                           "mt-2 inline-flex h-8 items-center rounded border px-3 text-xs font-semibold",
                           canChoosePath
-                            ? "border-pink-400 bg-pink-500 text-slate-950 hover:bg-pink-400"
-                            : "cursor-not-allowed border-slate-500 bg-slate-700 text-slate-300",
+                            ? "border-[#163832] bg-[#163832] text-white hover:bg-[#1f4a43]"
+                            : "cursor-not-allowed border-[#d8e2d9] bg-white/62 text-[#647067]",
                         )}
                       >
                         {fr.gameScreen.boardV2ChoosePath}

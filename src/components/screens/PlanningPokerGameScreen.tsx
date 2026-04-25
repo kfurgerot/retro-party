@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { SessionFrame, SessionHeader } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import {
@@ -25,24 +26,19 @@ import {
   formatPlanningValueForSystem,
   PLANNING_POKER_DECKS,
 } from "@/lib/planningPoker";
-
-// Portal-aligned local tokens
-const HUD = "rounded-2xl border border-white/[0.06] bg-[#0d0d1a]/90 backdrop-blur";
-const PANEL = "rounded-2xl border border-white/[0.06] bg-white/[0.02]";
-const SUBPANEL = "rounded-xl border border-white/[0.05] bg-white/[0.015]";
-const TAB_BTN =
-  "h-8 rounded-lg border border-white/[0.07] bg-white/[0.02] px-3 text-xs font-semibold text-slate-400 hover:bg-white/[0.05] hover:text-slate-200 transition-colors";
-const TAB_ACTIVE = "bg-indigo-500/20 border-indigo-400/40 text-indigo-200";
-const MOBILE_BTN = "h-11 w-full rounded-xl";
-const DRAWER_CLS =
-  "bg-[#0d0d1a] border-t border-white/[0.08] pb-[env(safe-area-inset-bottom)] text-slate-100 lg:hidden";
-const DIALOG_CLS =
-  "rounded-2xl border border-white/[0.08] bg-[#0d0d1a] p-5 text-slate-100 shadow-[0_14px_40px_rgba(0,0,0,0.65)] sm:p-6";
-const CTA_PRIMARY =
-  "border-indigo-400/40 bg-indigo-500 text-white shadow-[0_4px_16px_rgba(99,102,241,0.35)] hover:bg-indigo-400";
-const CTA_SUBTLE =
-  "border-white/[0.06] bg-white/[0.03] text-slate-300 hover:bg-white/[0.06] hover:text-white";
-const CTA_DANGER = "border-rose-400/40 bg-rose-500/15 text-rose-300 hover:bg-rose-500/25";
+import {
+  CTA_SESSION_DANGER as CTA_DANGER,
+  CTA_SESSION_PRIMARY as CTA_PRIMARY,
+  CTA_SESSION_SECONDARY as CTA_SUBTLE,
+  SESSION_DIALOG_CONTENT as DIALOG_CLS,
+  SESSION_DRAWER_CONTENT as DRAWER_CLS,
+  SESSION_HUD_SURFACE as HUD,
+  SESSION_MOBILE_ACTION_BUTTON_COMPACT as MOBILE_BTN,
+  SESSION_PANEL_SURFACE as PANEL,
+  SESSION_SUBPANEL_SURFACE as SUBPANEL,
+  SESSION_TAB_BUTTON_ACTIVE as TAB_ACTIVE,
+  SESSION_TAB_BUTTON_COMPACT as TAB_BTN,
+} from "@/lib/uiTokens";
 
 type Props = {
   state: PlanningPokerState;
@@ -1189,799 +1185,705 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
   ]);
 
   return (
-    <div
-      className="relative h-svh w-full overflow-hidden px-2 pb-2 pt-2 sm:px-4 sm:pb-3 sm:pt-3"
-      style={{ background: "#0a0a14", fontFamily: "'DM Sans', sans-serif" }}
-    >
-      <div
-        className="pointer-events-none fixed inset-0 z-0"
-        style={{
-          background:
-            "radial-gradient(ellipse 70% 50% at 20% 0%, rgba(99,102,241,0.09) 0%, transparent 70%)",
-        }}
-      />
-
-      <div className="relative z-10 mx-auto flex h-full w-full flex-col gap-2 sm:gap-3">
-        {/* ── Header HUD ── */}
-        <header className={cn(HUD, "px-2.5 py-2 sm:px-4 sm:py-3")}>
-          {/* Mobile header */}
-          <div className="grid gap-2 sm:hidden">
-            <div className="flex items-center justify-between gap-2">
-              <div className="rounded-xl border border-indigo-400/25 bg-indigo-500/8 px-2 py-1 text-[10px] text-indigo-300">
-                {consensusLabel}
-              </div>
-              {state.roomCode ? (
-                <div className="inline-flex max-w-full items-center gap-1 rounded-full border border-indigo-300/40 bg-indigo-500/10 px-2.5 py-1 text-[10px] font-semibold tracking-[0.08em] text-indigo-100">
-                  <span className="uppercase text-indigo-200/85">Code</span>
-                  <span className="truncate">{state.roomCode}</span>
-                </div>
-              ) : (
-                <span />
-              )}
+    <SessionFrame contentClassName="mx-auto flex h-full w-full flex-col gap-2 px-2 pb-2 pt-2 sm:gap-3 sm:px-4 sm:pb-3 sm:pt-3">
+      <SessionHeader
+        moduleLabel="Planning Party"
+        title={state.storyTitle || `Story #${state.round}`}
+        subtitle={`Votes ${voteProgressLabel} · ${consensusLabel}`}
+        statusLabel={
+          state.revealed ? "Votes révélés" : state.votesOpen ? "Vote ouvert" : "Vote fermé"
+        }
+        roomCode={state.roomCode}
+        onLeave={requestLeave}
+        leaveLabel={fr.gameScreen.leaveGame}
+      >
+        <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+          <div className="rounded-xl border border-[#d8e2d9] bg-white/72 px-3 py-2">
+            <div className="mb-1 flex items-center justify-between gap-2 text-[11px] uppercase tracking-[0.1em]">
+              <span className="text-[#647067]">Votes {voteProgressLabel}</span>
+              <span className="text-[#24443d]">{consensusLabel}</span>
             </div>
-            <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-2 py-1.5">
-              <div className="mb-1 flex items-center justify-between gap-2 text-[10px] uppercase tracking-[0.1em]">
-                <span className="text-slate-400">Votes {voteProgressLabel}</span>
-                <div className="inline-flex items-center gap-1">
-                  <div className="rounded-xl border border-indigo-400/30 bg-indigo-500/10 px-1.5 py-0.5 text-[10px] text-indigo-200">
-                    Moy {averageLabel}
-                  </div>
-                  <div className="rounded-xl border border-indigo-400/30 bg-indigo-500/10 px-1.5 py-0.5 text-[10px] text-indigo-200">
-                    Med {medianLabel}
-                  </div>
-                </div>
-              </div>
-              <div className="h-1.5 overflow-hidden rounded bg-slate-900/60">
-                <div
-                  className="h-full rounded bg-indigo-400/90 transition-all duration-300"
-                  style={{ width: `${voteProgressPct}%` }}
-                />
-              </div>
+            <div className="h-2 overflow-hidden rounded bg-[#d8e2d9]">
+              <div
+                className="h-full rounded bg-[#163832] transition-all duration-300"
+                style={{ width: `${voteProgressPct}%` }}
+              />
             </div>
           </div>
 
-          {/* Desktop header */}
-          <div className="hidden items-center justify-between gap-2 sm:flex">
-            <div className="min-w-0 flex-1">
-              <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2">
-                <div className="mb-1 flex items-center justify-between gap-2 text-[11px] uppercase tracking-[0.1em]">
-                  <span className="text-slate-400">Votes {voteProgressLabel}</span>
-                  <span className="text-indigo-300/90">{consensusLabel}</span>
-                </div>
-                <div className="h-2 overflow-hidden rounded bg-slate-900/60">
-                  <div
-                    className="h-full rounded bg-indigo-400/90 transition-all duration-300"
-                    style={{ width: `${voteProgressPct}%` }}
-                  />
-                </div>
-              </div>
+          <div className="grid grid-cols-2 gap-2 sm:w-[220px]">
+            <div className="rounded-xl border border-[#163832]/25 bg-[#edf5ef] px-3 py-2">
+              <div className="text-[11px] uppercase tracking-[0.12em] text-[#24443d]">Moyenne</div>
+              <div className="text-xl font-black leading-none text-[#18211f]">{averageLabel}</div>
             </div>
-
-            <div className="ml-2 grid grid-cols-2 gap-2">
-              <div className="rounded-xl border border-indigo-400/30 bg-indigo-500/10 px-4 py-2.5">
-                <div className="text-[11px] uppercase tracking-[0.12em] text-indigo-300/85">
-                  Moyenne
-                </div>
-                <div className="text-2xl font-black leading-none text-slate-100">
-                  {averageLabel}
-                </div>
-              </div>
-              <div className="rounded-xl border border-indigo-400/30 bg-indigo-500/10 px-4 py-2.5">
-                <div className="text-[11px] uppercase tracking-[0.12em] text-indigo-300/85">
-                  Mediane
-                </div>
-                <div className="text-2xl font-black leading-none text-slate-100">{medianLabel}</div>
-              </div>
+            <div className="rounded-xl border border-[#163832]/25 bg-[#edf5ef] px-3 py-2">
+              <div className="text-[11px] uppercase tracking-[0.12em] text-[#24443d]">Mediane</div>
+              <div className="text-xl font-black leading-none text-[#18211f]">{medianLabel}</div>
             </div>
-
-            <div className="flex min-w-0 flex-col items-end gap-2">
-              {state.roomCode ? (
-                <div className="-mt-0.5 inline-flex max-w-full items-center gap-1 rounded-full border border-indigo-300/40 bg-indigo-500/10 px-2.5 py-1 text-[11px] font-semibold tracking-[0.08em] text-indigo-100">
-                  <span className="uppercase text-indigo-200/85">Code</span>
-                  <span className="truncate">{state.roomCode}</span>
-                </div>
-              ) : null}
-              <Button
-                className={cn(
-                  "hidden xl:inline-flex h-9 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 text-xs font-semibold text-rose-300 hover:bg-rose-500/20 hover:text-rose-200",
-                )}
-                variant="secondary"
-                onClick={requestLeave}
-              >
-                {fr.gameScreen.leaveGame}
-              </Button>
-            </div>
-          </div>
-        </header>
-
-        {state.sessionEnded ? (
-          <div className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-100 sm:text-sm">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="font-semibold uppercase tracking-[0.08em] text-emerald-200">
-                Session terminee
-              </span>
-              <span className="text-[11px] text-emerald-200/80">
-                Cloture le {new Date(sessionEndedAt ?? state.updatedAt).toLocaleString("fr-FR")}
-              </span>
-            </div>
-            <div className="mt-1 text-[11px] text-emerald-200/85 sm:text-xs">
-              Les votes sont figes. Consulte la synthese et exporte-la en PDF.
-            </div>
-          </div>
-        ) : null}
-
-        {/* ── Main content grid ── */}
-        <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(280px,22vw)]">
-          {/* ── Game panel ── */}
-          <div
-            className={cn(
-              PANEL,
-              "grid min-h-0 grid-rows-[minmax(150px,1fr)_auto] gap-2 p-2.5 sm:grid-rows-[minmax(340px,1fr)_auto_auto] sm:gap-3 sm:p-4 lg:gap-4 lg:p-5",
-            )}
-          >
-            <PlanningPokerRoundBoard
-              players={tablePlayers}
-              revealed={displayedRevealed}
-              votesOpen={displayedVotesOpen}
-              storyTitle={state.storyTitle}
-              round={displayedRound}
-              voteSystem={displayedVoteSystem}
-            />
-
-            {/* ── Vote deck ── */}
-            <div className="rounded-xl border border-white/[0.06] bg-slate-950/40 p-2 sm:p-3">
-              {myRole === "player" ? (
-                <>
-                  {/* Mobile deck (horizontal scroll) */}
-                  <div className="grid gap-2 sm:hidden">
-                    <div className="min-w-0 pt-2">
-                      <div className="flex min-w-0 w-full snap-x snap-mandatory gap-2 overflow-x-auto overflow-y-visible scroll-smooth py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                        {activeDeck.map((value, index) => {
-                          const selected = myVote === value;
-                          const cardStyle = getDeckCardStyle(index, activeDeck.length, selected);
-                          return (
-                            <button
-                              key={`mini-${value}`}
-                              type="button"
-                              onClick={() => handleDeckVote(value)}
-                              disabled={state.sessionEnded || state.revealed || !state.votesOpen}
-                              style={cardStyle}
-                              className={cn(
-                                "mt-2 h-[58px] w-[38px] shrink-0 snap-start rounded-xl border text-sm font-semibold transition-all duration-150",
-                                "bg-gradient-to-b from-slate-900/82 to-slate-950/82",
-                                "disabled:cursor-not-allowed disabled:opacity-50",
-                                selected
-                                  ? "mt-0 text-indigo-100"
-                                  : "border-white/[0.08] text-slate-300",
-                              )}
-                            >
-                              {displayVoteValue(value)}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Desktop deck */}
-                  <div className="hidden sm:flex sm:flex-nowrap sm:justify-center sm:gap-2">
-                    {activeDeck.map((value, index) => {
-                      const selected = myVote === value;
-                      const cardStyle = getDeckCardStyle(index, activeDeck.length, selected);
-                      return (
-                        <button
-                          key={value}
-                          type="button"
-                          onClick={() => handleDeckVote(value)}
-                          disabled={state.sessionEnded || state.revealed || !state.votesOpen}
-                          style={cardStyle}
-                          className={cn(
-                            "h-[94px] w-[62px] rounded-xl border text-xl font-semibold transition-all duration-150",
-                            "bg-gradient-to-b from-slate-900/82 to-slate-950/82",
-                            "disabled:cursor-not-allowed disabled:opacity-50",
-                            selected
-                              ? "-translate-y-3 text-indigo-100"
-                              : "border-white/[0.08] text-slate-300 hover:-translate-y-0.5 hover:bg-slate-900/92",
-                          )}
-                        >
-                          {displayVoteValue(value)}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </>
-              ) : (
-                <div className="flex items-center justify-center py-1">
-                  <div className="relative h-[58px] w-[38px] rounded-xl border border-white/[0.08] bg-gradient-to-b from-slate-900/82 to-slate-950/82 shadow-[0_8px_20px_rgba(2,6,23,0.45)] sm:h-[94px] sm:w-[62px]">
-                    <div className="absolute inset-0 flex items-center justify-center text-[9px] font-semibold uppercase tracking-[0.06em] text-slate-400 sm:text-xs sm:tracking-[0.08em]">
-                      Spectateur
-                    </div>
-                    <div className="pointer-events-none absolute left-[-14%] top-1/2 h-[2px] w-[128%] -translate-y-1/2 rotate-[-36deg] rounded bg-rose-500/95 shadow-[0_0_10px_rgba(244,63,94,0.65)] sm:h-[3px]" />
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* ── Desktop controls ── */}
-            <div className="hidden min-w-0 flex-wrap items-center justify-between gap-2 sm:flex">
-              <div className="flex min-w-0 w-full flex-wrap items-center gap-2 sm:w-auto">
-                <Button
-                  variant="secondary"
-                  className={cn("h-9 min-w-0 rounded-xl border text-xs font-semibold", CTA_SUBTLE)}
-                  onClick={() => onRoleChange(myRole === "player" ? "spectator" : "player")}
-                >
-                  {myRole === "player"
-                    ? fr.planningPoker.switchSpectator
-                    : fr.planningPoker.switchPlayer}
-                </Button>
-                {isHost && !state.sessionEnded ? (
-                  <div className="flex min-w-0 items-center gap-1 rounded-xl border border-white/[0.06] bg-slate-900/55 p-1">
-                    {VOTE_SYSTEM_OPTIONS.map((option) => (
-                      <button
-                        key={option.value}
-                        type="button"
-                        disabled={state.sessionEnded}
-                        onClick={() => onVoteSystemChange(option.value)}
-                        className={cn(
-                          "h-7 min-w-0 rounded px-2 text-[11px] transition-colors",
-                          state.voteSystem === option.value
-                            ? "bg-indigo-500 text-white"
-                            : "bg-transparent text-slate-300 hover:bg-white/[0.06]",
-                          state.sessionEnded
-                            ? "cursor-not-allowed opacity-50 hover:bg-transparent"
-                            : "",
-                        )}
-                      >
-                        {option.label}
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-
-              <div className="grid w-full min-w-0 grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:justify-end">
-                {isHost && state.revealed && !state.sessionEnded ? (
-                  <Button
-                    variant="secondary"
-                    className={cn(
-                      "h-9 min-w-0 w-full rounded-xl border text-[11px] font-semibold sm:w-auto sm:text-xs",
-                      CTA_SUBTLE,
-                    )}
-                    onClick={onRevoteCurrentStory}
-                  >
-                    Revoter cette story
-                  </Button>
-                ) : null}
-                <Button
-                  variant="secondary"
-                  className={cn(
-                    "h-9 min-w-0 w-full rounded-xl border text-[11px] font-semibold sm:w-auto sm:text-xs",
-                    CTA_PRIMARY,
-                  )}
-                  disabled={!isHost || state.sessionEnded}
-                  onClick={handleHostMainAction}
-                >
-                  <span className="sm:hidden">{hostMainActionShortLabel}</span>
-                  <span className="hidden sm:inline">{hostMainActionLabel}</span>
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          {/* ── Desktop sidebar ── */}
-          <div className={cn(PANEL, "hidden min-h-0 p-3 lg:flex lg:flex-col")}>
-            {/* Sidebar tab bar */}
-            <div className={cn("mb-2 grid w-full gap-1.5", "grid-cols-3")}>
-              {(["stories", "spectators", "summary"] as const).map((tab) => (
-                <button
-                  key={tab}
-                  type="button"
-                  onClick={() => setSidebarTab(tab)}
-                  className={cn(
-                    TAB_BTN,
-                    "w-full justify-center",
-                    sidebarTab === tab ? TAB_ACTIVE : "",
-                    tab === "stories" ? "border-violet-400/30 text-violet-300" : "",
-                    tab === "stories" && sidebarTab === tab
-                      ? "bg-violet-500/20 border-violet-400/40 text-violet-200"
-                      : "",
-                  )}
-                >
-                  {tab === "spectators"
-                    ? "Spectateurs"
-                    : tab === "stories"
-                      ? `Stories (${storyListItems.length})`
-                      : "Synthese"}
-                </button>
-              ))}
-            </div>
-
-            {sidebarTab === "stories" ? (
-              <div className="grid min-h-0 gap-1.5 overflow-auto pr-1">
-                {canAddPreparedStories ? (
-                  <button
-                    type="button"
-                    onClick={openNewPreparedStoryEditor}
-                    className="flex h-8 items-center justify-center rounded-lg border border-violet-400/30 bg-violet-500/10 px-3 text-[11px] font-semibold text-violet-200 transition-colors hover:bg-violet-500/20"
-                  >
-                    + Ajouter une story
-                  </button>
-                ) : null}
-                {storyListItems.length === 0 ? (
-                  <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2 text-xs text-slate-400">
-                    {hasPreparedSession
-                      ? "Aucune story pour le moment."
-                      : "Aucune story votée pour le moment."}
-                  </div>
-                ) : (
-                  storyListItems.map((story, idx) => {
-                    const isCurrent = story.isCurrent;
-                    const isDone = !isCurrent && story.isVoted;
-                    const canSelectStory =
-                      isHost &&
-                      !state.sessionEnded &&
-                      (story.preparedIndex !== null
-                        ? typeof onSelectPokerStory === "function"
-                        : typeof onSelectPokerStoryByTitle === "function");
-                    const canEditStory =
-                      !state.sessionEnded &&
-                      (story.preparedIndex !== null
-                        ? canEditPreparedStories
-                        : canEditHistoryStories);
-                    return (
-                      <div
-                        key={story.id}
-                        className={cn(
-                          "flex items-start gap-2 rounded-xl border px-3 py-2 text-left text-xs transition-all",
-                          isCurrent
-                            ? "border-violet-400/40 bg-violet-500/15 text-violet-100"
-                            : isDone
-                              ? "border-white/[0.04] bg-white/[0.01] text-slate-600 line-through"
-                              : isHost
-                                ? "border-white/[0.06] bg-white/[0.02] text-slate-300 hover:border-violet-400/30 hover:bg-violet-500/10 hover:text-violet-200"
-                                : "border-white/[0.06] bg-white/[0.02] text-slate-300",
-                        )}
-                      >
-                        <button
-                          type="button"
-                          disabled={!canSelectStory || isCurrent}
-                          onClick={() => {
-                            if (story.preparedIndex != null) {
-                              onSelectPokerStory?.(story.preparedIndex);
-                              return;
-                            }
-                            onSelectPokerStoryByTitle?.(story.title);
-                          }}
-                          className="flex min-w-0 flex-1 items-start gap-2 text-left disabled:cursor-not-allowed"
-                        >
-                          <span
-                            className={cn(
-                              "mt-0.5 shrink-0 text-[10px] font-bold",
-                              isCurrent
-                                ? "text-violet-400"
-                                : isDone
-                                  ? "text-slate-600"
-                                  : "text-slate-500",
-                            )}
-                          >
-                            {String(idx + 1).padStart(2, "0")}
-                          </span>
-                          <div className="min-w-0">
-                            <div className="font-semibold leading-snug">{story.title}</div>
-                            {story.description && (
-                              <div className="mt-0.5 text-[10px] text-slate-500 line-clamp-2">
-                                {story.description}
-                              </div>
-                            )}
-                          </div>
-                        </button>
-                        <div className="ml-auto flex shrink-0 items-center gap-1">
-                          {canEditStory ? (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (story.preparedIndex !== null) {
-                                  openPreparedStoryEditor(story.preparedIndex);
-                                  return;
-                                }
-                                openHistoryStoryEditor(story.title);
-                              }}
-                              className="h-6 rounded-md border border-violet-400/30 bg-violet-500/10 px-2 text-[10px] font-semibold text-violet-200 transition-colors hover:bg-violet-500/20"
-                            >
-                              Renommer
-                            </button>
-                          ) : null}
-                          {isCurrent && (
-                            <span className="rounded-full bg-violet-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-violet-300">
-                              En cours
-                            </span>
-                          )}
-                          {story.isVoted && (
-                            <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-300">
-                              Voté
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            ) : sidebarTab === "spectators" ? (
-              <div className="grid min-h-0 gap-2 overflow-auto pr-1">
-                {spectators.length > 0 ? (
-                  spectators.map((player) => (
-                    <div
-                      key={player.socketId}
-                      className="flex items-center gap-2 rounded-xl border border-white/[0.05] bg-white/[0.015] px-2 py-1.5"
-                    >
-                      <span className="text-base">{AVATARS[player.avatar] ?? ":)"}</span>
-                      <span className="truncate text-xs text-slate-200">{player.name}</span>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-xs text-slate-500">Aucun spectateur.</div>
-                )}
-              </div>
-            ) : sidebarTab === "summary" ? (
-              <div className={cn("grid min-h-0 gap-2 p-2 text-xs", SUBPANEL)}>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-400">Synthese des votes</span>
-                  <span className="text-[11px] text-slate-500">{summaryRows.length} lignes</span>
-                </div>
-                <div className="grid grid-cols-1 gap-1.5 xl:grid-cols-2">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className={cn("h-8 rounded-xl border text-[11px] font-semibold", CTA_SUBTLE)}
-                    disabled={!canExportSessionSummary}
-                    onClick={exportSessionSummaryPdf}
-                  >
-                    {isExportingSummaryPdf ? "Export PDF..." : "Exporter la synthese (PDF)"}
-                  </Button>
-                  {hostCanEndSession ? (
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      className={cn("h-8 rounded-xl border text-[11px] font-semibold", CTA_DANGER)}
-                      onClick={requestEndSession}
-                    >
-                      Terminer la session
-                    </Button>
-                  ) : state.sessionEnded ? (
-                    <div className="inline-flex h-8 items-center justify-center rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-emerald-200">
-                      Session terminee
-                    </div>
-                  ) : null}
-                </div>
-                {summaryRows.length === 0 ? (
-                  <div className="rounded-xl border border-white/[0.05] bg-white/[0.015] px-2 py-1.5 text-xs text-slate-400">
-                    Aucune story votee pour le moment.
-                  </div>
-                ) : (
-                  <div className="grid min-h-0 gap-1 overflow-auto pr-1">
-                    <div className="grid grid-cols-[1.2fr_2fr_1fr_1fr_1.1fr] gap-2 rounded-xl border border-white/[0.05] bg-white/[0.015] px-2 py-1 text-[10px] uppercase tracking-[0.08em] text-slate-400">
-                      <span>Vote</span>
-                      <span>Nom</span>
-                      <span>Moy.</span>
-                      <span>Med.</span>
-                      <span>Consensus</span>
-                    </div>
-                    {summaryRows.map((row) => (
-                      <div
-                        key={row.id}
-                        className="grid grid-cols-[1.2fr_2fr_1fr_1fr_1.1fr] gap-2 rounded-xl border border-white/[0.04] bg-white/[0.01] px-2 py-1.5 text-[11px]"
-                      >
-                        <span className="text-slate-400">{row.roundLabel}</span>
-                        <span className="truncate text-slate-100">{row.title}</span>
-                        <span className="text-indigo-300">{row.average}</span>
-                        <span className="text-indigo-300">{row.median}</span>
-                        <span className="text-indigo-300">{row.consensus}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="grid gap-2 text-xs">
-                <div className={cn("p-2", SUBPANEL)}>
-                  <div className="mb-1 flex items-center justify-between gap-2">
-                    <div className="text-slate-400">Question</div>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        className={cn(
-                          TAB_BTN,
-                          "h-8 w-8 px-0 text-base font-semibold disabled:opacity-45",
-                        )}
-                        disabled={sessionCursor >= sessionEntries.length - 1}
-                        onClick={() =>
-                          setSessionCursor((value) =>
-                            Math.min(value + 1, sessionEntries.length - 1),
-                          )
-                        }
-                      >
-                        ‹
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        className={cn(
-                          TAB_BTN,
-                          "h-8 w-8 px-0 text-base font-semibold disabled:opacity-45",
-                        )}
-                        disabled={sessionCursor <= 0}
-                        onClick={() => setSessionCursor((value) => Math.max(value - 1, 0))}
-                      >
-                        ›
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="truncate text-slate-100">
-                    {selectedSession?.storyTitle || "-"}
-                  </div>
-                  <div className="text-[11px] text-slate-400">
-                    {selectedSession?.roundLabel ?? "-"}
-                  </div>
-                  <div className="mt-1 text-slate-400">Statut</div>
-                  <div className="text-slate-100">
-                    {selectedSession?.isCurrent
-                      ? state.revealed
-                        ? "Revele"
-                        : state.votesOpen
-                          ? "Vote en cours"
-                          : "Votes non lances"
-                      : "Question archivee"}
-                  </div>
-                </div>
-                {isHost ? (
-                  <div className={cn("grid gap-2 p-2", SUBPANEL)}>
-                    <input
-                      type="text"
-                      value={storyDraft}
-                      onChange={(event) => setStoryDraft(event.target.value)}
-                      onBlur={submitStoryTitle}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") submitStoryTitle();
-                      }}
-                      className="h-8 w-full rounded-lg border border-white/[0.08] bg-slate-950/55 px-2 text-xs text-slate-100 outline-none focus:border-indigo-400/50 transition"
-                      placeholder="Story en cours"
-                    />
-                  </div>
-                ) : null}
-                <div className={cn("grid grid-cols-2 gap-2 p-2", SUBPANEL)}>
-                  <div>
-                    <div className="text-slate-400">Moyenne</div>
-                    <div className="font-semibold text-slate-100">
-                      {selectedSession?.isCurrent
-                        ? averageLabel
-                        : formatPlanningValueForSystem(
-                            selectedSession?.average ?? null,
-                            selectedSession?.voteSystem ?? state.voteSystem,
-                          )}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-slate-400">Mediane</div>
-                    <div className="font-semibold text-slate-100">
-                      {selectedSession?.isCurrent
-                        ? medianLabel
-                        : formatPlanningValueForSystem(
-                            selectedSession?.median ?? null,
-                            selectedSession?.voteSystem ?? state.voteSystem,
-                          )}
-                    </div>
-                  </div>
-                </div>
-                <div className={cn("grid grid-cols-2 gap-2 p-2", SUBPANEL)}>
-                  <div>
-                    <div className="text-slate-400">Min</div>
-                    <div className="font-semibold text-slate-100">
-                      {formatPlanningValueForSystem(
-                        selectedSession?.isCurrent ? stats.min : (selectedSession?.min ?? null),
-                        selectedSession?.voteSystem ?? state.voteSystem,
-                      )}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-slate-400">Max</div>
-                    <div className="font-semibold text-slate-100">
-                      {formatPlanningValueForSystem(
-                        selectedSession?.isCurrent ? stats.max : (selectedSession?.max ?? null),
-                        selectedSession?.voteSystem ?? state.voteSystem,
-                      )}
-                    </div>
-                  </div>
-                </div>
-                {selectedSession?.totalVotes ? (
-                  <div className={cn("grid gap-1.5 p-2", SUBPANEL)}>
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-400">Consensus</span>
-                      <span className="font-semibold text-slate-100">
-                        {selectedLeadVote
-                          ? `${displayVoteValue(selectedLeadVote[0])} (${selectedConsensusPct}%)`
-                          : "-"}
-                      </span>
-                    </div>
-                    {selectedVoteEntries.map(([value, count]) => {
-                      const totalVotes = selectedSession?.totalVotes ?? 0;
-                      const barPct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
-                      return (
-                        <div key={value} className="grid gap-1">
-                          <div className="flex items-center justify-between text-[11px]">
-                            <span className="text-slate-200">{displayVoteValue(value)}</span>
-                            <span className="text-slate-400">{count}</span>
-                          </div>
-                          <div className="h-1.5 overflow-hidden rounded bg-slate-900/55">
-                            <div
-                              className="h-full rounded bg-indigo-400/80"
-                              style={{ width: `${barPct}%` }}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : null}
-                {globalSummary ? (
-                  <div className={cn("grid gap-1.5 p-2", SUBPANEL)}>
-                    <div className="text-slate-400">Synthese globale</div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <div className="text-slate-400">Stories estimees</div>
-                        <div className="font-semibold text-slate-100">
-                          {globalSummary.storiesCount}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-slate-400">Votes exprimes</div>
-                        <div className="font-semibold text-slate-100">
-                          {globalSummary.totalVotes}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-400">Consensus global</span>
-                      <span className="font-semibold text-slate-100">
-                        {globalSummary.leadVote
-                          ? `${displayVoteValue(globalSummary.leadVote[0])} (${globalSummary.consensusPct}%)`
-                          : "-"}
-                      </span>
-                    </div>
-                    <div className="text-[11px] text-slate-400">
-                      Types de vote: {globalSummary.voteSystemsLabel || "-"}
-                    </div>
-                    {globalSummary.distributionEntries.slice(0, 5).map(([value, count]) => {
-                      const barPct =
-                        globalSummary.totalVotes > 0
-                          ? Math.round((count / globalSummary.totalVotes) * 100)
-                          : 0;
-                      return (
-                        <div key={`desktop-global-distribution-${value}`} className="grid gap-1">
-                          <div className="flex items-center justify-between text-[11px]">
-                            <span className="text-slate-200">{displayVoteValue(value)}</span>
-                            <span className="text-slate-400">{count}</span>
-                          </div>
-                          <div className="h-1.5 overflow-hidden rounded bg-slate-900/55">
-                            <div
-                              className="h-full rounded bg-indigo-400/80"
-                              style={{ width: `${barPct}%` }}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : null}
-                {!selectedSession?.isCurrent && isHost && !state.sessionEnded ? (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className={cn("h-8 rounded-xl border text-xs font-semibold", CTA_SUBTLE)}
-                    onClick={reopenPastQuestion}
-                  >
-                    Reouvrir au vote
-                  </Button>
-                ) : null}
-              </div>
-            )}
           </div>
         </div>
+      </SessionHeader>
 
-        {/* ── Mobile sticky bottom bar ── */}
-        <div className="sticky bottom-0 z-30 pb-[calc(env(safe-area-inset-bottom)+4px)] sm:hidden">
-          <div className={cn(HUD, "px-2 py-2 shadow-[0_-8px_24px_rgba(0,0,0,0.45)]")}>
-            <div className="mb-2">
+      {state.sessionEnded ? (
+        <div className="rounded-xl border border-emerald-300/70 bg-emerald-50 px-3 py-2 text-xs text-emerald-800 sm:text-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="font-semibold uppercase tracking-[0.08em] text-emerald-900">
+              Session terminee
+            </span>
+            <span className="text-[11px] text-emerald-800">
+              Cloture le {new Date(sessionEndedAt ?? state.updatedAt).toLocaleString("fr-FR")}
+            </span>
+          </div>
+          <div className="mt-1 text-[11px] text-emerald-800 sm:text-xs">
+            Les votes sont figes. Consulte la synthese et exporte-la en PDF.
+          </div>
+        </div>
+      ) : null}
+
+      {/* ── Main content grid ── */}
+      <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(280px,22vw)]">
+        {/* ── Game panel ── */}
+        <div
+          className={cn(
+            PANEL,
+            "grid min-h-0 grid-rows-[minmax(150px,1fr)_auto] gap-2 p-2.5 sm:grid-rows-[minmax(340px,1fr)_auto_auto] sm:gap-3 sm:p-4 lg:gap-4 lg:p-5",
+          )}
+        >
+          <PlanningPokerRoundBoard
+            players={tablePlayers}
+            revealed={displayedRevealed}
+            votesOpen={displayedVotesOpen}
+            storyTitle={state.storyTitle}
+            round={displayedRound}
+            voteSystem={displayedVoteSystem}
+          />
+
+          {/* ── Vote deck ── */}
+          <div className="rounded-xl border border-[#d8e2d9] bg-white/62 p-2 sm:p-3">
+            {myRole === "player" ? (
+              <>
+                {/* Mobile deck (horizontal scroll) */}
+                <div className="grid gap-2 sm:hidden">
+                  <div className="min-w-0 pt-2">
+                    <div className="flex min-w-0 w-full snap-x snap-mandatory gap-2 overflow-x-auto overflow-y-visible scroll-smooth py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                      {activeDeck.map((value, index) => {
+                        const selected = myVote === value;
+                        const cardStyle = getDeckCardStyle(index, activeDeck.length, selected);
+                        return (
+                          <button
+                            key={`mini-${value}`}
+                            type="button"
+                            onClick={() => handleDeckVote(value)}
+                            disabled={state.sessionEnded || state.revealed || !state.votesOpen}
+                            style={cardStyle}
+                            className={cn(
+                              "mt-2 h-[58px] w-[38px] shrink-0 snap-start rounded-xl border text-sm font-semibold transition-all duration-150",
+                              "bg-gradient-to-b from-slate-900/82 to-slate-950/82",
+                              "disabled:cursor-not-allowed disabled:opacity-50",
+                              selected ? "mt-0 text-[#24443d]" : "border-[#cfd9d1] text-[#54645d]",
+                            )}
+                          >
+                            {displayVoteValue(value)}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Desktop deck */}
+                <div className="hidden sm:flex sm:flex-nowrap sm:justify-center sm:gap-2">
+                  {activeDeck.map((value, index) => {
+                    const selected = myVote === value;
+                    const cardStyle = getDeckCardStyle(index, activeDeck.length, selected);
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => handleDeckVote(value)}
+                        disabled={state.sessionEnded || state.revealed || !state.votesOpen}
+                        style={cardStyle}
+                        className={cn(
+                          "h-[94px] w-[62px] rounded-xl border text-xl font-semibold transition-all duration-150",
+                          "bg-gradient-to-b from-slate-900/82 to-slate-950/82",
+                          "disabled:cursor-not-allowed disabled:opacity-50",
+                          selected
+                            ? "-translate-y-3 text-[#24443d]"
+                            : "border-[#cfd9d1] text-[#54645d] hover:-translate-y-0.5 hover:bg-white",
+                        )}
+                      >
+                        {displayVoteValue(value)}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center justify-center py-1">
+                <div className="relative h-[58px] w-[38px] rounded-xl border border-[#cfd9d1] bg-gradient-to-b from-slate-900/82 to-slate-950/82 shadow-[0_8px_20px_rgba(2,6,23,0.45)] sm:h-[94px] sm:w-[62px]">
+                  <div className="absolute inset-0 flex items-center justify-center text-[9px] font-semibold uppercase tracking-[0.06em] text-[#647067] sm:text-xs sm:tracking-[0.08em]">
+                    Spectateur
+                  </div>
+                  <div className="pointer-events-none absolute left-[-14%] top-1/2 h-[2px] w-[128%] -translate-y-1/2 rotate-[-36deg] rounded bg-rose-500/95 shadow-[0_0_10px_rgba(244,63,94,0.65)] sm:h-[3px]" />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ── Desktop controls ── */}
+          <div className="hidden min-w-0 flex-wrap items-center justify-between gap-2 sm:flex">
+            <div className="flex min-w-0 w-full flex-wrap items-center gap-2 sm:w-auto">
               <Button
                 variant="secondary"
-                className={cn(MOBILE_BTN, "rounded-xl border text-xs font-semibold", CTA_SUBTLE)}
+                className={cn("h-9 min-w-0 rounded-xl border text-xs font-semibold", CTA_SUBTLE)}
                 onClick={() => onRoleChange(myRole === "player" ? "spectator" : "player")}
               >
                 {myRole === "player"
                   ? fr.planningPoker.switchSpectator
                   : fr.planningPoker.switchPlayer}
               </Button>
+              {isHost && !state.sessionEnded ? (
+                <div className="flex min-w-0 items-center gap-1 rounded-xl border border-[#d8e2d9] bg-white/62 p-1">
+                  {VOTE_SYSTEM_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      disabled={state.sessionEnded}
+                      onClick={() => onVoteSystemChange(option.value)}
+                      className={cn(
+                        "h-7 min-w-0 rounded px-2 text-[11px] transition-colors",
+                        state.voteSystem === option.value
+                          ? "bg-[#163832] text-white"
+                          : "bg-transparent text-[#54645d] hover:bg-white",
+                        state.sessionEnded
+                          ? "cursor-not-allowed opacity-50 hover:bg-transparent"
+                          : "",
+                      )}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
             </div>
-            <div className={cn("grid gap-2", isHost ? "grid-cols-3" : "grid-cols-2")}>
-              {isHost ? (
-                <>
-                  <Button
-                    variant="secondary"
-                    className={cn(
-                      MOBILE_BTN,
-                      "rounded-xl border text-xs font-semibold",
-                      CTA_SUBTLE,
-                    )}
-                    onClick={() => {
-                      setMobileMenuTab("stories");
-                      setMobileActionsOpen(true);
-                    }}
-                  >
-                    Menu
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    className={cn(MOBILE_BTN, "rounded-xl border text-xs font-bold", CTA_PRIMARY)}
-                    disabled={state.sessionEnded}
-                    onClick={handleHostMainAction}
-                  >
-                    {hostMainActionLabel}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    className={cn(
-                      MOBILE_BTN,
-                      "rounded-xl border text-xs font-semibold",
-                      CTA_DANGER,
-                    )}
-                    onClick={requestLeave}
-                  >
-                    {fr.onlineLobby.leaveParty}
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button
-                    variant="secondary"
-                    className={cn(
-                      MOBILE_BTN,
-                      "rounded-xl border text-xs font-semibold",
-                      CTA_SUBTLE,
-                    )}
-                    onClick={() => {
-                      setMobileMenuTab("stories");
-                      setMobileActionsOpen(true);
-                    }}
-                  >
-                    Menu
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    className={cn(
-                      MOBILE_BTN,
-                      "rounded-xl border text-xs font-semibold",
-                      CTA_DANGER,
-                    )}
-                    onClick={requestLeave}
-                  >
-                    {fr.onlineLobby.leaveParty}
-                  </Button>
-                </>
-              )}
+
+            <div className="grid w-full min-w-0 grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:justify-end">
+              {isHost && state.revealed && !state.sessionEnded ? (
+                <Button
+                  variant="secondary"
+                  className={cn(
+                    "h-9 min-w-0 w-full rounded-xl border text-[11px] font-semibold sm:w-auto sm:text-xs",
+                    CTA_SUBTLE,
+                  )}
+                  onClick={onRevoteCurrentStory}
+                >
+                  Revoter cette story
+                </Button>
+              ) : null}
+              <Button
+                variant="secondary"
+                className={cn(
+                  "h-9 min-w-0 w-full rounded-xl border text-[11px] font-semibold sm:w-auto sm:text-xs",
+                  CTA_PRIMARY,
+                )}
+                disabled={!isHost || state.sessionEnded}
+                onClick={handleHostMainAction}
+              >
+                <span className="sm:hidden">{hostMainActionShortLabel}</span>
+                <span className="hidden sm:inline">{hostMainActionLabel}</span>
+              </Button>
             </div>
           </div>
         </div>
+
+        {/* ── Desktop sidebar ── */}
+        <div className={cn(PANEL, "hidden min-h-0 p-3 lg:flex lg:flex-col")}>
+          {/* Sidebar tab bar */}
+          <div className={cn("mb-2 grid w-full gap-1.5", "grid-cols-3")}>
+            {(["stories", "spectators", "summary"] as const).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setSidebarTab(tab)}
+                className={cn(
+                  TAB_BTN,
+                  "w-full justify-center",
+                  sidebarTab === tab ? TAB_ACTIVE : "",
+                  tab === "stories" ? "border-violet-300/70 text-violet-800" : "",
+                  tab === "stories" && sidebarTab === tab
+                    ? "bg-violet-50 border-violet-300/70 text-violet-800"
+                    : "",
+                )}
+              >
+                {tab === "spectators"
+                  ? "Spectateurs"
+                  : tab === "stories"
+                    ? `Stories (${storyListItems.length})`
+                    : "Synthese"}
+              </button>
+            ))}
+          </div>
+
+          {sidebarTab === "stories" ? (
+            <div className="grid min-h-0 gap-1.5 overflow-auto pr-1">
+              {canAddPreparedStories ? (
+                <button
+                  type="button"
+                  onClick={openNewPreparedStoryEditor}
+                  className="flex h-8 items-center justify-center rounded-lg border border-violet-300/70 bg-violet-50 px-3 text-[11px] font-semibold text-violet-800 transition-colors hover:bg-violet-100"
+                >
+                  + Ajouter une story
+                </button>
+              ) : null}
+              {storyListItems.length === 0 ? (
+                <div className="rounded-xl border border-[#d8e2d9] bg-white/62 px-3 py-2 text-xs text-[#647067]">
+                  {hasPreparedSession
+                    ? "Aucune story pour le moment."
+                    : "Aucune story votée pour le moment."}
+                </div>
+              ) : (
+                storyListItems.map((story, idx) => {
+                  const isCurrent = story.isCurrent;
+                  const isDone = !isCurrent && story.isVoted;
+                  const canSelectStory =
+                    isHost &&
+                    !state.sessionEnded &&
+                    (story.preparedIndex !== null
+                      ? typeof onSelectPokerStory === "function"
+                      : typeof onSelectPokerStoryByTitle === "function");
+                  const canEditStory =
+                    !state.sessionEnded &&
+                    (story.preparedIndex !== null ? canEditPreparedStories : canEditHistoryStories);
+                  return (
+                    <div
+                      key={story.id}
+                      className={cn(
+                        "flex items-start gap-2 rounded-xl border px-3 py-2 text-left text-xs transition-all",
+                        isCurrent
+                          ? "border-violet-300/70 bg-violet-50 text-violet-800"
+                          : isDone
+                            ? "border-[#d8e2d9] bg-white/42 text-[#8b9891] line-through"
+                            : isHost
+                              ? "border-[#d8e2d9] bg-white/62 text-[#54645d] hover:border-violet-300/70 hover:bg-violet-50 hover:text-violet-800"
+                              : "border-[#d8e2d9] bg-white/62 text-[#54645d]",
+                      )}
+                    >
+                      <button
+                        type="button"
+                        disabled={!canSelectStory || isCurrent}
+                        onClick={() => {
+                          if (story.preparedIndex != null) {
+                            onSelectPokerStory?.(story.preparedIndex);
+                            return;
+                          }
+                          onSelectPokerStoryByTitle?.(story.title);
+                        }}
+                        className="flex min-w-0 flex-1 items-start gap-2 text-left disabled:cursor-not-allowed"
+                      >
+                        <span
+                          className={cn(
+                            "mt-0.5 shrink-0 text-[10px] font-bold",
+                            isCurrent
+                              ? "text-violet-400"
+                              : isDone
+                                ? "text-[#8b9891]"
+                                : "text-[#647067]",
+                          )}
+                        >
+                          {String(idx + 1).padStart(2, "0")}
+                        </span>
+                        <div className="min-w-0">
+                          <div className="font-semibold leading-snug">{story.title}</div>
+                          {story.description && (
+                            <div className="mt-0.5 text-[10px] text-[#647067] line-clamp-2">
+                              {story.description}
+                            </div>
+                          )}
+                        </div>
+                      </button>
+                      <div className="ml-auto flex shrink-0 items-center gap-1">
+                        {canEditStory ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (story.preparedIndex !== null) {
+                                openPreparedStoryEditor(story.preparedIndex);
+                                return;
+                              }
+                              openHistoryStoryEditor(story.title);
+                            }}
+                            className="h-6 rounded-md border border-violet-300/70 bg-violet-50 px-2 text-[10px] font-semibold text-violet-800 transition-colors hover:bg-violet-100"
+                          >
+                            Renommer
+                          </button>
+                        ) : null}
+                        {isCurrent && (
+                          <span className="rounded-full bg-violet-50 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-violet-800">
+                            En cours
+                          </span>
+                        )}
+                        {story.isVoted && (
+                          <span className="rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-800">
+                            Voté
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          ) : sidebarTab === "spectators" ? (
+            <div className="grid min-h-0 gap-2 overflow-auto pr-1">
+              {spectators.length > 0 ? (
+                spectators.map((player) => (
+                  <div
+                    key={player.socketId}
+                    className="flex items-center gap-2 rounded-xl border border-[#d8e2d9] bg-white/58 px-2 py-1.5"
+                  >
+                    <span className="text-base">{AVATARS[player.avatar] ?? ":)"}</span>
+                    <span className="truncate text-xs text-[#24443d]">{player.name}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="text-xs text-[#647067]">Aucun spectateur.</div>
+              )}
+            </div>
+          ) : sidebarTab === "summary" ? (
+            <div className={cn("grid min-h-0 gap-2 p-2 text-xs", SUBPANEL)}>
+              <div className="flex items-center justify-between">
+                <span className="text-[#647067]">Synthese des votes</span>
+                <span className="text-[11px] text-[#647067]">{summaryRows.length} lignes</span>
+              </div>
+              <div className="grid grid-cols-1 gap-1.5 xl:grid-cols-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className={cn("h-8 rounded-xl border text-[11px] font-semibold", CTA_SUBTLE)}
+                  disabled={!canExportSessionSummary}
+                  onClick={exportSessionSummaryPdf}
+                >
+                  {isExportingSummaryPdf ? "Export PDF..." : "Exporter la synthese (PDF)"}
+                </Button>
+                {hostCanEndSession ? (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className={cn("h-8 rounded-xl border text-[11px] font-semibold", CTA_DANGER)}
+                    onClick={requestEndSession}
+                  >
+                    Terminer la session
+                  </Button>
+                ) : state.sessionEnded ? (
+                  <div className="inline-flex h-8 items-center justify-center rounded-xl border border-emerald-300/70 bg-emerald-50 px-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-emerald-800">
+                    Session terminee
+                  </div>
+                ) : null}
+              </div>
+              {summaryRows.length === 0 ? (
+                <div className="rounded-xl border border-[#d8e2d9] bg-white/58 px-2 py-1.5 text-xs text-[#647067]">
+                  Aucune story votee pour le moment.
+                </div>
+              ) : (
+                <div className="grid min-h-0 gap-1 overflow-auto pr-1">
+                  <div className="grid grid-cols-[1.2fr_2fr_1fr_1fr_1.1fr] gap-2 rounded-xl border border-[#d8e2d9] bg-white/58 px-2 py-1 text-[10px] uppercase tracking-[0.08em] text-[#647067]">
+                    <span>Vote</span>
+                    <span>Nom</span>
+                    <span>Moy.</span>
+                    <span>Med.</span>
+                    <span>Consensus</span>
+                  </div>
+                  {summaryRows.map((row) => (
+                    <div
+                      key={row.id}
+                      className="grid grid-cols-[1.2fr_2fr_1fr_1fr_1.1fr] gap-2 rounded-xl border border-[#d8e2d9] bg-white/42 px-2 py-1.5 text-[11px]"
+                    >
+                      <span className="text-[#647067]">{row.roundLabel}</span>
+                      <span className="truncate text-[#18211f]">{row.title}</span>
+                      <span className="text-[#24443d]">{row.average}</span>
+                      <span className="text-[#24443d]">{row.median}</span>
+                      <span className="text-[#24443d]">{row.consensus}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="grid gap-2 text-xs">
+              <div className={cn("p-2", SUBPANEL)}>
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  <div className="text-[#647067]">Question</div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className={cn(
+                        TAB_BTN,
+                        "h-8 w-8 px-0 text-base font-semibold disabled:opacity-45",
+                      )}
+                      disabled={sessionCursor >= sessionEntries.length - 1}
+                      onClick={() =>
+                        setSessionCursor((value) => Math.min(value + 1, sessionEntries.length - 1))
+                      }
+                    >
+                      ‹
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className={cn(
+                        TAB_BTN,
+                        "h-8 w-8 px-0 text-base font-semibold disabled:opacity-45",
+                      )}
+                      disabled={sessionCursor <= 0}
+                      onClick={() => setSessionCursor((value) => Math.max(value - 1, 0))}
+                    >
+                      ›
+                    </Button>
+                  </div>
+                </div>
+                <div className="truncate text-[#18211f]">{selectedSession?.storyTitle || "-"}</div>
+                <div className="text-[11px] text-[#647067]">
+                  {selectedSession?.roundLabel ?? "-"}
+                </div>
+                <div className="mt-1 text-[#647067]">Statut</div>
+                <div className="text-[#18211f]">
+                  {selectedSession?.isCurrent
+                    ? state.revealed
+                      ? "Revele"
+                      : state.votesOpen
+                        ? "Vote en cours"
+                        : "Votes non lances"
+                    : "Question archivee"}
+                </div>
+              </div>
+              {isHost ? (
+                <div className={cn("grid gap-2 p-2", SUBPANEL)}>
+                  <input
+                    type="text"
+                    value={storyDraft}
+                    onChange={(event) => setStoryDraft(event.target.value)}
+                    onBlur={submitStoryTitle}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") submitStoryTitle();
+                    }}
+                    className="h-8 w-full rounded-lg border border-[#cfd9d1] bg-white/70 px-2 text-xs text-[#18211f] outline-none focus:border-[#163832]/35 transition"
+                    placeholder="Story en cours"
+                  />
+                </div>
+              ) : null}
+              <div className={cn("grid grid-cols-2 gap-2 p-2", SUBPANEL)}>
+                <div>
+                  <div className="text-[#647067]">Moyenne</div>
+                  <div className="font-semibold text-[#18211f]">
+                    {selectedSession?.isCurrent
+                      ? averageLabel
+                      : formatPlanningValueForSystem(
+                          selectedSession?.average ?? null,
+                          selectedSession?.voteSystem ?? state.voteSystem,
+                        )}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[#647067]">Mediane</div>
+                  <div className="font-semibold text-[#18211f]">
+                    {selectedSession?.isCurrent
+                      ? medianLabel
+                      : formatPlanningValueForSystem(
+                          selectedSession?.median ?? null,
+                          selectedSession?.voteSystem ?? state.voteSystem,
+                        )}
+                  </div>
+                </div>
+              </div>
+              <div className={cn("grid grid-cols-2 gap-2 p-2", SUBPANEL)}>
+                <div>
+                  <div className="text-[#647067]">Min</div>
+                  <div className="font-semibold text-[#18211f]">
+                    {formatPlanningValueForSystem(
+                      selectedSession?.isCurrent ? stats.min : (selectedSession?.min ?? null),
+                      selectedSession?.voteSystem ?? state.voteSystem,
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[#647067]">Max</div>
+                  <div className="font-semibold text-[#18211f]">
+                    {formatPlanningValueForSystem(
+                      selectedSession?.isCurrent ? stats.max : (selectedSession?.max ?? null),
+                      selectedSession?.voteSystem ?? state.voteSystem,
+                    )}
+                  </div>
+                </div>
+              </div>
+              {selectedSession?.totalVotes ? (
+                <div className={cn("grid gap-1.5 p-2", SUBPANEL)}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#647067]">Consensus</span>
+                    <span className="font-semibold text-[#18211f]">
+                      {selectedLeadVote
+                        ? `${displayVoteValue(selectedLeadVote[0])} (${selectedConsensusPct}%)`
+                        : "-"}
+                    </span>
+                  </div>
+                  {selectedVoteEntries.map(([value, count]) => {
+                    const totalVotes = selectedSession?.totalVotes ?? 0;
+                    const barPct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
+                    return (
+                      <div key={value} className="grid gap-1">
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="text-[#24443d]">{displayVoteValue(value)}</span>
+                          <span className="text-[#647067]">{count}</span>
+                        </div>
+                        <div className="h-1.5 overflow-hidden rounded bg-white/62">
+                          <div
+                            className="h-full rounded bg-[#163832]"
+                            style={{ width: `${barPct}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : null}
+              {globalSummary ? (
+                <div className={cn("grid gap-1.5 p-2", SUBPANEL)}>
+                  <div className="text-[#647067]">Synthese globale</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <div className="text-[#647067]">Stories estimees</div>
+                      <div className="font-semibold text-[#18211f]">
+                        {globalSummary.storiesCount}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[#647067]">Votes exprimes</div>
+                      <div className="font-semibold text-[#18211f]">{globalSummary.totalVotes}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#647067]">Consensus global</span>
+                    <span className="font-semibold text-[#18211f]">
+                      {globalSummary.leadVote
+                        ? `${displayVoteValue(globalSummary.leadVote[0])} (${globalSummary.consensusPct}%)`
+                        : "-"}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-[#647067]">
+                    Types de vote: {globalSummary.voteSystemsLabel || "-"}
+                  </div>
+                  {globalSummary.distributionEntries.slice(0, 5).map(([value, count]) => {
+                    const barPct =
+                      globalSummary.totalVotes > 0
+                        ? Math.round((count / globalSummary.totalVotes) * 100)
+                        : 0;
+                    return (
+                      <div key={`desktop-global-distribution-${value}`} className="grid gap-1">
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="text-[#24443d]">{displayVoteValue(value)}</span>
+                          <span className="text-[#647067]">{count}</span>
+                        </div>
+                        <div className="h-1.5 overflow-hidden rounded bg-white/62">
+                          <div
+                            className="h-full rounded bg-[#163832]"
+                            style={{ width: `${barPct}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : null}
+              {!selectedSession?.isCurrent && isHost && !state.sessionEnded ? (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className={cn("h-8 rounded-xl border text-xs font-semibold", CTA_SUBTLE)}
+                  onClick={reopenPastQuestion}
+                >
+                  Reouvrir au vote
+                </Button>
+              ) : null}
+            </div>
+          )}
+        </div>
       </div>
 
+      {/* ── Mobile sticky bottom bar ── */}
+      <div className="sticky bottom-0 z-30 pb-[calc(env(safe-area-inset-bottom)+4px)] sm:hidden">
+        <div className={cn(HUD, "px-2 py-2 shadow-[0_-8px_24px_rgba(0,0,0,0.45)]")}>
+          <div className="mb-2">
+            <Button
+              variant="secondary"
+              className={cn(MOBILE_BTN, "rounded-xl border text-xs font-semibold", CTA_SUBTLE)}
+              onClick={() => onRoleChange(myRole === "player" ? "spectator" : "player")}
+            >
+              {myRole === "player"
+                ? fr.planningPoker.switchSpectator
+                : fr.planningPoker.switchPlayer}
+            </Button>
+          </div>
+          <div className={cn("grid gap-2", isHost ? "grid-cols-3" : "grid-cols-2")}>
+            {isHost ? (
+              <>
+                <Button
+                  variant="secondary"
+                  className={cn(MOBILE_BTN, "rounded-xl border text-xs font-semibold", CTA_SUBTLE)}
+                  onClick={() => {
+                    setMobileMenuTab("stories");
+                    setMobileActionsOpen(true);
+                  }}
+                >
+                  Menu
+                </Button>
+                <Button
+                  variant="secondary"
+                  className={cn(MOBILE_BTN, "rounded-xl border text-xs font-bold", CTA_PRIMARY)}
+                  disabled={state.sessionEnded}
+                  onClick={handleHostMainAction}
+                >
+                  {hostMainActionLabel}
+                </Button>
+                <Button
+                  variant="secondary"
+                  className={cn(MOBILE_BTN, "rounded-xl border text-xs font-semibold", CTA_DANGER)}
+                  onClick={requestLeave}
+                >
+                  {fr.onlineLobby.leaveParty}
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  variant="secondary"
+                  className={cn(MOBILE_BTN, "rounded-xl border text-xs font-semibold", CTA_SUBTLE)}
+                  onClick={() => {
+                    setMobileMenuTab("stories");
+                    setMobileActionsOpen(true);
+                  }}
+                >
+                  Menu
+                </Button>
+                <Button
+                  variant="secondary"
+                  className={cn(MOBILE_BTN, "rounded-xl border text-xs font-semibold", CTA_DANGER)}
+                  onClick={requestLeave}
+                >
+                  {fr.onlineLobby.leaveParty}
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
       {/* ── Mobile actions drawer ── */}
       <Drawer open={mobileActionsOpen} onOpenChange={setMobileActionsOpen}>
         <DrawerContent className={DRAWER_CLS}>
           <DrawerHeader>
-            <DrawerTitle className="text-slate-100">Menu</DrawerTitle>
+            <DrawerTitle className="text-[#18211f]">Menu</DrawerTitle>
           </DrawerHeader>
           <div className="px-4 pb-2">
-            <div className="grid grid-cols-3 gap-1 rounded-xl border border-white/[0.06] bg-slate-900/55 p-1">
+            <div className="grid grid-cols-3 gap-1 rounded-xl border border-[#d8e2d9] bg-white/62 p-1">
               {(["stories", "spectators", "summary"] as const).map((tab) => (
                 <button
                   key={tab}
@@ -1992,8 +1894,8 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                     mobileMenuTab === tab
                       ? tab === "stories"
                         ? "bg-violet-500 text-white"
-                        : "bg-indigo-500 text-white"
-                      : "bg-transparent text-slate-300 hover:bg-white/[0.06]",
+                        : "bg-[#163832] text-white"
+                      : "bg-transparent text-[#54645d] hover:bg-white",
                   )}
                 >
                   {tab === "stories"
@@ -2012,13 +1914,13 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                   <button
                     type="button"
                     onClick={openNewPreparedStoryEditor}
-                    className="flex h-8 items-center justify-center rounded-lg border border-violet-400/30 bg-violet-500/10 px-3 text-[11px] font-semibold text-violet-200"
+                    className="flex h-8 items-center justify-center rounded-lg border border-violet-300/70 bg-violet-50 px-3 text-[11px] font-semibold text-violet-800"
                   >
                     + Ajouter une story
                   </button>
                 ) : null}
                 {storyListItems.length === 0 ? (
-                  <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2 text-xs text-slate-400">
+                  <div className="rounded-xl border border-[#d8e2d9] bg-white/62 px-3 py-2 text-xs text-[#647067]">
                     {hasPreparedSession
                       ? "Aucune story pour le moment."
                       : "Aucune story votée pour le moment."}
@@ -2044,10 +1946,10 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                         className={cn(
                           "flex items-start gap-2 rounded-xl border px-3 py-2 text-left text-xs",
                           isCurrent
-                            ? "border-violet-400/40 bg-violet-500/15 text-violet-100"
+                            ? "border-violet-300/70 bg-violet-50 text-violet-800"
                             : isDone
-                              ? "border-white/[0.04] bg-white/[0.01] text-slate-600 line-through"
-                              : "border-white/[0.06] bg-white/[0.02] text-slate-300",
+                              ? "border-[#d8e2d9] bg-white/42 text-[#8b9891] line-through"
+                              : "border-[#d8e2d9] bg-white/62 text-[#54645d]",
                         )}
                       >
                         <button
@@ -2066,7 +1968,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                           <span
                             className={cn(
                               "mt-0.5 shrink-0 text-[10px] font-bold",
-                              isCurrent ? "text-violet-400" : "text-slate-500",
+                              isCurrent ? "text-violet-400" : "text-[#647067]",
                             )}
                           >
                             {String(idx + 1).padStart(2, "0")}
@@ -2074,7 +1976,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                           <div className="min-w-0 flex-1">
                             <div className="font-semibold">{story.title}</div>
                             {story.description && (
-                              <div className="mt-0.5 text-[10px] text-slate-500">
+                              <div className="mt-0.5 text-[10px] text-[#647067]">
                                 {story.description}
                               </div>
                             )}
@@ -2091,18 +1993,18 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                                 }
                                 openHistoryStoryEditor(story.title);
                               }}
-                              className="h-6 rounded-md border border-violet-400/30 bg-violet-500/10 px-2 text-[10px] font-semibold text-violet-200"
+                              className="h-6 rounded-md border border-violet-300/70 bg-violet-50 px-2 text-[10px] font-semibold text-violet-800"
                             >
                               Renommer
                             </button>
                           ) : null}
                           {isCurrent && (
-                            <span className="rounded-full bg-violet-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase text-violet-300">
+                            <span className="rounded-full bg-violet-50 px-1.5 py-0.5 text-[9px] font-bold uppercase text-violet-800">
                               En cours
                             </span>
                           )}
                           {story.isVoted && (
-                            <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase text-emerald-300">
+                            <span className="rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] font-bold uppercase text-emerald-800">
                               Voté
                             </span>
                           )}
@@ -2120,14 +2022,14 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                   spectators.map((player) => (
                     <div
                       key={player.socketId}
-                      className="flex items-center gap-2 rounded-xl border border-white/[0.05] bg-white/[0.015] px-2 py-1.5"
+                      className="flex items-center gap-2 rounded-xl border border-[#d8e2d9] bg-white/58 px-2 py-1.5"
                     >
                       <span className="text-base">{AVATARS[player.avatar] ?? ":)"}</span>
-                      <span className="truncate text-xs text-slate-200">{player.name}</span>
+                      <span className="truncate text-xs text-[#24443d]">{player.name}</span>
                     </div>
                   ))
                 ) : (
-                  <div className="rounded-xl border border-white/[0.05] bg-white/[0.015] px-2 py-1.5 text-xs text-slate-400">
+                  <div className="rounded-xl border border-[#d8e2d9] bg-white/58 px-2 py-1.5 text-xs text-[#647067]">
                     Aucun spectateur.
                   </div>
                 )}
@@ -2137,8 +2039,8 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
             {mobileMenuTab === "summary" ? (
               <div className={cn("grid gap-2 rounded-xl p-2 text-xs", SUBPANEL)}>
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-400">Synthese des votes</span>
-                  <span className="text-[11px] text-slate-500">{summaryRows.length} lignes</span>
+                  <span className="text-[#647067]">Synthese des votes</span>
+                  <span className="text-[11px] text-[#647067]">{summaryRows.length} lignes</span>
                 </div>
                 <div className="grid gap-1.5">
                   <Button
@@ -2160,13 +2062,13 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                       Terminer la session
                     </Button>
                   ) : state.sessionEnded ? (
-                    <div className="inline-flex h-8 items-center justify-center rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-emerald-200">
+                    <div className="inline-flex h-8 items-center justify-center rounded-xl border border-emerald-300/70 bg-emerald-50 px-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-emerald-800">
                       Session terminee
                     </div>
                   ) : null}
                 </div>
                 {summaryRows.length === 0 ? (
-                  <div className="rounded-xl border border-white/[0.05] bg-white/[0.015] px-2 py-1.5 text-xs text-slate-400">
+                  <div className="rounded-xl border border-[#d8e2d9] bg-white/58 px-2 py-1.5 text-xs text-[#647067]">
                     Aucune story votee pour le moment.
                   </div>
                 ) : (
@@ -2174,27 +2076,27 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                     {summaryRows.map((row) => (
                       <div
                         key={`mobile-summary-row-${row.id}`}
-                        className="rounded-xl border border-white/[0.04] bg-white/[0.01] px-2 py-1.5"
+                        className="rounded-xl border border-[#d8e2d9] bg-white/42 px-2 py-1.5"
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-[10px] text-slate-400">{row.roundLabel}</span>
-                          <span className="text-[10px] text-slate-400">{row.totalVotes} votes</span>
+                          <span className="text-[10px] text-[#647067]">{row.roundLabel}</span>
+                          <span className="text-[10px] text-[#647067]">{row.totalVotes} votes</span>
                         </div>
-                        <div className="truncate text-sm font-semibold text-slate-100">
+                        <div className="truncate text-sm font-semibold text-[#18211f]">
                           {row.title}
                         </div>
                         <div className="mt-1 grid grid-cols-3 gap-2 text-[11px]">
                           <div>
-                            <div className="text-slate-400">Moy.</div>
-                            <div className="text-indigo-300">{row.average}</div>
+                            <div className="text-[#647067]">Moy.</div>
+                            <div className="text-[#24443d]">{row.average}</div>
                           </div>
                           <div>
-                            <div className="text-slate-400">Med.</div>
-                            <div className="text-indigo-300">{row.median}</div>
+                            <div className="text-[#647067]">Med.</div>
+                            <div className="text-[#24443d]">{row.median}</div>
                           </div>
                           <div>
-                            <div className="text-slate-400">Consensus</div>
-                            <div className="text-indigo-300">{row.consensus}</div>
+                            <div className="text-[#647067]">Consensus</div>
+                            <div className="text-[#24443d]">{row.consensus}</div>
                           </div>
                         </div>
                       </div>
@@ -2214,49 +2116,49 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
       >
         <AlertDialogContent className={cn(DIALOG_CLS, "max-w-2xl")}>
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-left text-lg text-slate-100">
+            <AlertDialogTitle className="text-left text-lg text-[#18211f]">
               Synthese de session
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-left text-slate-400">
+            <AlertDialogDescription className="text-left text-[#647067]">
               Session terminee. Les votes sont figes et la synthese est disponible.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="grid max-h-[60vh] gap-2 overflow-auto rounded-xl border border-white/[0.06] bg-slate-950/50 p-3">
+          <div className="grid max-h-[60vh] gap-2 overflow-auto rounded-xl border border-[#d8e2d9] bg-white/70 p-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-slate-400">Stories estimees: {summaryRows.length}</span>
+              <span className="text-xs text-[#647067]">Stories estimees: {summaryRows.length}</span>
               {globalSummary ? (
-                <span className="text-xs text-slate-400">
+                <span className="text-xs text-[#647067]">
                   Votes exprimes: {globalSummary.totalVotes}
                 </span>
               ) : null}
             </div>
             {summaryRows.length === 0 ? (
-              <div className="rounded-xl border border-white/[0.05] bg-white/[0.015] px-3 py-2 text-xs text-slate-400">
+              <div className="rounded-xl border border-[#d8e2d9] bg-white/58 px-3 py-2 text-xs text-[#647067]">
                 Aucune story votee pour le moment.
               </div>
             ) : (
               summaryRows.map((row) => (
                 <div
                   key={`session-summary-dialog-${row.id}`}
-                  className="rounded-xl border border-white/[0.04] bg-white/[0.01] px-3 py-2 text-xs"
+                  className="rounded-xl border border-[#d8e2d9] bg-white/42 px-3 py-2 text-xs"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-[10px] text-slate-400">{row.roundLabel}</span>
-                    <span className="text-[10px] text-slate-400">{row.totalVotes} votes</span>
+                    <span className="text-[10px] text-[#647067]">{row.roundLabel}</span>
+                    <span className="text-[10px] text-[#647067]">{row.totalVotes} votes</span>
                   </div>
-                  <div className="truncate text-sm font-semibold text-slate-100">{row.title}</div>
+                  <div className="truncate text-sm font-semibold text-[#18211f]">{row.title}</div>
                   <div className="mt-1 grid grid-cols-3 gap-2 text-[11px]">
                     <div>
-                      <div className="text-slate-400">Moy.</div>
-                      <div className="text-indigo-300">{row.average}</div>
+                      <div className="text-[#647067]">Moy.</div>
+                      <div className="text-[#24443d]">{row.average}</div>
                     </div>
                     <div>
-                      <div className="text-slate-400">Med.</div>
-                      <div className="text-indigo-300">{row.median}</div>
+                      <div className="text-[#647067]">Med.</div>
+                      <div className="text-[#24443d]">{row.median}</div>
                     </div>
                     <div>
-                      <div className="text-slate-400">Consensus</div>
-                      <div className="text-indigo-300">{row.consensus}</div>
+                      <div className="text-[#647067]">Consensus</div>
+                      <div className="text-[#24443d]">{row.consensus}</div>
                     </div>
                   </div>
                 </div>
@@ -2287,10 +2189,10 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
       <AlertDialog open={endSessionDialogOpen} onOpenChange={setEndSessionDialogOpen}>
         <AlertDialogContent className={cn(DIALOG_CLS, "max-w-md")}>
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-center text-xl text-slate-100">
+            <AlertDialogTitle className="text-center text-xl text-[#18211f]">
               Terminer cette session de vote ?
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-center text-slate-400">
+            <AlertDialogDescription className="text-center text-[#647067]">
               Les votes seront figes. Vous pourrez consulter la synthese et l&apos;exporter en PDF.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -2320,7 +2222,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
           }}
         >
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-indigo-300/90">
+            <AlertDialogTitle className="text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-[#24443d]/90">
               {mobileStoryEditorMode === "prepared"
                 ? "Modification d'une story"
                 : mobileStoryEditorMode === "new-prepared"
@@ -2339,8 +2241,8 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                     : "Edition du nom de la story en cours"}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="rounded-xl border border-white/[0.06] bg-slate-950 p-3">
-            <div className="text-sm font-semibold text-slate-100">
+          <div className="rounded-xl border border-[#d8e2d9] bg-white/80 p-3">
+            <div className="text-sm font-semibold text-[#18211f]">
               {mobileStoryEditorMode === "prepared"
                 ? "Renommer la story de la liste"
                 : mobileStoryEditorMode === "new-prepared"
@@ -2357,7 +2259,7 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
               onKeyDown={(event) => {
                 if (event.key === "Enter") saveMobileStoryEditor();
               }}
-              className="mt-2 h-10 w-full rounded-xl border border-white/[0.08] bg-slate-950 px-3 text-sm text-slate-100 outline-none focus:border-indigo-400/50 transition"
+              className="mt-2 h-10 w-full rounded-xl border border-[#cfd9d1] bg-white/80 px-3 text-sm text-[#18211f] outline-none focus:border-[#163832]/35 transition"
               placeholder="Nom de la story"
             />
           </div>
@@ -2384,13 +2286,13 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
       <AlertDialog open={leaveDialogOpen} onOpenChange={setLeaveDialogOpen}>
         <AlertDialogContent className={cn(DIALOG_CLS, "max-w-md")}>
           <AlertDialogHeader>
-            <div className="mx-auto mb-2 inline-flex items-center gap-2 rounded-full border border-rose-400/40 bg-rose-500/12 px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-rose-300">
+            <div className="mx-auto mb-2 inline-flex items-center gap-2 rounded-full border border-rose-300/70 bg-rose-50 px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-rose-800">
               <span>Quitter</span>
             </div>
-            <AlertDialogTitle className="text-center text-2xl text-slate-100">
+            <AlertDialogTitle className="text-center text-2xl text-[#18211f]">
               {fr.gameScreen.leaveQuestionTitle}
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-center text-slate-400">
+            <AlertDialogDescription className="text-center text-[#647067]">
               {fr.game.backToOnlineLobby}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -2414,10 +2316,10 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
       <AlertDialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
         <AlertDialogContent className={cn(DIALOG_CLS, "max-w-md")}>
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-center text-xl text-slate-100">
+            <AlertDialogTitle className="text-center text-xl text-[#18211f]">
               Reset des votes ?
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-center text-slate-400">
+            <AlertDialogDescription className="text-center text-[#647067]">
               Des joueurs ont deja vote. Cette action effacera les votes en cours.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -2436,6 +2338,6 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </SessionFrame>
   );
 };

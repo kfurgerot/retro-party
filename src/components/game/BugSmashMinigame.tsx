@@ -183,19 +183,19 @@ export const BugSmashMinigame: React.FC<BugSmashMinigameProps> = ({
   };
 
   return (
-    <div className="absolute inset-0 z-50 flex h-full w-full flex-col overflow-hidden bg-slate-950/95 p-3 sm:p-6">
-      <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-3 text-slate-100">
-        <div className="rounded border border-pink-400/35 bg-slate-900/70 px-3 py-2 text-sm font-semibold">
+    <div className="absolute inset-0 z-50 flex h-full w-full flex-col overflow-hidden bg-[#f7f8f3]/96 p-3 sm:p-6">
+      <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-3 text-[#18211f]">
+        <div className="rounded border border-[#d8e2d9] bg-white/72 px-3 py-2 text-sm font-semibold">
           {fr.bugSmash.title}
         </div>
-        <div className="rounded border border-pink-400/35 bg-slate-900/70 px-3 py-2 text-sm font-semibold">
+        <div className="rounded border border-[#d8e2d9] bg-white/72 px-3 py-2 text-sm font-semibold">
           {phase === "intro" ? `${fr.bugSmash.startsIn} ${countdown ?? 0}s` : `${timeLabel}s`}
         </div>
       </div>
 
       <div className="mx-auto mt-3 grid w-full max-w-5xl flex-1 gap-3 lg:grid-cols-[1fr_280px]">
-        <Card className="flex min-h-[280px] flex-col border-pink-400/35 bg-slate-900/70 p-3">
-          <div className="mb-2 flex items-center justify-between text-sm text-pink-100">
+        <Card className="flex min-h-[280px] flex-col border-[#d8e2d9] bg-white/72 p-3">
+          <div className="mb-2 flex items-center justify-between text-sm text-[#24443d]">
             <span>
               {fr.bugSmash.player}:{" "}
               {targetPlayer ? `${AVATARS[targetPlayer.avatar] ?? "?"} ${targetPlayer.name}` : "?"}
@@ -208,7 +208,7 @@ export const BugSmashMinigame: React.FC<BugSmashMinigameProps> = ({
           <div
             ref={areaRef}
             className={cn(
-              "relative flex-1 overflow-hidden rounded border border-pink-400/20 bg-slate-950/65",
+              "relative flex-1 overflow-hidden rounded border border-[#d8e2d9] bg-white/70",
               !canControl && "opacity-80",
             )}
           >
@@ -225,47 +225,47 @@ export const BugSmashMinigame: React.FC<BugSmashMinigameProps> = ({
               ))
             ) : phase === "done" ? (
               <div className="flex h-full items-center justify-center px-4">
-                <Card className="w-full max-w-md border-pink-400/35 bg-slate-900/85 p-4 text-slate-100 shadow-[0_0_24px_rgba(236,72,153,0.18)]">
+                <Card className="w-full max-w-md border-[#d8e2d9] bg-white/86 p-4 text-[#18211f] shadow-[0_0_24px_rgba(236,72,153,0.18)]">
                   <h4 className="text-center text-base font-bold">{fr.bugSmash.resultTitle}</h4>
                   <div className="mt-3 grid gap-2 text-center">
-                    <div className="rounded border border-pink-400/35 bg-slate-950/70 px-3 py-2 text-sm">
+                    <div className="rounded border border-[#d8e2d9] bg-white/72 px-3 py-2 text-sm">
                       {fr.bugSmash.bugsEliminated}:{" "}
                       <span className="font-bold">{displayedScore}</span>
                     </div>
-                    <div className="rounded border border-amber-300/35 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
+                    <div className="rounded border border-amber-300/70 bg-amber-50 px-3 py-2 text-sm text-amber-900">
                       {fr.bugSmash.starsWon}: <span className="font-bold">+{starsEarned}</span>
                     </div>
                   </div>
                   {canControl ? (
                     <Button
-                      className="mt-4 w-full border-pink-400 bg-pink-500 text-slate-950 hover:bg-pink-400"
+                      className="mt-4 w-full border-[#163832] bg-[#163832] text-white hover:bg-[#1f4a43]"
                       onClick={continueAfterResults}
                     >
                       {fr.bugSmash.continue}
                     </Button>
                   ) : (
-                    <div className="mt-4 text-center text-xs text-pink-100/75">
+                    <div className="mt-4 text-center text-xs text-[#647067]">
                       {fr.bugSmash.waitingActiveValidation}
                     </div>
                   )}
                 </Card>
               </div>
             ) : (
-              <div className="flex h-full items-center justify-center px-4 text-center text-sm text-pink-100/80">
+              <div className="flex h-full items-center justify-center px-4 text-center text-sm text-[#647067]">
                 {canControl ? fr.bugSmash.waitStart : fr.bugSmash.activePlaying}
               </div>
             )}
           </div>
         </Card>
 
-        <Card className="border-pink-400/35 bg-slate-900/70 p-4 text-slate-100">
+        <Card className="border-[#d8e2d9] bg-white/72 p-4 text-[#18211f]">
           <h3 className="text-base font-bold">{fr.bugSmash.redTileTitle}</h3>
-          <p className="mt-2 text-sm text-slate-200">{fr.bugSmash.objective}</p>
-          <div className="mt-3 text-xs text-pink-100/80">
+          <p className="mt-2 text-sm text-[#24443d]">{fr.bugSmash.objective}</p>
+          <div className="mt-3 text-xs text-[#647067]">
             {canControl ? fr.bugSmash.controls : fr.bugSmash.spectatorMode}
           </div>
 
-          <div className="mt-4 space-y-1 text-xs text-slate-200">
+          <div className="mt-4 space-y-1 text-xs text-[#24443d]">
             <div>{fr.bugSmash.rewards}:</div>
             <div>6+ bugs: +1 etoile</div>
             <div>12+ bugs: +2 etoiles</div>
@@ -274,7 +274,7 @@ export const BugSmashMinigame: React.FC<BugSmashMinigameProps> = ({
 
           {phase === "intro" && canControl && !startAt && (
             <Button
-              className="mt-4 w-full border-pink-400 bg-pink-500 text-slate-950 hover:bg-pink-400"
+              className="mt-4 w-full border-[#163832] bg-[#163832] text-white hover:bg-[#1f4a43]"
               onClick={() => setPhase("playing")}
             >
               {fr.bugSmash.start}

@@ -13,7 +13,7 @@ import {
 import { cn } from "@/lib/utils";
 import { fr } from "@/i18n/fr";
 import { ShopItemCard } from "./hud";
-import { GAME_DIALOG_CONTENT } from "@/lib/uiTokens";
+import { SESSION_DIALOG_CONTENT } from "@/lib/uiTokens";
 
 interface ShopModalProps {
   open: boolean;
@@ -38,22 +38,22 @@ export const ShopModal: React.FC<ShopModalProps> = ({
 }) => {
   return (
     <AlertDialog open={open} onOpenChange={() => {}}>
-      <AlertDialogContent className={cn(GAME_DIALOG_CONTENT, "max-w-2xl")}>
+      <AlertDialogContent className={cn(SESSION_DIALOG_CONTENT, "max-w-2xl")}>
         <AlertDialogHeader>
-          <div className="mx-auto mb-2 inline-flex items-center gap-2 rounded-full border border-orange-300/40 bg-orange-500/15 px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-orange-100">
+          <div className="mx-auto mb-2 inline-flex items-center gap-2 rounded-full border border-orange-300/70 bg-orange-50 px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-orange-800">
             <span className="text-base leading-none">🛒</span>
             <span>Boutique</span>
           </div>
           <AlertDialogTitle className="text-center text-2xl">{fr.shopModal.title}</AlertDialogTitle>
-          <AlertDialogDescription className="text-center text-slate-300">
+          <AlertDialogDescription className="text-center text-[#647067]">
             {fr.shopModal.availablePoints}
-            <span className="ml-2 inline-flex items-center rounded-lg border border-cyan-300/40 bg-cyan-500/15 px-2 py-0.5 font-semibold text-cyan-100">
+            <span className="ml-2 inline-flex items-center rounded-lg border border-[#163832]/35 bg-[#edf5ef] px-2 py-0.5 font-semibold text-[#24443d]">
               {points} {fr.shopModal.pointsUnit}
             </span>
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <div className="rounded-xl border border-cyan-300/20 bg-slate-950/30 p-2">
-          <div className="mb-2 px-1 text-xs uppercase tracking-[0.12em] text-slate-300">
+        <div className="rounded-xl border border-[#d8e2d9] bg-white/58 p-2">
+          <div className="mb-2 px-1 text-xs uppercase tracking-[0.12em] text-[#647067]">
             Articles disponibles
           </div>
           <div className="grid max-h-[52vh] gap-2 overflow-auto pr-1">
@@ -77,7 +77,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
         </div>
         <AlertDialogFooter className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:space-x-0">
           <AlertDialogCancel
-            className={cn(neutralBtnClass, "h-11 w-full rounded-xl text-cyan-100")}
+            className={cn(neutralBtnClass, "h-11 w-full rounded-xl text-[#24443d]")}
             onClick={onClose}
           >
             {fr.shopModal.continue}
