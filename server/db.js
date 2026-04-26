@@ -21,6 +21,26 @@ export async function initDatabase() {
   `);
 
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS oauth_identities (
+      id UUID PRIMARY KEY,
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      provider TEXT NOT NULL CHECK (provider IN ('google', 'microsoft')),
+      provider_subject TEXT NOT NULL,
+      email TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      UNIQUE (provider, provider_subject),
+      UNIQUE (provider, user_id)
+    );
+  `);
+  await pool.query(
+    "CREATE INDEX IF NOT EXISTS idx_oauth_identities_user_id ON oauth_identities(user_id);",
+  );
+  await pool.query(
+    "CREATE INDEX IF NOT EXISTS idx_oauth_identities_email ON oauth_identities(email);",
+  );
+
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS game_templates (
       id UUID PRIMARY KEY,
       user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,

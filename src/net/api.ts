@@ -6,6 +6,10 @@ export type HostUser = {
   displayName: string;
 };
 
+export type OAuthProviderId = "google" | "microsoft";
+
+export type OAuthProvidersAvailability = Record<OAuthProviderId, boolean>;
+
 export type SuiteModuleId = "retro-party" | "planning-poker" | "radar-party" | "skills-matrix";
 
 export type DashboardActivity = {
@@ -260,7 +264,8 @@ export type SkillsMatrixSnapshot = {
 
 type ApiError = { error?: string };
 
-const API_BASE = `${resolveBackendUrl()}/api`;
+const BACKEND_BASE = resolveBackendUrl();
+const API_BASE = `${BACKEND_BASE}/api`;
 
 const ERROR_TRANSLATIONS: Record<string, string> = {
   Unauthorized: "Non autorise",
@@ -275,6 +280,8 @@ const ERROR_TRANSLATIONS: Record<string, string> = {
   "Mail service not configured": "Service d'email non configure",
   "Internal server error": "Erreur interne du serveur",
   "Invalid or expired token": "Lien invalide ou expire",
+  "OAuth provider is not configured": "Fournisseur OAuth non configure",
+  "OAuth authentication failed": "Echec de l'authentification OAuth",
 };
 
 const SUCCESS_TRANSLATIONS: Record<string, string> = {
@@ -328,6 +335,20 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload),
     }),
+  getOAuthProviders: () =>
+    request<{ providers: OAuthProvidersAvailability }>("/auth/oauth/providers", {
+      method: "GET",
+    }),
+  getOAuthStartUrl: (provider: OAuthProviderId, nextPath?: string) => {
+    const url = new URL(`${API_BASE}/auth/oauth/${provider}/start`);
+    if (typeof nextPath === "string" && nextPath.trim()) {
+      url.searchParams.set("next", nextPath.trim());
+    }
+    if (typeof window !== "undefined" && window.location?.origin) {
+      url.searchParams.set("origin", window.location.origin);
+    }
+    return url.toString();
+  },
   forgotPassword: (payload: { email: string }) =>
     request<{ ok: boolean; message: string }>("/auth/forgot-password", {
       method: "POST",

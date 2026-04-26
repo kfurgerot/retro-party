@@ -1,8 +1,9 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { Building2, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
-import { api } from "@/net/api";
+import { api, OAuthProviderId } from "@/net/api";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 type AuthTab = "login" | "register" | "forgot";
@@ -12,13 +13,17 @@ export const AuthModal = ({
   onOpenChange,
   onSuccess,
   initialTab = "login",
+  postAuthPath = null,
+  oauthError = null,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onSuccess: () => void;
   initialTab?: AuthTab;
+  postAuthPath?: string | null;
+  oauthError?: string | null;
 }) => {
-  const { login, register } = useAuth();
+  const { login, register, startOAuthLogin, oauthProviders } = useAuth();
   const [tab, setTab] = useState<AuthTab>(initialTab);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -29,6 +34,11 @@ export const AuthModal = ({
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  useEffect(() => {
+    if (!open) return;
+    if (oauthError) setError(oauthError);
+  }, [open, oauthError]);
+
   const reset = () => {
     setError(null);
     setInfo(null);
@@ -38,6 +48,27 @@ export const AuthModal = ({
   const handleTab = (t: AuthTab) => {
     setTab(t);
     reset();
+  };
+
+  const handleOAuthStart = (provider: OAuthProviderId) => {
+    setError(null);
+    setInfo(null);
+    if (!oauthProviders[provider]) {
+      setError(
+        provider === "google"
+          ? "Connexion Google non configurée sur cet environnement."
+          : "Connexion Microsoft non configurée sur cet environnement.",
+      );
+      return;
+    }
+    if (tab === "register" && !termsAccepted) {
+      setError("Tu dois accepter les CGU pour créer un compte.");
+      return;
+    }
+    const fallbackPath = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    const nextPath =
+      typeof postAuthPath === "string" && postAuthPath.trim() ? postAuthPath : fallbackPath;
+    startOAuthLogin(provider, nextPath);
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -88,6 +119,7 @@ export const AuthModal = ({
     register: "Créer un compte",
     forgot: "Réinitialiser le mot de passe",
   };
+  const oauthDisabled = loading || (tab === "register" && !termsAccepted);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -138,6 +170,42 @@ export const AuthModal = ({
           {info && (
             <div className="mb-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5 text-sm text-emerald-300">
               {info}
+            </div>
+          )}
+
+          {tab !== "forgot" && (
+            <div className="mb-4 space-y-2">
+              <button
+                type="button"
+                onClick={() => handleOAuthStart("google")}
+                disabled={oauthDisabled || !oauthProviders.google}
+                className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-white/[0.1] bg-white/[0.03] text-sm font-semibold text-slate-200 transition hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Globe className="h-4 w-4" />
+                Continuer avec Google
+                {!oauthProviders.google && (
+                  <span className="text-[10px] uppercase tracking-[0.08em] text-slate-500">
+                    Non configuré
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleOAuthStart("microsoft")}
+                disabled={oauthDisabled || !oauthProviders.microsoft}
+                className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-white/[0.1] bg-white/[0.03] text-sm font-semibold text-slate-200 transition hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Building2 className="h-4 w-4" />
+                Continuer avec Microsoft
+                {!oauthProviders.microsoft && (
+                  <span className="text-[10px] uppercase tracking-[0.08em] text-slate-500">
+                    Non configuré
+                  </span>
+                )}
+              </button>
+              <div className="pt-1 text-center text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500">
+                Ou avec ton adresse e-mail
+              </div>
             </div>
           )}
 

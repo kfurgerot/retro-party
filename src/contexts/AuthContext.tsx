@@ -1,11 +1,13 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { api, HostUser } from "@/net/api";
+import { api, HostUser, OAuthProviderId, OAuthProvidersAvailability } from "@/net/api";
 
 type AuthState = {
   user: HostUser | null;
   loading: boolean;
+  oauthProviders: OAuthProvidersAvailability;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, displayName: string) => Promise<void>;
+  startOAuthLogin: (provider: OAuthProviderId, nextPath?: string) => void;
   updateProfile: (displayName: string) => Promise<void>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<string>;
   logout: () => Promise<void>;
@@ -16,6 +18,19 @@ const AuthContext = createContext<AuthState | null>(null);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<HostUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [oauthProviders, setOauthProviders] = useState<OAuthProvidersAvailability>({
+    google: false,
+    microsoft: false,
+  });
+
+  useEffect(() => {
+    api
+      .getOAuthProviders()
+      .then((res) => setOauthProviders(res.providers))
+      .catch(() => {
+        setOauthProviders({ google: false, microsoft: false });
+      });
+  }, []);
 
   useEffect(() => {
     api
@@ -35,6 +50,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(res.user);
   }, []);
 
+  const startOAuthLogin = useCallback((provider: OAuthProviderId, nextPath?: string) => {
+    const url = api.getOAuthStartUrl(provider, nextPath);
+    window.location.assign(url);
+  }, []);
+
   const updateProfile = useCallback(async (displayName: string) => {
     const res = await api.updateProfile({ displayName });
     setUser(res.user);
@@ -52,7 +72,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, login, register, updateProfile, changePassword, logout }}
+      value={{
+        user,
+        loading,
+        oauthProviders,
+        login,
+        register,
+        startOAuthLogin,
+        updateProfile,
+        changePassword,
+        logout,
+      }}
     >
       {children}
     </AuthContext.Provider>

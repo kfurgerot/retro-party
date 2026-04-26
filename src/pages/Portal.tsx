@@ -146,6 +146,18 @@ const PREPARE_ROUTE_BY_TOOL: Record<ToolId, string | null> = {
   "retro-generator": null,
 };
 
+const OAUTH_ERROR_MESSAGES: Record<string, string> = {
+  provider_not_configured: "Cette méthode de connexion n'est pas encore configurée.",
+  provider_not_supported: "Fournisseur de connexion non supporté.",
+  access_denied: "Connexion annulée. Aucune autorisation n'a été accordée.",
+  flow_expired: "La tentative de connexion a expiré. Réessaie.",
+  invalid_state: "La tentative de connexion n'est plus valide. Réessaie.",
+  missing_code: "Le code de connexion OAuth est manquant.",
+  missing_profile: "Impossible de récupérer le profil depuis le fournisseur.",
+  missing_email: "Aucune adresse e-mail exploitable n'a été fournie.",
+  oauth_failed: "La connexion externe a échoué. Réessaie dans quelques instants.",
+};
+
 // ─── Account modal ─────────────────────────────────────────────────────────────
 
 type AccountSection = "overview" | "profile" | "security";
@@ -1163,6 +1175,7 @@ export default function Portal() {
   const [mounted, setMounted] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [oauthError, setOauthError] = useState<string | null>(null);
   const [pendingPrepareRoute, setPendingPrepareRoute] = useState<string | null>(null);
 
   const [globalJoinOpen, setGlobalJoinOpen] = useState(false);
@@ -1208,6 +1221,21 @@ export default function Portal() {
     return () => clearTimeout(t);
   }, []);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("auth") !== "oauth_error") return;
+
+    const reason = params.get("reason") || "oauth_failed";
+    setOauthError(OAUTH_ERROR_MESSAGES[reason] ?? OAUTH_ERROR_MESSAGES.oauth_failed);
+    setLoginOpen(true);
+
+    params.delete("auth");
+    params.delete("reason");
+    const search = params.toString();
+    const cleanUrl = `${window.location.pathname}${search ? `?${search}` : ""}${window.location.hash}`;
+    window.history.replaceState({}, "", cleanUrl);
+  }, []);
+
   const toolsForCategory = useMemo(
     () =>
       selectedCategoryId === "all"
@@ -1247,6 +1275,7 @@ export default function Portal() {
 
   // After login succeeds from modal, continue to the prepare route that was requested.
   const handleAuthSuccess = () => {
+    setOauthError(null);
     if (pendingPrepareRoute) {
       const route = pendingPrepareRoute;
       setPendingPrepareRoute(null);
@@ -1293,6 +1322,7 @@ export default function Portal() {
       navigate(route);
       return;
     }
+    setOauthError(null);
     setPendingPrepareRoute(route);
     setLoginOpen(true);
   };
@@ -1390,6 +1420,7 @@ export default function Portal() {
                     type="button"
                     onClick={() => {
                       setPendingPrepareRoute(null);
+                      setOauthError(null);
                       setLoginOpen(true);
                     }}
                     className="flex shrink-0 items-center gap-2 rounded-full border border-indigo-500/40 bg-indigo-500/10 px-4 py-2 text-[13px] font-semibold text-indigo-300 transition hover:bg-indigo-500/20 hover:text-indigo-200"
@@ -1705,9 +1736,14 @@ export default function Portal() {
         open={loginOpen}
         onOpenChange={(v) => {
           setLoginOpen(v);
-          if (!v) setPendingPrepareRoute(null);
+          if (!v) {
+            setPendingPrepareRoute(null);
+            setOauthError(null);
+          }
         }}
         onSuccess={handleAuthSuccess}
+        postAuthPath={pendingPrepareRoute}
+        oauthError={oauthError}
       />
       <AccountModal
         open={accountOpen}
