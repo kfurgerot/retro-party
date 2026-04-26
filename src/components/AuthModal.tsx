@@ -4,7 +4,7 @@ import { Building2, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { api, OAuthProviderId } from "@/net/api";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 
 type AuthTab = "login" | "register" | "forgot";
 
@@ -124,6 +124,14 @@ export const AuthModal = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md rounded-2xl border border-white/[0.08] bg-[#0d0d1a] p-0 shadow-2xl [&>button]:text-slate-400 [&>button]:hover:text-slate-100">
+        <DialogTitle className="sr-only">{titleByTab[tab]}</DialogTitle>
+        <DialogDescription className="sr-only">
+          {tab === "login"
+            ? "Connexion a Agile Suite."
+            : tab === "register"
+              ? "Creation de compte Agile Suite."
+              : "Demande de reinitialisation de mot de passe Agile Suite."}
+        </DialogDescription>
         <div className="rounded-t-2xl border-b border-white/[0.08] bg-gradient-to-r from-indigo-500/14 via-violet-500/9 to-pink-500/12 p-5">
           <div className="mb-2 flex items-center gap-2">
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 text-sm">

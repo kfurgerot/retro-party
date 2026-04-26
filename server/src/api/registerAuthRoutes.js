@@ -1,3 +1,5 @@
+import https from "node:https";
+
 export function registerAuthRoutes(context) {
   const {
     app,
@@ -27,6 +29,7 @@ export function registerAuthRoutes(context) {
   const OAUTH_DISCOVERY_CACHE_TTL_MS = Number(
     process.env.OAUTH_DISCOVERY_CACHE_TTL_MS || 60 * 60 * 1000,
   );
+  const OAUTH_HTTP_TIMEOUT_MS = Number(process.env.OAUTH_HTTP_TIMEOUT_MS || 15000);
   const oauthStateSecretEnv = process.env.OAUTH_STATE_SECRET?.trim();
   const oauthStateSecret = oauthStateSecretEnv || crypto.randomBytes(32).toString("hex");
   const oauthDiscoveryCache = new Map();
@@ -283,6 +286,54 @@ export function registerAuthRoutes(context) {
     };
   };
 
+  const performOauthHttpRequest = ({ url, method = "GET", headers = {}, body = null }) =>
+    new Promise((resolve, reject) => {
+      let parsedUrl = null;
+      try {
+        parsedUrl = new URL(url);
+      } catch {
+        reject(new Error("Invalid OAuth URL"));
+        return;
+      }
+      if (parsedUrl.protocol !== "https:") {
+        reject(new Error("OAuth HTTP requests must use HTTPS"));
+        return;
+      }
+
+      const request = https.request(
+        {
+          protocol: parsedUrl.protocol,
+          hostname: parsedUrl.hostname,
+          port: parsedUrl.port || 443,
+          path: `${parsedUrl.pathname}${parsedUrl.search}`,
+          method,
+          headers,
+          family: 4,
+        },
+        (response) => {
+          const chunks = [];
+          response.on("data", (chunk) => chunks.push(chunk));
+          response.on("end", () => {
+            const rawBody = Buffer.concat(chunks).toString("utf8");
+            resolve({
+              ok: response.statusCode >= 200 && response.statusCode < 300,
+              status: response.statusCode ?? 0,
+              body: rawBody,
+            });
+          });
+        },
+      );
+
+      request.setTimeout(OAUTH_HTTP_TIMEOUT_MS, () => {
+        request.destroy(new Error("OAuth HTTP request timed out"));
+      });
+      request.on("error", reject);
+      if (typeof body === "string" && body.length > 0) {
+        request.write(body);
+      }
+      request.end();
+    });
+
   const getOAuthDiscovery = async (provider) => {
     const config = oauthConfigs[provider];
     if (!config) throw new Error("Unknown provider");
@@ -290,11 +341,16 @@ export function registerAuthRoutes(context) {
     const cached = oauthDiscoveryCache.get(provider);
     if (cached && cached.expiresAt > Date.now()) return cached.value;
 
-    const response = await fetch(config.discoveryUrl);
+    const response = await performOauthHttpRequest({ url: config.discoveryUrl });
     if (!response.ok) {
       throw new Error(`Unable to load OAuth discovery for ${provider}`);
     }
-    const discovery = await response.json();
+    let discovery = null;
+    try {
+      discovery = JSON.parse(response.body);
+    } catch {
+      discovery = null;
+    }
     if (
       !discovery ||
       typeof discovery.authorization_endpoint !== "string" ||
@@ -505,10 +561,10 @@ export function registerAuthRoutes(context) {
     });
   });
 
-  app.get("/api/auth/oauth/:provider/start", authLimiter, async (req, res, next) => {
+  app.get("/api/auth/oauth/:provider/start", authLimiter, async (req, res) => {
+    const frontendOrigin = resolveFrontendOriginFromRequest(req);
+    const provider = normalizeOauthProvider(req.params.provider);
     try {
-      const frontendOrigin = resolveFrontendOriginFromRequest(req);
-      const provider = normalizeOauthProvider(req.params.provider);
       if (!provider) {
         return res.redirect(
           302,
@@ -552,14 +608,15 @@ export function registerAuthRoutes(context) {
       const redirectUrl = `${discovery.authorization_endpoint}?${search.toString()}`;
       return res.redirect(302, redirectUrl);
     } catch (error) {
-      next(error);
+      console.error(`[oauth/start/${provider ?? "unknown"}]`, error);
+      return res.redirect(302, buildOauthErrorRedirect(frontendOrigin, "/", "oauth_failed"));
     }
   });
 
-  app.get("/api/auth/oauth/:provider/callback", authLimiter, async (req, res, next) => {
+  app.get("/api/auth/oauth/:provider/callback", authLimiter, async (req, res) => {
+    const fallbackFrontendOrigin = resolveFrontendOriginFromRequest(req);
+    const provider = normalizeOauthProvider(req.params.provider);
     try {
-      const fallbackFrontendOrigin = resolveFrontendOriginFromRequest(req);
-      const provider = normalizeOauthProvider(req.params.provider);
       if (!provider) {
         return res.redirect(
           302,
@@ -609,17 +666,22 @@ export function registerAuthRoutes(context) {
       const discovery = await getOAuthDiscovery(provider);
       const callbackUrl = getOAuthCallbackUrl(req, provider);
 
-      const tokenResponse = await fetch(discovery.token_endpoint, {
+      const tokenRequestBody = new URLSearchParams({
+        client_id: config.clientId,
+        client_secret: config.clientSecret,
+        grant_type: "authorization_code",
+        code,
+        redirect_uri: callbackUrl,
+        code_verifier: statePayload.codeVerifier,
+      }).toString();
+      const tokenResponse = await performOauthHttpRequest({
+        url: discovery.token_endpoint,
         method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-          client_id: config.clientId,
-          client_secret: config.clientSecret,
-          grant_type: "authorization_code",
-          code,
-          redirect_uri: callbackUrl,
-          code_verifier: statePayload.codeVerifier,
-        }).toString(),
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "Content-Length": Buffer.byteLength(tokenRequestBody).toString(),
+        },
+        body: tokenRequestBody,
       });
 
       if (!tokenResponse.ok) {
@@ -628,7 +690,7 @@ export function registerAuthRoutes(context) {
 
       let tokenPayload = null;
       try {
-        tokenPayload = await tokenResponse.json();
+        tokenPayload = JSON.parse(tokenResponse.body);
       } catch {
         tokenPayload = null;
       }
@@ -642,12 +704,13 @@ export function registerAuthRoutes(context) {
         typeof tokenPayload.access_token === "string" &&
         tokenPayload.access_token
       ) {
-        const userInfoResponse = await fetch(discovery.userinfo_endpoint, {
+        const userInfoResponse = await performOauthHttpRequest({
+          url: discovery.userinfo_endpoint,
           headers: { Authorization: `Bearer ${tokenPayload.access_token}` },
         });
         if (userInfoResponse.ok) {
           try {
-            profile = await userInfoResponse.json();
+            profile = JSON.parse(userInfoResponse.body);
           } catch {
             profile = null;
           }
@@ -688,7 +751,11 @@ export function registerAuthRoutes(context) {
       setSessionCookie(res, sessionToken);
       return res.redirect(302, toFrontendUrl(frontendOrigin, nextPath));
     } catch (error) {
-      next(error);
+      console.error(`[oauth/callback/${provider ?? "unknown"}]`, error);
+      return res.redirect(
+        302,
+        buildOauthErrorRedirect(fallbackFrontendOrigin, "/", "oauth_failed"),
+      );
     }
   });
 
