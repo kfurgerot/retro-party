@@ -16,6 +16,7 @@ Fonctions principales:
 - parties online avec code de room
 - logique de jeu autoritaire cote serveur
 - authentification (inscription/connexion/logout)
+- authentification OAuth (Google + Microsoft) en plus du login classique
 - gestion de templates de partie + questions personnalisees
 - creation de room rapide ou basee sur template
 - reset de mot de passe via email (SMTP Gmail)
@@ -171,6 +172,10 @@ Variables principales:
 - `RESET_TOKEN_TTL_MINUTES` (defaut `60`)
 - `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `MAIL_FROM`
 - `RESET_PASSWORD_URL_BASE`
+- `OAUTH_STATE_SECRET`
+- `OAUTH_CALLBACK_BASE_URL` (URL publique du backend pour les callbacks OAuth)
+- `OAUTH_GOOGLE_CLIENT_ID`, `OAUTH_GOOGLE_CLIENT_SECRET`
+- `OAUTH_MICROSOFT_CLIENT_ID`, `OAUTH_MICROSOFT_CLIENT_SECRET`, `OAUTH_MICROSOFT_TENANT_ID` (defaut `common`)
 
 Voir:
 
@@ -187,6 +192,9 @@ Auth:
 - `GET /api/auth/me`
 - `POST /api/auth/forgot-password`
 - `POST /api/auth/reset-password`
+- `GET /api/auth/oauth/providers`
+- `GET /api/auth/oauth/google/start`
+- `GET /api/auth/oauth/microsoft/start`
 
 Templates (auth requis):
 

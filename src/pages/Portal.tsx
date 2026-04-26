@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { AuthModal } from "@/components/AuthModal";
@@ -144,6 +144,18 @@ const PREPARE_ROUTE_BY_TOOL: Record<ToolId, string | null> = {
   "skills-matrix": "/prepare/skills-matrix",
   "draw-duel": null,
   "retro-generator": null,
+};
+
+const OAUTH_ERROR_MESSAGES: Record<string, string> = {
+  provider_not_configured: "Cette méthode de connexion n'est pas encore configurée.",
+  provider_not_supported: "Fournisseur de connexion non supporté.",
+  access_denied: "Connexion annulée. Aucune autorisation n'a été accordée.",
+  flow_expired: "La tentative de connexion a expiré. Réessaie.",
+  invalid_state: "La tentative de connexion n'est plus valide. Réessaie.",
+  missing_code: "Le code de connexion OAuth est manquant.",
+  missing_profile: "Impossible de récupérer le profil depuis le fournisseur.",
+  missing_email: "Aucune adresse e-mail exploitable n'a été fournie.",
+  oauth_failed: "La connexion externe a échoué. Réessaie dans quelques instants.",
 };
 
 // ─── Account modal ─────────────────────────────────────────────────────────────
@@ -434,6 +446,32 @@ const AccountModal = ({
                         <div className="truncate font-medium text-slate-100">{user.email}</div>
                       </div>
                     </div>
+                  </div>
+
+                  <div className="flex items-center justify-between rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3">
+                    <span className="text-xs text-slate-500">
+                      Conditions Générales d'Utilisation
+                    </span>
+                    <Link
+                      to="/terms"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 text-xs font-medium text-indigo-400 transition hover:text-indigo-300"
+                    >
+                      Lire les CGU
+                      <svg
+                        width="11"
+                        height="11"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.2"
+                      >
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                        <polyline points="15 3 21 3 21 9" />
+                        <line x1="10" y1="14" x2="21" y2="3" />
+                      </svg>
+                    </Link>
                   </div>
                 </div>
               )}
@@ -1137,6 +1175,7 @@ export default function Portal() {
   const [mounted, setMounted] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [oauthError, setOauthError] = useState<string | null>(null);
   const [pendingPrepareRoute, setPendingPrepareRoute] = useState<string | null>(null);
 
   const [globalJoinOpen, setGlobalJoinOpen] = useState(false);
@@ -1182,6 +1221,21 @@ export default function Portal() {
     return () => clearTimeout(t);
   }, []);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("auth") !== "oauth_error") return;
+
+    const reason = params.get("reason") || "oauth_failed";
+    setOauthError(OAUTH_ERROR_MESSAGES[reason] ?? OAUTH_ERROR_MESSAGES.oauth_failed);
+    setLoginOpen(true);
+
+    params.delete("auth");
+    params.delete("reason");
+    const search = params.toString();
+    const cleanUrl = `${window.location.pathname}${search ? `?${search}` : ""}${window.location.hash}`;
+    window.history.replaceState({}, "", cleanUrl);
+  }, []);
+
   const toolsForCategory = useMemo(
     () =>
       selectedCategoryId === "all"
@@ -1221,6 +1275,7 @@ export default function Portal() {
 
   // After login succeeds from modal, continue to the prepare route that was requested.
   const handleAuthSuccess = () => {
+    setOauthError(null);
     if (pendingPrepareRoute) {
       const route = pendingPrepareRoute;
       setPendingPrepareRoute(null);
@@ -1267,6 +1322,7 @@ export default function Portal() {
       navigate(route);
       return;
     }
+    setOauthError(null);
     setPendingPrepareRoute(route);
     setLoginOpen(true);
   };
@@ -1364,6 +1420,7 @@ export default function Portal() {
                     type="button"
                     onClick={() => {
                       setPendingPrepareRoute(null);
+                      setOauthError(null);
                       setLoginOpen(true);
                     }}
                     className="flex shrink-0 items-center gap-2 rounded-full border border-indigo-500/40 bg-indigo-500/10 px-4 py-2 text-[13px] font-semibold text-indigo-300 transition hover:bg-indigo-500/20 hover:text-indigo-200"
@@ -1591,6 +1648,18 @@ export default function Portal() {
             </button>
           </div>
         </section>
+
+        {/* Footer */}
+        <footer className="mt-12 flex flex-col items-center justify-between gap-3 border-t border-white/[0.06] pt-6 sm:flex-row">
+          <span className="text-xs text-slate-600">
+            © {new Date().getFullYear()} AgileSuite — Tous droits réservés
+          </span>
+          <div className="flex items-center gap-4 text-xs text-slate-600">
+            <Link to="/terms" className="transition hover:text-slate-300">
+              Conditions Générales d'Utilisation
+            </Link>
+          </div>
+        </footer>
       </div>
 
       {/* Global join modal */}
@@ -1667,9 +1736,14 @@ export default function Portal() {
         open={loginOpen}
         onOpenChange={(v) => {
           setLoginOpen(v);
-          if (!v) setPendingPrepareRoute(null);
+          if (!v) {
+            setPendingPrepareRoute(null);
+            setOauthError(null);
+          }
         }}
         onSuccess={handleAuthSuccess}
+        postAuthPath={pendingPrepareRoute}
+        oauthError={oauthError}
       />
       <AccountModal
         open={accountOpen}

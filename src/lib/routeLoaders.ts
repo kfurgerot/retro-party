@@ -14,3 +14,4 @@ export const loadTemplateEditorPage = () => import("@/pages/TemplateEditor");
 export const loadPokerTemplateEditorPage = () => import("@/pages/PokerTemplateEditor");
 export const loadResetPasswordPage = () => import("@/pages/ResetPassword");
 export const loadNotFoundPage = () => import("@/pages/NotFound");
+export const loadTermsPage = () => import("@/pages/Terms");
