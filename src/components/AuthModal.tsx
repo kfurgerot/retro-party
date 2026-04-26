@@ -1,12 +1,47 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Building2, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { api, OAuthProviderId } from "@/net/api";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 
 type AuthTab = "login" | "register" | "forgot";
+
+const GoogleLogo = ({ className }: { className?: string }) => (
+  <svg
+    viewBox="0 0 533.5 544.3"
+    className={className}
+    aria-hidden="true"
+    focusable="false"
+    role="img"
+  >
+    <path
+      fill="#4285F4"
+      d="M533.5 278.4c0-18.5-1.5-36.3-4.4-53.5H272v101.2h147.1c-6.3 34-25.4 62.8-54.1 82.1v68.2h87.4c51.1-47 81.1-116.2 81.1-197.9z"
+    />
+    <path
+      fill="#34A853"
+      d="M272 544.3c73.5 0 135.2-24.3 180.3-66.1l-87.4-68.2c-24.3 16.3-55.4 25.9-92.9 25.9-71.3 0-131.8-48.1-153.3-112.7H28.4v70.7C73.4 482.4 165.1 544.3 272 544.3z"
+    />
+    <path
+      fill="#FBBC05"
+      d="M118.7 323.2C113.3 307 110.2 289.8 110.2 272c0-17.8 3.1-35 8.5-51.2v-70.7H28.4C10.2 186.3 0 227.7 0 272s10.2 85.7 28.4 121.9l90.3-70.7z"
+    />
+    <path
+      fill="#EA4335"
+      d="M272 108.1c40 0 75.9 13.8 104.2 41l78.2-78.2C407.1 26.9 345.5 0 272 0 165.1 0 73.4 61.9 28.4 150.1l90.3 70.7C140.2 156.2 200.7 108.1 272 108.1z"
+    />
+  </svg>
+);
+
+const MicrosoftLogo = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" className={className} aria-hidden="true" focusable="false" role="img">
+    <rect x="1" y="1" width="10" height="10" fill="#F25022" />
+    <rect x="13" y="1" width="10" height="10" fill="#7FBA00" />
+    <rect x="1" y="13" width="10" height="10" fill="#00A4EF" />
+    <rect x="13" y="13" width="10" height="10" fill="#FFB900" />
+  </svg>
+);
 
 export const AuthModal = ({
   open,
@@ -187,10 +222,14 @@ export const AuthModal = ({
                 type="button"
                 onClick={() => handleOAuthStart("google")}
                 disabled={oauthDisabled || !oauthProviders.google}
-                className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-white/[0.1] bg-white/[0.03] text-sm font-semibold text-slate-200 transition hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex h-12 w-full items-center justify-between rounded-2xl border border-white/[0.12] bg-white/[0.03] px-3.5 text-sm font-semibold text-slate-100 transition hover:border-white/20 hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/50 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <Globe className="h-4 w-4" />
-                Continuer avec Google
+                <span className="flex items-center gap-3">
+                  <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-white/10 bg-[#111827] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+                    <GoogleLogo className="h-4 w-4" />
+                  </span>
+                  Continuer avec Google
+                </span>
                 {!oauthProviders.google && (
                   <span className="text-[10px] uppercase tracking-[0.08em] text-slate-500">
                     Non configuré
@@ -201,10 +240,14 @@ export const AuthModal = ({
                 type="button"
                 onClick={() => handleOAuthStart("microsoft")}
                 disabled={oauthDisabled || !oauthProviders.microsoft}
-                className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-white/[0.1] bg-white/[0.03] text-sm font-semibold text-slate-200 transition hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex h-12 w-full items-center justify-between rounded-2xl border border-[#2F6FED]/40 bg-[#0b1220] px-3.5 text-sm font-semibold text-slate-100 transition hover:border-[#2F6FED]/65 hover:bg-[#0f1a2e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/50 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <Building2 className="h-4 w-4" />
-                Continuer avec Microsoft
+                <span className="flex items-center gap-3">
+                  <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-white/10 bg-[#111827] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+                    <MicrosoftLogo className="h-4 w-4" />
+                  </span>
+                  Continuer avec Microsoft
+                </span>
                 {!oauthProviders.microsoft && (
                   <span className="text-[10px] uppercase tracking-[0.08em] text-slate-500">
                     Non configuré
