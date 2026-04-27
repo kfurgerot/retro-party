@@ -114,6 +114,30 @@ export async function initDatabase() {
   );
 
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS teams (
+      id UUID PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT NULL,
+      owner_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `);
+  await pool.query("CREATE INDEX IF NOT EXISTS idx_teams_owner_user_id ON teams(owner_user_id);");
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS team_members (
+      id UUID PRIMARY KEY,
+      team_id UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      role TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('owner', 'admin', 'member')),
+      joined_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      UNIQUE (team_id, user_id)
+    );
+  `);
+  await pool.query("CREATE INDEX IF NOT EXISTS idx_team_members_user_id ON team_members(user_id);");
+
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS auth_sessions (
       id UUID PRIMARY KEY,
       user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,

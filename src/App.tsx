@@ -27,6 +27,8 @@ import {
   loadLandingPage,
   loadAppSettingsPage,
   loadSessionSharePage,
+  loadAppTeamsPage,
+  loadAppTeamDetailPage,
   loadComingSoonPage,
   loadAppShell,
 } from "@/lib/routeLoaders";
@@ -57,6 +59,8 @@ const JoinPage = lazy(loadJoinPage);
 const Landing = lazy(loadLandingPage);
 const AppSettings = lazy(loadAppSettingsPage);
 const SessionShare = lazy(loadSessionSharePage);
+const AppTeams = lazy(loadAppTeamsPage);
+const AppTeamDetail = lazy(loadAppTeamDetailPage);
 const ComingSoon = lazy(loadComingSoonPage);
 
 const queryClient = new QueryClient();
@@ -108,16 +112,8 @@ const App = () => {
                   <Route path="experiences" element={<ExperienceCatalog />} />
                   <Route path="sessions" element={<AppSessions />} />
                   <Route path="templates" element={<AppTemplates />} />
-                  <Route
-                    path="teams"
-                    element={
-                      <ComingSoon
-                        title="Équipes"
-                        description="Bientôt : invitez vos equipes, suivez leur maturite et leurs competences au fil du temps."
-                        eta="Phase 3"
-                      />
-                    }
-                  />
+                  <Route path="teams" element={<AppTeams />} />
+                  <Route path="teams/:teamId" element={<AppTeamDetail />} />
                   <Route path="settings" element={<AppSettings />} />
                 </Route>
                 <Route path="/play" element={<Index />} />

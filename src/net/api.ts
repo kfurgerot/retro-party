@@ -262,6 +262,29 @@ export type SkillsMatrixSnapshot = {
   };
 };
 
+export type TeamRole = "owner" | "admin" | "member";
+
+export type Team = {
+  id: string;
+  name: string;
+  description: string | null;
+  ownerUserId: string;
+  memberCount?: number;
+  role: TeamRole | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type TeamMember = {
+  id: string;
+  teamId: string;
+  userId: string;
+  email: string;
+  displayName: string;
+  role: TeamRole;
+  joinedAt: string;
+};
+
 type ApiError = { error?: string };
 
 const BACKEND_BASE = resolveBackendUrl();
@@ -391,6 +414,31 @@ export const api = {
     request<void>(`/rooms/${encodeURIComponent(code.trim().toUpperCase())}/participants`, {
       method: "POST",
     }),
+
+  listTeams: () => request<{ items: Team[] }>("/teams", { method: "GET" }),
+  createTeam: (payload: { name: string; description?: string | null }) =>
+    request<{ team: Team }>("/teams", { method: "POST", body: JSON.stringify(payload) }),
+  getTeam: (teamId: string) =>
+    request<{ team: Team; members: TeamMember[] }>(`/teams/${encodeURIComponent(teamId)}`, {
+      method: "GET",
+    }),
+  updateTeam: (teamId: string, payload: { name: string; description?: string | null }) =>
+    request<{ team: Team }>(`/teams/${encodeURIComponent(teamId)}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }),
+  deleteTeam: (teamId: string) =>
+    request<void>(`/teams/${encodeURIComponent(teamId)}`, { method: "DELETE" }),
+  inviteTeamMember: (teamId: string, payload: { email: string; role?: "member" | "admin" }) =>
+    request<{ member: TeamMember }>(`/teams/${encodeURIComponent(teamId)}/members`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  removeTeamMember: (teamId: string, memberUserId: string) =>
+    request<void>(
+      `/teams/${encodeURIComponent(teamId)}/members/${encodeURIComponent(memberUserId)}`,
+      { method: "DELETE" },
+    ),
   logout: () => request<void>("/auth/logout", { method: "POST" }),
 
   listTemplates: () => request<{ items: TemplateItem[] }>("/templates", { method: "GET" }),

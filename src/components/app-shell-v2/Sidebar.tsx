@@ -14,7 +14,7 @@ const PRIMARY_NAV: NavItem[] = [
   { to: "/app/experiences", label: "Experiences", icon: Sparkles },
   { to: "/app/sessions", label: "Sessions", icon: History },
   { to: "/app/templates", label: "Templates", icon: FolderKanban },
-  { to: "/app/teams", label: "Équipes", icon: Users, soon: true },
+  { to: "/app/teams", label: "Équipes", icon: Users },
 ];
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {

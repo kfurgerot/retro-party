@@ -1,0 +1,388 @@
+import { FormEvent, useEffect, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { api, type Team, type TeamMember } from "@/net/api";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  AlertCircle,
+  ArrowLeft,
+  Crown,
+  Mail,
+  Trash2,
+  UserMinus,
+  UserPlus,
+  Users,
+} from "lucide-react";
+
+export default function AppTeamDetail() {
+  const { teamId = "" } = useParams<{ teamId: string }>();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const [team, setTeam] = useState<Team | null>(null);
+  const [members, setMembers] = useState<TeamMember[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviting, setInviting] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await api.getTeam(teamId);
+      setTeam(res.team);
+      setMembers(res.members);
+      setName(res.team.name);
+      setDescription(res.team.description ?? "");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (teamId) void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teamId]);
+
+  const isOwner = team?.role === "owner";
+
+  const handleSaveEdit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!team || !name.trim()) return;
+    setSavingEdit(true);
+    setError(null);
+    try {
+      const res = await api.updateTeam(team.id, {
+        name: name.trim(),
+        description: description.trim() || null,
+      });
+      setTeam((prev) => (prev ? { ...prev, ...res.team } : res.team));
+      setEditing(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur");
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleInvite = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!team || !inviteEmail.trim()) return;
+    setInviting(true);
+    setInviteError(null);
+    try {
+      await api.inviteTeamMember(team.id, { email: inviteEmail.trim() });
+      setInviteEmail("");
+      await load();
+    } catch (err) {
+      setInviteError(err instanceof Error ? err.message : "Erreur");
+    } finally {
+      setInviting(false);
+    }
+  };
+
+  const handleRemove = async (memberUserId: string) => {
+    if (!team) return;
+    try {
+      await api.removeTeamMember(team.id, memberUserId);
+      if (memberUserId === user?.id) {
+        navigate("/app/teams");
+        return;
+      }
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur");
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!team) return;
+    try {
+      await api.deleteTeam(team.id);
+      navigate("/app/teams");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur");
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface-0)] py-12 text-center text-[13px] text-[var(--ds-text-muted)]">
+        Chargement…
+      </div>
+    );
+  }
+
+  if (!team) {
+    return (
+      <div className="space-y-4">
+        <BackLink />
+        <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-[13px] text-rose-200">
+          {error || "Équipe introuvable"}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-8 pb-12">
+      <BackLink />
+
+      <header className="flex items-start gap-4">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-indigo-400/30 bg-indigo-500/10 text-indigo-300">
+          <Users size={20} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--ds-text-faint)]">
+            Équipe
+          </p>
+          {editing ? (
+            <form onSubmit={handleSaveEdit} className="mt-1 space-y-3">
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                maxLength={80}
+                className="ds-focus-ring h-11 w-full rounded-lg border border-[var(--ds-border)] bg-[var(--ds-surface-1)] px-3 text-[18px] font-semibold text-[var(--ds-text-primary)] focus:border-indigo-400/60 focus:outline-none"
+              />
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                maxLength={280}
+                rows={2}
+                placeholder="Description (optionnel)"
+                className="ds-focus-ring w-full resize-none rounded-lg border border-[var(--ds-border)] bg-[var(--ds-surface-1)] px-3 py-2 text-[13px] text-[var(--ds-text-primary)] placeholder:text-[var(--ds-text-faint)] focus:border-indigo-400/60 focus:outline-none"
+              />
+              <div className="flex items-center gap-2">
+                <button
+                  type="submit"
+                  disabled={savingEdit || !name.trim()}
+                  className="ds-focus-ring inline-flex h-9 items-center rounded-lg bg-indigo-500 px-4 text-[12.5px] font-semibold text-white hover:bg-indigo-400 disabled:opacity-50"
+                >
+                  {savingEdit ? "Enregistrement…" : "Enregistrer"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditing(false);
+                    setName(team.name);
+                    setDescription(team.description ?? "");
+                  }}
+                  className="ds-focus-ring inline-flex h-9 items-center rounded-lg border border-[var(--ds-border)] bg-[var(--ds-surface-1)] px-4 text-[12.5px] font-medium text-[var(--ds-text-secondary)] hover:bg-[var(--ds-surface-2)] hover:text-[var(--ds-text-primary)]"
+                >
+                  Annuler
+                </button>
+              </div>
+            </form>
+          ) : (
+            <>
+              <h1 className="mt-0.5 text-[26px] font-semibold tracking-tight text-[var(--ds-text-primary)] sm:text-[30px]">
+                {team.name}
+              </h1>
+              {team.description ? (
+                <p className="mt-1 max-w-xl text-[13.5px] leading-relaxed text-[var(--ds-text-muted)]">
+                  {team.description}
+                </p>
+              ) : null}
+              {isOwner ? (
+                <button
+                  type="button"
+                  onClick={() => setEditing(true)}
+                  className="mt-2 text-[12px] font-medium text-[var(--ds-text-faint)] underline-offset-2 hover:text-[var(--ds-text-primary)] hover:underline"
+                >
+                  Modifier
+                </button>
+              ) : null}
+            </>
+          )}
+        </div>
+      </header>
+
+      {error ? (
+        <div className="flex items-start gap-2.5 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-[13px] text-rose-200">
+          <AlertCircle size={14} className="mt-0.5 shrink-0" />
+          <span>{error}</span>
+        </div>
+      ) : null}
+
+      {isOwner ? (
+        <section className="rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface-1)] p-5">
+          <h2 className="text-[14px] font-semibold text-[var(--ds-text-primary)]">
+            Inviter un membre
+          </h2>
+          <p className="mt-0.5 text-[12px] text-[var(--ds-text-muted)]">
+            La personne doit déjà avoir un compte AgileSuite.
+          </p>
+          <form onSubmit={handleInvite} className="mt-3 flex flex-col gap-2 sm:flex-row">
+            <div className="relative flex-1">
+              <Mail
+                size={13}
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ds-text-faint)]"
+              />
+              <input
+                type="email"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                placeholder="email@exemple.com"
+                className="ds-focus-ring h-10 w-full rounded-lg border border-[var(--ds-border)] bg-[var(--ds-surface-0)] pl-9 pr-3 text-[13px] text-[var(--ds-text-primary)] placeholder:text-[var(--ds-text-faint)] focus:border-indigo-400/60 focus:outline-none"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={inviting || !inviteEmail.trim()}
+              className="ds-focus-ring inline-flex h-10 items-center justify-center gap-1.5 rounded-lg bg-indigo-500 px-4 text-[13px] font-semibold text-white hover:bg-indigo-400 disabled:opacity-50"
+            >
+              <UserPlus size={13} />
+              {inviting ? "Invitation…" : "Inviter"}
+            </button>
+          </form>
+          {inviteError ? <p className="mt-2 text-[12px] text-rose-300">{inviteError}</p> : null}
+        </section>
+      ) : null}
+
+      <section>
+        <h2 className="mb-3 text-[14px] font-semibold text-[var(--ds-text-primary)]">
+          Membres ({members.length})
+        </h2>
+        <div className="overflow-hidden rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface-0)]">
+          {members.map((m) => (
+            <MemberRow
+              key={m.id}
+              member={m}
+              isCurrentUser={m.userId === user?.id}
+              canRemove={isOwner && m.role !== "owner"}
+              canLeave={!isOwner && m.userId === user?.id}
+              onRemove={() => handleRemove(m.userId)}
+            />
+          ))}
+        </div>
+      </section>
+
+      {isOwner ? (
+        <section className="rounded-2xl border border-rose-500/20 bg-rose-500/5 p-5">
+          <h2 className="text-[14px] font-semibold text-rose-200">Zone dangereuse</h2>
+          <p className="mt-0.5 text-[12px] text-[var(--ds-text-muted)]">
+            La suppression est irréversible. Les sessions et templates restent intacts.
+          </p>
+          {confirmDelete ? (
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span className="text-[12.5px] text-rose-200">Vraiment supprimer ?</span>
+              <button
+                type="button"
+                onClick={handleDelete}
+                className="ds-focus-ring inline-flex h-9 items-center gap-1.5 rounded-lg border border-rose-500/40 bg-rose-500/15 px-3 text-[12.5px] font-semibold text-rose-100 hover:bg-rose-500/25"
+              >
+                <Trash2 size={12} />
+                Confirmer
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(false)}
+                className="ds-focus-ring inline-flex h-9 items-center rounded-lg border border-[var(--ds-border)] bg-[var(--ds-surface-1)] px-3 text-[12.5px] font-medium text-[var(--ds-text-secondary)] hover:bg-[var(--ds-surface-2)] hover:text-[var(--ds-text-primary)]"
+              >
+                Annuler
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmDelete(true)}
+              className="ds-focus-ring mt-3 inline-flex h-9 items-center gap-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 text-[12.5px] font-semibold text-rose-200 hover:bg-rose-500/15"
+            >
+              <Trash2 size={12} />
+              Supprimer l'équipe
+            </button>
+          )}
+        </section>
+      ) : null}
+    </div>
+  );
+}
+
+function MemberRow({
+  member,
+  isCurrentUser,
+  canRemove,
+  canLeave,
+  onRemove,
+}: {
+  member: TeamMember;
+  isCurrentUser: boolean;
+  canRemove: boolean;
+  canLeave: boolean;
+  onRemove: () => void;
+}) {
+  const initials = (member.displayName || member.email)
+    .split(/[\s._-]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((s) => s[0])
+    .join("")
+    .toUpperCase();
+
+  return (
+    <div className="flex items-center gap-3 border-b border-[var(--ds-border-faint)] px-4 py-3 last:border-b-0">
+      <div className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--ds-border)] bg-[var(--ds-surface-2)] text-[12px] font-semibold text-[var(--ds-text-primary)]">
+        {initials}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <span className="truncate text-[13.5px] font-medium text-[var(--ds-text-primary)]">
+            {member.displayName}
+          </span>
+          {isCurrentUser ? (
+            <span className="rounded-full border border-[var(--ds-border)] bg-[var(--ds-surface-1)] px-1.5 py-px text-[10px] font-semibold uppercase tracking-wider text-[var(--ds-text-muted)]">
+              Vous
+            </span>
+          ) : null}
+        </div>
+        <div className="truncate text-[11.5px] text-[var(--ds-text-faint)]">{member.email}</div>
+      </div>
+      <span
+        className={`hidden rounded-full px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-wider sm:inline-block ${
+          member.role === "owner"
+            ? "border border-amber-400/30 bg-amber-500/10 text-amber-300"
+            : "border border-[var(--ds-border)] bg-[var(--ds-surface-1)] text-[var(--ds-text-muted)]"
+        }`}
+      >
+        {member.role === "owner" ? (
+          <span className="inline-flex items-center gap-1">
+            <Crown size={9} />
+            Owner
+          </span>
+        ) : (
+          member.role
+        )}
+      </span>
+      {canRemove || canLeave ? (
+        <button
+          type="button"
+          onClick={onRemove}
+          title={canLeave ? "Quitter l'équipe" : "Retirer le membre"}
+          className="ds-focus-ring flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--ds-border)] bg-[var(--ds-surface-0)] text-[var(--ds-text-faint)] hover:border-rose-500/40 hover:bg-rose-500/10 hover:text-rose-300"
+        >
+          <UserMinus size={13} />
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+function BackLink() {
+  return (
+    <Link
+      to="/app/teams"
+      className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-[var(--ds-text-muted)] hover:text-[var(--ds-text-primary)]"
+    >
+      <ArrowLeft size={13} />
+      Toutes les équipes
+    </Link>
+  );
+}
