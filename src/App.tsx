@@ -33,6 +33,7 @@ import {
   loadAppShell,
 } from "@/lib/routeLoaders";
 import { HostPill } from "@/components/app-shell-v2/HostPill";
+import { SessionEndedListener } from "@/components/app-shell-v2/SessionEndedListener";
 import { UI_MODE } from "@/lib/uiMode";
 import { AuthProvider } from "@/contexts/AuthContext";
 
@@ -136,6 +137,7 @@ const App = () => {
               </Routes>
             </Suspense>
             <HostPill />
+            <SessionEndedListener />
           </BrowserRouter>
         </TooltipProvider>
       </AuthProvider>

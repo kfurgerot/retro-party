@@ -153,9 +153,10 @@ function toTimestamp(value) {
 }
 
 import { sessionLifecycle } from "../services/sessionLifecycle.js";
+import { S2C_EVENTS } from "../../../shared/contracts/socketEvents.js";
 
 export function registerDashboardRoutes(context) {
-  const { app, pool, requireAuth, crypto } = context;
+  const { app, pool, requireAuth, crypto, io } = context;
 
   // Phase α — session lifecycle endpoints (module-agnostic, code-keyed).
 
@@ -183,6 +184,15 @@ export function registerDashboardRoutes(context) {
       }
       if (session.status === "ended") return res.status(204).end();
       await sessionLifecycle.transitionTo(pool, session, "ended", req.currentUser.id);
+      // Phase β.2 — notify all live participants in the socket room.
+      try {
+        io?.to(session.code).emit(S2C_EVENTS.SESSION_ENDED, {
+          code: session.code,
+          module: session.module,
+        });
+      } catch (err) {
+        console.error("[lifecycle] failed to emit SESSION_ENDED", err);
+      }
       return res.status(204).end();
     } catch (err) {
       next(err);

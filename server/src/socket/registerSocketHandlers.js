@@ -2,6 +2,8 @@ import { C2S_EVENTS, S2C_EVENTS } from "../../../shared/contracts/socketEvents.j
 export function registerSocketHandlers(deps) {
   const {
     io,
+    pool,
+    sessionLifecycle,
     attachSocketToRadarRoom,
     detachSocketFromRadarRoom,
     attachSocketToSkillsMatrixRoom,
@@ -192,6 +194,8 @@ export function registerSocketHandlers(deps) {
       room.sessionEnded = false;
       room.votesOpen = false;
       room.revealed = false;
+      // Phase β.2 — auto lifecycle transition: lobby → live.
+      void sessionLifecycle?.markRoomLiveByCode(pool, code);
       if (!room.storyTitle) room.storyTitle = `Story #${room.round}`;
       room.lobby = room.lobby.map((player) => ({
         ...player,
@@ -650,6 +654,8 @@ export function registerSocketHandlers(deps) {
         ? Math.max(1, Math.min(30, Math.floor(maxRounds)))
         : 12;
       room.state = initializePlayers(room.state, connectedPlayers, rounds);
+      // Phase β.2 — auto lifecycle transition: lobby → live.
+      void sessionLifecycle?.markRoomLiveByCode(pool, code);
       broadcastState(code);
     });
 

@@ -72,6 +72,24 @@ async function bumpActivity(pool, session) {
   ]);
 }
 
+// Direct, non-resolving helper for socket handlers: bump rooms.status to 'live'
+// when a retro/poker game starts. No-op if already ended/abandoned.
+async function markRoomLiveByCode(pool, code) {
+  if (!code) return;
+  try {
+    await pool.query(
+      `UPDATE rooms
+       SET status = 'live',
+           started_at = COALESCE(started_at, now()),
+           last_active_at = now()
+       WHERE room_code = $1 AND status IN ('lobby','live')`,
+      [code],
+    );
+  } catch (err) {
+    console.error("[lifecycle] markRoomLiveByCode failed", err.message);
+  }
+}
+
 const ABANDON_THRESHOLD_MINUTES = 720; // 12 hours
 
 async function markAbandonedSessions(pool) {
@@ -96,5 +114,6 @@ export const sessionLifecycle = {
   transitionTo,
   bumpActivity,
   markAbandonedSessions,
+  markRoomLiveByCode,
   ABANDON_THRESHOLD_MINUTES,
 };

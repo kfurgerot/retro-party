@@ -1275,6 +1275,8 @@ function attachSocketToExistingPlayer(code, room, player, socket) {
 }
 registerSocketHandlers({
   io,
+  pool,
+  sessionLifecycle,
   attachSocketToRadarRoom,
   detachSocketFromRadarRoom,
   attachSocketToSkillsMatrixRoom,

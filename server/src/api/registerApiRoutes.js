@@ -437,6 +437,7 @@ export function registerApiRoutes({
     pool,
     requireAuth,
     crypto,
+    io,
   });
 
   registerTeamRoutes({

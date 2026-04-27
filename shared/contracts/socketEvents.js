@@ -72,4 +72,5 @@ export const S2C_EVENTS = Object.freeze({
   ROOM_CLOSED: "room_closed",
   RADAR_SESSION_UPDATE: "radar_session_update",
   SKILLS_MATRIX_SESSION_UPDATE: "skills_matrix_session_update",
+  SESSION_ENDED: "session_ended",
 });
