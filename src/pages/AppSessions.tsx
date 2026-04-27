@@ -8,7 +8,6 @@ import {
 } from "@/net/api";
 import { EXPERIENCES, EXPERIENCE_BY_ID } from "@/design-system/tokens";
 import { ArrowRight, CheckCircle2, Filter, Search, Share2 } from "lucide-react";
-import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 type ModuleFilter = "all" | SuiteModuleId;
