@@ -465,8 +465,9 @@ export function registerRadarRoutes(context) {
         `
           UPDATE radar_sessions
           SET
-            status = 'started',
+            status = 'live',
             started_at = COALESCE(started_at, now()),
+            last_active_at = now(),
             host_participates = COALESCE($2::boolean, host_participates)
           WHERE id = $1
           RETURNING id, session_code, status, started_at, host_participates

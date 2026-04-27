@@ -113,6 +113,25 @@ export async function initDatabase() {
     "CREATE INDEX IF NOT EXISTS idx_room_participants_user_id ON room_participants(user_id);",
   );
 
+  // Phase α — standardize session lifecycle across modules.
+  // Statuses converge to: lobby | live | ended | abandoned.
+  await pool.query("ALTER TABLE rooms DROP CONSTRAINT IF EXISTS rooms_status_check;");
+  await pool.query("UPDATE rooms SET status = 'lobby' WHERE status = 'open';");
+  await pool.query("UPDATE rooms SET status = 'live' WHERE status = 'started';");
+  await pool.query(
+    "ALTER TABLE rooms ADD CONSTRAINT rooms_status_check CHECK (status IN ('lobby','live','ended','abandoned'));",
+  );
+  await pool.query("ALTER TABLE rooms ALTER COLUMN status SET DEFAULT 'lobby';");
+  await pool.query(
+    "ALTER TABLE rooms ADD COLUMN IF NOT EXISTS last_active_at TIMESTAMPTZ NOT NULL DEFAULT now();",
+  );
+  await pool.query(
+    "ALTER TABLE rooms ADD COLUMN IF NOT EXISTS ended_by_user_id UUID NULL REFERENCES users(id) ON DELETE SET NULL;",
+  );
+  await pool.query(
+    "CREATE INDEX IF NOT EXISTS idx_rooms_status_last_active ON rooms(status, last_active_at);",
+  );
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS teams (
       id UUID PRIMARY KEY,
@@ -216,6 +235,26 @@ export async function initDatabase() {
   await pool.query(
     "CREATE INDEX IF NOT EXISTS idx_radar_sessions_team_id ON radar_sessions(team_id);",
   );
+  // Phase α — radar lifecycle alignment.
+  await pool.query(
+    "ALTER TABLE radar_sessions DROP CONSTRAINT IF EXISTS radar_sessions_status_check;",
+  );
+  await pool.query("UPDATE radar_sessions SET status = 'live' WHERE status = 'started';");
+  await pool.query(
+    "ALTER TABLE radar_sessions ADD CONSTRAINT radar_sessions_status_check CHECK (status IN ('lobby','live','ended','abandoned'));",
+  );
+  await pool.query(
+    "ALTER TABLE radar_sessions ADD COLUMN IF NOT EXISTS last_active_at TIMESTAMPTZ NOT NULL DEFAULT now();",
+  );
+  await pool.query(
+    "ALTER TABLE radar_sessions ADD COLUMN IF NOT EXISTS ended_at TIMESTAMPTZ NULL;",
+  );
+  await pool.query(
+    "ALTER TABLE radar_sessions ADD COLUMN IF NOT EXISTS ended_by_user_id UUID NULL REFERENCES users(id) ON DELETE SET NULL;",
+  );
+  await pool.query(
+    "CREATE INDEX IF NOT EXISTS idx_radar_sessions_status_last_active ON radar_sessions(status, last_active_at);",
+  );
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS radar_participants (
@@ -311,12 +350,24 @@ export async function initDatabase() {
   await pool.query(
     "CREATE INDEX IF NOT EXISTS idx_skills_matrix_sessions_team_id ON skills_matrix_sessions(team_id);",
   );
+  // Phase α — skills_matrix lifecycle alignment.
   await pool.query(
     "ALTER TABLE skills_matrix_sessions DROP CONSTRAINT IF EXISTS skills_matrix_sessions_status_check;",
   );
+  await pool.query("UPDATE skills_matrix_sessions SET status = 'live' WHERE status = 'started';");
   await pool.query(
-    "ALTER TABLE skills_matrix_sessions ADD CONSTRAINT skills_matrix_sessions_status_check CHECK (status IN ('lobby', 'started', 'ended'));",
+    "ALTER TABLE skills_matrix_sessions ADD CONSTRAINT skills_matrix_sessions_status_check CHECK (status IN ('lobby','live','ended','abandoned'));",
   );
+  await pool.query(
+    "ALTER TABLE skills_matrix_sessions ADD COLUMN IF NOT EXISTS last_active_at TIMESTAMPTZ NOT NULL DEFAULT now();",
+  );
+  await pool.query(
+    "ALTER TABLE skills_matrix_sessions ADD COLUMN IF NOT EXISTS ended_by_user_id UUID NULL REFERENCES users(id) ON DELETE SET NULL;",
+  );
+  await pool.query(
+    "CREATE INDEX IF NOT EXISTS idx_skills_matrix_sessions_status_last_active ON skills_matrix_sessions(status, last_active_at);",
+  );
+  // (legacy status migration removed — superseded by Phase α normalization above.)
   await pool.query(
     "CREATE INDEX IF NOT EXISTS idx_skills_matrix_sessions_created_by_user_id ON skills_matrix_sessions(created_by_user_id);",
   );

@@ -152,8 +152,60 @@ function toTimestamp(value) {
   return Number.isFinite(time) ? time : 0;
 }
 
+import { sessionLifecycle } from "../services/sessionLifecycle.js";
+
 export function registerDashboardRoutes(context) {
   const { app, pool, requireAuth, crypto } = context;
+
+  // Phase α — session lifecycle endpoints (module-agnostic, code-keyed).
+
+  // Heartbeat: bump last_active_at. Public-ish (anyone with the code can
+  // signal activity — abuse is irrelevant since the code is the bearer).
+  app.post("/api/sessions/:code/heartbeat", async (req, res, next) => {
+    try {
+      const session = await sessionLifecycle.resolveSessionByCode(pool, req.params.code);
+      if (!session) return res.status(404).json({ error: "Not found" });
+      if (session.status === "ended") return res.status(204).end();
+      await sessionLifecycle.bumpActivity(pool, session);
+      return res.status(204).end();
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Terminer la session — owner only, sets status=ended, freezes the row.
+  app.post("/api/sessions/:code/end", requireAuth, async (req, res, next) => {
+    try {
+      const session = await sessionLifecycle.resolveSessionByCode(pool, req.params.code);
+      if (!session) return res.status(404).json({ error: "Not found" });
+      if (session.ownerUserId && session.ownerUserId !== req.currentUser.id) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      if (session.status === "ended") return res.status(204).end();
+      await sessionLifecycle.transitionTo(pool, session, "ended", req.currentUser.id);
+      return res.status(204).end();
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Restaurer une session abandonnée — owner only, abandoned → live.
+  app.post("/api/sessions/:code/restore", requireAuth, async (req, res, next) => {
+    try {
+      const session = await sessionLifecycle.resolveSessionByCode(pool, req.params.code);
+      if (!session) return res.status(404).json({ error: "Not found" });
+      if (session.ownerUserId && session.ownerUserId !== req.currentUser.id) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      if (session.status !== "abandoned") {
+        return res.status(409).json({ error: "Not abandoned" });
+      }
+      await sessionLifecycle.transitionTo(pool, session, "live", req.currentUser.id);
+      return res.status(204).end();
+    } catch (err) {
+      next(err);
+    }
+  });
 
   // Record an authenticated participation in a retro/poker room. Anonymous
   // joins are not persisted; this endpoint is best-effort and idempotent.

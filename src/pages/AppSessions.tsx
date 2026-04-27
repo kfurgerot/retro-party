@@ -14,6 +14,9 @@ import { TeamPicker } from "@/components/app-shell-v2/TeamPicker";
 
 type ModuleFilter = "all" | SuiteModuleId;
 type TeamFilter = "all" | "none" | string;
+type StatusTab = "active" | "ended" | "archive";
+
+const ACTIVE_STATUSES = new Set(["lobby", "live"]);
 
 export default function AppSessions() {
   const [data, setData] = useState<DashboardActivitiesResponse | null>(null);
@@ -22,6 +25,7 @@ export default function AppSessions() {
   const [error, setError] = useState<string | null>(null);
   const [moduleFilter, setModuleFilter] = useState<ModuleFilter>("all");
   const [teamFilter, setTeamFilter] = useState<TeamFilter>("all");
+  const [statusTab, setStatusTab] = useState<StatusTab>("active");
   const [query, setQuery] = useState("");
 
   useEffect(() => {
@@ -52,11 +56,26 @@ export default function AppSessions() {
     });
   };
 
+  const counts = useMemo(() => {
+    if (!data) return { active: 0, ended: 0, archive: 0 };
+    const all = data.modules.flatMap((m) =>
+      m.activities.filter((a) => a.activityType === "session"),
+    );
+    return {
+      active: all.filter((s) => ACTIVE_STATUSES.has(s.status)).length,
+      ended: all.filter((s) => s.status === "ended").length,
+      archive: all.filter((s) => s.status === "abandoned").length,
+    };
+  }, [data]);
+
   const sessions = useMemo<DashboardActivity[]>(() => {
     if (!data) return [];
     let list = data.modules.flatMap((m) =>
       m.activities.filter((a) => a.activityType === "session"),
     );
+    if (statusTab === "active") list = list.filter((s) => ACTIVE_STATUSES.has(s.status));
+    else if (statusTab === "ended") list = list.filter((s) => s.status === "ended");
+    else list = list.filter((s) => s.status === "abandoned");
     if (moduleFilter !== "all") list = list.filter((s) => s.moduleId === moduleFilter);
     if (teamFilter === "none") list = list.filter((s) => s.teamId === null);
     else if (teamFilter !== "all") list = list.filter((s) => s.teamId === teamFilter);
@@ -70,7 +89,7 @@ export default function AppSessions() {
       );
     }
     return list.sort((a, b) => Date.parse(b.occurredAt || "") - Date.parse(a.occurredAt || ""));
-  }, [data, moduleFilter, teamFilter, query]);
+  }, [data, statusTab, moduleFilter, teamFilter, query]);
 
   return (
     <div className="space-y-6 pb-12">
@@ -85,6 +104,18 @@ export default function AppSessions() {
           Reprenez ou consultez vos ateliers passés. Filtrez par module ou cherchez par nom / code.
         </p>
       </header>
+
+      <div className="flex items-center gap-1 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface-1)] p-1 text-[12.5px] font-medium">
+        <StatusTabButton active={statusTab === "active"} onClick={() => setStatusTab("active")}>
+          Actives <CountBadge n={counts.active} />
+        </StatusTabButton>
+        <StatusTabButton active={statusTab === "ended"} onClick={() => setStatusTab("ended")}>
+          Terminées <CountBadge n={counts.ended} />
+        </StatusTabButton>
+        <StatusTabButton active={statusTab === "archive"} onClick={() => setStatusTab("archive")}>
+          Archive <CountBadge n={counts.archive} />
+        </StatusTabButton>
+      </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
@@ -296,12 +327,49 @@ function Row({
   );
 }
 
+function StatusTabButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "ds-focus-ring inline-flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg px-3 transition",
+        active
+          ? "bg-[var(--ds-surface-2)] text-[var(--ds-text-primary)] shadow-[0_1px_2px_rgba(0,0,0,0.2)]"
+          : "text-[var(--ds-text-muted)] hover:text-[var(--ds-text-primary)]",
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+function CountBadge({ n }: { n: number }) {
+  return (
+    <span className="rounded-full bg-[var(--ds-surface-0)] px-1.5 py-px text-[10.5px] font-semibold tabular-nums text-[var(--ds-text-faint)]">
+      {n}
+    </span>
+  );
+}
+
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { label: string; rgb: string }> = {
-    open: { label: "En cours", rgb: "16,185,129" },
     lobby: { label: "Lobby", rgb: "99,102,241" },
-    in_progress: { label: "En cours", rgb: "16,185,129" },
+    live: { label: "En cours", rgb: "16,185,129" },
     ended: { label: "Terminée", rgb: "100,116,139" },
+    abandoned: { label: "Abandonnée", rgb: "234,179,8" },
+    // legacy fallbacks
+    open: { label: "Lobby", rgb: "99,102,241" },
+    started: { label: "En cours", rgb: "16,185,129" },
+    in_progress: { label: "En cours", rgb: "16,185,129" },
     closed: { label: "Terminée", rgb: "100,116,139" },
   };
   const m = map[status] ?? { label: status, rgb: "100,116,139" };

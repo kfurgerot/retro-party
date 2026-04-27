@@ -707,8 +707,9 @@ export function registerSkillsMatrixRoutes(context) {
         `
           UPDATE skills_matrix_sessions
           SET
-            status = 'started',
+            status = 'live',
             started_at = COALESCE(started_at, now()),
+            last_active_at = now(),
             updated_at = now()
           WHERE id = $1
         `,

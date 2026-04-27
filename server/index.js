@@ -5,6 +5,7 @@ import crypto from "node:crypto";
 import { Server } from "socket.io";
 import { initDatabase, pool } from "./db.js";
 import { registerApiRoutes } from "./restApi.js";
+import { sessionLifecycle } from "./src/services/sessionLifecycle.js";
 import { registerSocketHandlers } from "./src/socket/registerSocketHandlers.js";
 import { S2C_EVENTS } from "../shared/contracts/socketEvents.js";
 import {
@@ -1336,6 +1337,19 @@ async function startServer() {
   server.listen(PORT, () => {
     console.log(`Retro Party backend listening on :${PORT}`);
   });
+
+  // Phase α — abandon idle sessions every 5 minutes.
+  setInterval(
+    () => {
+      sessionLifecycle
+        .markAbandonedSessions(pool)
+        .then((count) => {
+          if (count > 0) console.log(`[lifecycle] marked ${count} session(s) as abandoned`);
+        })
+        .catch((err) => console.error("[lifecycle] abandon sweep failed", err));
+    },
+    5 * 60 * 1000,
+  );
 }
 
 startServer().catch((err) => {

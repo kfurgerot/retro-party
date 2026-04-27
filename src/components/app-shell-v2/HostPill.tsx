@@ -1,8 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { CheckCircle2, Copy, Crown, ExternalLink, LogOut, X } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Copy,
+  Crown,
+  ExternalLink,
+  LogOut,
+  Square,
+  X,
+} from "lucide-react";
 import { EXPERIENCE_BY_ID } from "@/design-system/tokens";
-import type { SuiteModuleId } from "@/net/api";
+import { api, type SuiteModuleId } from "@/net/api";
 import { getHostSession, subscribeHostSession, type HostSession } from "@/lib/hostSession";
 
 const PATH_TO_MODULE: Array<{
@@ -29,10 +38,14 @@ function detectModule(pathname: string, search: URLSearchParams): SuiteModuleId 
 
 export function HostPill() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [pushed, setPushed] = useState<HostSession | null>(() => getHostSession());
+  const [confirmEnd, setConfirmEnd] = useState(false);
+  const [ending, setEnding] = useState(false);
+  const [endError, setEndError] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => subscribeHostSession(setPushed), []);
@@ -49,7 +62,16 @@ export function HostPill() {
     setOpen(false);
     setDismissed(false);
     setCopied(false);
+    setConfirmEnd(false);
+    setEndError(null);
   }, [location.pathname, location.search]);
+
+  useEffect(() => {
+    if (!open) {
+      setConfirmEnd(false);
+      setEndError(null);
+    }
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -67,6 +89,24 @@ export function HostPill() {
     };
   }, [open]);
 
+  // Heartbeat: ping every 60s while a session is active. Auto-stop on unmount
+  // or session change.
+  useEffect(() => {
+    if (!code) return;
+    let alive = true;
+    const ping = () => {
+      api.sessionHeartbeat(code).catch(() => {});
+    };
+    ping();
+    const id = window.setInterval(() => {
+      if (alive) ping();
+    }, 60_000);
+    return () => {
+      alive = false;
+      window.clearInterval(id);
+    };
+  }, [code]);
+
   if (!moduleId || !code || dismissed) return null;
   const exp = EXPERIENCE_BY_ID[moduleId];
 
@@ -79,6 +119,20 @@ export function HostPill() {
       setTimeout(() => setCopied(false), 1800);
     } catch {
       // ignored
+    }
+  };
+
+  const handleEndSession = async () => {
+    if (!code) return;
+    setEnding(true);
+    setEndError(null);
+    try {
+      await api.endSession(code);
+      setOpen(false);
+      navigate(`/r/${code}`, { replace: true });
+    } catch (err) {
+      setEndError(err instanceof Error ? err.message : "Erreur");
+      setEnding(false);
     }
   };
 
@@ -167,12 +221,54 @@ export function HostPill() {
               </a>
               <Link
                 to="/app"
-                className="ds-focus-ring flex h-9 w-full items-center justify-center gap-1.5 rounded-lg border border-[var(--ds-border)] bg-[var(--ds-surface-0)] text-[12.5px] font-medium text-[var(--ds-text-faint)] transition hover:border-rose-500/30 hover:bg-rose-500/10 hover:text-rose-200"
+                className="ds-focus-ring flex h-9 w-full items-center justify-center gap-1.5 rounded-lg border border-[var(--ds-border)] bg-[var(--ds-surface-0)] text-[12.5px] font-medium text-[var(--ds-text-faint)] transition hover:bg-[var(--ds-surface-2)] hover:text-[var(--ds-text-primary)]"
               >
                 <LogOut size={12} />
-                Quitter la session
+                Quitter (la session reste active)
               </Link>
             </div>
+
+            {confirmEnd ? (
+              <div className="mt-3 rounded-lg border border-rose-500/30 bg-rose-500/10 p-3">
+                <div className="flex items-start gap-2 text-[12px] text-rose-100">
+                  <AlertTriangle size={13} className="mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-semibold">Terminer définitivement ?</p>
+                    <p className="mt-0.5 text-[11.5px] text-rose-200/80">
+                      Plus aucun participant ne pourra rejoindre. État figé.
+                    </p>
+                  </div>
+                </div>
+                {endError ? <p className="mt-2 text-[11.5px] text-rose-300">{endError}</p> : null}
+                <div className="mt-2.5 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setConfirmEnd(false)}
+                    disabled={ending}
+                    className="ds-focus-ring h-8 flex-1 rounded-md border border-[var(--ds-border)] bg-[var(--ds-surface-1)] text-[12px] font-medium text-[var(--ds-text-secondary)] hover:bg-[var(--ds-surface-2)] hover:text-[var(--ds-text-primary)] disabled:opacity-50"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleEndSession}
+                    disabled={ending}
+                    className="ds-focus-ring h-8 flex-1 rounded-md bg-rose-500 text-[12px] font-semibold text-white shadow-[0_4px_12px_rgba(244,63,94,0.35)] transition hover:bg-rose-400 disabled:opacity-50"
+                  >
+                    {ending ? "…" : "Terminer"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setConfirmEnd(true)}
+                className="ds-focus-ring mt-3 flex h-9 w-full items-center justify-center gap-1.5 rounded-lg border border-rose-500/30 bg-rose-500/5 text-[12.5px] font-semibold text-rose-200 transition hover:bg-rose-500/15 hover:text-rose-100"
+              >
+                <Square size={11} />
+                Terminer la session
+              </button>
+            )}
           </div>
 
           <div className="border-t border-[var(--ds-border)] bg-[var(--ds-surface-0)] px-4 py-2 text-center text-[10.5px] text-[var(--ds-text-faint)]">

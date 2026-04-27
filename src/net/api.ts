@@ -462,6 +462,18 @@ export const api = {
     request<void>(`/rooms/${encodeURIComponent(code.trim().toUpperCase())}/participants`, {
       method: "POST",
     }),
+  sessionHeartbeat: (code: string) =>
+    request<void>(`/sessions/${encodeURIComponent(code.trim().toUpperCase())}/heartbeat`, {
+      method: "POST",
+    }),
+  endSession: (code: string) =>
+    request<void>(`/sessions/${encodeURIComponent(code.trim().toUpperCase())}/end`, {
+      method: "POST",
+    }),
+  restoreSession: (code: string) =>
+    request<void>(`/sessions/${encodeURIComponent(code.trim().toUpperCase())}/restore`, {
+      method: "POST",
+    }),
 
   listTeams: () => request<{ items: Team[] }>("/teams", { method: "GET" }),
   createTeam: (payload: { name: string; description?: string | null }) =>
