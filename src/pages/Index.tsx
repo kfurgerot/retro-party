@@ -11,6 +11,7 @@ import { ResultsScreen } from "@/components/screens/ResultsScreen";
 import { perfLog, perfMark, perfMeasure } from "@/lib/perf";
 import { fr } from "@/i18n/fr";
 import { TOOL_ACCENT } from "@/lib/uiTokens";
+import { setHostSession } from "@/lib/hostSession";
 import PlanningPokerPage from "@/pages/PlanningPoker";
 
 type InitialParams = {
@@ -93,6 +94,16 @@ const Index: React.FC = () => {
   React.useEffect(() => {
     perfMark(screenTransitionStartMark);
   }, [screenTransitionStartMark]);
+
+  React.useEffect(() => {
+    if (!online.code) {
+      setHostSession(null);
+      return;
+    }
+    const isPoker = new URLSearchParams(location.search).get("experience") === "planning-poker";
+    setHostSession({ code: online.code, moduleId: isPoker ? "planning-poker" : "retro-party" });
+    return () => setHostSession(null);
+  }, [online.code, location.search]);
 
   React.useEffect(() => {
     const view = isOnline ? online.gameState.phase : local.gameState.phase;

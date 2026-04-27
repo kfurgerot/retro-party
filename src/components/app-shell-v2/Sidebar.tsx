@@ -12,8 +12,8 @@ type NavItem = {
 const PRIMARY_NAV: NavItem[] = [
   { to: "/app", label: "Dashboard", icon: LayoutDashboard },
   { to: "/app/experiences", label: "Experiences", icon: Sparkles },
-  { to: "/app/sessions", label: "Sessions", icon: History, soon: true },
-  { to: "/app/templates", label: "Templates", icon: FolderKanban, soon: true },
+  { to: "/app/sessions", label: "Sessions", icon: History },
+  { to: "/app/templates", label: "Templates", icon: FolderKanban },
   { to: "/app/teams", label: "Équipes", icon: Users, soon: true },
 ];
 

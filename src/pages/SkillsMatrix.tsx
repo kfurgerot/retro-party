@@ -31,6 +31,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { FileDown } from "lucide-react";
 import { Card, PrimaryButton, SecondaryButton } from "@/components/app-shell";
 import { cn } from "@/lib/utils";
+import { setHostSession } from "@/lib/hostSession";
 import { useAuth } from "@/contexts/AuthContext";
 import { isSkillsMatrixTemplate } from "@/features/skillsMatrix/templateConfig";
 import { CTA_NEON_DANGER, CTA_NEON_SECONDARY_SUBTLE, TOOL_ACCENT } from "@/lib/uiTokens";
@@ -972,6 +973,10 @@ export default function SkillsMatrixPage() {
   }, [isExportingPdf, snapshot]);
 
   const roomCode = snapshot?.session.code ?? null;
+  useEffect(() => {
+    setHostSession(roomCode ? { code: roomCode, moduleId: "skills-matrix" } : null);
+    return () => setHostSession(null);
+  }, [roomCode]);
   const isLobbyStage = !snapshot || snapshot.session.status === "lobby";
   const myParticipantId = participantId || snapshot?.me?.participantId || null;
   const selfParticipant =

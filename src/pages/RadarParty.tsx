@@ -6,6 +6,7 @@ import { OnlineOnboardingScreen } from "@/components/screens/OnlineOnboardingScr
 import { Card, SecondaryButton } from "@/components/app-shell";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
+import { setHostSession } from "@/lib/hostSession";
 import { AVATARS } from "@/types/game";
 import {
   APP_SHELL_SURFACE_SOFT,
@@ -325,6 +326,10 @@ const RadarPartyPage = () => {
   const [error, setError] = useState<string | null>(null);
 
   const [roomCode, setRoomCode] = useState<string | null>(null);
+  useEffect(() => {
+    setHostSession(roomCode ? { code: roomCode, moduleId: "radar-party" } : null);
+    return () => setHostSession(null);
+  }, [roomCode]);
   const [participantId, setParticipantId] = useState("");
   const [participants, setParticipants] = useState<RadarParticipant[]>([]);
   const [profile, setProfile] = useState({ name: "", avatar: 0 });

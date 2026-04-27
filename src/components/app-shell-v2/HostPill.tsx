@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { CheckCircle2, Copy, Crown, ExternalLink, LogOut, X } from "lucide-react";
 import { EXPERIENCE_BY_ID } from "@/design-system/tokens";
 import type { SuiteModuleId } from "@/net/api";
+import { getHostSession, subscribeHostSession, type HostSession } from "@/lib/hostSession";
 
 const PATH_TO_MODULE: Array<{
   pattern: RegExp;
@@ -31,11 +32,18 @@ export function HostPill() {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+  const [pushed, setPushed] = useState<HostSession | null>(() => getHostSession());
   const ref = useRef<HTMLDivElement | null>(null);
 
+  useEffect(() => subscribeHostSession(setPushed), []);
+
   const search = useMemo(() => new URLSearchParams(location.search), [location.search]);
-  const moduleId = detectModule(location.pathname, search);
-  const code = (search.get("code") || "").toUpperCase();
+  const onLiveRoute = detectModule(location.pathname, search) !== null;
+  const urlCode = (search.get("code") || "").toUpperCase();
+  const urlModule = detectModule(location.pathname, search);
+
+  const moduleId = onLiveRoute ? (urlModule ?? pushed?.moduleId ?? null) : null;
+  const code = onLiveRoute ? urlCode || pushed?.code || "" : "";
 
   useEffect(() => {
     setOpen(false);
