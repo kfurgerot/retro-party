@@ -138,7 +138,38 @@ function toTimestamp(value) {
 }
 
 export function registerDashboardRoutes(context) {
-  const { app, pool, requireAuth } = context;
+  const { app, pool, requireAuth, crypto } = context;
+
+  // Record an authenticated participation in a retro/poker room. Anonymous
+  // joins are not persisted; this endpoint is best-effort and idempotent.
+  app.post("/api/rooms/:code/participants", requireAuth, async (req, res, next) => {
+    try {
+      const raw = String(req.params.code || "")
+        .trim()
+        .toUpperCase();
+      if (!raw) return res.status(400).json({ error: "Missing code" });
+
+      const roomResult = await pool.query("SELECT id FROM rooms WHERE room_code = $1 LIMIT 1", [
+        raw,
+      ]);
+      const room = roomResult.rows[0];
+      if (!room) return res.status(404).json({ error: "Not found" });
+
+      await pool.query(
+        `
+          INSERT INTO room_participants (id, room_id, user_id)
+          VALUES ($1, $2, $3)
+          ON CONFLICT (room_id, user_id)
+          DO UPDATE SET last_seen_at = now()
+        `,
+        [crypto.randomUUID(), room.id, req.currentUser.id],
+      );
+
+      return res.status(204).end();
+    } catch (err) {
+      next(err);
+    }
+  });
 
   // Resolve any room code to its module so the client can redirect without
   // knowing which module the code belongs to.
@@ -180,7 +211,7 @@ export function registerDashboardRoutes(context) {
       const [roomsResult, radarResult, templatesResult, skillsMatrixResult] = await Promise.all([
         pool.query(
           `
-            SELECT
+            SELECT DISTINCT ON (r.id)
               r.id,
               r.room_code,
               r.mode,
@@ -193,8 +224,9 @@ export function registerDashboardRoutes(context) {
               t.base_config->>'module' AS source_template_module
             FROM rooms r
             LEFT JOIN game_templates t ON t.id = r.source_template_id
-            WHERE r.created_by_user_id = $1
-            ORDER BY r.created_at DESC
+            LEFT JOIN room_participants rp ON rp.room_id = r.id AND rp.user_id = $1
+            WHERE r.created_by_user_id = $1 OR rp.user_id = $1
+            ORDER BY r.id, r.created_at DESC
             LIMIT 200
           `,
           [userId],

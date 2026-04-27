@@ -387,6 +387,10 @@ export const api = {
       `/resolve-room?code=${encodeURIComponent(code.trim().toUpperCase())}`,
       { method: "GET" },
     ),
+  recordRoomParticipation: (code: string) =>
+    request<void>(`/rooms/${encodeURIComponent(code.trim().toUpperCase())}/participants`, {
+      method: "POST",
+    }),
   logout: () => request<void>("/auth/logout", { method: "POST" }),
 
   listTemplates: () => request<{ items: TemplateItem[] }>("/templates", { method: "GET" }),

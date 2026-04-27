@@ -100,6 +100,20 @@ export async function initDatabase() {
   );
 
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS room_participants (
+      id UUID PRIMARY KEY,
+      room_id UUID NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      first_joined_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      last_seen_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      UNIQUE (room_id, user_id)
+    );
+  `);
+  await pool.query(
+    "CREATE INDEX IF NOT EXISTS idx_room_participants_user_id ON room_participants(user_id);",
+  );
+
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS auth_sessions (
       id UUID PRIMARY KEY,
       user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,

@@ -435,6 +435,7 @@ export function registerApiRoutes({
     app,
     pool,
     requireAuth,
+    crypto,
   });
 
   registerSkillsMatrixRoutes({

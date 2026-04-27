@@ -1,4 +1,4 @@
-import type { SuiteModuleId } from "@/net/api";
+import { api, type SuiteModuleId } from "@/net/api";
 
 export type HostSession = {
   code: string;
@@ -7,12 +7,25 @@ export type HostSession = {
 
 const EVENT = "agile:host-session";
 let current: HostSession | null = null;
+const recorded = new Set<string>();
 
 export function setHostSession(next: HostSession | null) {
   if (next?.code === current?.code && next?.moduleId === current?.moduleId) return;
   current = next;
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent<HostSession | null>(EVENT, { detail: next }));
+  }
+  // Best-effort persistence for retro/poker rooms (radar/skills already
+  // persist via their own join flows). Server requires auth; anonymous
+  // calls are silently ignored.
+  if (next && (next.moduleId === "retro-party" || next.moduleId === "planning-poker")) {
+    const key = `${next.moduleId}:${next.code}`;
+    if (!recorded.has(key)) {
+      recorded.add(key);
+      api.recordRoomParticipation(next.code).catch(() => {
+        recorded.delete(key);
+      });
+    }
   }
 }
 
