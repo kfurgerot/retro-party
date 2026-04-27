@@ -12,8 +12,12 @@ export type OAuthProvidersAvailability = Record<OAuthProviderId, boolean>;
 
 export type SuiteModuleId = "retro-party" | "planning-poker" | "radar-party" | "skills-matrix";
 
+export type ActivityKind = "room" | "radar" | "skills" | "template";
+
 export type DashboardActivity = {
   id: string;
+  rawId: string;
+  kind: ActivityKind;
   moduleId: SuiteModuleId;
   moduleLabel: string;
   moduleIcon: string;
@@ -23,6 +27,7 @@ export type DashboardActivity = {
   details: string | null;
   sessionCode: string | null;
   status: string;
+  teamId: string | null;
   occurredAt: string | null;
   createdAt: string | null;
   startedAt: string | null;
@@ -401,9 +406,15 @@ export const api = {
       ...response,
       message: localizeSuccessMessage(response.message),
     })),
-  getDashboardActivities: () =>
-    request<DashboardActivitiesResponse>("/dashboard/activities", {
-      method: "GET",
+  getDashboardActivities: (teamId?: string | null) =>
+    request<DashboardActivitiesResponse>(
+      `/dashboard/activities${teamId ? `?teamId=${encodeURIComponent(teamId)}` : ""}`,
+      { method: "GET" },
+    ),
+  setItemTeam: (payload: { kind: ActivityKind; id: string; teamId: string | null }) =>
+    request<void>("/items/team", {
+      method: "PATCH",
+      body: JSON.stringify(payload),
     }),
   resolveRoom: (code: string) =>
     request<{ module: "skills-matrix" | "radar-party" | "play"; code: string }>(

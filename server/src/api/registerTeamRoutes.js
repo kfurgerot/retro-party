@@ -236,6 +236,44 @@ export function registerTeamRoutes(context) {
     }
   });
 
+  // Assign / unassign an item (session or template) to a team. The user must
+  // own the item AND be a member of the target team (or null to unassign).
+  // kind ∈ {room, radar, skills, template}
+  app.patch("/api/items/team", requireAuth, async (req, res, next) => {
+    try {
+      const userId = req.currentUser.id;
+      const kind = String(req.body?.kind || "");
+      const itemId = String(req.body?.id || "");
+      const teamId = req.body?.teamId == null ? null : String(req.body.teamId);
+      if (!itemId || !["room", "radar", "skills", "template"].includes(kind)) {
+        return res.status(400).json({ error: "Invalid payload" });
+      }
+
+      if (teamId) {
+        const role = await ensureMembership(teamId, userId);
+        if (!role) return res.status(403).json({ error: "Forbidden" });
+      }
+
+      const TABLE = {
+        room: { table: "rooms", ownerCol: "created_by_user_id" },
+        radar: { table: "radar_sessions", ownerCol: "created_by_user_id" },
+        skills: { table: "skills_matrix_sessions", ownerCol: "created_by_user_id" },
+        template: { table: "game_templates", ownerCol: "user_id" },
+      }[kind];
+
+      const ownerCheck = await pool.query(
+        `SELECT id FROM ${TABLE.table} WHERE id = $1 AND ${TABLE.ownerCol} = $2 LIMIT 1`,
+        [itemId, userId],
+      );
+      if (!ownerCheck.rows[0]) return res.status(403).json({ error: "Forbidden" });
+
+      await pool.query(`UPDATE ${TABLE.table} SET team_id = $1 WHERE id = $2`, [teamId, itemId]);
+      return res.status(204).end();
+    } catch (err) {
+      next(err);
+    }
+  });
+
   // Remove a member (owner can remove anyone; members can remove themselves).
   app.delete("/api/teams/:teamId/members/:memberUserId", requireAuth, async (req, res, next) => {
     try {

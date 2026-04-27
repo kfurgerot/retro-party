@@ -46,6 +46,8 @@ function mapRoomToActivity(row) {
 
   return {
     id: `room:${row.id}`,
+    rawId: row.id,
+    kind: "room",
     moduleId,
     moduleLabel: moduleMeta.label,
     moduleIcon: moduleMeta.icon,
@@ -53,7 +55,9 @@ function mapRoomToActivity(row) {
     activityLabel: row.mode === "template" ? "Session depuis template" : "Session rapide",
     title,
     details: row.room_code ? `Code ${row.room_code}` : null,
+    sessionCode: row.room_code || null,
     status: row.status || "open",
+    teamId: row.team_id ?? null,
     occurredAt: row.ended_at || row.started_at || row.created_at,
     createdAt: row.created_at,
     startedAt: row.started_at,
@@ -68,6 +72,8 @@ function mapRadarToActivity(row) {
 
   return {
     id: `radar:${row.id}`,
+    rawId: row.id,
+    kind: "radar",
     moduleId: "radar-party",
     moduleLabel: moduleMeta.label,
     moduleIcon: moduleMeta.icon,
@@ -75,7 +81,9 @@ function mapRadarToActivity(row) {
     activityLabel: "Session Radar",
     title,
     details: row.session_code ? `Code ${row.session_code}` : null,
+    sessionCode: row.session_code || null,
     status: row.status || "lobby",
+    teamId: row.team_id ?? null,
     occurredAt: row.started_at || row.created_at,
     createdAt: row.created_at,
     startedAt: row.started_at,
@@ -93,6 +101,8 @@ function mapTemplateToActivity(row) {
 
   return {
     id: `template:${row.id}`,
+    rawId: row.id,
+    kind: "template",
     moduleId,
     moduleLabel: moduleMeta.label,
     moduleIcon: moduleMeta.icon,
@@ -100,7 +110,9 @@ function mapTemplateToActivity(row) {
     activityLabel: "Template",
     title,
     details: description,
+    sessionCode: null,
     status: row.is_archived ? "archived" : "active",
+    teamId: row.team_id ?? null,
     occurredAt: row.updated_at || row.created_at,
     createdAt: row.created_at,
     startedAt: null,
@@ -115,6 +127,8 @@ function mapSkillsMatrixToActivity(row) {
 
   return {
     id: `skills-matrix:${row.id}`,
+    rawId: row.id,
+    kind: "skills",
     moduleId: "skills-matrix",
     moduleLabel: moduleMeta.label,
     moduleIcon: moduleMeta.icon,
@@ -124,6 +138,7 @@ function mapSkillsMatrixToActivity(row) {
     details: row.session_code ? `Code ${row.session_code}` : null,
     sessionCode: row.session_code || null,
     status: row.status || "lobby",
+    teamId: row.team_id ?? null,
     occurredAt: row.ended_at || row.started_at || row.updated_at || row.created_at,
     createdAt: row.created_at,
     startedAt: row.started_at || null,
@@ -208,6 +223,10 @@ export function registerDashboardRoutes(context) {
   app.get("/api/dashboard/activities", requireAuth, async (req, res, next) => {
     try {
       const userId = req.currentUser.id;
+      const teamFilter =
+        typeof req.query.teamId === "string" && req.query.teamId.trim()
+          ? req.query.teamId.trim()
+          : null;
       const [roomsResult, radarResult, templatesResult, skillsMatrixResult] = await Promise.all([
         pool.query(
           `
@@ -216,6 +235,7 @@ export function registerDashboardRoutes(context) {
               r.room_code,
               r.mode,
               r.status,
+              r.team_id,
               r.created_at,
               r.started_at,
               r.ended_at,
@@ -225,11 +245,12 @@ export function registerDashboardRoutes(context) {
             FROM rooms r
             LEFT JOIN game_templates t ON t.id = r.source_template_id
             LEFT JOIN room_participants rp ON rp.room_id = r.id AND rp.user_id = $1
-            WHERE r.created_by_user_id = $1 OR rp.user_id = $1
+            WHERE (r.created_by_user_id = $1 OR rp.user_id = $1)
+              AND ($2::uuid IS NULL OR r.team_id = $2::uuid)
             ORDER BY r.id, r.created_at DESC
             LIMIT 200
           `,
-          [userId],
+          [userId, teamFilter],
         ),
         pool.query(
           `
@@ -238,16 +259,18 @@ export function registerDashboardRoutes(context) {
               s.session_code,
               s.title,
               s.status,
+              s.team_id,
               s.created_at,
               s.started_at
             FROM radar_sessions s
             LEFT JOIN radar_participants p
               ON p.session_id = s.id AND p.user_id = $1
-            WHERE s.created_by_user_id = $1 OR p.user_id = $1
+            WHERE (s.created_by_user_id = $1 OR p.user_id = $1)
+              AND ($2::uuid IS NULL OR s.team_id = $2::uuid)
             ORDER BY s.id, s.created_at DESC
             LIMIT 200
           `,
-          [userId],
+          [userId, teamFilter],
         ),
         pool.query(
           `
@@ -257,14 +280,16 @@ export function registerDashboardRoutes(context) {
               description,
               base_config,
               is_archived,
+              team_id,
               created_at,
               updated_at
             FROM game_templates
             WHERE user_id = $1
+              AND ($2::uuid IS NULL OR team_id = $2::uuid)
             ORDER BY updated_at DESC
             LIMIT 300
           `,
-          [userId],
+          [userId, teamFilter],
         ),
         pool.query(
           `
@@ -273,6 +298,7 @@ export function registerDashboardRoutes(context) {
               s.session_code,
               s.title,
               s.status,
+              s.team_id,
               s.started_at,
               s.ended_at,
               s.created_at,
@@ -281,10 +307,11 @@ export function registerDashboardRoutes(context) {
             FROM skills_matrix_sessions s
             INNER JOIN skills_matrix_participants p
               ON p.session_id = s.id AND p.user_id = $1
+            WHERE ($2::uuid IS NULL OR s.team_id = $2::uuid)
             ORDER BY s.updated_at DESC
             LIMIT 200
           `,
-          [userId],
+          [userId, teamFilter],
         ),
       ]);
 

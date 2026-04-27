@@ -1,11 +1,13 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { api, type Team, type TeamMember } from "@/net/api";
+import { api, type DashboardActivity, type Team, type TeamMember } from "@/net/api";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   AlertCircle,
   ArrowLeft,
   Crown,
+  FolderKanban,
+  History,
   Mail,
   Trash2,
   UserMinus,
@@ -20,6 +22,7 @@ export default function AppTeamDetail() {
 
   const [team, setTeam] = useState<Team | null>(null);
   const [members, setMembers] = useState<TeamMember[]>([]);
+  const [activities, setActivities] = useState<DashboardActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
@@ -35,11 +38,15 @@ export default function AppTeamDetail() {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.getTeam(teamId);
-      setTeam(res.team);
-      setMembers(res.members);
-      setName(res.team.name);
-      setDescription(res.team.description ?? "");
+      const [teamRes, dashRes] = await Promise.all([
+        api.getTeam(teamId),
+        api.getDashboardActivities(teamId),
+      ]);
+      setTeam(teamRes.team);
+      setMembers(teamRes.members);
+      setName(teamRes.team.name);
+      setDescription(teamRes.team.description ?? "");
+      setActivities(dashRes.modules.flatMap((m) => m.activities));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur");
     } finally {
@@ -247,6 +254,22 @@ export default function AppTeamDetail() {
         </section>
       ) : null}
 
+      <section className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <StatTile
+          label="Sessions liées"
+          value={activities.filter((a) => a.activityType === "session").length}
+          icon={<History size={14} />}
+          to="/app/sessions"
+        />
+        <StatTile
+          label="Templates liés"
+          value={activities.filter((a) => a.activityType === "template").length}
+          icon={<FolderKanban size={14} />}
+          to="/app/templates"
+        />
+        <StatTile label="Membres" value={members.length} icon={<Users size={14} />} />
+      </section>
+
       <section>
         <h2 className="mb-3 text-[14px] font-semibold text-[var(--ds-text-primary)]">
           Membres ({members.length})
@@ -371,6 +394,45 @@ function MemberRow({
           <UserMinus size={13} />
         </button>
       ) : null}
+    </div>
+  );
+}
+
+function StatTile({
+  label,
+  value,
+  icon,
+  to,
+}: {
+  label: string;
+  value: number;
+  icon: React.ReactNode;
+  to?: string;
+}) {
+  const inner = (
+    <>
+      <div className="flex items-center gap-2 text-[11.5px] font-medium uppercase tracking-wider text-[var(--ds-text-faint)]">
+        <span className="text-[var(--ds-text-muted)]">{icon}</span>
+        {label}
+      </div>
+      <div className="mt-2 text-[24px] font-semibold tracking-tight text-[var(--ds-text-primary)]">
+        {value}
+      </div>
+    </>
+  );
+  if (to) {
+    return (
+      <Link
+        to={to}
+        className="ds-card-hover rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface-1)] p-4"
+      >
+        {inner}
+      </Link>
+    );
+  }
+  return (
+    <div className="rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface-1)] p-4">
+      {inner}
     </div>
   );
 }

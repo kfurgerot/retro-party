@@ -137,6 +137,18 @@ export async function initDatabase() {
   `);
   await pool.query("CREATE INDEX IF NOT EXISTS idx_team_members_user_id ON team_members(user_id);");
 
+  // Link sessions / templates to a team (nullable; teams added in D1).
+  await pool.query(
+    "ALTER TABLE rooms ADD COLUMN IF NOT EXISTS team_id UUID NULL REFERENCES teams(id) ON DELETE SET NULL;",
+  );
+  await pool.query("CREATE INDEX IF NOT EXISTS idx_rooms_team_id ON rooms(team_id);");
+  await pool.query(
+    "ALTER TABLE game_templates ADD COLUMN IF NOT EXISTS team_id UUID NULL REFERENCES teams(id) ON DELETE SET NULL;",
+  );
+  await pool.query(
+    "CREATE INDEX IF NOT EXISTS idx_game_templates_team_id ON game_templates(team_id);",
+  );
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS auth_sessions (
       id UUID PRIMARY KEY,
@@ -197,6 +209,12 @@ export async function initDatabase() {
   );
   await pool.query(
     "CREATE INDEX IF NOT EXISTS idx_radar_sessions_created_by_user_id ON radar_sessions(created_by_user_id);",
+  );
+  await pool.query(
+    "ALTER TABLE radar_sessions ADD COLUMN IF NOT EXISTS team_id UUID NULL REFERENCES teams(id) ON DELETE SET NULL;",
+  );
+  await pool.query(
+    "CREATE INDEX IF NOT EXISTS idx_radar_sessions_team_id ON radar_sessions(team_id);",
   );
 
   await pool.query(`
@@ -286,6 +304,12 @@ export async function initDatabase() {
   );
   await pool.query(
     "ALTER TABLE skills_matrix_sessions ADD COLUMN IF NOT EXISTS ended_at TIMESTAMPTZ NULL;",
+  );
+  await pool.query(
+    "ALTER TABLE skills_matrix_sessions ADD COLUMN IF NOT EXISTS team_id UUID NULL REFERENCES teams(id) ON DELETE SET NULL;",
+  );
+  await pool.query(
+    "CREATE INDEX IF NOT EXISTS idx_skills_matrix_sessions_team_id ON skills_matrix_sessions(team_id);",
   );
   await pool.query(
     "ALTER TABLE skills_matrix_sessions DROP CONSTRAINT IF EXISTS skills_matrix_sessions_status_check;",

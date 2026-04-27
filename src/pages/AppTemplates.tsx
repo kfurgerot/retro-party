@@ -5,25 +5,33 @@ import {
   type DashboardActivitiesResponse,
   type DashboardActivity,
   type SuiteModuleId,
+  type Team,
 } from "@/net/api";
 import { EXPERIENCES, EXPERIENCE_BY_ID } from "@/design-system/tokens";
-import { Filter, Play, Search, Settings2 } from "lucide-react";
+import { Filter, Play, Search, Settings2, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TeamPicker } from "@/components/app-shell-v2/TeamPicker";
 
 type ModuleFilter = "all" | SuiteModuleId;
+type TeamFilter = "all" | "none" | string;
 
 export default function AppTemplates() {
   const [data, setData] = useState<DashboardActivitiesResponse | null>(null);
+  const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [moduleFilter, setModuleFilter] = useState<ModuleFilter>("all");
+  const [teamFilter, setTeamFilter] = useState<TeamFilter>("all");
   const [query, setQuery] = useState("");
 
   useEffect(() => {
     let alive = true;
-    api
-      .getDashboardActivities()
-      .then((res) => alive && setData(res))
+    Promise.all([api.getDashboardActivities(), api.listTeams()])
+      .then(([activities, teamsRes]) => {
+        if (!alive) return;
+        setData(activities);
+        setTeams(teamsRes.items);
+      })
       .catch((err) => alive && setError(err instanceof Error ? err.message : "Erreur"))
       .finally(() => alive && setLoading(false));
     return () => {
@@ -31,12 +39,27 @@ export default function AppTemplates() {
     };
   }, []);
 
+  const updateActivityTeam = (activityId: string, teamId: string | null) => {
+    setData((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        modules: prev.modules.map((m) => ({
+          ...m,
+          activities: m.activities.map((a) => (a.id === activityId ? { ...a, teamId } : a)),
+        })),
+      };
+    });
+  };
+
   const templates = useMemo<DashboardActivity[]>(() => {
     if (!data) return [];
     let list = data.modules.flatMap((m) =>
       m.activities.filter((a) => a.activityType === "template"),
     );
     if (moduleFilter !== "all") list = list.filter((t) => t.moduleId === moduleFilter);
+    if (teamFilter === "none") list = list.filter((t) => t.teamId === null);
+    else if (teamFilter !== "all") list = list.filter((t) => t.teamId === teamFilter);
     if (query.trim()) {
       const q = query.trim().toLowerCase();
       list = list.filter(
@@ -44,7 +67,7 @@ export default function AppTemplates() {
       );
     }
     return list.sort((a, b) => Date.parse(b.occurredAt || "") - Date.parse(a.occurredAt || ""));
-  }, [data, moduleFilter, query]);
+  }, [data, moduleFilter, teamFilter, query]);
 
   return (
     <div className="space-y-6 pb-12">
@@ -92,6 +115,27 @@ export default function AppTemplates() {
         </div>
       </div>
 
+      {teams.length > 0 ? (
+        <div className="flex items-center gap-1.5 overflow-x-auto">
+          <Users size={13} className="shrink-0 text-[var(--ds-text-faint)]" />
+          <Chip active={teamFilter === "all"} onClick={() => setTeamFilter("all")}>
+            Toutes équipes
+          </Chip>
+          <Chip active={teamFilter === "none"} onClick={() => setTeamFilter("none")}>
+            Sans équipe
+          </Chip>
+          {teams.map((team) => (
+            <Chip
+              key={team.id}
+              active={teamFilter === team.id}
+              onClick={() => setTeamFilter(team.id)}
+            >
+              {team.name}
+            </Chip>
+          ))}
+        </div>
+      ) : null}
+
       {error ? (
         <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-[13px] text-rose-200">
           Erreur : {error}
@@ -105,7 +149,12 @@ export default function AppTemplates() {
       ) : (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {templates.map((t) => (
-            <Card key={t.id} activity={t} />
+            <Card
+              key={t.id}
+              activity={t}
+              teams={teams}
+              onTeamChange={(teamId) => updateActivityTeam(t.id, teamId)}
+            />
           ))}
         </div>
       )}
@@ -151,7 +200,15 @@ function Chip({
   );
 }
 
-function Card({ activity }: { activity: DashboardActivity }) {
+function Card({
+  activity,
+  teams,
+  onTeamChange,
+}: {
+  activity: DashboardActivity;
+  teams: Team[];
+  onTeamChange: (teamId: string | null) => void;
+}) {
   const exp = EXPERIENCE_BY_ID[activity.moduleId];
   const editPath = templateEditPath(activity);
   return (
@@ -166,11 +223,20 @@ function Card({ activity }: { activity: DashboardActivity }) {
         >
           {activity.moduleIcon}
         </span>
-        {activity.status === "archived" ? (
-          <span className="rounded-full border border-[var(--ds-border)] bg-[var(--ds-surface-1)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--ds-text-faint)]">
-            Archivé
-          </span>
-        ) : null}
+        <div className="flex items-center gap-1.5">
+          {activity.status === "archived" ? (
+            <span className="rounded-full border border-[var(--ds-border)] bg-[var(--ds-surface-1)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--ds-text-faint)]">
+              Archivé
+            </span>
+          ) : null}
+          <TeamPicker
+            teams={teams}
+            currentTeamId={activity.teamId}
+            kind={activity.kind}
+            itemId={activity.rawId}
+            onChange={onTeamChange}
+          />
+        </div>
       </div>
       <h3 className="mt-3 truncate text-[14px] font-semibold text-[var(--ds-text-primary)]">
         {activity.title}
