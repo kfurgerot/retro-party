@@ -7,7 +7,6 @@ import { BrowserRouter, Navigate, Routes, Route } from "react-router-dom";
 import {
   loadPortalPage,
   loadDashboardPage,
-  loadHomePage,
   loadNotFoundPage,
   loadPlayPage,
   loadPrepareRetroPage,
@@ -37,7 +36,6 @@ import { AuthProvider } from "@/contexts/AuthContext";
 
 const Portal = lazy(loadPortalPage);
 const Dashboard = lazy(loadDashboardPage);
-const Home = lazy(loadHomePage);
 const Index = lazy(loadPlayPage);
 const PrepareRetroPage = lazy(loadPrepareRetroPage);
 const PreparePlanningPokerPage = lazy(loadPreparePlanningPokerPage);
@@ -122,7 +120,6 @@ const App = () => {
                   />
                   <Route path="settings" element={<AppSettings />} />
                 </Route>
-                <Route path="/home" element={<Home />} />
                 <Route path="/play" element={<Index />} />
                 <Route path="/prepare" element={<Navigate to="/prepare/retro-party" replace />} />
                 <Route path="/prepare/retro-party" element={<PrepareRetroPage />} />
