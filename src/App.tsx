@@ -31,6 +31,7 @@ import {
   loadComingSoonPage,
   loadAppShell,
 } from "@/lib/routeLoaders";
+import { HostPill } from "@/components/app-shell-v2/HostPill";
 import { UI_MODE } from "@/lib/uiMode";
 import { AuthProvider } from "@/contexts/AuthContext";
 
@@ -141,6 +142,7 @@ const App = () => {
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
+            <HostPill />
           </BrowserRouter>
         </TooltipProvider>
       </AuthProvider>
