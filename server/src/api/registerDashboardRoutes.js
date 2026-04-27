@@ -201,16 +201,18 @@ export function registerDashboardRoutes(context) {
         ),
         pool.query(
           `
-            SELECT
-              id,
-              session_code,
-              title,
-              status,
-              created_at,
-              started_at
-            FROM radar_sessions
-            WHERE created_by_user_id = $1
-            ORDER BY created_at DESC
+            SELECT DISTINCT ON (s.id)
+              s.id,
+              s.session_code,
+              s.title,
+              s.status,
+              s.created_at,
+              s.started_at
+            FROM radar_sessions s
+            LEFT JOIN radar_participants p
+              ON p.session_id = s.id AND p.user_id = $1
+            WHERE s.created_by_user_id = $1 OR p.user_id = $1
+            ORDER BY s.id, s.created_at DESC
             LIMIT 200
           `,
           [userId],

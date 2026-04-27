@@ -93,11 +93,11 @@ export function registerRadarRoutes(context) {
       const participantId = crypto.randomUUID();
       const participantResult = await pool.query(
         `
-          INSERT INTO radar_participants (id, session_id, display_name, avatar, is_host)
-          VALUES ($1, $2, $3, $4, $5)
+          INSERT INTO radar_participants (id, session_id, display_name, avatar, is_host, user_id)
+          VALUES ($1, $2, $3, $4, $5, $6)
           RETURNING *
         `,
-        [participantId, session.id, displayName, avatar, shouldBeHost],
+        [participantId, session.id, displayName, avatar, shouldBeHost, req.currentUser?.id ?? null],
       );
 
       emitRadarSessionUpdate(session.session_code, "participant_joined");

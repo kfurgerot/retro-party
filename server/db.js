@@ -186,7 +186,13 @@ export async function initDatabase() {
     "ALTER TABLE radar_participants ADD COLUMN IF NOT EXISTS progress_total INT NOT NULL DEFAULT 50;",
   );
   await pool.query(
+    "ALTER TABLE radar_participants ADD COLUMN IF NOT EXISTS user_id UUID NULL REFERENCES users(id) ON DELETE SET NULL;",
+  );
+  await pool.query(
     "CREATE INDEX IF NOT EXISTS idx_radar_participants_session_id ON radar_participants(session_id);",
+  );
+  await pool.query(
+    "CREATE INDEX IF NOT EXISTS idx_radar_participants_user_id ON radar_participants(user_id);",
   );
 
   await pool.query(`
