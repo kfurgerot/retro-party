@@ -27,6 +27,7 @@ import {
   loadJoinPage,
   loadLandingPage,
   loadAppSettingsPage,
+  loadSessionSharePage,
   loadComingSoonPage,
   loadAppShell,
 } from "@/lib/routeLoaders";
@@ -56,6 +57,7 @@ const AppTemplates = lazy(loadAppTemplatesPage);
 const JoinPage = lazy(loadJoinPage);
 const Landing = lazy(loadLandingPage);
 const AppSettings = lazy(loadAppSettingsPage);
+const SessionShare = lazy(loadSessionSharePage);
 const ComingSoon = lazy(loadComingSoonPage);
 
 const queryClient = new QueryClient();
@@ -101,6 +103,7 @@ const App = () => {
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/join" element={<JoinPage />} />
                 <Route path="/join/:code" element={<JoinPage />} />
+                <Route path="/r/:code" element={<SessionShare />} />
                 <Route path="/app" element={<AppShell />}>
                   <Route index element={<AppDashboard />} />
                   <Route path="experiences" element={<ExperienceCatalog />} />

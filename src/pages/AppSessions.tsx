@@ -7,7 +7,8 @@ import {
   type SuiteModuleId,
 } from "@/net/api";
 import { EXPERIENCES, EXPERIENCE_BY_ID } from "@/design-system/tokens";
-import { ArrowRight, Filter, Search } from "lucide-react";
+import { ArrowRight, CheckCircle2, Filter, Search, Share2 } from "lucide-react";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 type ModuleFilter = "all" | SuiteModuleId;
@@ -161,6 +162,22 @@ function FilterChip({
 function Row({ activity }: { activity: DashboardActivity }) {
   const exp = EXPERIENCE_BY_ID[activity.moduleId];
   const code = activity.sessionCode || extractCode(activity.details);
+  const [copied, setCopied] = useState(false);
+
+  const handleShare = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!code) return;
+    const url = `${window.location.origin}/r/${code}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      // ignored
+    }
+  };
+
   return (
     <Link
       to={resumePath(activity)}
@@ -190,6 +207,17 @@ function Row({ activity }: { activity: DashboardActivity }) {
         </div>
       </div>
       <StatusBadge status={activity.status} />
+      {code ? (
+        <button
+          type="button"
+          onClick={handleShare}
+          title={copied ? "Lien copié" : "Copier le lien partageable"}
+          aria-label="Partager"
+          className="ds-focus-ring hidden h-8 w-8 items-center justify-center rounded-lg border border-[var(--ds-border)] bg-[var(--ds-surface-1)] text-[var(--ds-text-muted)] opacity-0 transition hover:bg-[var(--ds-surface-2)] hover:text-[var(--ds-text-primary)] group-hover:opacity-100 sm:flex"
+        >
+          {copied ? <CheckCircle2 size={13} className="text-emerald-400" /> : <Share2 size={13} />}
+        </button>
+      ) : null}
       <span className="hidden w-24 text-right text-[11.5px] text-[var(--ds-text-faint)] sm:block">
         {activity.occurredAt ? formatRelative(activity.occurredAt) : ""}
       </span>

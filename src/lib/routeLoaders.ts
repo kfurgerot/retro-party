@@ -22,6 +22,7 @@ export const loadAppTemplatesPage = () => import("@/pages/AppTemplates");
 export const loadJoinPage = () => import("@/pages/Join");
 export const loadLandingPage = () => import("@/pages/Landing");
 export const loadAppSettingsPage = () => import("@/pages/AppSettings");
+export const loadSessionSharePage = () => import("@/pages/SessionShare");
 export const loadComingSoonPage = () => import("@/pages/ComingSoon");
 export const loadAppShell = () =>
   import("@/components/app-shell-v2/AppShell").then((m) => ({ default: m.AppShell }));
