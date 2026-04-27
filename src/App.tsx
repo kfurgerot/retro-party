@@ -26,6 +26,7 @@ import {
   loadAppTemplatesPage,
   loadJoinPage,
   loadLandingPage,
+  loadAppSettingsPage,
   loadComingSoonPage,
   loadAppShell,
 } from "@/lib/routeLoaders";
@@ -54,6 +55,7 @@ const AppSessions = lazy(loadAppSessionsPage);
 const AppTemplates = lazy(loadAppTemplatesPage);
 const JoinPage = lazy(loadJoinPage);
 const Landing = lazy(loadLandingPage);
+const AppSettings = lazy(loadAppSettingsPage);
 const ComingSoon = lazy(loadComingSoonPage);
 
 const queryClient = new QueryClient();
@@ -114,16 +116,7 @@ const App = () => {
                       />
                     }
                   />
-                  <Route
-                    path="settings"
-                    element={
-                      <ComingSoon
-                        title="Paramètres"
-                        description="Bientôt : profil, equipes, notifications et preferences d'animation."
-                        eta="Phase 7"
-                      />
-                    }
-                  />
+                  <Route path="settings" element={<AppSettings />} />
                 </Route>
                 <Route path="/home" element={<Home />} />
                 <Route path="/play" element={<Index />} />
