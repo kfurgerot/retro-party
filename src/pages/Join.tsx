@@ -3,7 +3,7 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api } from "@/net/api";
 import { ArrowRight, Sparkles } from "lucide-react";
 
-const CODE_LEN = 6;
+const CODE_LEN = 4;
 
 export default function Join() {
   const params = useParams<{ code?: string }>();
@@ -146,7 +146,7 @@ export default function Join() {
           Rejoindre une session
         </h1>
         <p className="mt-1.5 text-center text-[14px] text-[var(--ds-text-muted)]">
-          Saisissez le code à 6 caractères partagé par l'animateur.
+          Saisissez le code à 4 caractères partagé par l'animateur.
         </p>
 
         <div className="mt-8 flex items-center justify-center gap-2 sm:gap-2.5">
