@@ -1,14 +1,23 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { api, type DashboardActivity, type Team, type TeamMember } from "@/net/api";
+import {
+  api,
+  type DashboardActivity,
+  type Team,
+  type TeamInsights,
+  type TeamMember,
+} from "@/net/api";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   AlertCircle,
   ArrowLeft,
+  ArrowRight,
   Crown,
   FolderKanban,
   History,
   Mail,
+  Radar,
+  Sparkles,
   Trash2,
   UserMinus,
   UserPlus,
@@ -23,6 +32,7 @@ export default function AppTeamDetail() {
   const [team, setTeam] = useState<Team | null>(null);
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [activities, setActivities] = useState<DashboardActivity[]>([]);
+  const [insights, setInsights] = useState<TeamInsights | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
@@ -38,15 +48,17 @@ export default function AppTeamDetail() {
     setLoading(true);
     setError(null);
     try {
-      const [teamRes, dashRes] = await Promise.all([
+      const [teamRes, dashRes, insightsRes] = await Promise.all([
         api.getTeam(teamId),
         api.getDashboardActivities(teamId),
+        api.getTeamInsights(teamId),
       ]);
       setTeam(teamRes.team);
       setMembers(teamRes.members);
       setName(teamRes.team.name);
       setDescription(teamRes.team.description ?? "");
       setActivities(dashRes.modules.flatMap((m) => m.activities));
+      setInsights(insightsRes);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur");
     } finally {
@@ -270,6 +282,8 @@ export default function AppTeamDetail() {
         <StatTile label="Membres" value={members.length} icon={<Users size={14} />} />
       </section>
 
+      {insights ? <InsightsSection insights={insights} /> : null}
+
       <section>
         <h2 className="mb-3 text-[14px] font-semibold text-[var(--ds-text-primary)]">
           Membres ({members.length})
@@ -396,6 +410,148 @@ function MemberRow({
       ) : null}
     </div>
   );
+}
+
+const RADAR_AXIS_LABELS: Record<keyof TeamInsights["radar"]["axes"], string> = {
+  collaboration: "Collaboration",
+  fun: "Fun",
+  learning: "Apprentissages",
+  alignment: "Alignement",
+  ownership: "Ownership",
+  process: "Processus",
+  resources: "Ressources",
+  roles: "Rôles",
+  speed: "Vitesse",
+  value: "Valeur",
+};
+
+function InsightsSection({ insights }: { insights: TeamInsights }) {
+  const radar = insights.radar;
+  const skills = insights.skillsLatest;
+  const hasRadar = radar.sessionsCount > 0;
+  const axes = Object.entries(radar.axes) as Array<[keyof TeamInsights["radar"]["axes"], number]>;
+
+  return (
+    <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface-1)] p-5 lg:col-span-2">
+        <header className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-emerald-400/30 bg-emerald-500/10 text-emerald-300">
+              <Radar size={15} />
+            </div>
+            <div>
+              <h2 className="text-[14px] font-semibold text-[var(--ds-text-primary)]">
+                Radar moyen équipe
+              </h2>
+              <p className="text-[11.5px] text-[var(--ds-text-muted)]">
+                Moyenne des résultats Radar Party liés à l'équipe
+              </p>
+            </div>
+          </div>
+          <span className="rounded-full border border-[var(--ds-border)] bg-[var(--ds-surface-1)] px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-wider text-[var(--ds-text-muted)]">
+            {radar.sessionsCount} session{radar.sessionsCount > 1 ? "s" : ""}
+          </span>
+        </header>
+
+        {hasRadar ? (
+          <div className="mt-5 space-y-2.5">
+            {axes.map(([axis, value]) => (
+              <div key={axis} className="flex items-center gap-3">
+                <span className="w-[120px] shrink-0 text-[12px] font-medium text-[var(--ds-text-secondary)]">
+                  {RADAR_AXIS_LABELS[axis]}
+                </span>
+                <div className="relative h-2 flex-1 overflow-hidden rounded-full bg-[var(--ds-surface-0)]">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-emerald-500/70 to-emerald-300/90"
+                    style={{ width: `${Math.min(100, Math.max(0, (value / 10) * 100))}%` }}
+                  />
+                </div>
+                <span className="w-10 shrink-0 text-right font-mono text-[12px] tabular-nums text-[var(--ds-text-primary)]">
+                  {value.toFixed(1)}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-5 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface-0)] px-4 py-6 text-center text-[12.5px] text-[var(--ds-text-muted)]">
+            <Sparkles size={16} className="mx-auto text-[var(--ds-text-faint)]" />
+            <p className="mt-2">
+              Lancez une session Radar et liez-la à l'équipe pour voir la moyenne ici.
+            </p>
+          </div>
+        )}
+
+        {radar.recent.length > 0 ? (
+          <div className="mt-5 border-t border-[var(--ds-border-faint)] pt-4">
+            <p className="text-[10.5px] font-semibold uppercase tracking-wider text-[var(--ds-text-faint)]">
+              Sessions récentes
+            </p>
+            <ul className="mt-2 space-y-1">
+              {radar.recent.map((s) => (
+                <li
+                  key={s.sessionId}
+                  className="flex items-center justify-between text-[12.5px] text-[var(--ds-text-secondary)]"
+                >
+                  <span className="min-w-0 truncate">{s.title || `Code ${s.code}`}</span>
+                  <span className="text-[var(--ds-text-faint)]">
+                    {s.memberCount} part. · {formatDate(s.updatedAt)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface-1)] p-5">
+        <header className="flex items-center gap-2.5">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-cyan-400/30 bg-cyan-500/10 text-cyan-300">
+            🧩
+          </div>
+          <div>
+            <h2 className="text-[14px] font-semibold text-[var(--ds-text-primary)]">
+              Skills Matrix
+            </h2>
+            <p className="text-[11.5px] text-[var(--ds-text-muted)]">
+              Cartographie la plus récente
+            </p>
+          </div>
+        </header>
+        {skills ? (
+          <div className="mt-4 space-y-3">
+            <div className="rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface-0)] p-4">
+              <div className="text-[13px] font-medium text-[var(--ds-text-primary)]">
+                {skills.title || `Code ${skills.code}`}
+              </div>
+              <div className="mt-1 text-[11.5px] text-[var(--ds-text-faint)]">
+                <span className="font-mono">{skills.code}</span>
+                {" · "}
+                {formatDate(skills.updatedAt)}
+              </div>
+            </div>
+            <Link
+              to={`/skills-matrix?mode=join&code=${skills.code}`}
+              className="ds-focus-ring inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-lg border border-cyan-400/40 bg-cyan-500/10 px-3 text-[12.5px] font-semibold text-cyan-100 hover:bg-cyan-500/15"
+            >
+              Ouvrir la matrice
+              <ArrowRight size={12} />
+            </Link>
+          </div>
+        ) : (
+          <div className="mt-4 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface-0)] px-4 py-6 text-center text-[12.5px] text-[var(--ds-text-muted)]">
+            Aucune Skills Matrix liée à l'équipe.
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function formatDate(iso: string): string {
+  const ts = Date.parse(iso);
+  if (!Number.isFinite(ts)) return "—";
+  const d = new Date(ts);
+  return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
 }
 
 function StatTile({

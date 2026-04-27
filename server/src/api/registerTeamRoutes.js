@@ -1,3 +1,11 @@
+function safeParse(s) {
+  try {
+    return JSON.parse(s);
+  } catch {
+    return {};
+  }
+}
+
 function trimNonEmpty(value, max) {
   if (typeof value !== "string") return null;
   const t = value.trim();
@@ -269,6 +277,104 @@ export function registerTeamRoutes(context) {
 
       await pool.query(`UPDATE ${TABLE.table} SET team_id = $1 WHERE id = $2`, [teamId, itemId]);
       return res.status(204).end();
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Aggregated team insights: average team radar + latest skills session link.
+  app.get("/api/teams/:teamId/insights", requireAuth, async (req, res, next) => {
+    try {
+      const userId = req.currentUser.id;
+      const { teamId } = req.params;
+      const role = await ensureMembership(teamId, userId);
+      if (!role) return res.status(404).json({ error: "Not found" });
+
+      const [radarRes, skillsRes] = await Promise.all([
+        pool.query(
+          `
+            SELECT s.id, s.session_code, s.title, r.member_count, r.radar, r.updated_at
+            FROM radar_sessions s
+            INNER JOIN radar_team_results r ON r.session_id = s.id
+            WHERE s.team_id = $1
+            ORDER BY r.updated_at DESC
+          `,
+          [teamId],
+        ),
+        pool.query(
+          `
+            SELECT id, session_code, title, status, started_at, ended_at, updated_at
+            FROM skills_matrix_sessions
+            WHERE team_id = $1
+            ORDER BY updated_at DESC
+            LIMIT 1
+          `,
+          [teamId],
+        ),
+      ]);
+
+      const radarRows = radarRes.rows;
+      const radarSessions = radarRows.map((row) => {
+        const radar = typeof row.radar === "string" ? safeParse(row.radar) : row.radar || {};
+        return {
+          sessionId: row.id,
+          code: row.session_code,
+          title: row.title,
+          memberCount: Number(row.member_count) || 0,
+          radar,
+          updatedAt: row.updated_at,
+        };
+      });
+
+      const dimensions = [
+        "collaboration",
+        "fun",
+        "learning",
+        "alignment",
+        "ownership",
+        "process",
+        "resources",
+        "roles",
+        "speed",
+        "value",
+      ];
+
+      const averagedRadar = dimensions.reduce((acc, dim) => {
+        if (radarSessions.length === 0) {
+          acc[dim] = 0;
+          return acc;
+        }
+        const sum = radarSessions.reduce((s, r) => s + Number(r.radar?.[dim] || 0), 0);
+        acc[dim] = Math.round((sum / radarSessions.length) * 10) / 10;
+        return acc;
+      }, {});
+
+      const latestSkills = skillsRes.rows[0]
+        ? {
+            sessionId: skillsRes.rows[0].id,
+            code: skillsRes.rows[0].session_code,
+            title: skillsRes.rows[0].title,
+            status: skillsRes.rows[0].status,
+            startedAt: skillsRes.rows[0].started_at,
+            endedAt: skillsRes.rows[0].ended_at,
+            updatedAt: skillsRes.rows[0].updated_at,
+          }
+        : null;
+
+      return res.status(200).json({
+        radar: {
+          sessionsCount: radarSessions.length,
+          axes: averagedRadar,
+          recent: radarSessions.slice(0, 3).map((s) => ({
+            sessionId: s.sessionId,
+            code: s.code,
+            title: s.title,
+            memberCount: s.memberCount,
+            updatedAt: s.updatedAt,
+          })),
+        },
+        skillsLatest: latestSkills,
+      });
     } catch (err) {
       next(err);
     }

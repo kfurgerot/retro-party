@@ -290,6 +290,43 @@ export type TeamMember = {
   joinedAt: string;
 };
 
+export type TeamRadarAxes = Record<
+  | "collaboration"
+  | "fun"
+  | "learning"
+  | "alignment"
+  | "ownership"
+  | "process"
+  | "resources"
+  | "roles"
+  | "speed"
+  | "value",
+  number
+>;
+
+export type TeamInsights = {
+  radar: {
+    sessionsCount: number;
+    axes: TeamRadarAxes;
+    recent: Array<{
+      sessionId: string;
+      code: string;
+      title: string | null;
+      memberCount: number;
+      updatedAt: string;
+    }>;
+  };
+  skillsLatest: {
+    sessionId: string;
+    code: string;
+    title: string;
+    status: string;
+    startedAt: string | null;
+    endedAt: string | null;
+    updatedAt: string;
+  } | null;
+};
+
 type ApiError = { error?: string };
 
 const BACKEND_BASE = resolveBackendUrl();
@@ -450,6 +487,8 @@ export const api = {
       `/teams/${encodeURIComponent(teamId)}/members/${encodeURIComponent(memberUserId)}`,
       { method: "DELETE" },
     ),
+  getTeamInsights: (teamId: string) =>
+    request<TeamInsights>(`/teams/${encodeURIComponent(teamId)}/insights`, { method: "GET" }),
   logout: () => request<void>("/auth/logout", { method: "POST" }),
 
   listTemplates: () => request<{ items: TemplateItem[] }>("/templates", { method: "GET" }),
