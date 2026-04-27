@@ -131,6 +131,11 @@ export async function initDatabase() {
   await pool.query(
     "CREATE INDEX IF NOT EXISTS idx_rooms_status_last_active ON rooms(status, last_active_at);",
   );
+  // Phase β — persistent state snapshot for retro/poker rooms (was RAM-only).
+  await pool.query("ALTER TABLE rooms ADD COLUMN IF NOT EXISTS state_snapshot JSONB NULL;");
+  await pool.query(
+    "ALTER TABLE rooms ADD COLUMN IF NOT EXISTS state_snapshot_at TIMESTAMPTZ NULL;",
+  );
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS teams (

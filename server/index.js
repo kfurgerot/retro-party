@@ -6,6 +6,12 @@ import { Server } from "socket.io";
 import { initDatabase, pool } from "./db.js";
 import { registerApiRoutes } from "./restApi.js";
 import { sessionLifecycle } from "./src/services/sessionLifecycle.js";
+import {
+  markRetroDirty,
+  markPokerDirty,
+  hydrateRooms,
+  startSnapshotFlushLoop,
+} from "./src/services/roomSnapshot.js";
 import { registerSocketHandlers } from "./src/socket/registerSocketHandlers.js";
 import { S2C_EVENTS } from "../shared/contracts/socketEvents.js";
 import {
@@ -387,12 +393,14 @@ function sanitizePokerState(room) {
 function broadcastPokerState(code) {
   const room = pokerRooms.get(code);
   if (!room) return;
+  markPokerDirty(code);
   io.to(code).emit(S2C_EVENTS.POKER_STATE_UPDATE, sanitizePokerState(room));
 }
 
 function broadcastPokerLobby(code) {
   const room = pokerRooms.get(code);
   if (!room) return;
+  markPokerDirty(code);
   io.to(code).emit(S2C_EVENTS.POKER_LOBBY_UPDATE, {
     players: room.lobby.map((player) => ({
       socketId: player.socketId,
@@ -899,12 +907,14 @@ function sanitizeState(state) {
 function broadcastState(code) {
   const room = rooms.get(code);
   if (!room) return;
+  markRetroDirty(code);
   io.to(code).emit(S2C_EVENTS.STATE_UPDATE, sanitizeState(room.state));
 }
 
 function broadcastLobby(code) {
   const room = rooms.get(code);
   if (!room) return;
+  markRetroDirty(code);
   io.to(code).emit(S2C_EVENTS.LOBBY_UPDATE, { players: room.lobby });
 }
 
@@ -1334,9 +1344,23 @@ registerSocketHandlers({
 
 async function startServer() {
   await initDatabase();
+
+  // Phase β — rehydrate rooms persisted from previous boot.
+  try {
+    const { retroCount, pokerCount } = await hydrateRooms(pool, { rooms, pokerRooms });
+    if (retroCount + pokerCount > 0) {
+      console.log(`[snapshot] hydrated ${retroCount} retro / ${pokerCount} poker room(s)`);
+    }
+  } catch (err) {
+    console.error("[snapshot] hydrate failed", err);
+  }
+
   server.listen(PORT, () => {
     console.log(`Retro Party backend listening on :${PORT}`);
   });
+
+  // Phase β — flush dirty room snapshots every second.
+  startSnapshotFlushLoop(pool, { rooms, pokerRooms }, 1000);
 
   // Phase α — abandon idle sessions every 5 minutes.
   setInterval(
