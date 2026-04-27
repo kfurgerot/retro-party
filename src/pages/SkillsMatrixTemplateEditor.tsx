@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { PageShell } from "@/components/app-shell";
+import { EditorLayout } from "@/components/app-shell-v2/EditorLayout";
 import { Slider } from "@/components/ui/slider";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -11,10 +11,8 @@ import {
   type SkillsMatrixTemplateCategory,
   type SkillsMatrixTemplateSkill,
 } from "@/features/skillsMatrix/templateConfig";
-import { TOOL_ACCENT } from "@/lib/uiTokens";
 import { api } from "@/net/api";
 
-const SKILLS_ACCENT = TOOL_ACCENT["skills-matrix"];
 const inputCls =
   "h-11 w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 text-sm text-slate-100 placeholder:text-slate-600 outline-none transition focus:border-white/20 focus:ring-1 focus:ring-cyan-400/60";
 const selectCls =
@@ -213,61 +211,33 @@ export default function SkillsMatrixTemplateEditorPage() {
 
   if (!user) {
     return (
-      <PageShell accentColor={SKILLS_ACCENT.ambientColor} accentGlow={SKILLS_ACCENT.ambientGlow}>
-        <div className="mx-auto flex min-h-[calc(100svh-5rem)] max-w-md flex-col items-center justify-center text-center">
-          <h1 className="text-2xl font-extrabold tracking-tight text-slate-50">
-            Édition du template
-          </h1>
-          <p className="mt-2 text-sm text-slate-400">Connecte-toi pour modifier ce template.</p>
+      <EditorLayout
+        moduleId="skills-matrix"
+        backToListPath="/prepare/skills-matrix"
+        title="Édition du template"
+        subtitle="Connectez-vous pour modifier ce template."
+      >
+        <div className="rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface-1)] p-8 text-center">
           <button
             type="button"
             onClick={() => navigate("/")}
-            className="mt-5 rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-2 text-sm font-semibold text-slate-200 transition hover:bg-white/[0.08]"
+            className="ds-focus-ring inline-flex h-10 items-center gap-2 rounded-lg border border-[var(--ds-border)] bg-[var(--ds-surface-1)] px-4 text-[13px] font-medium text-[var(--ds-text-secondary)] hover:bg-[var(--ds-surface-2)] hover:text-[var(--ds-text-primary)]"
           >
-            Retour au portail
+            Retour à l'accueil
           </button>
         </div>
-      </PageShell>
+      </EditorLayout>
     );
   }
 
   return (
-    <PageShell
-      accentColor={SKILLS_ACCENT.ambientColor}
-      accentGlow={SKILLS_ACCENT.ambientGlow}
-      maxWidth="4xl"
+    <EditorLayout
+      moduleId="skills-matrix"
+      templateName={templateName}
+      backToListPath="/prepare/skills-matrix"
+      subtitle="Ajustez l'échelle, les catégories et les compétences de ce template."
+      error={error}
     >
-      <div className="mb-7 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-sky-600 text-sm">
-            🧩
-          </div>
-          <span className="text-xs font-bold uppercase tracking-[0.12em] text-cyan-300">
-            Matrice de Compétences
-          </span>
-        </div>
-        <button
-          type="button"
-          onClick={() => navigate("/prepare/skills-matrix")}
-          className="rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-xs text-slate-400 transition hover:bg-white/[0.06] hover:text-slate-200"
-        >
-          Retour templates
-        </button>
-      </div>
-
-      <h1 className="mb-1 text-2xl font-extrabold tracking-tight text-slate-50 sm:text-3xl">
-        Éditer le template
-      </h1>
-      <p className="mb-6 text-sm text-slate-400">
-        Ajuste l'échelle, les catégories et les compétences de ce template.
-      </p>
-
-      {error && (
-        <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-          {error}
-        </div>
-      )}
-
       <div className="space-y-4 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 sm:p-5">
         <div className="grid gap-3 md:grid-cols-2">
           <input
@@ -583,6 +553,6 @@ export default function SkillsMatrixTemplateEditorPage() {
           {savingTemplate ? "Enregistrement..." : "Enregistrer"}
         </button>
       </div>
-    </PageShell>
+    </EditorLayout>
   );
 }

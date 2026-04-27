@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { api, TemplateItem, TemplateQuestion } from "@/net/api";
-import { PageShell } from "@/components/app-shell";
+import { EditorLayout } from "@/components/app-shell-v2/EditorLayout";
 import { useAuth } from "@/contexts/AuthContext";
 
 const inputCls =
@@ -476,56 +476,13 @@ const PokerTemplateEditorPage = () => {
   };
 
   return (
-    <PageShell
-      accentColor="rgba(139,92,246,0.08)"
-      accentGlow="rgba(139,92,246,0.04)"
-      maxWidth="4xl"
+    <EditorLayout
+      moduleId="planning-poker"
+      templateName={template?.name}
+      loading={loading}
+      error={error}
+      backToListPath="/prepare/planning-poker"
     >
-      {/* Header */}
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-indigo-500 text-sm">
-            🃏
-          </div>
-          <span className="text-xs font-bold uppercase tracking-[0.12em] text-indigo-400">
-            Agile Suite
-          </span>
-          <span className="text-slate-700">/</span>
-          <span className="text-xs font-bold uppercase tracking-[0.12em] text-violet-400">
-            Planning Poker
-          </span>
-          {template && (
-            <>
-              <span className="text-slate-700">/</span>
-              <span className="max-w-[200px] truncate text-xs text-slate-400">{template.name}</span>
-            </>
-          )}
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => navigate("/prepare/planning-poker")}
-            className="h-9 rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 text-sm font-semibold text-slate-300 transition hover:bg-white/[0.07] hover:text-white"
-          >
-            Mes templates
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate("/")}
-            className="h-9 rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 text-sm font-semibold text-slate-400 transition hover:bg-white/[0.07] hover:text-slate-200"
-          >
-            Accueil
-          </button>
-        </div>
-      </div>
-
-      {loading && <p className="py-8 text-center text-sm text-slate-500">Chargement...</p>}
-      {error && (
-        <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-          {error}
-        </div>
-      )}
-
       {!loading && template && (
         <div className="space-y-5">
           {/* Template info */}
@@ -759,7 +716,7 @@ const PokerTemplateEditorPage = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </PageShell>
+    </EditorLayout>
   );
 };
 

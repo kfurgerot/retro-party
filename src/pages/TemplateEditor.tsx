@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { api, TemplateItem, TemplateQuestion } from "@/net/api";
 import { fr } from "@/i18n/fr";
-import { PageShell } from "@/components/app-shell";
+import { EditorLayout } from "@/components/app-shell-v2/EditorLayout";
 import { cn } from "@/lib/utils";
 
 type ThemeTab = "all" | "blue" | "green" | "red" | "violet" | "bonus" | "other";
@@ -366,61 +366,14 @@ const TemplateEditorPage = () => {
     "h-11 w-full rounded-xl border border-white/[0.08] bg-[#0d0d1a] px-3 text-sm text-slate-100 outline-none focus:border-white/20 focus:ring-1 focus:ring-indigo-400/50 transition";
 
   return (
-    <PageShell
-      accentColor="rgba(236,72,153,0.08)"
-      accentGlow="rgba(236,72,153,0.04)"
-      maxWidth="5xl"
+    <EditorLayout
+      moduleId="retro-party"
+      templateName={template?.name}
+      loading={loading}
+      error={error || (!validTemplateId ? fr.templateEditor.invalidTemplate : null)}
+      backToListPath="/prepare/retro-party"
+      backToListLabel={fr.templateEditor.myTemplates}
     >
-      {/* Header */}
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 text-sm">
-            ⚡
-          </div>
-          <span className="text-xs font-bold uppercase tracking-[0.12em] text-indigo-400">
-            Agile Suite
-          </span>
-          <span className="text-slate-700">/</span>
-          <span className="text-xs font-bold uppercase tracking-[0.12em] text-pink-400">
-            Préparer
-          </span>
-          {template && (
-            <>
-              <span className="text-slate-700">/</span>
-              <span className="max-w-[200px] truncate text-xs text-slate-400">{template.name}</span>
-            </>
-          )}
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => navigate("/prepare/retro-party")}
-            className="h-9 rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 text-sm font-semibold text-slate-300 transition hover:bg-white/[0.07] hover:text-white"
-          >
-            {fr.templateEditor.myTemplates}
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate("/")}
-            className="h-9 rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 text-sm font-semibold text-slate-400 transition hover:bg-white/[0.07] hover:text-slate-200"
-          >
-            {fr.templateEditor.home}
-          </button>
-        </div>
-      </div>
-
-      {loading && (
-        <p className="py-8 text-center text-sm text-slate-500">{fr.templateEditor.loading}</p>
-      )}
-      {!validTemplateId && (
-        <p className="text-sm text-red-300">{fr.templateEditor.invalidTemplate}</p>
-      )}
-      {error && (
-        <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-          {error}
-        </div>
-      )}
-
       {!loading && template && (
         <div className="space-y-5">
           {/* Template info */}
@@ -744,7 +697,7 @@ const TemplateEditorPage = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </PageShell>
+    </EditorLayout>
   );
 };
 
