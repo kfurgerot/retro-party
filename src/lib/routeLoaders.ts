@@ -15,3 +15,12 @@ export const loadPokerTemplateEditorPage = () => import("@/pages/PokerTemplateEd
 export const loadResetPasswordPage = () => import("@/pages/ResetPassword");
 export const loadNotFoundPage = () => import("@/pages/NotFound");
 export const loadTermsPage = () => import("@/pages/Terms");
+export const loadAppDashboardPage = () => import("@/pages/AppDashboard");
+export const loadExperienceCatalogPage = () => import("@/pages/ExperienceCatalog");
+export const loadAppSessionsPage = () => import("@/pages/AppSessions");
+export const loadAppTemplatesPage = () => import("@/pages/AppTemplates");
+export const loadJoinPage = () => import("@/pages/Join");
+export const loadLandingPage = () => import("@/pages/Landing");
+export const loadComingSoonPage = () => import("@/pages/ComingSoon");
+export const loadAppShell = () =>
+  import("@/components/app-shell-v2/AppShell").then((m) => ({ default: m.AppShell }));

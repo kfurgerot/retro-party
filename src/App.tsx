@@ -20,6 +20,14 @@ import {
   loadTemplateEditorPage,
   loadPokerTemplateEditorPage,
   loadTermsPage,
+  loadAppDashboardPage,
+  loadExperienceCatalogPage,
+  loadAppSessionsPage,
+  loadAppTemplatesPage,
+  loadJoinPage,
+  loadLandingPage,
+  loadComingSoonPage,
+  loadAppShell,
 } from "@/lib/routeLoaders";
 import { UI_MODE } from "@/lib/uiMode";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -39,6 +47,14 @@ const PokerTemplateEditorPage = lazy(loadPokerTemplateEditorPage);
 const ResetPasswordPage = lazy(loadResetPasswordPage);
 const TermsPage = lazy(loadTermsPage);
 const NotFound = lazy(loadNotFoundPage);
+const AppShell = lazy(loadAppShell);
+const AppDashboard = lazy(loadAppDashboardPage);
+const ExperienceCatalog = lazy(loadExperienceCatalogPage);
+const AppSessions = lazy(loadAppSessionsPage);
+const AppTemplates = lazy(loadAppTemplatesPage);
+const JoinPage = lazy(loadJoinPage);
+const Landing = lazy(loadLandingPage);
+const ComingSoon = lazy(loadComingSoonPage);
 
 const queryClient = new QueryClient();
 
@@ -78,8 +94,37 @@ const App = () => {
           <BrowserRouter>
             <Suspense fallback={<RouteFallback />}>
               <Routes>
-                <Route path="/" element={<Portal />} />
+                <Route path="/" element={<Landing />} />
+                <Route path="/portal-legacy" element={<Portal />} />
                 <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/join" element={<JoinPage />} />
+                <Route path="/join/:code" element={<JoinPage />} />
+                <Route path="/app" element={<AppShell />}>
+                  <Route index element={<AppDashboard />} />
+                  <Route path="experiences" element={<ExperienceCatalog />} />
+                  <Route path="sessions" element={<AppSessions />} />
+                  <Route path="templates" element={<AppTemplates />} />
+                  <Route
+                    path="teams"
+                    element={
+                      <ComingSoon
+                        title="Équipes"
+                        description="Bientôt : invitez vos equipes, suivez leur maturite et leurs competences au fil du temps."
+                        eta="Phase 3"
+                      />
+                    }
+                  />
+                  <Route
+                    path="settings"
+                    element={
+                      <ComingSoon
+                        title="Paramètres"
+                        description="Bientôt : profil, equipes, notifications et preferences d'animation."
+                        eta="Phase 7"
+                      />
+                    }
+                  />
+                </Route>
                 <Route path="/home" element={<Home />} />
                 <Route path="/play" element={<Index />} />
                 <Route path="/prepare" element={<Navigate to="/prepare/retro-party" replace />} />
