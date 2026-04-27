@@ -3,7 +3,9 @@ export function registerSocketHandlers(deps) {
   const {
     io,
     pool,
+    crypto,
     sessionLifecycle,
+    persistQuickRoom,
     attachSocketToRadarRoom,
     detachSocketFromRadarRoom,
     attachSocketToSkillsMatrixRoom,
@@ -108,6 +110,8 @@ export function registerSocketHandlers(deps) {
       });
       socketToPokerRoom.set(socket.id, code);
       socket.join(code);
+      // Phase β.2 — persist quick room so /api/sessions/:code/* resolve it.
+      void persistQuickRoom?.(pool, crypto, code, "poker");
       socket.emit(S2C_EVENTS.POKER_ROOM_CREATED, { code });
       broadcastPokerLobby(code);
       broadcastPokerState(code);
@@ -543,6 +547,8 @@ export function registerSocketHandlers(deps) {
       });
       socketToRoom.set(socket.id, code);
       socket.join(code);
+      // Phase β.2 — persist quick room so /api/sessions/:code/* resolve it.
+      void persistQuickRoom?.(pool, crypto, code, "retro");
       socket.emit(S2C_EVENTS.ROOM_CREATED, { code });
       broadcastLobby(code);
       broadcastState(code);

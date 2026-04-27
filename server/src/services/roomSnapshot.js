@@ -195,6 +195,23 @@ function safeParse(s) {
   }
 }
 
+// Phase β.2 — persist quick (non-template) retro/poker rooms so the lifecycle
+// service can resolve them. Fire-and-forget; conflicts are ignored.
+export async function persistQuickRoom(pool, crypto, code, kind) {
+  if (!code || !crypto || !pool) return;
+  const module = kind === "poker" ? "planning-poker" : "retro-party";
+  try {
+    await pool.query(
+      `INSERT INTO rooms (id, room_code, mode, config_snapshot, status)
+       VALUES ($1, $2, 'quick', $3::jsonb, 'lobby')
+       ON CONFLICT (room_code) DO NOTHING`,
+      [crypto.randomUUID(), code, JSON.stringify({ baseConfig: { module } })],
+    );
+  } catch (err) {
+    console.error("[snapshot] persistQuickRoom failed", code, err.message);
+  }
+}
+
 export function startSnapshotFlushLoop(pool, maps, intervalMs = 1000) {
   return setInterval(() => {
     flushDirtyRooms(pool, maps).catch((err) => console.error("[snapshot] flush loop failed", err));

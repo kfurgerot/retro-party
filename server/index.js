@@ -11,6 +11,7 @@ import {
   markPokerDirty,
   hydrateRooms,
   startSnapshotFlushLoop,
+  persistQuickRoom,
 } from "./src/services/roomSnapshot.js";
 import { registerSocketHandlers } from "./src/socket/registerSocketHandlers.js";
 import { S2C_EVENTS } from "../shared/contracts/socketEvents.js";
@@ -1276,7 +1277,9 @@ function attachSocketToExistingPlayer(code, room, player, socket) {
 registerSocketHandlers({
   io,
   pool,
+  crypto,
   sessionLifecycle,
+  persistQuickRoom,
   attachSocketToRadarRoom,
   detachSocketFromRadarRoom,
   attachSocketToSkillsMatrixRoom,
