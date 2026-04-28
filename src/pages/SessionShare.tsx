@@ -13,7 +13,8 @@ type Resolved = {
 const RESOLVE_TO_MODULE: Record<string, SuiteModuleId> = {
   "skills-matrix": "skills-matrix",
   "radar-party": "radar-party",
-  play: "retro-party",
+  "planning-poker": "planning-poker",
+  "retro-party": "retro-party",
 };
 
 const PERKS_BY_MODULE: Record<SuiteModuleId, string[]> = {

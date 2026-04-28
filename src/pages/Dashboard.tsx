@@ -22,7 +22,7 @@ const formatDateTime = (value: string | null) => {
 };
 
 const statusLabel = (value: string) => {
-  if (value === "started") return "Démarrée";
+  if (value === "live") return "Démarrée";
   if (value === "ended") return "Terminée";
   if (value === "lobby") return "Lobby";
   if (value === "open") return "Ouverte";
@@ -66,6 +66,8 @@ export default function Dashboard() {
         navigate(`/skills-matrix?${params.toString()}`);
       } else if (result.module === "radar-party") {
         navigate(`/radar-party?mode=join&code=${result.code}`);
+      } else if (result.module === "planning-poker") {
+        navigate(`/play?experience=planning-poker&mode=join&code=${result.code}`);
       } else {
         navigate(`/play?mode=join&code=${result.code}`);
       }

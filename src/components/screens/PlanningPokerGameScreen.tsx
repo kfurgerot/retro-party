@@ -57,7 +57,7 @@ type Props = {
   onRevealVotes: () => void;
   onResetVotes: () => void;
   onRevoteCurrentStory: () => void;
-  onLeave: () => void;
+  onLeave?: () => void;
   onRoleChange: (role: PlanningPokerRole) => void;
   onVoteSystemChange: (voteSystem: PlanningPokerState["voteSystem"]) => void;
   onStoryTitleChange: (storyTitle: string) => void;
@@ -951,13 +951,14 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
   };
 
   const requestLeave = () => {
+    if (!onLeave) return;
     setMobileActionsOpen(false);
     setLeaveDialogOpen(true);
   };
 
   const confirmLeave = () => {
     setLeaveDialogOpen(false);
-    onLeave();
+    onLeave?.();
   };
 
   const requestResetVotes = () => {
@@ -1281,15 +1282,17 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                   <span className="truncate">{state.roomCode}</span>
                 </div>
               ) : null}
-              <Button
-                className={cn(
-                  "hidden xl:inline-flex h-9 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 text-xs font-semibold text-rose-300 hover:bg-rose-500/20 hover:text-rose-200",
-                )}
-                variant="secondary"
-                onClick={requestLeave}
-              >
-                {fr.gameScreen.leaveGame}
-              </Button>
+              {onLeave ? (
+                <Button
+                  className={cn(
+                    "hidden xl:inline-flex h-9 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 text-xs font-semibold text-rose-300 hover:bg-rose-500/20 hover:text-rose-200",
+                  )}
+                  variant="secondary"
+                  onClick={requestLeave}
+                >
+                  {fr.gameScreen.leaveGame}
+                </Button>
+              ) : null}
             </div>
           </div>
         </header>
@@ -1928,17 +1931,19 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                   >
                     {hostMainActionLabel}
                   </Button>
-                  <Button
-                    variant="secondary"
-                    className={cn(
-                      MOBILE_BTN,
-                      "rounded-xl border text-xs font-semibold",
-                      CTA_DANGER,
-                    )}
-                    onClick={requestLeave}
-                  >
-                    {fr.onlineLobby.leaveParty}
-                  </Button>
+                  {onLeave ? (
+                    <Button
+                      variant="secondary"
+                      className={cn(
+                        MOBILE_BTN,
+                        "rounded-xl border text-xs font-semibold",
+                        CTA_DANGER,
+                      )}
+                      onClick={requestLeave}
+                    >
+                      {fr.onlineLobby.leaveParty}
+                    </Button>
+                  ) : null}
                 </>
               ) : (
                 <>
@@ -1956,17 +1961,19 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
                   >
                     Menu
                   </Button>
-                  <Button
-                    variant="secondary"
-                    className={cn(
-                      MOBILE_BTN,
-                      "rounded-xl border text-xs font-semibold",
-                      CTA_DANGER,
-                    )}
-                    onClick={requestLeave}
-                  >
-                    {fr.onlineLobby.leaveParty}
-                  </Button>
+                  {onLeave ? (
+                    <Button
+                      variant="secondary"
+                      className={cn(
+                        MOBILE_BTN,
+                        "rounded-xl border text-xs font-semibold",
+                        CTA_DANGER,
+                      )}
+                      onClick={requestLeave}
+                    >
+                      {fr.onlineLobby.leaveParty}
+                    </Button>
+                  ) : null}
                 </>
               )}
             </div>

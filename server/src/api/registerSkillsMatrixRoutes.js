@@ -150,7 +150,7 @@ function serializeSession(row) {
     title: row.title,
     scaleMin: Number(row.scale_min),
     scaleMax: Number(row.scale_max),
-    status: row.status === "ended" ? "ended" : row.status === "started" ? "started" : "lobby",
+    status: row.status === "ended" ? "ended" : row.status === "live" ? "live" : "lobby",
     startedAt: row.started_at ?? null,
     createdByUserId: row.created_by_user_id,
     createdAt: row.created_at,
@@ -739,7 +739,14 @@ export function registerSkillsMatrixRoutes(context) {
       const { session, me } = await getSessionContext(pool, code, participantId);
       if (!session) return res.status(404).json({ error: "Not found" });
       if (!me || !me.is_admin) return res.status(403).json({ error: "Unauthorized" });
-      if (session.status === "lobby") return res.status(400).json({ error: "Session not started" });
+      if (session.status === "ended") {
+        const payload = await buildSessionSnapshot({
+          pool,
+          session,
+          currentParticipantId: participantId,
+        });
+        return res.status(200).json(payload);
+      }
 
       await pool.query(
         `

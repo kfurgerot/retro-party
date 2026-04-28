@@ -19,6 +19,29 @@ const TABLES = {
 
 const VALID_STATUSES = new Set(["lobby", "live", "ended", "abandoned"]);
 
+function normalizeJsonObject(value) {
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+}
+
+function normalizeRoomModule(row) {
+  const configSnapshot = normalizeJsonObject(row.config_snapshot);
+  const baseConfig = normalizeJsonObject(configSnapshot.baseConfig);
+  const snapshotModule = typeof baseConfig.module === "string" ? baseConfig.module : "";
+  const templateModule =
+    typeof row.source_template_module === "string" ? row.source_template_module : "";
+  return templateModule === "planning-poker" || snapshotModule === "planning-poker"
+    ? "planning-poker"
+    : "retro-party";
+}
+
 async function resolveSessionByCode(pool, code) {
   const raw = String(code || "")
     .trim()
@@ -27,16 +50,28 @@ async function resolveSessionByCode(pool, code) {
   const candidates = [
     { module: "skills-matrix", ...TABLES["skills-matrix"] },
     { module: "radar-party", ...TABLES["radar-party"] },
-    { module: "retro-party", ...TABLES["retro-party"] }, // covers planning-poker too
+    { module: "retro-party", ...TABLES["retro-party"] }, // rooms can resolve to retro or poker
   ];
   for (const c of candidates) {
+    const isRoomTable = c.table === "rooms";
     const result = await pool.query(
-      `SELECT id, status, ${c.ownerCol} AS owner_user_id FROM ${c.table} WHERE ${c.codeCol} = $1 LIMIT 1`,
+      isRoomTable
+        ? `SELECT r.id,
+                  r.status,
+                  r.${c.ownerCol} AS owner_user_id,
+                  r.config_snapshot,
+                  t.base_config->>'module' AS source_template_module
+             FROM rooms r
+             LEFT JOIN game_templates t ON t.id = r.source_template_id
+            WHERE r.${c.codeCol} = $1
+            LIMIT 1`
+        : `SELECT id, status, ${c.ownerCol} AS owner_user_id FROM ${c.table} WHERE ${c.codeCol} = $1 LIMIT 1`,
       [raw],
     );
     if (result.rows[0]) {
+      const module = isRoomTable ? normalizeRoomModule(result.rows[0]) : c.module;
       return {
-        module: c.module,
+        module,
         table: c.table,
         codeCol: c.codeCol,
         ownerCol: c.ownerCol,

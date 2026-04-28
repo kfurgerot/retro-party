@@ -155,7 +155,7 @@ export type RadarSessionInfo = {
   title: string | null;
   facilitatorName: string | null;
   hostParticipates: boolean;
-  status: "lobby" | "started";
+  status: "lobby" | "live" | "ended" | "abandoned";
   startedAt: string | null;
   createdAt?: string;
 };
@@ -179,7 +179,7 @@ export type SkillsMatrixSession = {
   title: string;
   scaleMin: number;
   scaleMax: number;
-  status: "lobby" | "started" | "ended";
+  status: "lobby" | "live" | "ended" | "abandoned";
   startedAt: string | null;
   endedAt: string | null;
   createdByUserId: string | null;
@@ -379,6 +379,8 @@ const ERROR_TRANSLATIONS: Record<string, string> = {
   "Mail service not configured": "Service d'email non configure",
   "Internal server error": "Erreur interne du serveur",
   "Invalid or expired token": "Lien invalide ou expire",
+  "Session ended": "Cette session est terminee",
+  "Session abandoned": "Cette session n'est plus active",
   "OAuth provider is not configured": "Fournisseur OAuth non configure",
   "OAuth authentication failed": "Echec de l'authentification OAuth",
 };
@@ -488,7 +490,7 @@ export const api = {
       body: JSON.stringify(payload),
     }),
   resolveRoom: (code: string) =>
-    request<{ module: "skills-matrix" | "radar-party" | "play"; code: string }>(
+    request<{ module: SuiteModuleId; code: string }>(
       `/resolve-room?code=${encodeURIComponent(code.trim().toUpperCase())}`,
       { method: "GET" },
     ),
@@ -514,9 +516,12 @@ export const api = {
     request<void>(`/sessions/${encodeURIComponent(code.trim().toUpperCase())}/heartbeat`, {
       method: "POST",
     }),
-  endSession: (code: string) =>
+  endSession: (code: string, participantSessionId?: string | null) =>
     request<void>(`/sessions/${encodeURIComponent(code.trim().toUpperCase())}/end`, {
       method: "POST",
+      headers: participantSessionId
+        ? { "X-Participant-Session-Id": participantSessionId }
+        : undefined,
     }),
   restoreSession: (code: string) =>
     request<void>(`/sessions/${encodeURIComponent(code.trim().toUpperCase())}/restore`, {
@@ -732,6 +737,13 @@ export const api = {
     request<{
       session: Pick<RadarSessionInfo, "id" | "code" | "status" | "startedAt" | "hostParticipates">;
     }>(`/radar/sessions/${encodeURIComponent(code)}/start`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  radarEndSession: (code: string, payload: { participantId: string }) =>
+    request<{
+      session: Pick<RadarSessionInfo, "id" | "code" | "status" | "startedAt" | "hostParticipates">;
+    }>(`/radar/sessions/${encodeURIComponent(code)}/end`, {
       method: "POST",
       body: JSON.stringify(payload),
     }),

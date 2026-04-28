@@ -6,11 +6,15 @@ import { PlanningPokerReadyScreen } from "@/components/screens/PlanningPokerRead
 import { PlanningPokerGameScreen } from "@/components/screens/PlanningPokerGameScreen";
 import { usePlanningPokerOnlineState } from "@/hooks/usePlanningPokerOnlineState";
 import { useProfile } from "@/hooks/useProfile";
+import { useAuth } from "@/contexts/AuthContext";
+import { setHostSession } from "@/lib/hostSession";
 import { PlanningPokerRole, PlanningPokerVoteSystem } from "@/types/planningPoker";
 import { TOOL_ACCENT } from "@/lib/uiTokens";
 import { fr } from "@/i18n/fr";
 
 const ACCENT = TOOL_ACCENT["planning-poker"];
+
+const cleanDisplayName = (value: string) => value.replace(/\s+/g, " ").trim().slice(0, 16);
 
 type InitialParams = {
   mode: "host" | "join";
@@ -25,6 +29,7 @@ type InitialParams = {
 const PlanningPokerPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
 
   const initialParams = useMemo<InitialParams>(() => {
     const params = new URLSearchParams(location.search);
@@ -54,10 +59,13 @@ const PlanningPokerPage: React.FC = () => {
     navigate("/?stage=select-experience", { replace: true });
   }, [location.key, navigate, online.leaveRoom]);
 
-  const [autoSubmitKey] = useState<number>(() => (initialParams.autoSubmit ? Date.now() : 0));
+  const connectedDisplayName = cleanDisplayName(user?.displayName || "");
+  const [autoSubmitKey, setAutoSubmitKey] = useState<number>(() =>
+    initialParams.autoSubmit ? Date.now() : 0,
+  );
   const { profile, setProfile } = useProfile(
     "planning-poker",
-    initialParams.name || undefined,
+    initialParams.name || connectedDisplayName || undefined,
     initialParams.avatar,
   );
   const forceProfileBeforeJoin = useMemo(
@@ -70,8 +78,48 @@ const PlanningPokerPage: React.FC = () => {
   const [onboardingInitialStep, setOnboardingInitialStep] = useState<1 | 2>(() =>
     forceProfileBeforeJoin ? 1 : profile.name ? 2 : 1,
   );
+  const [connectedLaunchProfileApplied, setConnectedLaunchProfileApplied] = useState(false);
   const [voteSystem, setVoteSystem] = useState<PlanningPokerVoteSystem>("fibonacci");
   const [role, setRole] = useState<PlanningPokerRole>("player");
+
+  useEffect(() => {
+    if (!online.code) {
+      setHostSession(null);
+      return;
+    }
+    setHostSession({
+      code: online.code,
+      moduleId: "planning-poker",
+      isHost: online.isHost,
+      participantSessionId: online.sessionId,
+    });
+    return () => setHostSession(null);
+  }, [online.code, online.isHost, online.sessionId]);
+
+  useEffect(() => {
+    if (connectedLaunchProfileApplied || authLoading) return;
+    if (
+      !connectedDisplayName ||
+      initialParams.mode !== "host" ||
+      initialParams.direct ||
+      online.code
+    ) {
+      return;
+    }
+    setProfile({ name: connectedDisplayName, avatar: profile.avatar });
+    setOnboardingInitialStep(2);
+    setShowOnboarding(true);
+    setConnectedLaunchProfileApplied(true);
+  }, [
+    authLoading,
+    connectedDisplayName,
+    connectedLaunchProfileApplied,
+    initialParams.direct,
+    initialParams.mode,
+    online.code,
+    profile.avatar,
+    setProfile,
+  ]);
 
   const leaveSession = () => {
     online.leaveRoom();
@@ -95,6 +143,7 @@ const PlanningPokerPage: React.FC = () => {
             setProfile({ name, avatar });
             setOnboardingInitialStep(1);
             setShowOnboarding(false);
+            setAutoSubmitKey(Date.now());
           }}
           onBack={() => navigate("/")}
         />
@@ -120,7 +169,7 @@ const PlanningPokerPage: React.FC = () => {
             }}
             onStartGame={() => {}}
             canStart={false}
-            initialName={profile.name || initialParams.name || undefined}
+            initialName={profile.name || initialParams.name || connectedDisplayName || undefined}
             initialAvatar={profile.avatar ?? initialParams.avatar}
             initialMode={initialParams.mode}
             initialCode={initialParams.code}
@@ -144,7 +193,6 @@ const PlanningPokerPage: React.FC = () => {
         voteSystem={online.state.voteSystem || voteSystem}
         myRole={online.myRole || role}
         isHost={online.isHost}
-        onLeave={leaveSession}
         onStart={online.startSession}
         onVoteSystemChange={(next) => {
           setVoteSystem(next);
@@ -172,7 +220,6 @@ const PlanningPokerPage: React.FC = () => {
       onRevealVotes={online.revealVotes}
       onResetVotes={online.resetVotes}
       onRevoteCurrentStory={online.revoteCurrentStory}
-      onLeave={leaveSession}
       onRoleChange={online.setRole}
       onVoteSystemChange={online.setVoteSystem}
       onStoryTitleChange={online.setStoryTitle}
@@ -180,7 +227,6 @@ const PlanningPokerPage: React.FC = () => {
       onSelectPokerStoryByTitle={online.selectPokerStoryByTitle}
       onUpdatePreparedStoryTitle={online.updatePreparedStoryTitle}
       onAddPreparedStory={online.addPreparedStory}
-      onEndSession={online.endSession}
     />
   );
 };

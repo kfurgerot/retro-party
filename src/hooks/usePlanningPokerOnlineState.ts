@@ -515,6 +515,7 @@ export function usePlanningPokerOnlineState() {
     state,
     history,
     myPlayerId,
+    sessionId: sessionRef.current?.sessionId ?? null,
     myRole,
     myVote,
     isHost,

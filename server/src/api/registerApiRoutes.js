@@ -439,6 +439,8 @@ export function registerApiRoutes({
     requireAuth,
     crypto,
     io,
+    rooms,
+    pokerRooms,
   });
 
   registerTeamRoutes({

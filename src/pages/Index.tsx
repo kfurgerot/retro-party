@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useGameState } from "@/hooks/useGameState";
 import { useOnlineGameState } from "@/hooks/useOnlineGameState";
 import { useProfile } from "@/hooks/useProfile";
+import { useAuth } from "@/contexts/AuthContext";
 import { LobbyScreen } from "@/components/screens/LobbyScreen";
 import { OnlineLobbyScreen } from "@/components/screens/OnlineLobbyScreen";
 import { OnlineOnboardingScreen } from "@/components/screens/OnlineOnboardingScreen";
@@ -25,9 +26,10 @@ type InitialParams = {
   experience: "planning-poker" | "retro-party";
 };
 
+const cleanDisplayName = (value: string) => value.replace(/\s+/g, " ").trim().slice(0, 16);
+
 const Index: React.FC = () => {
   const location = useLocation();
-  const navigate = useNavigate();
   const initialParams = useMemo<InitialParams>(() => {
     const params = new URLSearchParams(location.search);
     const mode = params.get("mode");
@@ -53,6 +55,14 @@ const Index: React.FC = () => {
     return <PlanningPokerPage />;
   }
 
+  return <RetroPartyPage initialParams={initialParams} />;
+};
+
+const RetroPartyPage: React.FC<{ initialParams: InitialParams }> = ({ initialParams }) => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
+
   const isOnline = useMemo(() => {
     if (typeof window === "undefined") return false;
 
@@ -72,11 +82,14 @@ const Index: React.FC = () => {
 
   // Online state (rooms + websocket)
   const online = useOnlineGameState();
-  const [autoSubmitKey] = useState<number>(() => (initialParams.autoSubmit ? Date.now() : 0));
+  const connectedDisplayName = cleanDisplayName(user?.displayName || "");
+  const [autoSubmitKey, setAutoSubmitKey] = useState<number>(() =>
+    initialParams.autoSubmit ? Date.now() : 0,
+  );
   const [screenTransitionStartMark] = useState(() => `screen-transition-start-${Date.now()}`);
   const { profile: onboardingProfile, setProfile: setOnboardingProfile } = useProfile(
     "retro-party",
-    initialParams.name || undefined,
+    initialParams.name || connectedDisplayName || undefined,
     initialParams.avatar,
   );
   const forceProfileBeforeJoin = useMemo(
@@ -89,7 +102,33 @@ const Index: React.FC = () => {
   const [onboardingInitialStep, setOnboardingInitialStep] = useState<1 | 2>(() =>
     forceProfileBeforeJoin ? 1 : onboardingProfile.name ? 2 : 1,
   );
+  const [connectedLaunchProfileApplied, setConnectedLaunchProfileApplied] = useState(false);
   const accent = TOOL_ACCENT["retro-party"];
+
+  React.useEffect(() => {
+    if (connectedLaunchProfileApplied || authLoading) return;
+    if (
+      !connectedDisplayName ||
+      initialParams.mode !== "host" ||
+      initialParams.direct ||
+      online.code
+    ) {
+      return;
+    }
+    setOnboardingProfile({ name: connectedDisplayName, avatar: onboardingProfile.avatar });
+    setOnboardingInitialStep(2);
+    setShowOnlineOnboarding(true);
+    setConnectedLaunchProfileApplied(true);
+  }, [
+    authLoading,
+    connectedDisplayName,
+    connectedLaunchProfileApplied,
+    initialParams.direct,
+    initialParams.mode,
+    onboardingProfile.avatar,
+    online.code,
+    setOnboardingProfile,
+  ]);
 
   React.useEffect(() => {
     perfMark(screenTransitionStartMark);
@@ -101,9 +140,14 @@ const Index: React.FC = () => {
       return;
     }
     const isPoker = new URLSearchParams(location.search).get("experience") === "planning-poker";
-    setHostSession({ code: online.code, moduleId: isPoker ? "planning-poker" : "retro-party" });
+    setHostSession({
+      code: online.code,
+      moduleId: isPoker ? "planning-poker" : "retro-party",
+      isHost: online.isHost,
+      participantSessionId: online.sessionId,
+    });
     return () => setHostSession(null);
-  }, [online.code, location.search]);
+  }, [online.code, online.isHost, online.sessionId, location.search]);
 
   React.useEffect(() => {
     const view = isOnline ? online.gameState.phase : local.gameState.phase;
@@ -140,6 +184,7 @@ const Index: React.FC = () => {
               setOnboardingProfile({ name, avatar });
               setOnboardingInitialStep(1);
               setShowOnlineOnboarding(false);
+              setAutoSubmitKey(Date.now());
             }}
             onBack={() => {
               navigate("/");
@@ -166,7 +211,9 @@ const Index: React.FC = () => {
             }}
             onStartGame={online.startGame}
             canStart={online.isHost}
-            initialName={onboardingProfile.name || initialParams.name || undefined}
+            initialName={
+              onboardingProfile.name || initialParams.name || connectedDisplayName || undefined
+            }
             initialAvatar={onboardingProfile.avatar ?? initialParams.avatar}
             initialMode={initialParams.mode}
             initialCode={initialParams.code}
@@ -214,7 +261,6 @@ const Index: React.FC = () => {
         roomCode={online.code}
         roomNotice={online.roomNotice}
         myPlayerId={online.myPlayerId}
-        onLeave={leaveOnlineSession}
         onRollDice={online.rollDice}
         onMovePlayer={online.movePlayer}
         onChoosePath={online.choosePath}

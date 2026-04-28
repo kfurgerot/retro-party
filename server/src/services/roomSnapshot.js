@@ -31,6 +31,7 @@ function serializeRetroRoom(room) {
     state: room.state ?? null,
     lobby: (room.lobby ?? []).map((p) => ({
       socketId: null,
+      statePlayerId: p.socketId ?? p.statePlayerId ?? null,
       sessionId: p.sessionId ?? null,
       name: p.name ?? "",
       avatar: p.avatar ?? 0,
@@ -131,16 +132,20 @@ export async function flushDirtyRooms(pool, { rooms, pokerRooms }) {
   const writes = [];
   for (const code of dirtyRetro) {
     const room = rooms.get(code);
-    if (!room) continue;
-    writes.push({ code, snapshot: serializeRetroRoom(room) });
+    if (!room) {
+      dirtyRetro.delete(code);
+      continue;
+    }
+    writes.push({ kind: "retro", code, snapshot: serializeRetroRoom(room) });
   }
-  dirtyRetro.clear();
   for (const code of dirtyPoker) {
     const room = pokerRooms.get(code);
-    if (!room) continue;
-    writes.push({ code, snapshot: serializePokerRoom(room) });
+    if (!room) {
+      dirtyPoker.delete(code);
+      continue;
+    }
+    writes.push({ kind: "poker", code, snapshot: serializePokerRoom(room) });
   }
-  dirtyPoker.clear();
 
   for (const w of writes) {
     try {
@@ -150,6 +155,8 @@ export async function flushDirtyRooms(pool, { rooms, pokerRooms }) {
          WHERE room_code = $2`,
         [JSON.stringify(w.snapshot), w.code],
       );
+      if (w.kind === "retro") dirtyRetro.delete(w.code);
+      if (w.kind === "poker") dirtyPoker.delete(w.code);
     } catch (err) {
       console.error("[snapshot] failed to persist", w.code, err.message);
     }

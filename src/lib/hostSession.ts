@@ -3,6 +3,10 @@ import { api, type SuiteModuleId } from "@/net/api";
 export type HostSession = {
   code: string;
   moduleId: SuiteModuleId;
+  isHost?: boolean;
+  participantId?: string | null;
+  participantSessionId?: string | null;
+  endSession?: () => void | Promise<void>;
 };
 
 const EVENT = "agile:host-session";
@@ -10,7 +14,15 @@ let current: HostSession | null = null;
 const recorded = new Set<string>();
 
 export function setHostSession(next: HostSession | null) {
-  if (next?.code === current?.code && next?.moduleId === current?.moduleId) return;
+  if (
+    next?.code === current?.code &&
+    next?.moduleId === current?.moduleId &&
+    next?.isHost === current?.isHost &&
+    next?.participantId === current?.participantId &&
+    next?.participantSessionId === current?.participantSessionId
+  ) {
+    return;
+  }
   current = next;
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent<HostSession | null>(EVENT, { detail: next }));

@@ -1,21 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useMemo } from "react";
 import { AVATARS } from "@/types/game";
 import { fr } from "@/i18n/fr";
 import { PageShell, StickyFooter, RoomCodeDisplay, PlayerList } from "@/components/app-shell";
 import { cn } from "@/lib/utils";
 import { PlanningPokerRole, PlanningPokerVoteSystem } from "@/types/planningPoker";
 import { PLANNING_POKER_DECKS } from "@/lib/planningPoker";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-
 const ACCENT = "#6366f1";
 
 type LobbyPlayer = {
@@ -37,7 +26,6 @@ type Props = {
   voteSystem: PlanningPokerVoteSystem;
   myRole: PlanningPokerRole;
   isHost: boolean;
-  onLeave: () => void;
   onStart: () => void;
   onVoteSystemChange: (voteSystem: PlanningPokerVoteSystem) => void;
   onRoleChange: (role: PlanningPokerRole) => void;
@@ -59,13 +47,10 @@ export const PlanningPokerReadyScreen: React.FC<Props> = ({
   voteSystem,
   myRole,
   isHost,
-  onLeave,
   onStart,
   onVoteSystemChange,
   onRoleChange,
 }) => {
-  const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
-
   const sortedPlayers = useMemo(
     () =>
       [...lobbyPlayers].sort((a, b) => {
@@ -223,13 +208,6 @@ export const PlanningPokerReadyScreen: React.FC<Props> = ({
         <div className="flex items-center gap-2.5">
           <button
             type="button"
-            onClick={() => setLeaveDialogOpen(true)}
-            className="h-11 rounded-xl border border-red-500/30 bg-red-500/10 px-5 text-sm font-semibold text-red-400 transition hover:bg-red-500/20 hover:text-red-300"
-          >
-            {fr.onlineLobby.cancelParty}
-          </button>
-          <button
-            type="button"
             onClick={onStart}
             disabled={!isHost}
             className="h-11 flex-1 rounded-xl text-sm font-bold text-white transition disabled:opacity-40"
@@ -242,33 +220,6 @@ export const PlanningPokerReadyScreen: React.FC<Props> = ({
           </button>
         </div>
       </StickyFooter>
-
-      <AlertDialog open={leaveDialogOpen} onOpenChange={setLeaveDialogOpen}>
-        <AlertDialogContent className="max-w-sm rounded-2xl border border-white/[0.08] bg-[#0f0f1c] p-6 text-slate-100 shadow-2xl">
-          <AlertDialogHeader className="space-y-2">
-            <AlertDialogTitle className="text-base font-bold text-slate-50">
-              {fr.onlineLobby.cancelPartyQuestion}
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-sm text-slate-400">
-              {fr.onlineLobby.disconnectAll}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="mt-2 grid grid-cols-2 gap-2 space-x-0">
-            <AlertDialogCancel className="h-11 rounded-xl border border-white/[0.08] bg-white/[0.03] text-slate-300 hover:bg-white/[0.06] hover:text-white">
-              {fr.onlineLobby.cancel}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              className="h-11 rounded-xl border border-red-500/30 bg-red-500/15 text-red-400 hover:bg-red-500/25 hover:text-red-300"
-              onClick={() => {
-                setLeaveDialogOpen(false);
-                onLeave();
-              }}
-            >
-              {fr.onlineLobby.cancelParty}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </PageShell>
   );
 };

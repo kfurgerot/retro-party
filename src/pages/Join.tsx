@@ -110,6 +110,8 @@ function CodeEntry({ seed }: { seed: string }) {
         navigate(`/skills-matrix?mode=join&code=${raw}`, { replace: true });
       else if (res.module === "radar-party")
         navigate(`/radar-party?mode=join&code=${raw}`, { replace: true });
+      else if (res.module === "planning-poker")
+        navigate(`/play?experience=planning-poker&mode=join&code=${raw}`, { replace: true });
       else navigate(`/play?mode=join&code=${raw}`, { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Code introuvable");

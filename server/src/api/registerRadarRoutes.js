@@ -83,6 +83,10 @@ export function registerRadarRoutes(context) {
       );
       const session = sessionResult.rows[0];
       if (!session) return res.status(404).json({ error: "Not found" });
+      if (session.status === "ended") return res.status(409).json({ error: "Session ended" });
+      if (session.status === "abandoned") {
+        return res.status(409).json({ error: "Session abandoned" });
+      }
 
       const hostCountResult = await pool.query(
         "SELECT COUNT(*)::int AS count FROM radar_participants WHERE session_id = $1 AND is_host = true",
@@ -144,6 +148,9 @@ export function registerRadarRoutes(context) {
       );
       const session = sessionResult.rows[0];
       if (!session) return res.status(404).json({ error: "Not found" });
+      if (session.status === "ended" || session.status === "abandoned") {
+        return res.status(409).json({ error: "Session ended" });
+      }
 
       const participantResult = await pool.query(
         "SELECT id, is_host FROM radar_participants WHERE id = $1 AND session_id = $2 LIMIT 1",
@@ -213,7 +220,7 @@ export function registerRadarRoutes(context) {
       );
       const session = sessionResult.rows[0];
       if (!session) return res.status(404).json({ error: "Not found" });
-      if (session.status !== "started" && session.status !== "lobby") {
+      if (session.status !== "live" && session.status !== "lobby") {
         return res.status(400).json({ error: "Invalid payload" });
       }
 
@@ -452,6 +459,9 @@ export function registerRadarRoutes(context) {
       );
       const session = sessionResult.rows[0];
       if (!session) return res.status(404).json({ error: "Not found" });
+      if (session.status === "ended" || session.status === "abandoned") {
+        return res.status(409).json({ error: "Session ended" });
+      }
 
       const participantResult = await pool.query(
         "SELECT id, is_host FROM radar_participants WHERE id = $1 AND session_id = $2 LIMIT 1",
@@ -488,6 +498,68 @@ export function registerRadarRoutes(context) {
       }
 
       emitRadarSessionUpdate(updated.session_code, "session_started");
+
+      return res.status(200).json({
+        session: {
+          id: updated.id,
+          code: updated.session_code,
+          status: updated.status,
+          startedAt: updated.started_at,
+          hostParticipates: updated.host_participates !== false,
+        },
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.post("/api/radar/sessions/:code/end", async (req, res, next) => {
+    try {
+      const code = String(req.params.code || "")
+        .trim()
+        .toUpperCase();
+      const participantId =
+        typeof req.body?.participantId === "string" ? req.body.participantId : "";
+      if (!participantId) return res.status(400).json({ error: "Invalid payload" });
+
+      const sessionResult = await pool.query(
+        "SELECT id, session_code, status, started_at, host_participates FROM radar_sessions WHERE session_code = $1 LIMIT 1",
+        [code],
+      );
+      const session = sessionResult.rows[0];
+      if (!session) return res.status(404).json({ error: "Not found" });
+      if (session.status === "ended") {
+        return res.status(200).json({
+          session: {
+            id: session.id,
+            code: session.session_code,
+            status: session.status,
+            startedAt: session.started_at,
+            hostParticipates: session.host_participates !== false,
+          },
+        });
+      }
+
+      const participantResult = await pool.query(
+        "SELECT id, is_host FROM radar_participants WHERE id = $1 AND session_id = $2 LIMIT 1",
+        [participantId, session.id],
+      );
+      const participant = participantResult.rows[0];
+      if (!participant) return res.status(404).json({ error: "Not found" });
+      if (!participant.is_host) return res.status(403).json({ error: "Unauthorized" });
+
+      const updateResult = await pool.query(
+        `
+          UPDATE radar_sessions
+          SET status = 'ended', ended_at = COALESCE(ended_at, now()), last_active_at = now()
+          WHERE id = $1
+          RETURNING id, session_code, status, started_at, host_participates
+        `,
+        [session.id],
+      );
+      const updated = updateResult.rows[0];
+
+      emitRadarSessionUpdate(updated.session_code, "session_ended");
 
       return res.status(200).json({
         session: {

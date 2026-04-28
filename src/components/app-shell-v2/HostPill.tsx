@@ -57,6 +57,11 @@ export function HostPill() {
 
   const moduleId = onLiveRoute ? (urlModule ?? pushed?.moduleId ?? null) : null;
   const code = onLiveRoute ? urlCode || pushed?.code || "" : "";
+  const isRuntimeRoom = moduleId === "retro-party" || moduleId === "planning-poker";
+  const isCurrentParticipant = Boolean(
+    pushed && moduleId && pushed.code === code && pushed.moduleId === moduleId,
+  );
+  const canEndSession = Boolean(isCurrentParticipant && pushed?.isHost);
 
   useEffect(() => {
     setOpen(false);
@@ -107,7 +112,7 @@ export function HostPill() {
     };
   }, [code]);
 
-  if (!moduleId || !code || dismissed) return null;
+  if (!moduleId || !code || dismissed || !isCurrentParticipant) return null;
   const exp = EXPERIENCE_BY_ID[moduleId];
 
   const shareUrl = `${window.location.origin}/r/${code}`;
@@ -123,11 +128,19 @@ export function HostPill() {
   };
 
   const handleEndSession = async () => {
-    if (!code) return;
+    if (!code || !canEndSession || !pushed) return;
     setEnding(true);
     setEndError(null);
     try {
-      await api.endSession(code);
+      if (pushed.endSession) {
+        await pushed.endSession();
+      } else if (moduleId === "radar-party" && pushed.participantId) {
+        await api.radarEndSession(code, { participantId: pushed.participantId });
+      } else if (moduleId === "skills-matrix" && pushed.participantId) {
+        await api.skillsMatrixEndSession(code, pushed.participantId);
+      } else {
+        await api.endSession(code, isRuntimeRoom ? pushed.participantSessionId : null);
+      }
       setOpen(false);
       navigate(`/r/${code}`, { replace: true });
     } catch (err) {
@@ -165,7 +178,7 @@ export function HostPill() {
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-wider text-[var(--ds-text-faint)]">
                 <Crown size={10} style={{ color: exp.accent }} />
-                Cockpit animateur
+                {canEndSession ? "Cockpit animateur" : "Cockpit session"}
               </div>
               <div className="truncate text-[12.5px] font-medium text-[var(--ds-text-primary)]">
                 {exp.label}
@@ -228,7 +241,7 @@ export function HostPill() {
               </Link>
             </div>
 
-            {confirmEnd ? (
+            {canEndSession && confirmEnd ? (
               <div className="mt-3 rounded-lg border border-rose-500/30 bg-rose-500/10 p-3">
                 <div className="flex items-start gap-2 text-[12px] text-rose-100">
                   <AlertTriangle size={13} className="mt-0.5 shrink-0" />
@@ -259,7 +272,7 @@ export function HostPill() {
                   </button>
                 </div>
               </div>
-            ) : (
+            ) : canEndSession ? (
               <button
                 type="button"
                 onClick={() => setConfirmEnd(true)}
@@ -268,7 +281,7 @@ export function HostPill() {
                 <Square size={11} />
                 Terminer la session
               </button>
-            )}
+            ) : null}
           </div>
 
           <div className="border-t border-[var(--ds-border)] bg-[var(--ds-surface-0)] px-4 py-2 text-center text-[10.5px] text-[var(--ds-text-faint)]">
@@ -284,7 +297,7 @@ export function HostPill() {
             borderColor: `rgba(${exp.accentRgb},0.45)`,
             background: `linear-gradient(135deg, rgba(${exp.accentRgb},0.18), rgba(14,14,26,0.96))`,
           }}
-          aria-label={`Cockpit animateur — code ${code}`}
+          aria-label={`Cockpit session — code ${code}`}
         >
           <span
             className="flex h-7 w-7 items-center justify-center rounded-full text-[13px]"

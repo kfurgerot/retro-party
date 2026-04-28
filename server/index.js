@@ -349,13 +349,17 @@ function createPokerRoom({
 function syncPokerHostFlags(room) {
   if (!room) return;
   if (
-    room.hostSocketId &&
+    !room.hostSocketId ||
     !room.lobby.some(
       (player) => player.socketId === room.hostSocketId && player.connected !== false,
     )
   ) {
+    const hasDesignatedHost = room.lobby.some((player) => player.isHost);
     const nextHost =
-      room.lobby.find((player) => player.connected !== false) ?? room.lobby[0] ?? null;
+      room.lobby.find((player) => player.connected !== false && player.isHost) ??
+      (!hasDesignatedHost
+        ? (room.lobby.find((player) => player.connected !== false) ?? room.lobby[0] ?? null)
+        : null);
     room.hostSocketId = nextHost?.socketId ?? null;
   }
   room.lobby = room.lobby.map((player) => ({
@@ -501,6 +505,9 @@ function attachSocketToExistingPokerPlayer(code, room, player, socket) {
     if (room.hostSocketId === oldSocketId) {
       room.hostSocketId = socket.id;
     }
+  }
+  if (!room.hostSocketId && player.isHost) {
+    room.hostSocketId = socket.id;
   }
 
   player.socketId = socket.id;
@@ -1159,6 +1166,18 @@ function removePlayerFromState(state, socketId) {
 }
 
 function syncHostFlags(room) {
+  if (
+    !room.hostSocketId ||
+    !room.lobby.some((p) => p.socketId === room.hostSocketId && p.connected !== false)
+  ) {
+    const hasDesignatedHost = room.lobby.some((p) => p.isHost);
+    const nextHost =
+      room.lobby.find((p) => p.connected !== false && p.isHost) ??
+      (!hasDesignatedHost
+        ? (room.lobby.find((p) => p.connected !== false) ?? room.lobby[0] ?? null)
+        : null);
+    room.hostSocketId = nextHost?.socketId ?? null;
+  }
   room.lobby = room.lobby.map((p) => ({ ...p, isHost: p.socketId === room.hostSocketId }));
   if (room.state?.players?.length) {
     room.state.players = room.state.players.map((p) => ({
@@ -1252,19 +1271,24 @@ function scheduleDisconnectCleanup(code, socketId, sessionId) {
 
 function attachSocketToExistingPlayer(code, room, player, socket) {
   const oldSocketId = player.socketId;
-  if (oldSocketId && oldSocketId !== socket.id) {
+  const previousPlayerId = oldSocketId || player.statePlayerId || null;
+  if (previousPlayerId && previousPlayerId !== socket.id) {
     room.clients.delete(oldSocketId);
     socketToRoom.delete(oldSocketId);
-    room.state = remapSocketIdInState(room.state, oldSocketId, socket.id);
-    if (room.hostSocketId === oldSocketId) {
+    room.state = remapSocketIdInState(room.state, previousPlayerId, socket.id);
+    if (room.hostSocketId === previousPlayerId) {
       room.hostSocketId = socket.id;
     }
     if (isWhoSaidItActive(room)) {
-      remapWhoSaidItPlayerId(room.wsi, oldSocketId, socket.id);
+      remapWhoSaidItPlayerId(room.wsi, previousPlayerId, socket.id);
     }
+  }
+  if (!room.hostSocketId && player.isHost) {
+    room.hostSocketId = socket.id;
   }
 
   player.socketId = socket.id;
+  player.statePlayerId = socket.id;
   player.connected = true;
   delete player.disconnectedAt;
 

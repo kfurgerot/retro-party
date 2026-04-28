@@ -156,7 +156,7 @@ import { sessionLifecycle } from "../services/sessionLifecycle.js";
 import { S2C_EVENTS } from "../../../shared/contracts/socketEvents.js";
 
 export function registerDashboardRoutes(context) {
-  const { app, pool, requireAuth, crypto, io } = context;
+  const { app, pool, requireAuth, crypto, io, rooms, pokerRooms } = context;
 
   // Phase α — session lifecycle endpoints (module-agnostic, code-keyed).
 
@@ -227,6 +227,9 @@ export function registerDashboardRoutes(context) {
       const session = await sessionLifecycle.resolveSessionByCode(pool, code);
       if (!session) return res.status(404).json({ error: "Not found" });
       if (session.status === "ended") return res.status(409).json({ error: "Session ended" });
+      if (session.status === "abandoned") {
+        return res.status(409).json({ error: "Session abandoned" });
+      }
 
       const token = crypto.randomUUID();
       const id = crypto.randomUUID();
@@ -325,12 +328,42 @@ export function registerDashboardRoutes(context) {
     }
   });
 
+  function isRuntimeHost(session, participantSessionId) {
+    if (!participantSessionId) return false;
+    const room =
+      session.module === "planning-poker"
+        ? pokerRooms?.get(session.code)
+        : session.module === "retro-party"
+          ? rooms?.get(session.code)
+          : null;
+    if (!room) return false;
+    return room.lobby?.some(
+      (player) =>
+        player?.sessionId === participantSessionId &&
+        player?.isHost === true &&
+        player?.socketId === room.hostSocketId,
+    );
+  }
+
+  function canManageSession(session, req) {
+    if (session.ownerUserId) return session.ownerUserId === req.currentUser.id;
+    if (session.module !== "retro-party" && session.module !== "planning-poker") return false;
+    const participantSessionId =
+      typeof req.headers["x-participant-session-id"] === "string"
+        ? req.headers["x-participant-session-id"].trim()
+        : "";
+    return isRuntimeHost(session, participantSessionId);
+  }
+
   // Terminer la session — owner only, sets status=ended, freezes the row.
-  app.post("/api/sessions/:code/end", requireAuth, async (req, res, next) => {
+  app.post("/api/sessions/:code/end", async (req, res, next) => {
     try {
       const session = await sessionLifecycle.resolveSessionByCode(pool, req.params.code);
       if (!session) return res.status(404).json({ error: "Not found" });
-      if (session.ownerUserId && session.ownerUserId !== req.currentUser.id) {
+      if (!req.currentUser && session.ownerUserId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      if (!canManageSession(session, req)) {
         return res.status(403).json({ error: "Forbidden" });
       }
       if (session.status === "ended") return res.status(204).end();
@@ -355,7 +388,7 @@ export function registerDashboardRoutes(context) {
     try {
       const session = await sessionLifecycle.resolveSessionByCode(pool, req.params.code);
       if (!session) return res.status(404).json({ error: "Not found" });
-      if (session.ownerUserId && session.ownerUserId !== req.currentUser.id) {
+      if (!canManageSession(session, req)) {
         return res.status(403).json({ error: "Forbidden" });
       }
       if (session.status !== "abandoned") {
@@ -406,26 +439,8 @@ export function registerDashboardRoutes(context) {
       const raw = typeof req.query.code === "string" ? req.query.code.trim().toUpperCase() : "";
       if (!raw) return res.status(400).json({ error: "Missing code" });
 
-      const [smResult, radarResult, roomResult] = await Promise.all([
-        pool.query(
-          `SELECT session_code FROM skills_matrix_sessions WHERE session_code = $1 LIMIT 1`,
-          [raw],
-        ),
-        pool.query(`SELECT session_code FROM radar_sessions WHERE session_code = $1 LIMIT 1`, [
-          raw,
-        ]),
-        pool.query(`SELECT room_code FROM rooms WHERE room_code = $1 LIMIT 1`, [raw]),
-      ]);
-
-      if (smResult.rows.length > 0) {
-        return res.status(200).json({ module: "skills-matrix", code: raw });
-      }
-      if (radarResult.rows.length > 0) {
-        return res.status(200).json({ module: "radar-party", code: raw });
-      }
-      if (roomResult.rows.length > 0) {
-        return res.status(200).json({ module: "play", code: raw });
-      }
+      const session = await sessionLifecycle.resolveSessionByCode(pool, raw);
+      if (session) return res.status(200).json({ module: session.module, code: raw });
 
       return res.status(404).json({ error: "Code introuvable" });
     } catch (err) {

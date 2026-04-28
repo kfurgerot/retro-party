@@ -113,31 +113,6 @@ export async function initDatabase() {
     "CREATE INDEX IF NOT EXISTS idx_room_participants_user_id ON room_participants(user_id);",
   );
 
-  // Phase δ — action items issued from sessions, tracked until done.
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS action_items (
-      id UUID PRIMARY KEY,
-      session_code TEXT NOT NULL,
-      session_module TEXT NOT NULL,
-      team_id UUID NULL REFERENCES teams(id) ON DELETE SET NULL,
-      title TEXT NOT NULL,
-      description TEXT NULL,
-      owner_user_id UUID NULL REFERENCES users(id) ON DELETE SET NULL,
-      created_by_user_id UUID NULL REFERENCES users(id) ON DELETE SET NULL,
-      status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','done','cancelled')),
-      due_at TIMESTAMPTZ NULL,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-      completed_at TIMESTAMPTZ NULL,
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-    );
-  `);
-  await pool.query(
-    "CREATE INDEX IF NOT EXISTS idx_action_items_session_code ON action_items(session_code);",
-  );
-  await pool.query(
-    "CREATE INDEX IF NOT EXISTS idx_action_items_team_id_status ON action_items(team_id, status);",
-  );
-
   // Phase γ.2 — anonymous participant identity persistence (rejoin tokens).
   await pool.query(`
     CREATE TABLE IF NOT EXISTS session_participant_tokens (
@@ -208,6 +183,31 @@ export async function initDatabase() {
     );
   `);
   await pool.query("CREATE INDEX IF NOT EXISTS idx_team_members_user_id ON team_members(user_id);");
+
+  // Phase δ — action items issued from sessions, tracked until done.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS action_items (
+      id UUID PRIMARY KEY,
+      session_code TEXT NOT NULL,
+      session_module TEXT NOT NULL,
+      team_id UUID NULL REFERENCES teams(id) ON DELETE SET NULL,
+      title TEXT NOT NULL,
+      description TEXT NULL,
+      owner_user_id UUID NULL REFERENCES users(id) ON DELETE SET NULL,
+      created_by_user_id UUID NULL REFERENCES users(id) ON DELETE SET NULL,
+      status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','done','cancelled')),
+      due_at TIMESTAMPTZ NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      completed_at TIMESTAMPTZ NULL,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `);
+  await pool.query(
+    "CREATE INDEX IF NOT EXISTS idx_action_items_session_code ON action_items(session_code);",
+  );
+  await pool.query(
+    "CREATE INDEX IF NOT EXISTS idx_action_items_team_id_status ON action_items(team_id, status);",
+  );
 
   // Link sessions / templates to a team (nullable; teams added in D1).
   await pool.query(

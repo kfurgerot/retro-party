@@ -452,30 +452,20 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
                 {fr.onlineLobby.waitingHostDescription.replace("{host}", hostPlayerName)}
               </p>
             )}
-            <div className={cn("flex gap-2.5", canStart ? "w-full" : "w-full sm:w-auto")}>
+            {canStart && (
               <button
                 type="button"
-                onClick={submitLeave}
-                disabled={pending !== "idle"}
-                className="h-11 flex-1 rounded-xl border border-red-500/30 bg-red-500/10 text-sm font-semibold text-red-400 transition hover:bg-red-500/20 hover:text-red-300 disabled:opacity-40 sm:flex-none sm:px-5"
+                onClick={submitStart}
+                disabled={!canLaunch || pending !== "idle"}
+                className="h-11 flex-1 rounded-xl text-sm font-bold text-white transition disabled:opacity-40"
+                style={{
+                  background: `linear-gradient(135deg, ${accentColor}, ${accentColor}cc)`,
+                  boxShadow: canLaunch ? `0 4px 16px ${accentColor}40` : "none",
+                }}
               >
-                {canStart ? fr.onlineLobby.cancelParty : fr.onlineLobby.leaveParty}
+                {fr.onlineLobby.hostPrimaryAction}
               </button>
-              {canStart && (
-                <button
-                  type="button"
-                  onClick={submitStart}
-                  disabled={!canLaunch || pending !== "idle"}
-                  className="h-11 flex-1 rounded-xl text-sm font-bold text-white transition disabled:opacity-40"
-                  style={{
-                    background: `linear-gradient(135deg, ${accentColor}, ${accentColor}cc)`,
-                    boxShadow: canLaunch ? `0 4px 16px ${accentColor}40` : "none",
-                  }}
-                >
-                  {fr.onlineLobby.hostPrimaryAction}
-                </button>
-              )}
-            </div>
+            )}
           </div>
         ) : (
           <div className="flex items-center gap-2.5">

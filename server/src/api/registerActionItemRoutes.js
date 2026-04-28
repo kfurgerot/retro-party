@@ -19,6 +19,14 @@ function serialize(row) {
   };
 }
 
+async function canMutateActionItem(pool, item, userId) {
+  if (!item || !userId) return false;
+  if (item.owner_user_id === userId || item.created_by_user_id === userId) return true;
+
+  const session = await sessionLifecycle.resolveSessionByCode(pool, item.session_code);
+  return !!session?.ownerUserId && session.ownerUserId === userId;
+}
+
 export function registerActionItemRoutes(context) {
   const { app, pool, requireAuth, crypto } = context;
 
@@ -94,6 +102,13 @@ export function registerActionItemRoutes(context) {
   app.patch("/api/action-items/:id", requireAuth, async (req, res, next) => {
     try {
       const { id } = req.params;
+      const current = await pool.query("SELECT * FROM action_items WHERE id = $1 LIMIT 1", [id]);
+      const currentRow = current.rows[0];
+      if (!currentRow) return res.status(404).json({ error: "Not found" });
+      if (!(await canMutateActionItem(pool, currentRow, req.currentUser.id))) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+
       const sets = [];
       const values = [];
       const { title, description, status, ownerUserId, dueAt } = req.body ?? {};
@@ -152,6 +167,13 @@ export function registerActionItemRoutes(context) {
   app.delete("/api/action-items/:id", requireAuth, async (req, res, next) => {
     try {
       const { id } = req.params;
+      const current = await pool.query("SELECT * FROM action_items WHERE id = $1 LIMIT 1", [id]);
+      const currentRow = current.rows[0];
+      if (!currentRow) return res.status(404).json({ error: "Not found" });
+      if (!(await canMutateActionItem(pool, currentRow, req.currentUser.id))) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+
       const result = await pool.query("DELETE FROM action_items WHERE id = $1 RETURNING id", [id]);
       if (!result.rows[0]) return res.status(404).json({ error: "Not found" });
       return res.status(204).end();

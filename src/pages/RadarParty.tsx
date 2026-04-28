@@ -6,6 +6,7 @@ import { OnlineOnboardingScreen } from "@/components/screens/OnlineOnboardingScr
 import { Card, SecondaryButton } from "@/components/app-shell";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
 import { setHostSession } from "@/lib/hostSession";
 import { AVATARS } from "@/types/game";
 import {
@@ -171,6 +172,10 @@ const AXIS_FR: Record<keyof RadarAxisValues, string> = RADAR_DIMENSION_LABELS;
 const TOTAL_QUESTIONS = RADAR_QUESTIONS.length;
 const RADAR_FALLBACK_SYNC_MS = 12000;
 
+function cleanDisplayName(value: string) {
+  return value.replace(/\s+/g, " ").trim().slice(0, 16);
+}
+
 type ThemeCardMeta = {
   title: string;
   description: string;
@@ -312,10 +317,20 @@ function emptyTeamInsights(
 const RadarPartyPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, loading: authLoading } = useAuth();
   const params = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const initialMode = params.get("mode") === "join" ? "join" : "host";
   const initialCode = (params.get("code") || "").toUpperCase();
+  const initialName = cleanDisplayName(params.get("name") || "");
+  const rawInitialAvatar = Number(params.get("avatar"));
+  const initialAvatar = Number.isFinite(rawInitialAvatar)
+    ? Math.max(0, Math.min(AVATARS.length - 1, Math.floor(rawInitialAvatar)))
+    : 0;
+  const initialAutoSubmit = params.get("auto") === "1";
+  const initialDirectAccess = initialAutoSubmit || !!initialCode;
+  const forceProfileBeforeJoin = initialMode === "join" && !!initialCode && !initialAutoSubmit;
   const fromEntry = params.get("from") === "entry";
+  const connectedDisplayName = cleanDisplayName(user?.displayName || "");
 
   const [stage, setStage] = useState<Stage>("lobby");
   const [answers, setAnswers] = useState<RadarAnswers>({});
@@ -326,19 +341,25 @@ const RadarPartyPage = () => {
   const [error, setError] = useState<string | null>(null);
 
   const [roomCode, setRoomCode] = useState<string | null>(null);
-  useEffect(() => {
-    setHostSession(roomCode ? { code: roomCode, moduleId: "radar-party" } : null);
-    return () => setHostSession(null);
-  }, [roomCode]);
   const [participantId, setParticipantId] = useState("");
   const [participants, setParticipants] = useState<RadarParticipant[]>([]);
-  const [profile, setProfile] = useState({ name: "", avatar: 0 });
-  const [showOnlineOnboarding, setShowOnlineOnboarding] = useState(true);
-  const [onboardingInitialStep, setOnboardingInitialStep] = useState<1 | 2>(1);
+  const [profile, setProfile] = useState(() => ({ name: initialName, avatar: initialAvatar }));
+  const [showOnlineOnboarding, setShowOnlineOnboarding] = useState(
+    () => forceProfileBeforeJoin || (!initialDirectAccess && initialName.length < 2),
+  );
+  const [onboardingInitialStep, setOnboardingInitialStep] = useState<1 | 2>(() =>
+    forceProfileBeforeJoin ? 1 : initialName.length >= 2 ? 2 : 1,
+  );
+  const [autoSubmitKey, setAutoSubmitKey] = useState<number>(() =>
+    initialAutoSubmit ? Date.now() : 0,
+  );
+  const [connectedLaunchProfileApplied, setConnectedLaunchProfileApplied] = useState(false);
 
   const [teamRadar, setTeamRadar] = useState<RadarAxisValues>(createNeutralRadar());
   const [teamInsights, setTeamInsights] = useState<RadarTeamInsights | null>(null);
-  const [sessionStatus, setSessionStatus] = useState<"lobby" | "started">("lobby");
+  const [sessionStatus, setSessionStatus] = useState<"lobby" | "live" | "ended" | "abandoned">(
+    "lobby",
+  );
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
   const [submitDialogOpen, setSubmitDialogOpen] = useState(false);
   const [questionNavMessage, setQuestionNavMessage] = useState<string | null>(null);
@@ -368,6 +389,19 @@ const RadarPartyPage = () => {
       participants.some((participant) => participant.id === participantId && participant.isHost),
     [participants, participantId],
   );
+  useEffect(() => {
+    setHostSession(
+      roomCode
+        ? {
+            code: roomCode,
+            moduleId: "radar-party",
+            isHost: isHost && sessionStatus !== "ended" && sessionStatus !== "abandoned",
+            participantId,
+          }
+        : null,
+    );
+    return () => setHostSession(null);
+  }, [isHost, participantId, roomCode, sessionStatus]);
   const selfParticipant = useMemo(
     () => participants.find((participant) => participant.id === participantId) ?? null,
     [participants, participantId],
@@ -387,6 +421,22 @@ const RadarPartyPage = () => {
     });
     return aggregated;
   }, [participants]);
+
+  useEffect(() => {
+    if (connectedLaunchProfileApplied || authLoading) return;
+    if (!connectedDisplayName || initialMode !== "host" || initialDirectAccess || roomCode) return;
+    setProfile((prev) => ({ name: connectedDisplayName, avatar: prev.avatar }));
+    setOnboardingInitialStep(2);
+    setShowOnlineOnboarding(true);
+    setConnectedLaunchProfileApplied(true);
+  }, [
+    authLoading,
+    connectedDisplayName,
+    connectedLaunchProfileApplied,
+    initialDirectAccess,
+    initialMode,
+    roomCode,
+  ]);
   const progressRows = useMemo(() => {
     return participants.map((participant) => {
       const exempted = participant.isHost && !hostParticipates;
@@ -511,7 +561,7 @@ const RadarPartyPage = () => {
       };
     }).sort((a, b) => b.score - a.score);
 
-  const refreshSession = async (codeArg?: string) => {
+  const refreshSession = async (codeArg?: string, participantIdOverride?: string) => {
     const code = (codeArg ?? roomCode ?? "").trim().toUpperCase();
     if (!code) return;
     const response = await api.radarGetSession(code);
@@ -528,7 +578,10 @@ const RadarPartyPage = () => {
       response.team?.insights ?? emptyTeamInsights(nextTeamRadar, response.participants);
     setTeamRadar(nextTeamRadar);
     setTeamInsights(nextTeamInsights);
-    const self = response.participants.find((participant) => participant.id === participantId);
+    const currentParticipantId = participantIdOverride ?? participantId;
+    const self = response.participants.find(
+      (participant) => participant.id === currentParticipantId,
+    );
     const submitted = Boolean(self?.submittedAt);
     setResultPublished(submitted);
     if (submitted && self?.result) {
@@ -539,7 +592,7 @@ const RadarPartyPage = () => {
       });
     }
 
-    if (response.session.status === "started" && stage === "lobby") {
+    if (response.session.status === "live" && stage === "lobby") {
       const shouldOpenProgressMenu =
         Boolean(self?.isHost) && response.session.hostParticipates === false;
       if (submitted) {
@@ -636,6 +689,13 @@ const RadarPartyPage = () => {
       try {
         const response = await api.radarGetSession(persisted.code);
         if (cancelled) return;
+
+        if (response.session.status === "ended" || response.session.status === "abandoned") {
+          persistRadarSession(null);
+          setError("Cette session Radar Party est terminée.");
+          setIsRestoringSession(false);
+          return;
+        }
 
         const self = response.participants.find(
           (participant) => participant.id === persisted.participantId,
@@ -905,7 +965,7 @@ const RadarPartyPage = () => {
       setResultPublished(false);
       setShowOnlineOnboarding(false);
       setStage("lobby");
-      await refreshSession(joined.session.code);
+      await refreshSession(joined.session.code, joined.participant.id);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur serveur");
     } finally {
@@ -932,7 +992,7 @@ const RadarPartyPage = () => {
       setShowOnlineOnboarding(false);
       setResultPublished(false);
       setStage("lobby");
-      await refreshSession(joined.session.code);
+      await refreshSession(joined.session.code, joined.participant.id);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur serveur");
     } finally {
@@ -1746,7 +1806,7 @@ const RadarPartyPage = () => {
     navigate("/?stage=select-experience");
   };
 
-  if (isRestoringSession) {
+  if (authLoading || isRestoringSession) {
     return (
       <div
         className="relative flex min-h-svh w-full items-start justify-center px-4 pb-12 pt-6"
@@ -1787,6 +1847,7 @@ const RadarPartyPage = () => {
             setProfile({ name, avatar });
             setShowOnlineOnboarding(false);
             setOnboardingInitialStep(1);
+            setAutoSubmitKey(Date.now());
           }}
           onBack={() => {
             if (fromEntry) {
@@ -1829,11 +1890,11 @@ const RadarPartyPage = () => {
             void handleStartSession();
           }}
           canStart={Boolean(roomCode) && isHost}
-          initialName={profile.name || undefined}
+          initialName={profile.name || initialName || connectedDisplayName || undefined}
           initialAvatar={profile.avatar}
           initialMode={initialMode}
           initialCode={initialCode}
-          autoSubmitKey={0}
+          autoSubmitKey={autoSubmitKey}
           stepLabel="Etape 5/5"
           stepCurrent={5}
           stepTotal={5}
@@ -2084,7 +2145,7 @@ const RadarPartyPage = () => {
             </p>
 
             <div className="mt-2 flex items-center gap-2 sm:hidden">
-              {isHost && roomCode && sessionStatus === "started" ? (
+              {isHost && roomCode && sessionStatus === "live" ? (
                 <SecondaryButton
                   className="h-9 px-3 text-xs"
                   onClick={() => setStage("team-progress")}
@@ -2092,12 +2153,6 @@ const RadarPartyPage = () => {
                   Progression
                 </SecondaryButton>
               ) : null}
-              <SecondaryButton
-                className={cn("ml-auto h-9 px-3 text-xs", CTA_NEON_DANGER)}
-                onClick={() => setLeaveDialogOpen(true)}
-              >
-                Quitter
-              </SecondaryButton>
             </div>
 
             <div className="mt-6 hidden flex-wrap justify-between gap-2 sm:flex">
@@ -2338,20 +2393,14 @@ const RadarPartyPage = () => {
         ) : null}
 
         {stage === "questionnaire" ? (
-          <div className="hidden w-full flex-wrap items-center justify-between gap-2 sm:flex">
+          <div className="hidden w-full flex-wrap items-center gap-2 sm:flex">
             <div className="flex flex-wrap gap-2">
-              {isHost && roomCode && sessionStatus === "started" ? (
+              {isHost && roomCode && sessionStatus === "live" ? (
                 <SecondaryButton onClick={() => setStage("team-progress")}>
                   Progression
                 </SecondaryButton>
               ) : null}
             </div>
-            <SecondaryButton
-              className={cn(CTA_NEON_DANGER)}
-              onClick={() => setLeaveDialogOpen(true)}
-            >
-              Quitter
-            </SecondaryButton>
           </div>
         ) : null}
       </Card>
@@ -2360,7 +2409,7 @@ const RadarPartyPage = () => {
         <>
           <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 hidden px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:block">
             <Card className="pointer-events-auto mx-auto w-full max-w-5xl border-emerald-500/25 bg-slate-950/92 p-3 shadow-[0_0_0_1px_rgba(16,185,129,0.15),0_8px_28px_rgba(2,6,23,0.55)]">
-              <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
                 <div className="flex flex-wrap items-center gap-2">
                   {stage === "individual" ? (
                     <SecondaryButton onClick={submitToSession} disabled={!canPublish || loading}>
@@ -2372,25 +2421,19 @@ const RadarPartyPage = () => {
                       Mon radar
                     </SecondaryButton>
                   ) : null}
-                  {isHost && roomCode && sessionStatus === "started" ? (
+                  {isHost && roomCode && sessionStatus === "live" ? (
                     <SecondaryButton onClick={() => setStage("team-progress")}>
                       Progression
                     </SecondaryButton>
                   ) : null}
                 </div>
-                <SecondaryButton
-                  className={cn(CTA_NEON_DANGER)}
-                  onClick={() => setLeaveDialogOpen(true)}
-                >
-                  Quitter
-                </SecondaryButton>
               </div>
             </Card>
           </div>
 
           <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:hidden">
             <Card className="pointer-events-auto mx-auto w-full max-w-5xl border-cyan-300/40 bg-slate-950/92 p-2.5 shadow-[0_0_0_1px_rgba(34,211,238,0.2),0_8px_28px_rgba(2,6,23,0.55)]">
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 {stage === "individual" ? (
                   <SecondaryButton
                     className="h-10 px-2 text-[11px]"
@@ -2408,7 +2451,7 @@ const RadarPartyPage = () => {
                     Mon radar
                   </SecondaryButton>
                 )}
-                {isHost && roomCode && sessionStatus === "started" ? (
+                {isHost && roomCode && sessionStatus === "live" ? (
                   <SecondaryButton
                     className="h-10 px-2 text-[11px]"
                     onClick={() => setStage("team-progress")}
@@ -2423,12 +2466,6 @@ const RadarPartyPage = () => {
                     Progression
                   </SecondaryButton>
                 )}
-                <SecondaryButton
-                  className={cn("h-10 px-2 text-[11px]", CTA_NEON_DANGER)}
-                  onClick={() => setLeaveDialogOpen(true)}
-                >
-                  Quitter
-                </SecondaryButton>
               </div>
             </Card>
           </div>

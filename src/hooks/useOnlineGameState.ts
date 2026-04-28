@@ -494,6 +494,7 @@ export function useOnlineGameState() {
     gameState,
     roomNotice,
     myPlayerId,
+    sessionId: sessionRef.current?.sessionId ?? null,
     createRoom,
     joinRoom,
     leaveRoom,

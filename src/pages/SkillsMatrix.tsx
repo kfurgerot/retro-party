@@ -631,6 +631,7 @@ export default function SkillsMatrixPage() {
     : 0;
   const initialAutoSubmit = searchParams.get("auto") === "1";
   const initialDirectAccess = initialAutoSubmit || !!initialCode;
+  const connectedDisplayName = cleanName(user?.displayName || "");
   const forceProfileBeforeJoin = useMemo(
     () => initialMode === "join" && !!initialCode && !initialAutoSubmit,
     [initialAutoSubmit, initialCode, initialMode],
@@ -646,7 +647,9 @@ export default function SkillsMatrixPage() {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(templateFromQuery);
   const [applyingTemplate, setApplyingTemplate] = useState(false);
   const [autoApplyGuard, setAutoApplyGuard] = useState<string | null>(null);
-  const [autoSubmitKey] = useState<number>(() => (initialAutoSubmit ? Date.now() : 0));
+  const [autoSubmitKey, setAutoSubmitKey] = useState<number>(() =>
+    initialAutoSubmit ? Date.now() : 0,
+  );
 
   const [profile, setProfile] = useState(() => ({ name: initialName, avatar: initialAvatar }));
   const [showOnlineOnboarding, setShowOnlineOnboarding] = useState(
@@ -655,6 +658,7 @@ export default function SkillsMatrixPage() {
   const [onboardingInitialStep, setOnboardingInitialStep] = useState<1 | 2>(() =>
     forceProfileBeforeJoin ? 1 : initialName.length >= 2 ? 2 : 1,
   );
+  const [connectedLaunchProfileApplied, setConnectedLaunchProfileApplied] = useState(false);
 
   const [categoryNameInput, setCategoryNameInput] = useState("");
   const [skillNameInput, setSkillNameInput] = useState("");
@@ -679,12 +683,29 @@ export default function SkillsMatrixPage() {
   const refreshQueuedRef = useRef(false);
   const refreshTicketRef = useRef(0);
   const matrixCaptureRef = useRef<HTMLDivElement | null>(null);
+  const roomCode = snapshot?.session.code ?? null;
 
   useEffect(() => {
     if (user && !profile.name) {
       setProfile((prev) => ({ ...prev, name: cleanName(user.displayName || "Equipe") }));
     }
   }, [profile.name, user]);
+
+  useEffect(() => {
+    if (connectedLaunchProfileApplied || authLoading) return;
+    if (!connectedDisplayName || initialMode !== "host" || initialDirectAccess || roomCode) return;
+    setProfile((prev) => ({ name: connectedDisplayName, avatar: prev.avatar }));
+    setOnboardingInitialStep(2);
+    setShowOnlineOnboarding(true);
+    setConnectedLaunchProfileApplied(true);
+  }, [
+    authLoading,
+    connectedDisplayName,
+    connectedLaunchProfileApplied,
+    initialDirectAccess,
+    initialMode,
+    roomCode,
+  ]);
 
   const applySnapshot = useCallback((nextSnapshot: SkillsMatrixSnapshot) => {
     setSnapshot(nextSnapshot);
@@ -972,11 +993,6 @@ export default function SkillsMatrixPage() {
     }
   }, [isExportingPdf, snapshot]);
 
-  const roomCode = snapshot?.session.code ?? null;
-  useEffect(() => {
-    setHostSession(roomCode ? { code: roomCode, moduleId: "skills-matrix" } : null);
-    return () => setHostSession(null);
-  }, [roomCode]);
   const isLobbyStage = !snapshot || snapshot.session.status === "lobby";
   const myParticipantId = participantId || snapshot?.me?.participantId || null;
   const selfParticipant =
@@ -984,7 +1000,19 @@ export default function SkillsMatrixPage() {
       ? (snapshot.participants.find((participant) => participant.id === myParticipantId) ?? null)
       : null;
   const isAdmin = selfParticipant?.isAdmin === true;
-  const canEndSession = isAdmin && snapshot?.session.status === "started";
+  useEffect(() => {
+    setHostSession(
+      roomCode
+        ? {
+            code: roomCode,
+            moduleId: "skills-matrix",
+            isHost: isAdmin && snapshot?.session.status !== "ended",
+            participantId: myParticipantId,
+          }
+        : null,
+    );
+    return () => setHostSession(null);
+  }, [isAdmin, myParticipantId, roomCode, snapshot?.session.status]);
   const canExportPdf = !!snapshot && snapshot.session.status === "ended";
   const isSessionEnded = snapshot?.session.status === "ended";
 
@@ -1644,6 +1672,7 @@ export default function SkillsMatrixPage() {
             setProfile({ name: cleanName(name), avatar });
             setShowOnlineOnboarding(false);
             setOnboardingInitialStep(1);
+            setAutoSubmitKey(Date.now());
           }}
           onBack={() => navigate("/")}
         />
@@ -2015,7 +2044,7 @@ export default function SkillsMatrixPage() {
             handleStartSession();
           }}
           canStart={Boolean(roomCode) && isAdmin}
-          initialName={profile.name || undefined}
+          initialName={profile.name || initialName || connectedDisplayName || undefined}
           initialAvatar={profile.avatar}
           initialMode={initialMode}
           initialCode={initialCode}
@@ -2049,7 +2078,7 @@ export default function SkillsMatrixPage() {
 
       <div className="relative z-10 mx-auto w-full max-w-[1260px] px-4 pb-12 pt-6 sm:px-6">
         <header className="mb-5">
-          {/* Row 1 : badge + code room + bouton Quitter */}
+          {/* Row 1 : badge + code room */}
           <div className="mb-2 flex items-center justify-between gap-2">
             <div className="flex min-w-0 items-center gap-2">
               <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-indigo-500 text-sm">
@@ -2065,12 +2094,6 @@ export default function SkillsMatrixPage() {
                 </div>
               )}
             </div>
-            <SecondaryButton
-              className={cn("h-8 shrink-0 min-h-0 px-3 text-xs", CTA_NEON_DANGER)}
-              onClick={() => setLeaveDialogOpen(true)}
-            >
-              Quitter
-            </SecondaryButton>
           </div>
 
           {/* Row 2 : titre + description */}
@@ -2084,28 +2107,18 @@ export default function SkillsMatrixPage() {
           </p>
 
           {/* Row 3 : boutons d'action (optionnels) */}
-          {(canExportPdf || canEndSession) && (
+          {canExportPdf && (
             <div className="mt-3 flex flex-wrap gap-2">
-              {canExportPdf && (
-                <SecondaryButton
-                  onClick={() => void handleExportPdf()}
-                  disabled={isExportingPdf}
-                  className="h-9 min-h-0 rounded-full border-cyan-500/25 bg-cyan-500/10 px-3 text-[11px] font-semibold tracking-[0.08em] text-cyan-100 hover:bg-cyan-500/18"
-                >
-                  <span className="inline-flex items-center gap-1.5">
-                    <FileDown className="h-3.5 w-3.5" />
-                    {isExportingPdf ? "Export..." : "Exporter PDF"}
-                  </span>
-                </SecondaryButton>
-              )}
-              {canEndSession && (
-                <SecondaryButton
-                  className="h-9 min-h-0 rounded-full border-amber-500/25 bg-amber-500/10 px-3 text-[11px] font-semibold tracking-[0.08em] text-amber-200 hover:bg-amber-500/18"
-                  onClick={() => setEndSessionDialogOpen(true)}
-                >
-                  Terminer la session
-                </SecondaryButton>
-              )}
+              <SecondaryButton
+                onClick={() => void handleExportPdf()}
+                disabled={isExportingPdf}
+                className="h-9 min-h-0 rounded-full border-cyan-500/25 bg-cyan-500/10 px-3 text-[11px] font-semibold tracking-[0.08em] text-cyan-100 hover:bg-cyan-500/18"
+              >
+                <span className="inline-flex items-center gap-1.5">
+                  <FileDown className="h-3.5 w-3.5" />
+                  {isExportingPdf ? "Export..." : "Exporter PDF"}
+                </span>
+              </SecondaryButton>
             </div>
           )}
         </header>
