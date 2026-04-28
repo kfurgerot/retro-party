@@ -24,6 +24,12 @@ export type SessionPreview = {
   participantCount: number | null;
 };
 
+export type GuestIdentity = {
+  participantId: string;
+  displayName: string;
+  avatar: number;
+};
+
 export type DashboardActivity = {
   id: string;
   rawId: string;
@@ -476,6 +482,16 @@ export const api = {
     request<SessionPreview>(`/sessions/${encodeURIComponent(code.trim().toUpperCase())}/preview`, {
       method: "GET",
     }),
+  resolveGuestIdentity: (code: string, token: string) =>
+    request<GuestIdentity>(
+      `/sessions/${encodeURIComponent(code.trim().toUpperCase())}/identity?token=${encodeURIComponent(token)}`,
+      { method: "GET" },
+    ),
+  createGuestIdentity: (code: string, payload: { displayName: string; avatar?: number }) =>
+    request<GuestIdentity & { token: string }>(
+      `/sessions/${encodeURIComponent(code.trim().toUpperCase())}/identity`,
+      { method: "POST", body: JSON.stringify(payload) },
+    ),
   sessionHeartbeat: (code: string) =>
     request<void>(`/sessions/${encodeURIComponent(code.trim().toUpperCase())}/heartbeat`, {
       method: "POST",

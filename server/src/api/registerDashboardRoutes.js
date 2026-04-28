@@ -160,6 +160,96 @@ export function registerDashboardRoutes(context) {
 
   // Phase α — session lifecycle endpoints (module-agnostic, code-keyed).
 
+  // Phase γ.2 — anonymous participant identity tokens.
+  //
+  // Tokens are random UUID v4, stored hashed (SHA-256) and bound to one
+  // (session_code, participant_id, display_name, avatar). 30-day TTL.
+  // Auth users do NOT use tokens — they have their auth session.
+  const hashToken = (token) => crypto.createHash("sha256").update(String(token)).digest("hex");
+
+  // Resolve an existing identity from a token. Touches last_used_at.
+  app.get("/api/sessions/:code/identity", async (req, res, next) => {
+    try {
+      const code = String(req.params.code || "")
+        .trim()
+        .toUpperCase();
+      const token = typeof req.query.token === "string" ? req.query.token : "";
+      if (!code || !token) return res.status(400).json({ error: "Invalid payload" });
+
+      const session = await sessionLifecycle.resolveSessionByCode(pool, code);
+      if (!session) return res.status(404).json({ error: "Not found" });
+
+      const result = await pool.query(
+        `SELECT id, participant_id, display_name, avatar, expires_at, revoked_at
+         FROM session_participant_tokens
+         WHERE session_code = $1 AND token_hash = $2
+         LIMIT 1`,
+        [code, hashToken(token)],
+      );
+      const row = result.rows[0];
+      if (!row || row.revoked_at) return res.status(404).json({ error: "Token invalid" });
+      if (Date.parse(row.expires_at) < Date.now()) {
+        return res.status(410).json({ error: "Token expired" });
+      }
+
+      // Touch last_used_at (fire-and-forget OK — read still succeeds).
+      void pool
+        .query("UPDATE session_participant_tokens SET last_used_at = now() WHERE id = $1", [row.id])
+        .catch(() => {});
+
+      return res.status(200).json({
+        participantId: row.participant_id,
+        displayName: row.display_name,
+        avatar: Number(row.avatar) || 0,
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Create a new identity (issue a fresh token). Anonymous join.
+  app.post("/api/sessions/:code/identity", async (req, res, next) => {
+    try {
+      const code = String(req.params.code || "")
+        .trim()
+        .toUpperCase();
+      const displayName = (typeof req.body?.displayName === "string" ? req.body.displayName : "")
+        .trim()
+        .slice(0, 80);
+      const avatarRaw = Number(req.body?.avatar);
+      const avatar = Number.isFinite(avatarRaw)
+        ? Math.max(0, Math.min(30, Math.floor(avatarRaw)))
+        : 0;
+      if (!code || displayName.length < 2) {
+        return res.status(400).json({ error: "Invalid payload" });
+      }
+
+      const session = await sessionLifecycle.resolveSessionByCode(pool, code);
+      if (!session) return res.status(404).json({ error: "Not found" });
+      if (session.status === "ended") return res.status(409).json({ error: "Session ended" });
+
+      const token = crypto.randomUUID();
+      const id = crypto.randomUUID();
+      const participantId = crypto.randomUUID();
+
+      await pool.query(
+        `INSERT INTO session_participant_tokens
+           (id, session_code, module, participant_id, token_hash, display_name, avatar)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [id, code, session.module, participantId, hashToken(token), displayName, avatar],
+      );
+
+      return res.status(201).json({
+        token,
+        participantId,
+        displayName,
+        avatar,
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
   // Phase γ.1 — public session preview for the unified pre-join lobby.
   // Returns module + status + title + code. No PII, no auth.
   app.get("/api/sessions/:code/preview", async (req, res, next) => {

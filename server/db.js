@@ -113,6 +113,29 @@ export async function initDatabase() {
     "CREATE INDEX IF NOT EXISTS idx_room_participants_user_id ON room_participants(user_id);",
   );
 
+  // Phase γ.2 — anonymous participant identity persistence (rejoin tokens).
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS session_participant_tokens (
+      id UUID PRIMARY KEY,
+      session_code TEXT NOT NULL,
+      module TEXT NOT NULL,
+      participant_id UUID NOT NULL,
+      token_hash TEXT NOT NULL UNIQUE,
+      display_name TEXT NOT NULL,
+      avatar INT NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      last_used_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      expires_at TIMESTAMPTZ NOT NULL DEFAULT (now() + interval '30 days'),
+      revoked_at TIMESTAMPTZ NULL
+    );
+  `);
+  await pool.query(
+    "CREATE INDEX IF NOT EXISTS idx_session_participant_tokens_session_code ON session_participant_tokens(session_code);",
+  );
+  await pool.query(
+    "CREATE INDEX IF NOT EXISTS idx_session_participant_tokens_expires_at ON session_participant_tokens(expires_at);",
+  );
+
   // Phase α — standardize session lifecycle across modules.
   // Statuses converge to: lobby | live | ended | abandoned.
   await pool.query("ALTER TABLE rooms DROP CONSTRAINT IF EXISTS rooms_status_check;");

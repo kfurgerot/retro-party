@@ -7,12 +7,35 @@ import {
   AlertCircle,
   ArrowRight,
   CheckCircle2,
+  Copy,
   LogIn,
   Pencil,
+  Share2,
   Sparkles,
-  User as UserIcon,
   Users,
 } from "lucide-react";
+
+const tokenStorageKey = (code: string) => `agile.session.${code}.token`;
+
+function readTokenFromUrl(): string | null {
+  try {
+    const hash = window.location.hash || "";
+    if (!hash.startsWith("#")) return null;
+    const params = new URLSearchParams(hash.slice(1));
+    return params.get("t");
+  } catch {
+    return null;
+  }
+}
+
+function clearUrlFragment() {
+  try {
+    const url = `${window.location.pathname}${window.location.search}`;
+    window.history.replaceState({}, "", url);
+  } catch {
+    // ignored
+  }
+}
 
 const STATUS_LABELS: Record<SessionPreview["status"], string> = {
   lobby: "En attente",
@@ -56,8 +79,10 @@ export function PreJoinLobby({ code }: Props) {
 
   // Identity (anonymous fallback only — auth users use their profile).
   const [guestName, setGuestName] = useState("");
+  const [guestToken, setGuestToken] = useState<string | null>(null);
   const [editingName, setEditingName] = useState(false);
   const [draftName, setDraftName] = useState("");
+  const [shareCopied, setShareCopied] = useState(false);
 
   useEffect(() => {
     if (!code) return;
@@ -77,14 +102,57 @@ export function PreJoinLobby({ code }: Props) {
   }, [code]);
 
   useEffect(() => {
-    // Pull a remembered guest name from localStorage as a friendly default.
+    if (user) return;
+    // Phase γ.2 — try to restore guest identity:
+    //  1. URL fragment #t=… (magic rejoin link, never logged server-side)
+    //  2. localStorage per-session token
+    //  3. fallback: remembered display name
+    const fragmentToken = readTokenFromUrl();
+    let storedToken: string | null = null;
     try {
-      const saved = window.localStorage.getItem("agile.guest.name");
-      if (saved && !user) setGuestName(saved.trim().slice(0, 80));
+      storedToken = window.localStorage.getItem(tokenStorageKey(code));
     } catch {
       // ignored
     }
-  }, [user]);
+    const candidate = fragmentToken || storedToken;
+
+    if (candidate) {
+      let alive = true;
+      api
+        .resolveGuestIdentity(code, candidate)
+        .then((id) => {
+          if (!alive) return;
+          setGuestName(id.displayName);
+          setGuestToken(candidate);
+          try {
+            window.localStorage.setItem(tokenStorageKey(code), candidate);
+            window.localStorage.setItem("agile.guest.name", id.displayName);
+          } catch {
+            // ignored
+          }
+          if (fragmentToken) clearUrlFragment();
+        })
+        .catch(() => {
+          // Token expired/invalid: drop it silently and fall back to name memory.
+          try {
+            window.localStorage.removeItem(tokenStorageKey(code));
+          } catch {
+            // ignored
+          }
+          if (fragmentToken) clearUrlFragment();
+        });
+      return () => {
+        alive = false;
+      };
+    }
+
+    try {
+      const saved = window.localStorage.getItem("agile.guest.name");
+      if (saved) setGuestName(saved.trim().slice(0, 80));
+    } catch {
+      // ignored
+    }
+  }, [code, user]);
 
   const startEditName = () => {
     setDraftName(user ? user.displayName || "" : guestName);
@@ -104,7 +172,7 @@ export function PreJoinLobby({ code }: Props) {
     setEditingName(false);
   };
 
-  const handleEnter = () => {
+  const handleEnter = async () => {
     if (!preview) return;
     const displayName = (user ? user.displayName : guestName).trim();
     if (!displayName || displayName.length < 2) {
@@ -116,7 +184,33 @@ export function PreJoinLobby({ code }: Props) {
       navigate(`/r/${preview.code}`);
       return;
     }
+    // Phase γ.2 — issue or reuse a guest token before entering. Auth users skip.
+    if (!user && !guestToken) {
+      try {
+        const created = await api.createGuestIdentity(preview.code, { displayName, avatar: 0 });
+        setGuestToken(created.token);
+        try {
+          window.localStorage.setItem(tokenStorageKey(preview.code), created.token);
+        } catch {
+          // ignored
+        }
+      } catch {
+        // Non-blocking: continue without token if creation failed.
+      }
+    }
     navigate(buildLiveUrl(preview, displayName, 0), { replace: true });
+  };
+
+  const handleCopyMagicLink = async () => {
+    if (!preview || !guestToken) return;
+    const url = `${window.location.origin}/join/${preview.code}#t=${guestToken}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setShareCopied(true);
+      window.setTimeout(() => setShareCopied(false), 1800);
+    } catch {
+      // ignored
+    }
   };
 
   if (loading || authLoading) {
@@ -261,15 +355,37 @@ export function PreJoinLobby({ code }: Props) {
           ) : null}
         </div>
         {!user ? (
-          <div className="mt-4 rounded-lg border border-[var(--ds-border)] bg-[var(--ds-surface-0)] px-3 py-2 text-[11.5px] text-[var(--ds-text-faint)]">
-            <Link
-              to="/"
-              className="text-[var(--ds-text-secondary)] underline-offset-2 hover:underline"
-            >
-              Connectez-vous
-            </Link>{" "}
-            pour retrouver vos sessions sur tous vos appareils.
-          </div>
+          <>
+            {guestToken ? (
+              <button
+                type="button"
+                onClick={handleCopyMagicLink}
+                className="ds-focus-ring mt-3 inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-md border border-[var(--ds-border)] bg-[var(--ds-surface-0)] text-[11.5px] font-medium text-[var(--ds-text-muted)] transition hover:bg-[var(--ds-surface-2)] hover:text-[var(--ds-text-primary)]"
+                title="Copier un lien qui restaure cette identité sur un autre appareil"
+              >
+                {shareCopied ? (
+                  <>
+                    <CheckCircle2 size={11} className="text-emerald-400" />
+                    Lien de reprise copié
+                  </>
+                ) : (
+                  <>
+                    <Share2 size={11} />
+                    Copier mon lien de reprise
+                  </>
+                )}
+              </button>
+            ) : null}
+            <div className="mt-3 rounded-lg border border-[var(--ds-border)] bg-[var(--ds-surface-0)] px-3 py-2 text-[11.5px] text-[var(--ds-text-faint)]">
+              <Link
+                to="/"
+                className="text-[var(--ds-text-secondary)] underline-offset-2 hover:underline"
+              >
+                Connectez-vous
+              </Link>{" "}
+              pour retrouver vos sessions sur tous vos appareils.
+            </div>
+          </>
         ) : null}
       </section>
 
