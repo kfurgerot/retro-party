@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { api, type SuiteModuleId } from "@/net/api";
 import { EXPERIENCE_BY_ID } from "@/design-system/tokens";
 import { ArrowRight, Copy, CheckCircle2, AlertCircle, Sparkles, LogIn } from "lucide-react";
+import { ActionItemsCard } from "@/components/app-shell-v2/ActionItemsCard";
 
 type Resolved = {
   moduleId: SuiteModuleId;
@@ -196,6 +197,14 @@ export default function SessionShare() {
           ))}
         </ul>
       </section>
+
+      <div className="mt-5">
+        <ActionItemsCard
+          sessionCode={resolved.code}
+          title="Action items"
+          emptyHint="Aucun action item — ajoutez ce sur quoi l'équipe s'engage."
+        />
+      </div>
 
       <p className="mt-5 text-center text-[11.5px] text-[var(--ds-text-faint)]">
         Animez vos propres rituels agiles —{" "}

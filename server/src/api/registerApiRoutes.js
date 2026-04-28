@@ -17,6 +17,7 @@ import { registerTemplateRoutes } from "./registerTemplateRoutes.js";
 import { registerRadarRoutes } from "./registerRadarRoutes.js";
 import { registerDashboardRoutes } from "./registerDashboardRoutes.js";
 import { registerTeamRoutes } from "./registerTeamRoutes.js";
+import { registerActionItemRoutes } from "./registerActionItemRoutes.js";
 import { registerSkillsMatrixRoutes } from "./registerSkillsMatrixRoutes.js";
 import { S2C_EVENTS } from "../../../shared/contracts/socketEvents.js";
 const SESSION_COOKIE_NAME = process.env.SESSION_COOKIE_NAME || "rp_session";
@@ -441,6 +442,13 @@ export function registerApiRoutes({
   });
 
   registerTeamRoutes({
+    app,
+    pool,
+    requireAuth,
+    crypto,
+  });
+
+  registerActionItemRoutes({
     app,
     pool,
     requireAuth,

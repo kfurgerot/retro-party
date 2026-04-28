@@ -30,6 +30,24 @@ export type GuestIdentity = {
   avatar: number;
 };
 
+export type ActionItemStatus = "open" | "done" | "cancelled";
+
+export type ActionItem = {
+  id: string;
+  sessionCode: string;
+  sessionModule: SuiteModuleId;
+  teamId: string | null;
+  title: string;
+  description: string | null;
+  ownerUserId: string | null;
+  ownerDisplayName: string | null;
+  status: ActionItemStatus;
+  dueAt: string | null;
+  createdAt: string;
+  completedAt: string | null;
+  updatedAt: string;
+};
+
 export type DashboardActivity = {
   id: string;
   rawId: string;
@@ -531,6 +549,37 @@ export const api = {
     ),
   getTeamInsights: (teamId: string) =>
     request<TeamInsights>(`/teams/${encodeURIComponent(teamId)}/insights`, { method: "GET" }),
+
+  listSessionActionItems: (code: string) =>
+    request<{ items: ActionItem[] }>(
+      `/sessions/${encodeURIComponent(code.trim().toUpperCase())}/action-items`,
+      { method: "GET" },
+    ),
+  createSessionActionItem: (code: string, payload: { title: string; description?: string }) =>
+    request<{ item: ActionItem }>(
+      `/sessions/${encodeURIComponent(code.trim().toUpperCase())}/action-items`,
+      { method: "POST", body: JSON.stringify(payload) },
+    ),
+  updateActionItem: (
+    id: string,
+    payload: Partial<{
+      title: string;
+      description: string | null;
+      status: ActionItemStatus;
+      ownerUserId: string | null;
+      dueAt: string | null;
+    }>,
+  ) =>
+    request<{ item: ActionItem }>(`/action-items/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }),
+  deleteActionItem: (id: string) =>
+    request<void>(`/action-items/${encodeURIComponent(id)}`, { method: "DELETE" }),
+  listTeamActionItems: (teamId: string) =>
+    request<{ items: ActionItem[] }>(`/teams/${encodeURIComponent(teamId)}/action-items`, {
+      method: "GET",
+    }),
   logout: () => request<void>("/auth/logout", { method: "POST" }),
 
   listTemplates: () => request<{ items: TemplateItem[] }>("/templates", { method: "GET" }),

@@ -23,6 +23,7 @@ import {
   UserPlus,
   Users,
 } from "lucide-react";
+import { ActionItemsCard } from "@/components/app-shell-v2/ActionItemsCard";
 
 export default function AppTeamDetail() {
   const { teamId = "" } = useParams<{ teamId: string }>();
@@ -283,6 +284,12 @@ export default function AppTeamDetail() {
       </section>
 
       {insights ? <InsightsSection insights={insights} /> : null}
+
+      <ActionItemsCard
+        teamId={team.id}
+        title="Action items de l'équipe"
+        emptyHint="Aucun action item lié à cette équipe — ajoutez-en depuis la page d'une session terminée."
+      />
 
       <section>
         <h2 className="mb-3 text-[14px] font-semibold text-[var(--ds-text-primary)]">
