@@ -14,6 +14,7 @@ type PlanningPokerSession = {
   name: string;
   avatar: number;
   sessionId: string;
+  updatedAt?: number;
 };
 
 const EMPTY_STATE: PlanningPokerState = {
@@ -53,6 +54,8 @@ const makeSessionId = () => {
   return `pp-${Date.now()}-${sessionFallbackCounter.toString(36)}`;
 };
 
+const normalizeCode = (value: string | null | undefined) => (value || "").trim().toUpperCase();
+
 const isSession = (value: unknown): value is PlanningPokerSession => {
   if (!value || typeof value !== "object") return false;
   const session = value as Partial<PlanningPokerSession>;
@@ -64,25 +67,57 @@ const isSession = (value: unknown): value is PlanningPokerSession => {
   );
 };
 
-const loadSession = (): PlanningPokerSession | null => {
-  if (typeof window === "undefined") return null;
+const loadSessions = (): Record<string, PlanningPokerSession> => {
+  if (typeof window === "undefined") return {};
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
+    if (!raw) return {};
     const parsed = JSON.parse(raw);
-    return isSession(parsed) ? parsed : null;
+    if (isSession(parsed)) return { [normalizeCode(parsed.code)]: parsed };
+
+    const sessions = parsed?.sessions;
+    if (!sessions || typeof sessions !== "object") return {};
+
+    return Object.fromEntries(
+      Object.entries(sessions as Record<string, unknown>)
+        .filter(([, session]) => isSession(session))
+        .map(([code, session]) => [normalizeCode(code), session as PlanningPokerSession]),
+    );
   } catch {
-    return null;
+    return {};
   }
 };
 
-const storeSession = (session: PlanningPokerSession | null) => {
+const loadSession = (code?: string | null): PlanningPokerSession | null => {
+  const sessions = loadSessions();
+  const requestedCode = normalizeCode(code);
+  if (requestedCode) return sessions[requestedCode] ?? null;
+  return Object.values(sessions).sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))[0] ?? null;
+};
+
+const storeSession = (session: PlanningPokerSession) => {
   if (typeof window === "undefined") return;
-  if (!session) {
+  const sessions = loadSessions();
+  const code = normalizeCode(session.code);
+  if (!code) return;
+  sessions[code] = { ...session, code, updatedAt: Date.now() };
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ sessions }));
+};
+
+const removeStoredSession = (code?: string | null) => {
+  if (typeof window === "undefined") return;
+  const normalizedCode = normalizeCode(code);
+  if (!normalizedCode) {
     window.localStorage.removeItem(STORAGE_KEY);
     return;
   }
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+  const sessions = loadSessions();
+  delete sessions[normalizedCode];
+  if (Object.keys(sessions).length === 0) {
+    window.localStorage.removeItem(STORAGE_KEY);
+  } else {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ sessions }));
+  }
 };
 
 type PersistedHistory = {
@@ -139,8 +174,14 @@ const storeHistory = (
   window.localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(payload));
 };
 
-export function usePlanningPokerOnlineState() {
-  const initialSession = loadSession();
+type UsePlanningPokerOnlineStateOptions = {
+  skipRestore?: boolean;
+  restoreCode?: string | null;
+};
+
+export function usePlanningPokerOnlineState(options: UsePlanningPokerOnlineStateOptions = {}) {
+  const skipRestore = options.skipRestore === true;
+  const initialSession = skipRestore ? null : loadSession(options.restoreCode);
   const initialHistory = loadHistory(initialSession);
   const initialState = initialSession?.code
     ? { ...EMPTY_STATE, roomCode: initialSession.code }
@@ -174,6 +215,7 @@ export function usePlanningPokerOnlineState() {
 
   useEffect(() => {
     const tryResume = () => {
+      if (skipRestore) return;
       const active = sessionRef.current;
       if (!active?.code) return;
       if (!socket.connected) {
@@ -303,12 +345,13 @@ export function usePlanningPokerOnlineState() {
       const normalized = text.toLowerCase();
       if (!normalized.includes("introuvable")) return;
 
+      const previousCode = sessionRef.current?.code;
       storeHistory(sessionRef.current, []);
       sessionRef.current = null;
       pendingProfileRef.current = null;
       recordedSummariesRef.current.clear();
       setHistory([]);
-      storeSession(null);
+      removeStoredSession(previousCode);
       setCode(null);
       setState(EMPTY_STATE);
       latestStateRef.current = EMPTY_STATE;
@@ -316,12 +359,13 @@ export function usePlanningPokerOnlineState() {
 
     const onRoomClosed = ({ message }: { message?: string }) => {
       setError(message ?? null);
+      const previousCode = sessionRef.current?.code;
       storeHistory(sessionRef.current, []);
       sessionRef.current = null;
       pendingProfileRef.current = null;
       recordedSummariesRef.current.clear();
       setHistory([]);
-      storeSession(null);
+      removeStoredSession(previousCode);
       setCode(null);
       setState(EMPTY_STATE);
       latestStateRef.current = EMPTY_STATE;
@@ -362,7 +406,7 @@ export function usePlanningPokerOnlineState() {
       window.removeEventListener("focus", onWindowFocus);
       window.removeEventListener("online", onOnline);
     };
-  }, []);
+  }, [skipRestore]);
 
   const createRoom = useCallback(
     (
@@ -372,7 +416,7 @@ export function usePlanningPokerOnlineState() {
       voteSystem: PlanningPokerVoteSystem,
     ) => {
       const normalizedName = name.trim() || "Hote";
-      const sessionId = sessionRef.current?.sessionId ?? makeSessionId();
+      const sessionId = makeSessionId();
       pendingProfileRef.current = { name: normalizedName, avatar, sessionId };
       setError(null);
       if (!socket.connected) socket.connect();
@@ -390,7 +434,11 @@ export function usePlanningPokerOnlineState() {
   const joinRoom = useCallback(
     (roomCode: string, name: string, avatar: number, role: PlanningPokerRole) => {
       const normalizedName = name.trim() || "Joueur";
-      const sessionId = sessionRef.current?.sessionId ?? makeSessionId();
+      const normalizedRoomCode = normalizeCode(roomCode);
+      const sessionId =
+        sessionRef.current?.code === normalizedRoomCode
+          ? sessionRef.current.sessionId
+          : makeSessionId();
       pendingProfileRef.current = { name: normalizedName, avatar, sessionId };
       setError(null);
       if (!socket.connected) socket.connect();
@@ -409,16 +457,17 @@ export function usePlanningPokerOnlineState() {
     if (socket.connected) {
       socket.emit(C2S_EVENTS.LEAVE_POKER_ROOM);
     }
+    const previousCode = sessionRef.current?.code ?? code;
     storeHistory(sessionRef.current, []);
     sessionRef.current = null;
     pendingProfileRef.current = null;
     recordedSummariesRef.current.clear();
     setHistory([]);
-    storeSession(null);
+    removeStoredSession(previousCode);
     setCode(null);
     setState(EMPTY_STATE);
     latestStateRef.current = EMPTY_STATE;
-  }, []);
+  }, [code]);
 
   const startSession = useCallback(() => {
     socket.emit(C2S_EVENTS.START_POKER_SESSION);

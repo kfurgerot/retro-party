@@ -23,6 +23,7 @@ type InitialParams = {
   autoSubmit: boolean;
   direct: boolean;
   fromEntry: boolean;
+  fresh: boolean;
   experience: "planning-poker" | "retro-party";
 };
 
@@ -47,6 +48,7 @@ const Index: React.FC = () => {
       autoSubmit: auto === "1",
       direct: auto === "1" || !!code,
       fromEntry: from === "entry",
+      fresh: params.get("new") === "1",
       experience: experience === "planning-poker" ? "planning-poker" : "retro-party",
     };
   }, [location.search]);
@@ -81,7 +83,10 @@ const RetroPartyPage: React.FC<{ initialParams: InitialParams }> = ({ initialPar
   const local = useGameState();
 
   // Online state (rooms + websocket)
-  const online = useOnlineGameState();
+  const online = useOnlineGameState({
+    skipRestore: initialParams.fresh,
+    restoreCode: initialParams.mode === "join" ? initialParams.code : null,
+  });
   const connectedDisplayName = cleanDisplayName(user?.displayName || "");
   const [autoSubmitKey, setAutoSubmitKey] = useState<number>(() =>
     initialParams.autoSubmit ? Date.now() : 0,

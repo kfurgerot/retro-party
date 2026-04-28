@@ -24,6 +24,7 @@ type InitialParams = {
   autoSubmit: boolean;
   direct: boolean;
   fromEntry: boolean;
+  fresh: boolean;
 };
 
 const PlanningPokerPage: React.FC = () => {
@@ -47,17 +48,22 @@ const PlanningPokerPage: React.FC = () => {
       autoSubmit: auto === "1",
       direct: auto === "1" || !!code,
       fromEntry: from === "entry",
+      fresh: params.get("new") === "1",
     };
   }, [location.search]);
 
-  const online = usePlanningPokerOnlineState();
+  const online = usePlanningPokerOnlineState({
+    skipRestore: initialParams.fresh,
+    restoreCode: initialParams.mode === "join" ? initialParams.code : null,
+  });
+  const { leaveRoom } = online;
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (location.key !== "default") return;
-    online.leaveRoom();
+    leaveRoom();
     navigate("/?stage=select-experience", { replace: true });
-  }, [location.key, navigate, online.leaveRoom]);
+  }, [leaveRoom, location.key, navigate]);
 
   const connectedDisplayName = cleanDisplayName(user?.displayName || "");
   const [autoSubmitKey, setAutoSubmitKey] = useState<number>(() =>

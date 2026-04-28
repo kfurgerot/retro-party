@@ -6,6 +6,8 @@ import { EXPERIENCES, EXPERIENCE_BY_ID } from "@/design-system/tokens";
 import { ExperienceCard } from "@/components/app-shell-v2/ExperienceCard";
 import { ArrowRight, Sparkles, History, FolderKanban, Play } from "lucide-react";
 
+const ACTIVE_SESSION_STATUSES = new Set(["lobby", "live", "open", "started", "in_progress"]);
+
 export default function AppDashboard() {
   const { user } = useAuth();
   const [data, setData] = useState<DashboardActivitiesResponse | null>(null);
@@ -42,7 +44,11 @@ export default function AppDashboard() {
   const recentSessions = useMemo<DashboardActivity[]>(() => {
     if (!data) return [];
     return data.modules
-      .flatMap((m) => m.activities.filter((a) => a.activityType === "session"))
+      .flatMap((m) =>
+        m.activities.filter(
+          (a) => a.activityType === "session" && ACTIVE_SESSION_STATUSES.has(a.status),
+        ),
+      )
       .sort((a, b) => Date.parse(b.occurredAt || "") - Date.parse(a.occurredAt || ""))
       .slice(0, 5);
   }, [data]);
@@ -153,12 +159,16 @@ export default function AppDashboard() {
 
       <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div>
-          <SectionHeader title="Sessions récentes" />
+          <SectionHeader
+            title="Sessions récentes"
+            linkTo="/app/sessions"
+            linkLabel="Sessions actives"
+          />
           <div className="mt-3 overflow-hidden rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface-0)]">
             {loading ? (
               <SkeletonRows />
             ) : recentSessions.length === 0 ? (
-              <EmptyRow label="Aucune session pour l'instant — lancez-en une depuis ⌘K." />
+              <EmptyRow label="Aucune session active — lancez-en une depuis ⌘K." />
             ) : (
               recentSessions.map((s) => <SessionRow key={s.id} activity={s} />)
             )}

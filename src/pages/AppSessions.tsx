@@ -16,7 +16,7 @@ type ModuleFilter = "all" | SuiteModuleId;
 type TeamFilter = "all" | "none" | string;
 type StatusTab = "active" | "ended" | "archive";
 
-const ACTIVE_STATUSES = new Set(["lobby", "live"]);
+const ACTIVE_STATUSES = new Set(["lobby", "live", "open", "started", "in_progress"]);
 
 export default function AppSessions() {
   const [data, setData] = useState<DashboardActivitiesResponse | null>(null);

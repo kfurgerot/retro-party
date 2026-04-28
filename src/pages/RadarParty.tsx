@@ -328,6 +328,7 @@ const RadarPartyPage = () => {
     : 0;
   const initialAutoSubmit = params.get("auto") === "1";
   const initialDirectAccess = initialAutoSubmit || !!initialCode;
+  const initialFreshLaunch = params.get("new") === "1";
   const forceProfileBeforeJoin = initialMode === "join" && !!initialCode && !initialAutoSubmit;
   const fromEntry = params.get("from") === "entry";
   const connectedDisplayName = cleanDisplayName(user?.displayName || "");
@@ -680,7 +681,17 @@ const RadarPartyPage = () => {
     let cancelled = false;
 
     const restoreSession = async () => {
+      if (initialFreshLaunch) {
+        persistRadarSession(null);
+        if (!cancelled) setIsRestoringSession(false);
+        return;
+      }
+
       const persisted = loadPersistedRadarSession();
+      if (initialCode && (!persisted || persisted.code !== initialCode)) {
+        if (!cancelled) setIsRestoringSession(false);
+        return;
+      }
       if (!persisted) {
         if (!cancelled) setIsRestoringSession(false);
         return;
@@ -790,7 +801,7 @@ const RadarPartyPage = () => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [initialCode, initialFreshLaunch]);
 
   useEffect(() => {
     if (isRestoringSession) return;

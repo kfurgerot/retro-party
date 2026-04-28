@@ -631,6 +631,7 @@ export default function SkillsMatrixPage() {
     : 0;
   const initialAutoSubmit = searchParams.get("auto") === "1";
   const initialDirectAccess = initialAutoSubmit || !!initialCode;
+  const initialFreshLaunch = searchParams.get("new") === "1";
   const connectedDisplayName = cleanName(user?.displayName || "");
   const forceProfileBeforeJoin = useMemo(
     () => initialMode === "join" && !!initialCode && !initialAutoSubmit,
@@ -1027,6 +1028,12 @@ export default function SkillsMatrixPage() {
     let cancelled = false;
 
     const restoreSession = async () => {
+      if (initialFreshLaunch) {
+        persistSkillsMatrixSession(null);
+        if (!cancelled) setIsRestoringSession(false);
+        return;
+      }
+
       if (initialCode && initialParticipantIdFromQuery) {
         try {
           const restored = await api.skillsMatrixGetSession(
@@ -1114,6 +1121,7 @@ export default function SkillsMatrixPage() {
     authLoading,
     initialAvatar,
     initialCode,
+    initialFreshLaunch,
     initialName,
     initialParticipantIdFromQuery,
     rawInitialAvatar,

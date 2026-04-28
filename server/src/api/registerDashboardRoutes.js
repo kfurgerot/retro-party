@@ -355,6 +355,23 @@ export function registerDashboardRoutes(context) {
     return isRuntimeHost(session, participantSessionId);
   }
 
+  function closeRuntimeRoom(session) {
+    if (session.module === "planning-poker") {
+      pokerRooms?.delete(session.code);
+      io?.to(session.code).emit(S2C_EVENTS.POKER_ROOM_CLOSED, {
+        message: "Session terminee.",
+      });
+      return;
+    }
+
+    if (session.module === "retro-party") {
+      rooms?.delete(session.code);
+      io?.to(session.code).emit(S2C_EVENTS.ROOM_CLOSED, {
+        message: "Session terminee.",
+      });
+    }
+  }
+
   // Terminer la session — owner only, sets status=ended, freezes the row.
   app.post("/api/sessions/:code/end", async (req, res, next) => {
     try {
@@ -367,7 +384,8 @@ export function registerDashboardRoutes(context) {
         return res.status(403).json({ error: "Forbidden" });
       }
       if (session.status === "ended") return res.status(204).end();
-      await sessionLifecycle.transitionTo(pool, session, "ended", req.currentUser.id);
+      await sessionLifecycle.transitionTo(pool, session, "ended", req.currentUser?.id ?? null);
+      closeRuntimeRoom(session);
       // Phase β.2 — notify all live participants in the socket room.
       try {
         io?.to(session.code).emit(S2C_EVENTS.SESSION_ENDED, {

@@ -26,6 +26,7 @@ type OnlineSession = {
   name: string;
   avatar: number;
   sessionId: string;
+  updatedAt?: number;
 };
 
 const EMPTY_STATE: GameState = {
@@ -74,6 +75,8 @@ const makeSessionId = () => {
   return `session-${Date.now()}-${sessionFallbackCounter.toString(36)}`;
 };
 
+const normalizeCode = (value: string | null | undefined) => (value || "").trim().toUpperCase();
+
 const isOnlineSession = (value: unknown): value is OnlineSession => {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Partial<OnlineSession>;
@@ -85,29 +88,67 @@ const isOnlineSession = (value: unknown): value is OnlineSession => {
   );
 };
 
-const loadStoredSession = (): OnlineSession | null => {
-  if (typeof window === "undefined") return null;
+const loadStoredSessions = (): Record<string, OnlineSession> => {
+  if (typeof window === "undefined") return {};
   try {
     const raw = window.localStorage.getItem(SESSION_STORAGE_KEY);
-    if (!raw) return null;
+    if (!raw) return {};
     const parsed = JSON.parse(raw);
-    return isOnlineSession(parsed) ? parsed : null;
+    if (isOnlineSession(parsed)) return { [normalizeCode(parsed.code)]: parsed };
+
+    const sessions = parsed?.sessions;
+    if (!sessions || typeof sessions !== "object") return {};
+
+    return Object.fromEntries(
+      Object.entries(sessions as Record<string, unknown>)
+        .filter(([, session]) => isOnlineSession(session))
+        .map(([code, session]) => [normalizeCode(code), session as OnlineSession]),
+    );
   } catch {
-    return null;
+    return {};
   }
 };
 
-const storeSession = (session: OnlineSession | null) => {
+const loadStoredSession = (code?: string | null): OnlineSession | null => {
+  const sessions = loadStoredSessions();
+  const requestedCode = normalizeCode(code);
+  if (requestedCode) return sessions[requestedCode] ?? null;
+  return Object.values(sessions).sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))[0] ?? null;
+};
+
+const storeSession = (session: OnlineSession) => {
   if (typeof window === "undefined") return;
-  if (!session) {
+  const sessions = loadStoredSessions();
+  const code = normalizeCode(session.code);
+  if (!code) return;
+  sessions[code] = { ...session, code, updatedAt: Date.now() };
+  window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ sessions }));
+};
+
+const removeStoredSession = (code?: string | null) => {
+  if (typeof window === "undefined") return;
+  const normalizedCode = normalizeCode(code);
+  if (!normalizedCode) {
     window.localStorage.removeItem(SESSION_STORAGE_KEY);
     return;
   }
-  window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+  const sessions = loadStoredSessions();
+  delete sessions[normalizedCode];
+  if (Object.keys(sessions).length === 0) {
+    window.localStorage.removeItem(SESSION_STORAGE_KEY);
+  } else {
+    window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ sessions }));
+  }
 };
 
-export function useOnlineGameState() {
-  const initialSession = loadStoredSession();
+type UseOnlineGameStateOptions = {
+  skipRestore?: boolean;
+  restoreCode?: string | null;
+};
+
+export function useOnlineGameState(options: UseOnlineGameStateOptions = {}) {
+  const skipRestore = options.skipRestore === true;
+  const initialSession = skipRestore ? null : loadStoredSession(options.restoreCode);
   const [code, setCode] = useState<string | null>(initialSession?.code ?? null);
   const [lobby, setLobby] = useState<LobbyPlayer[]>([]);
   const [gameState, setGameState] = useState<GameState>(EMPTY_STATE);
@@ -132,6 +173,7 @@ export function useOnlineGameState() {
 
   useEffect(() => {
     const tryResumeSession = () => {
+      if (skipRestore) return;
       const activeSession = sessionRef.current;
       if (!activeSession?.code) return;
       if (!socket.connected) {
@@ -218,13 +260,14 @@ export function useOnlineGameState() {
     };
     const onDisconnect = () => setConnected(false);
     const onRoomClosed = () => {
+      const previousCode = sessionRef.current?.code;
       if (minigameCleanupRef.current) {
         window.clearTimeout(minigameCleanupRef.current);
         minigameCleanupRef.current = null;
       }
       sessionRef.current = null;
       pendingProfileRef.current = null;
-      storeSession(null);
+      removeStoredSession(previousCode);
       setCode(null);
       setLobby([]);
       previousLobbyRef.current = null;
@@ -237,13 +280,14 @@ export function useOnlineGameState() {
       const shouldResetSession =
         normalized.includes("room introuvable") || normalized.includes("session introuvable");
       if (!shouldResetSession) return;
+      const previousCode = sessionRef.current?.code;
       if (minigameCleanupRef.current) {
         window.clearTimeout(minigameCleanupRef.current);
         minigameCleanupRef.current = null;
       }
       sessionRef.current = null;
       pendingProfileRef.current = null;
-      storeSession(null);
+      removeStoredSession(previousCode);
       setCode(null);
       setLobby([]);
       previousLobbyRef.current = null;
@@ -393,11 +437,11 @@ export function useOnlineGameState() {
         minigameCleanupRef.current = null;
       }
     };
-  }, []);
+  }, [skipRestore]);
 
   const createRoom = useCallback((name: string, avatar: number) => {
     const normalizedName = name.trim() || "Hote";
-    const sessionId = sessionRef.current?.sessionId ?? makeSessionId();
+    const sessionId = makeSessionId();
     pendingProfileRef.current = { name: normalizedName, avatar, sessionId };
     if (!socket.connected) socket.connect();
     socket.emit(C2S_EVENTS.CREATE_ROOM, { name: normalizedName, avatar, sessionId });
@@ -405,7 +449,11 @@ export function useOnlineGameState() {
 
   const joinRoom = useCallback((roomCode: string, name: string, avatar: number) => {
     const normalizedName = name.trim() || "Joueur";
-    const sessionId = sessionRef.current?.sessionId ?? makeSessionId();
+    const normalizedRoomCode = normalizeCode(roomCode);
+    const sessionId =
+      sessionRef.current?.code === normalizedRoomCode
+        ? sessionRef.current.sessionId
+        : makeSessionId();
     pendingProfileRef.current = { name: normalizedName, avatar, sessionId };
     if (!socket.connected) socket.connect();
     socket.emit(C2S_EVENTS.JOIN_ROOM, { code: roomCode, name: normalizedName, avatar, sessionId });
@@ -413,20 +461,21 @@ export function useOnlineGameState() {
 
   const leaveRoom = useCallback(() => {
     if (socket.connected) socket.emit(C2S_EVENTS.LEAVE_ROOM);
+    const previousCode = sessionRef.current?.code ?? code;
     if (minigameCleanupRef.current) {
       window.clearTimeout(minigameCleanupRef.current);
       minigameCleanupRef.current = null;
     }
     sessionRef.current = null;
     pendingProfileRef.current = null;
-    storeSession(null);
+    removeStoredSession(previousCode);
     setCode(null);
     setLobby([]);
     previousLobbyRef.current = null;
     setGameState(EMPTY_STATE);
     setWhoSaidIt(null);
     setRoomNotice(null);
-  }, []);
+  }, [code]);
 
   const startGame = useCallback(
     (maxRounds: number) => socket.emit(C2S_EVENTS.START_GAME, { maxRounds }),
