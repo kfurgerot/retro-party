@@ -14,6 +14,16 @@ export type SuiteModuleId = "retro-party" | "planning-poker" | "radar-party" | "
 
 export type ActivityKind = "room" | "radar" | "skills" | "template";
 
+export type SessionStatus = "lobby" | "live" | "ended" | "abandoned";
+
+export type SessionPreview = {
+  code: string;
+  module: SuiteModuleId;
+  status: SessionStatus;
+  title: string | null;
+  participantCount: number | null;
+};
+
 export type DashboardActivity = {
   id: string;
   rawId: string;
@@ -461,6 +471,10 @@ export const api = {
   recordRoomParticipation: (code: string) =>
     request<void>(`/rooms/${encodeURIComponent(code.trim().toUpperCase())}/participants`, {
       method: "POST",
+    }),
+  previewSession: (code: string) =>
+    request<SessionPreview>(`/sessions/${encodeURIComponent(code.trim().toUpperCase())}/preview`, {
+      method: "GET",
     }),
   sessionHeartbeat: (code: string) =>
     request<void>(`/sessions/${encodeURIComponent(code.trim().toUpperCase())}/heartbeat`, {

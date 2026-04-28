@@ -2,15 +2,27 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api } from "@/net/api";
 import { ArrowRight, Sparkles } from "lucide-react";
+import { PreJoinLobby } from "@/components/app-shell-v2/PreJoinLobby";
 
 const CODE_LEN = 4;
 
 export default function Join() {
   const params = useParams<{ code?: string }>();
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
+  // Phase γ.1 — when a code is already known (path param or ?code= seed
+  // long enough to be a full code), skip the OTP input and show the
+  // unified PreJoinLobby preview instead.
+  const seedFromUrl = (params.code || searchParams.get("code") || "")
+    .toUpperCase()
+    .slice(0, CODE_LEN);
+  if (seedFromUrl.length === CODE_LEN) {
+    return <PreJoinLobby code={seedFromUrl} />;
+  }
+  return <CodeEntry seed={seedFromUrl} />;
+}
 
-  const seed = (params.code || searchParams.get("code") || "").toUpperCase().slice(0, CODE_LEN);
+function CodeEntry({ seed }: { seed: string }) {
+  const navigate = useNavigate();
   const [digits, setDigits] = useState<string[]>(() => {
     const arr = Array.from({ length: CODE_LEN }, () => "");
     for (let i = 0; i < seed.length; i++) arr[i] = seed[i];

@@ -160,6 +160,67 @@ export function registerDashboardRoutes(context) {
 
   // Phase α — session lifecycle endpoints (module-agnostic, code-keyed).
 
+  // Phase γ.1 — public session preview for the unified pre-join lobby.
+  // Returns module + status + title + code. No PII, no auth.
+  app.get("/api/sessions/:code/preview", async (req, res, next) => {
+    try {
+      const session = await sessionLifecycle.resolveSessionByCode(pool, req.params.code);
+      if (!session) return res.status(404).json({ error: "Not found" });
+
+      // Best-effort title resolution per module.
+      let title = null;
+      let participantCount = null;
+      try {
+        if (session.module === "retro-party" || session.module === "planning-poker") {
+          const r = await pool.query(
+            `SELECT
+               (config_snapshot->>'templateName') AS template_name,
+               state_snapshot->'lobby' AS lobby
+             FROM rooms WHERE id = $1 LIMIT 1`,
+            [session.id],
+          );
+          const row = r.rows[0];
+          if (row) {
+            title = row.template_name || null;
+            if (Array.isArray(row.lobby)) participantCount = row.lobby.length;
+          }
+        } else if (session.module === "radar-party") {
+          const r = await pool.query(
+            `SELECT s.title, (SELECT COUNT(*)::int FROM radar_participants WHERE session_id = s.id) AS n
+             FROM radar_sessions s WHERE s.id = $1 LIMIT 1`,
+            [session.id],
+          );
+          if (r.rows[0]) {
+            title = r.rows[0].title || null;
+            participantCount = r.rows[0].n;
+          }
+        } else if (session.module === "skills-matrix") {
+          const r = await pool.query(
+            `SELECT s.title, (SELECT COUNT(*)::int FROM skills_matrix_participants WHERE session_id = s.id) AS n
+             FROM skills_matrix_sessions s WHERE s.id = $1 LIMIT 1`,
+            [session.id],
+          );
+          if (r.rows[0]) {
+            title = r.rows[0].title || null;
+            participantCount = r.rows[0].n;
+          }
+        }
+      } catch (err) {
+        console.error("[preview] metadata lookup failed", err.message);
+      }
+
+      return res.status(200).json({
+        code: session.code,
+        module: session.module,
+        status: session.status,
+        title,
+        participantCount,
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
   // Heartbeat: bump last_active_at. Public-ish (anyone with the code can
   // signal activity — abuse is irrelevant since the code is the bearer).
   app.post("/api/sessions/:code/heartbeat", async (req, res, next) => {
