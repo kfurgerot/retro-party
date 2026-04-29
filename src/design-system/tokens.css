@@ -105,3 +105,29 @@
 .ds-fade-in {
   animation: ds-fade-in var(--ds-motion-slow) both;
 }
+
+@keyframes ds-tile-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.6) translateY(8px);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.05) translateY(0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.ds-tile-pop {
+  animation: ds-tile-pop 360ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-fade-in,
+  .ds-tile-pop {
+    animation: none;
+  }
+}

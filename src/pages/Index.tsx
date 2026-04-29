@@ -5,8 +5,10 @@ import { useOnlineGameState } from "@/hooks/useOnlineGameState";
 import { useProfile } from "@/hooks/useProfile";
 import { useAuth } from "@/contexts/AuthContext";
 import { LobbyScreen } from "@/components/screens/LobbyScreen";
-import { OnlineLobbyScreen } from "@/components/screens/OnlineLobbyScreen";
-import { OnlineOnboardingScreen } from "@/components/screens/OnlineOnboardingScreen";
+import { IdentityStep, SessionLobby, ConnectingState } from "@/components/app-shell-v2/pre-game";
+import type { PresenceParticipant } from "@/components/app-shell-v2/pre-game";
+import { Slider } from "@/components/ui/slider";
+import { EXPERIENCE_BY_ID } from "@/design-system/tokens";
 import { GameScreen } from "@/components/screens/GameScreen";
 import { ResultsScreen } from "@/components/screens/ResultsScreen";
 import { perfLog, perfMark, perfMeasure } from "@/lib/perf";
@@ -88,9 +90,6 @@ const RetroPartyPage: React.FC<{ initialParams: InitialParams }> = ({ initialPar
     restoreCode: initialParams.mode === "join" ? initialParams.code : null,
   });
   const connectedDisplayName = cleanDisplayName(user?.displayName || "");
-  const [autoSubmitKey, setAutoSubmitKey] = useState<number>(() =>
-    initialParams.autoSubmit ? Date.now() : 0,
-  );
   const [screenTransitionStartMark] = useState(() => `screen-transition-start-${Date.now()}`);
   const { profile: onboardingProfile, setProfile: setOnboardingProfile } = useProfile(
     "retro-party",
@@ -108,6 +107,7 @@ const RetroPartyPage: React.FC<{ initialParams: InitialParams }> = ({ initialPar
     forceProfileBeforeJoin ? 1 : onboardingProfile.name ? 2 : 1,
   );
   const [connectedLaunchProfileApplied, setConnectedLaunchProfileApplied] = useState(false);
+  const [v2MaxRounds, setV2MaxRounds] = useState(12);
   const accent = TOOL_ACCENT["retro-party"];
 
   React.useEffect(() => {
@@ -139,6 +139,36 @@ const RetroPartyPage: React.FC<{ initialParams: InitialParams }> = ({ initialPar
     perfMark(screenTransitionStartMark);
   }, [screenTransitionStartMark]);
 
+  // URL direct join/host bypass (?auto=1 ou ?mode=join&code=…) :
+  // si on saute l'IdentityStep, on déclenche createRoom / joinRoom une seule fois.
+  const directSubmitRef = React.useRef(false);
+  React.useEffect(() => {
+    if (directSubmitRef.current) return;
+    if (online.code || showOnlineOnboarding) return;
+    if (!initialParams.autoSubmit && !initialParams.direct) return;
+    const name = (onboardingProfile.name || initialParams.name || connectedDisplayName).trim();
+    if (name.length < 2) return;
+    directSubmitRef.current = true;
+    if (initialParams.mode === "join" && initialParams.code) {
+      online.joinRoom(initialParams.code, name, onboardingProfile.avatar ?? initialParams.avatar);
+    } else {
+      online.createRoom(name, onboardingProfile.avatar ?? initialParams.avatar);
+    }
+  }, [
+    connectedDisplayName,
+    initialParams.autoSubmit,
+    initialParams.avatar,
+    initialParams.code,
+    initialParams.direct,
+    initialParams.mode,
+    initialParams.name,
+    onboardingProfile.avatar,
+    onboardingProfile.name,
+    online,
+    online.code,
+    showOnlineOnboarding,
+  ]);
+
   React.useEffect(() => {
     if (!online.code) {
       setHostSession(null);
@@ -168,68 +198,109 @@ const RetroPartyPage: React.FC<{ initialParams: InitialParams }> = ({ initialPar
 
   const leaveOnlineSession = () => {
     online.leaveRoom();
-    navigate("/?stage=select-experience");
+    navigate("/app");
   };
 
   if (isOnline) {
     if (online.gameState.phase === "lobby") {
+      const exp = EXPERIENCE_BY_ID["retro-party"];
+
       if (!online.code && showOnlineOnboarding) {
+        const handleIdentitySubmit = ({ name, avatar }: { name: string; avatar: number }) => {
+          setOnboardingProfile({ name, avatar });
+          setOnboardingInitialStep(1);
+          setShowOnlineOnboarding(false);
+          if (initialParams.mode === "join" && initialParams.code) {
+            online.joinRoom(initialParams.code, name, avatar);
+          } else {
+            online.createRoom(name, avatar);
+          }
+        };
+        const handleIdentityBack = () => {
+          navigate("/");
+        };
+
         return (
-          <OnlineOnboardingScreen
+          <IdentityStep
             connected={online.connected}
+            moduleLabel={exp.label}
+            moduleIcon={exp.icon}
+            accentRgb={exp.accentRgb}
             brandLabel={fr.home.title}
-            accentColor={accent.color}
-            accentGlow={accent.ambientGlow}
             initialName={onboardingProfile.name || undefined}
             initialAvatar={onboardingProfile.avatar}
-            initialStep={onboardingInitialStep}
             overallStepStart={3}
             overallStepTotal={5}
-            onSubmit={({ name, avatar }) => {
-              setOnboardingProfile({ name, avatar });
-              setOnboardingInitialStep(1);
-              setShowOnlineOnboarding(false);
-              setAutoSubmitKey(Date.now());
-            }}
-            onBack={() => {
-              navigate("/");
-            }}
+            sessionPreview={
+              initialParams.mode === "join" && initialParams.code
+                ? { code: initialParams.code, status: "lobby" }
+                : null
+            }
+            primaryLabel={
+              initialParams.mode === "join" ? "Rejoindre la session" : "Créer la session"
+            }
+            onSubmit={handleIdentitySubmit}
+            onBack={handleIdentityBack}
           />
         );
       }
 
-      return (
-        <div className="h-full w-full">
-          <OnlineLobbyScreen
-            connected={online.connected}
-            brandLabel={fr.home.title}
-            accentColor={accent.color}
-            accentGlow={accent.ambientGlow}
+      if (online.code) {
+        const selfName = (onboardingProfile.name || connectedDisplayName || "").trim();
+        const participants: PresenceParticipant[] = online.lobby.map((p, i) => ({
+          id: p.socketId ?? `${p.name}-${i}`,
+          name: p.name,
+          avatar: p.avatar,
+          isHost: p.isHost,
+          isSelf: !!selfName && p.name.trim().toLowerCase() === selfName.toLowerCase(),
+          state: p.connected === false ? "offline" : p.isHost ? "ready" : "idle",
+        }));
+        const hostPlayer = online.lobby.find((p) => p.isHost);
+        const shareUrl =
+          typeof window !== "undefined"
+            ? `${window.location.origin}/join/${online.code}`
+            : undefined;
+        const shareMessage = `Rejoins-moi sur ${exp.label} avec le code ${online.code} → ${shareUrl ?? ""}`;
+
+        return (
+          <SessionLobby
             roomCode={online.code}
-            lobbyPlayers={online.lobby}
-            onHost={online.createRoom}
-            onJoin={online.joinRoom}
-            onLeave={leaveOnlineSession}
-            onEditProfile={() => {
-              setOnboardingInitialStep(2);
-              setShowOnlineOnboarding(true);
-            }}
-            onStartGame={online.startGame}
+            connected={online.connected}
+            moduleLabel={exp.label}
+            moduleIcon={exp.icon}
+            accentRgb={exp.accentRgb}
+            brandLabel={fr.home.title}
+            sessionTitle={null}
+            participants={participants}
+            isHost={online.isHost}
             canStart={online.isHost}
-            initialName={
-              onboardingProfile.name || initialParams.name || connectedDisplayName || undefined
+            shareUrl={shareUrl}
+            shareMessage={shareMessage}
+            waitingHostName={hostPlayer?.name}
+            onLeave={leaveOnlineSession}
+            onStart={() => online.startGame(v2MaxRounds)}
+            hostSetupPanel={
+              online.isHost ? (
+                <RetroPartyHostControls
+                  rounds={v2MaxRounds}
+                  onRoundsChange={setV2MaxRounds}
+                  accentRgb={exp.accentRgb}
+                />
+              ) : null
             }
-            initialAvatar={onboardingProfile.avatar ?? initialParams.avatar}
-            initialMode={initialParams.mode}
-            initialCode={initialParams.code}
-            autoSubmitKey={autoSubmitKey}
-            joinOnly={initialParams.mode === "join" && !!initialParams.code}
-            stepLabel={`${fr.onlineOnboarding.step} 5/5`}
-            stepCurrent={5}
-            stepTotal={5}
-            titleWhenNoRoomOverride={"Créer ou rejoindre un plateau"}
           />
-        </div>
+        );
+      }
+
+      // !online.code && !showOnlineOnboarding → connexion en cours
+      // (URL direct join `?auto=1` ou retour de l'IdentityStep en attente du roomCode)
+      return (
+        <ConnectingState
+          accentRgb={exp.accentRgb}
+          mode={initialParams.mode === "join" ? "joining" : "creating"}
+          code={initialParams.mode === "join" ? initialParams.code : null}
+          onBack={() => navigate("/")}
+        />
       );
     }
 
@@ -349,3 +420,44 @@ const RetroPartyPage: React.FC<{ initialParams: InitialParams }> = ({ initialPar
 };
 
 export default Index;
+
+const RetroPartyHostControls: React.FC<{
+  rounds: number;
+  onRoundsChange: (next: number) => void;
+  accentRgb: string;
+}> = ({ rounds, onRoundsChange, accentRgb }) => {
+  return (
+    <div>
+      <div className="mb-3 flex items-center justify-between">
+        <label className="text-[13px] font-semibold text-[var(--ds-text-secondary)]">
+          Nombre de manches
+        </label>
+        <span
+          className="rounded-lg border px-2.5 py-1 text-[13px] font-bold"
+          style={{
+            borderColor: `rgba(${accentRgb},0.35)`,
+            background: `rgba(${accentRgb},0.12)`,
+            color: `rgb(${accentRgb})`,
+          }}
+        >
+          {rounds}
+        </span>
+      </div>
+      <Slider
+        min={1}
+        max={30}
+        step={1}
+        value={[rounds]}
+        onValueChange={(vals) => {
+          const n = vals[0];
+          if (Number.isFinite(n)) onRoundsChange(Math.max(1, Math.min(30, Math.round(n))));
+        }}
+        aria-label="Nombre de manches"
+      />
+      <div className="mt-2 flex justify-between text-[10px] text-[var(--ds-text-faint)]">
+        <span>1</span>
+        <span>30</span>
+      </div>
+    </div>
+  );
+};

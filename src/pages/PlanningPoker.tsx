@@ -1,18 +1,17 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { OnlineOnboardingScreen } from "@/components/screens/OnlineOnboardingScreen";
-import { OnlineLobbyScreen } from "@/components/screens/OnlineLobbyScreen";
-import { PlanningPokerReadyScreen } from "@/components/screens/PlanningPokerReadyScreen";
 import { PlanningPokerGameScreen } from "@/components/screens/PlanningPokerGameScreen";
+import { IdentityStep, SessionLobby, ConnectingState } from "@/components/app-shell-v2/pre-game";
+import type { PresenceParticipant } from "@/components/app-shell-v2/pre-game";
 import { usePlanningPokerOnlineState } from "@/hooks/usePlanningPokerOnlineState";
 import { useProfile } from "@/hooks/useProfile";
 import { useAuth } from "@/contexts/AuthContext";
 import { setHostSession } from "@/lib/hostSession";
 import { PlanningPokerRole, PlanningPokerVoteSystem } from "@/types/planningPoker";
-import { TOOL_ACCENT } from "@/lib/uiTokens";
+import { PLANNING_POKER_DECKS } from "@/lib/planningPoker";
+import { EXPERIENCE_BY_ID } from "@/design-system/tokens";
+import { cn } from "@/lib/utils";
 import { fr } from "@/i18n/fr";
-
-const ACCENT = TOOL_ACCENT["planning-poker"];
 
 const cleanDisplayName = (value: string) => value.replace(/\s+/g, " ").trim().slice(0, 16);
 
@@ -66,9 +65,6 @@ const PlanningPokerPage: React.FC = () => {
   }, [leaveRoom, location.key, navigate]);
 
   const connectedDisplayName = cleanDisplayName(user?.displayName || "");
-  const [autoSubmitKey, setAutoSubmitKey] = useState<number>(() =>
-    initialParams.autoSubmit ? Date.now() : 0,
-  );
   const { profile, setProfile } = useProfile(
     "planning-poker",
     initialParams.name || connectedDisplayName || undefined,
@@ -80,9 +76,6 @@ const PlanningPokerPage: React.FC = () => {
   );
   const [showOnboarding, setShowOnboarding] = useState<boolean>(
     () => forceProfileBeforeJoin || (!profile.name && !initialParams.direct),
-  );
-  const [onboardingInitialStep, setOnboardingInitialStep] = useState<1 | 2>(() =>
-    forceProfileBeforeJoin ? 1 : profile.name ? 2 : 1,
   );
   const [connectedLaunchProfileApplied, setConnectedLaunchProfileApplied] = useState(false);
   const [voteSystem, setVoteSystem] = useState<PlanningPokerVoteSystem>("fibonacci");
@@ -113,7 +106,6 @@ const PlanningPokerPage: React.FC = () => {
       return;
     }
     setProfile({ name: connectedDisplayName, avatar: profile.avatar });
-    setOnboardingInitialStep(2);
     setShowOnboarding(true);
     setConnectedLaunchProfileApplied(true);
   }, [
@@ -127,87 +119,145 @@ const PlanningPokerPage: React.FC = () => {
     setProfile,
   ]);
 
+  const directSubmitRef = React.useRef(false);
+  useEffect(() => {
+    if (directSubmitRef.current) return;
+    if (online.code || showOnboarding) return;
+    if (!initialParams.autoSubmit && !initialParams.direct) return;
+    const name = (profile.name || initialParams.name || connectedDisplayName).trim();
+    if (name.length < 2) return;
+    directSubmitRef.current = true;
+    if (initialParams.mode === "join" && initialParams.code) {
+      online.joinRoom(initialParams.code, name, profile.avatar ?? initialParams.avatar, "player");
+    } else {
+      online.createRoom(name, profile.avatar ?? initialParams.avatar, "player", voteSystem);
+    }
+  }, [
+    connectedDisplayName,
+    initialParams.autoSubmit,
+    initialParams.avatar,
+    initialParams.code,
+    initialParams.direct,
+    initialParams.mode,
+    initialParams.name,
+    online,
+    online.code,
+    profile.avatar,
+    profile.name,
+    showOnboarding,
+    voteSystem,
+  ]);
+
   const leaveSession = () => {
     online.leaveRoom();
-    navigate("/?stage=select-experience");
+    navigate("/app");
   };
 
   if (online.state.phase === "lobby") {
     if (!online.code && showOnboarding) {
+      const handleIdentitySubmit = ({ name, avatar }: { name: string; avatar: number }) => {
+        setProfile({ name, avatar });
+        setShowOnboarding(false);
+        if (initialParams.mode === "join" && initialParams.code) {
+          online.joinRoom(initialParams.code, name, avatar, "player");
+        } else {
+          online.createRoom(name, avatar, "player", voteSystem);
+        }
+      };
+      const exp = EXPERIENCE_BY_ID["planning-poker"];
       return (
-        <OnlineOnboardingScreen
+        <IdentityStep
           connected={online.connected}
+          moduleLabel={exp.label}
+          moduleIcon={exp.icon}
+          accentRgb={exp.accentRgb}
           brandLabel={fr.planningPoker.gameTitle}
-          accentColor={ACCENT.color}
-          accentGlow={ACCENT.ambientGlow}
           initialName={profile.name || undefined}
           initialAvatar={profile.avatar}
-          initialStep={onboardingInitialStep}
           overallStepStart={3}
           overallStepTotal={5}
-          onSubmit={({ name, avatar }) => {
-            setProfile({ name, avatar });
-            setOnboardingInitialStep(1);
-            setShowOnboarding(false);
-            setAutoSubmitKey(Date.now());
-          }}
+          sessionPreview={
+            initialParams.mode === "join" && initialParams.code
+              ? { code: initialParams.code, status: "lobby" }
+              : null
+          }
+          primaryLabel={initialParams.mode === "join" ? "Rejoindre la table" : "Créer la table"}
+          onSubmit={handleIdentitySubmit}
           onBack={() => navigate("/")}
         />
       );
     }
 
     if (!online.code) {
+      const exp = EXPERIENCE_BY_ID["planning-poker"];
       return (
-        <div className="h-full w-full">
-          <OnlineLobbyScreen
-            connected={online.connected}
-            brandLabel={fr.planningPoker.gameTitle}
-            accentColor={ACCENT.color}
-            accentGlow={ACCENT.ambientGlow}
-            roomCode={null}
-            lobbyPlayers={[]}
-            onHost={(name, avatar) => online.createRoom(name, avatar, "player", voteSystem)}
-            onJoin={(code, name, avatar) => online.joinRoom(code, name, avatar, "player")}
-            onLeave={leaveSession}
-            onEditProfile={() => {
-              setOnboardingInitialStep(2);
-              setShowOnboarding(true);
-            }}
-            onStartGame={() => {}}
-            canStart={false}
-            initialName={profile.name || initialParams.name || connectedDisplayName || undefined}
-            initialAvatar={profile.avatar ?? initialParams.avatar}
-            initialMode={initialParams.mode}
-            initialCode={initialParams.code}
-            autoSubmitKey={autoSubmitKey}
-            joinOnly={initialParams.mode === "join" && !!initialParams.code}
-            stepLabel={`${fr.onlineOnboarding.step} 5/5`}
-            stepCurrent={5}
-            stepTotal={5}
-            titleWhenNoRoomOverride="Créer ou rejoindre une table"
-          />
-        </div>
+        <ConnectingState
+          accentRgb={exp.accentRgb}
+          mode={initialParams.mode === "join" ? "joining" : "creating"}
+          code={initialParams.mode === "join" ? initialParams.code : null}
+          onBack={() => navigate("/")}
+        />
       );
     }
 
+    const exp = EXPERIENCE_BY_ID["planning-poker"];
+    const selfName = (profile.name || connectedDisplayName || "").trim();
+    const activeVoteSystem = online.state.voteSystem || voteSystem;
+    const activeRole = online.myRole || role;
+    const participants: PresenceParticipant[] = online.state.players.map((p, i) => ({
+      id: p.socketId ?? `${p.name}-${i}`,
+      name: p.name,
+      avatar: p.avatar,
+      isHost: p.isHost,
+      isSelf: !!selfName && p.name.trim().toLowerCase() === selfName.toLowerCase(),
+      state: p.connected === false ? "offline" : p.isHost ? "ready" : "idle",
+    }));
+    const hostPlayer = online.state.players.find((p) => p.isHost);
+    const shareUrl =
+      typeof window !== "undefined" ? `${window.location.origin}/join/${online.code}` : undefined;
+    const shareMessage = `Rejoins-moi sur ${exp.label} avec le code ${online.code} → ${shareUrl ?? ""}`;
+
     return (
-      <PlanningPokerReadyScreen
-        connected={online.connected}
-        brandLabel={fr.planningPoker.gameTitle}
+      <SessionLobby
         roomCode={online.code}
-        lobbyPlayers={online.state.players}
-        voteSystem={online.state.voteSystem || voteSystem}
-        myRole={online.myRole || role}
+        connected={online.connected}
+        moduleLabel={exp.label}
+        moduleIcon={exp.icon}
+        accentRgb={exp.accentRgb}
+        brandLabel={fr.planningPoker.gameTitle}
+        sessionTitle={null}
+        participants={participants}
         isHost={online.isHost}
+        canStart={online.isHost}
+        shareUrl={shareUrl}
+        shareMessage={shareMessage}
+        waitingHostName={hostPlayer?.name}
+        onLeave={leaveSession}
         onStart={online.startSession}
-        onVoteSystemChange={(next) => {
-          setVoteSystem(next);
-          online.setVoteSystem(next);
-        }}
-        onRoleChange={(nextRole) => {
-          setRole(nextRole);
-          online.setRole(nextRole);
-        }}
+        playerSetupTitle="Mon rôle"
+        playerSetupPanel={
+          <PlanningPokerRoleControl
+            accentRgb={exp.accentRgb}
+            value={activeRole}
+            onChange={(nextRole) => {
+              setRole(nextRole);
+              online.setRole(nextRole);
+            }}
+          />
+        }
+        hostSetupTitle="Système de vote"
+        hostSetupPanel={
+          online.isHost ? (
+            <PlanningPokerDeckControl
+              accentRgb={exp.accentRgb}
+              value={activeVoteSystem}
+              onChange={(next) => {
+                setVoteSystem(next);
+                online.setVoteSystem(next);
+              }}
+            />
+          ) : null
+        }
       />
     );
   }
@@ -238,3 +288,106 @@ const PlanningPokerPage: React.FC = () => {
 };
 
 export default PlanningPokerPage;
+
+const VOTE_SYSTEM_OPTIONS: Array<{ value: PlanningPokerVoteSystem; label: string }> = [
+  { value: "fibonacci", label: "Fibonacci" },
+  { value: "man-day", label: "JH" },
+  { value: "tshirt", label: "T-Shirt" },
+];
+
+const displayDeckValue = (value: string) => (value === "☕" ? "Café" : value);
+
+const PlanningPokerRoleControl: React.FC<{
+  value: PlanningPokerRole;
+  onChange: (next: PlanningPokerRole) => void;
+  accentRgb: string;
+}> = ({ value, onChange, accentRgb }) => {
+  const options: Array<{ value: PlanningPokerRole; label: string; hint: string }> = [
+    { value: "player", label: "Joueur", hint: "Tu votes les estimations" },
+    { value: "spectator", label: "Spectateur", hint: "Tu observes sans voter" },
+  ];
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      {options.map((opt) => {
+        const active = value === opt.value;
+        return (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => onChange(opt.value)}
+            aria-pressed={active}
+            className={cn(
+              "ds-focus-ring flex flex-col items-start gap-1 rounded-xl border px-3 py-2.5 text-left transition",
+              active
+                ? "text-[var(--ds-text-primary)]"
+                : "border-[var(--ds-border)] bg-[var(--ds-surface-0)] text-[var(--ds-text-secondary)] hover:bg-[var(--ds-surface-2)]",
+            )}
+            style={
+              active
+                ? {
+                    borderColor: `rgba(${accentRgb},0.55)`,
+                    background: `rgba(${accentRgb},0.12)`,
+                    boxShadow: `0 0 0 1px rgba(${accentRgb},0.4)`,
+                  }
+                : undefined
+            }
+          >
+            <span className="text-[13px] font-semibold">{opt.label}</span>
+            <span className="text-[11.5px] text-[var(--ds-text-faint)]">{opt.hint}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+};
+
+const PlanningPokerDeckControl: React.FC<{
+  value: PlanningPokerVoteSystem;
+  onChange: (next: PlanningPokerVoteSystem) => void;
+  accentRgb: string;
+}> = ({ value, onChange, accentRgb }) => {
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-3 gap-1.5">
+        {VOTE_SYSTEM_OPTIONS.map((opt) => {
+          const active = value === opt.value;
+          return (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => onChange(opt.value)}
+              aria-pressed={active}
+              className={cn(
+                "ds-focus-ring h-9 rounded-xl border text-[12.5px] font-semibold transition",
+                active
+                  ? "text-[var(--ds-text-primary)]"
+                  : "border-[var(--ds-border)] bg-[var(--ds-surface-0)] text-[var(--ds-text-secondary)] hover:bg-[var(--ds-surface-2)]",
+              )}
+              style={
+                active
+                  ? {
+                      borderColor: `rgba(${accentRgb},0.55)`,
+                      background: `rgba(${accentRgb},0.12)`,
+                      boxShadow: `0 0 0 1px rgba(${accentRgb},0.4)`,
+                    }
+                  : undefined
+              }
+            >
+              {opt.label}
+            </button>
+          );
+        })}
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {PLANNING_POKER_DECKS[value].map((v) => (
+          <span
+            key={`deck-${v}`}
+            className="rounded-lg border border-[var(--ds-border)] bg-[var(--ds-surface-0)] px-2 py-0.5 font-mono text-[11px] text-[var(--ds-text-faint)]"
+          >
+            {displayDeckValue(v)}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+};

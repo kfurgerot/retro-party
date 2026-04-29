@@ -12,3 +12,10 @@ export const ENABLE_BOARD_V2 = import.meta.env.VITE_ENABLE_BOARD_V2 === "1";
 // Pixi renderer rollout for the legacy board.
 // Default ON, with opt-out via env: VITE_ENABLE_BOARD_PIXI=0
 export const ENABLE_BOARD_PIXI = import.meta.env.VITE_ENABLE_BOARD_PIXI !== "0";
+
+// Pre-game flow v2 (IdentityStep + SessionLobby v2). Activé par défaut.
+// L'écran legacy a été supprimé — cette fonction reste pour permettre
+// à un éventuel futur fork (v3) de gating si besoin.
+export function isPreGameV2Enabled(): boolean {
+  return true;
+}

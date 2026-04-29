@@ -10,8 +10,9 @@ import {
 } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { C2S_EVENTS, S2C_EVENTS } from "@shared/contracts/socketEvents.js";
-import { OnlineLobbyScreen } from "@/components/screens/OnlineLobbyScreen";
-import { OnlineOnboardingScreen } from "@/components/screens/OnlineOnboardingScreen";
+import { IdentityStep, SessionLobby, ConnectingState } from "@/components/app-shell-v2/pre-game";
+import type { PresenceParticipant } from "@/components/app-shell-v2/pre-game";
+import { EXPERIENCE_BY_ID } from "@/design-system/tokens";
 import {
   Dialog,
   DialogContent,
@@ -648,16 +649,9 @@ export default function SkillsMatrixPage() {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(templateFromQuery);
   const [applyingTemplate, setApplyingTemplate] = useState(false);
   const [autoApplyGuard, setAutoApplyGuard] = useState<string | null>(null);
-  const [autoSubmitKey, setAutoSubmitKey] = useState<number>(() =>
-    initialAutoSubmit ? Date.now() : 0,
-  );
-
   const [profile, setProfile] = useState(() => ({ name: initialName, avatar: initialAvatar }));
   const [showOnlineOnboarding, setShowOnlineOnboarding] = useState(
     () => forceProfileBeforeJoin || (!initialDirectAccess && initialName.length < 2),
-  );
-  const [onboardingInitialStep, setOnboardingInitialStep] = useState<1 | 2>(() =>
-    forceProfileBeforeJoin ? 1 : initialName.length >= 2 ? 2 : 1,
   );
   const [connectedLaunchProfileApplied, setConnectedLaunchProfileApplied] = useState(false);
 
@@ -696,7 +690,6 @@ export default function SkillsMatrixPage() {
     if (connectedLaunchProfileApplied || authLoading) return;
     if (!connectedDisplayName || initialMode !== "host" || initialDirectAccess || roomCode) return;
     setProfile((prev) => ({ name: connectedDisplayName, avatar: prev.avatar }));
-    setOnboardingInitialStep(2);
     setShowOnlineOnboarding(true);
     setConnectedLaunchProfileApplied(true);
   }, [
@@ -707,6 +700,8 @@ export default function SkillsMatrixPage() {
     initialMode,
     roomCode,
   ]);
+
+  const directSubmitRef = useRef(false);
 
   const applySnapshot = useCallback((nextSnapshot: SkillsMatrixSnapshot) => {
     setSnapshot(nextSnapshot);
@@ -1331,16 +1326,43 @@ export default function SkillsMatrixPage() {
     });
   }, [applySnapshot, participantId, roomCode, withLoading]);
 
+  // URL direct join/host (?auto=1 ou ?mode=join&code=…) :
+  // si on saute l'IdentityStep, on déclenche createRoom / joinRoom une seule fois.
+  // Placé après les déclarations de handleHost / handleJoin pour éviter une TDZ.
+  useEffect(() => {
+    if (directSubmitRef.current) return;
+    if (roomCode || showOnlineOnboarding) return;
+    if (!initialAutoSubmit && !initialDirectAccess) return;
+    const name = cleanName(profile.name || initialName || connectedDisplayName);
+    if (name.length < 2) return;
+    directSubmitRef.current = true;
+    if (initialMode === "join" && initialCode) {
+      handleJoin(initialCode, name, profile.avatar ?? 0);
+    } else {
+      handleHost(name, profile.avatar ?? 0);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    connectedDisplayName,
+    initialAutoSubmit,
+    initialCode,
+    initialDirectAccess,
+    initialMode,
+    initialName,
+    profile.avatar,
+    profile.name,
+    roomCode,
+    showOnlineOnboarding,
+  ]);
+
   const handleLeaveLobby = useCallback(() => {
     persistSkillsMatrixSession(null);
     setParticipantId("");
     setSnapshot(null);
     setError(null);
     setShowOnlineOnboarding(true);
-    if (!roomCode) {
-      navigate("/");
-    }
-  }, [navigate, roomCode]);
+    navigate("/app");
+  }, [navigate]);
 
   useEffect(() => {
     if (!snapshot) return;
@@ -1664,55 +1686,55 @@ export default function SkillsMatrixPage() {
   }
 
   if (isLobbyStage) {
+    const exp = EXPERIENCE_BY_ID["skills-matrix"];
+
     if (!roomCode && showOnlineOnboarding) {
+      const handleIdentitySubmit = ({ name, avatar }: { name: string; avatar: number }) => {
+        const cleaned = cleanName(name);
+        setProfile({ name: cleaned, avatar });
+        setShowOnlineOnboarding(false);
+        if (initialMode === "join" && initialCode) {
+          void handleJoin(initialCode, cleaned, avatar);
+        } else {
+          void handleHost(cleaned, avatar);
+        }
+      };
       return (
-        <OnlineOnboardingScreen
+        <IdentityStep
           connected={true}
+          moduleLabel={exp.label}
+          moduleIcon={exp.icon}
+          accentRgb={exp.accentRgb}
           brandLabel="Matrice de Compétences"
-          accentColor={SKILLS_ACCENT.color}
-          accentGlow={SKILLS_ACCENT.ambientGlow}
           initialName={profile.name || undefined}
           initialAvatar={profile.avatar}
-          initialStep={onboardingInitialStep}
           overallStepStart={3}
           overallStepTotal={5}
-          onSubmit={({ name, avatar }) => {
-            setProfile({ name: cleanName(name), avatar });
-            setShowOnlineOnboarding(false);
-            setOnboardingInitialStep(1);
-            setAutoSubmitKey(Date.now());
-          }}
+          sessionPreview={
+            initialMode === "join" && initialCode ? { code: initialCode, status: "lobby" } : null
+          }
+          primaryLabel={initialMode === "join" ? "Rejoindre la session" : "Créer la session"}
+          onSubmit={handleIdentitySubmit}
           onBack={() => navigate("/")}
         />
       );
     }
 
-    const lobbyPlayers =
-      snapshot?.participants.map((participant) => ({
-        name: participant.displayName,
-        avatar: participant.avatar,
-        isHost: participant.isAdmin,
-        connected: true,
-      })) ?? [];
-
     const hostSetupPanel =
       snapshot && isAdmin ? (
         <div className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-xs font-bold uppercase tracking-[0.08em] text-slate-400">
-              Configuration Host
-            </h2>
+          <div className="flex flex-wrap items-center justify-end gap-2">
             <button
               type="button"
               onClick={() => navigate("/prepare/skills-matrix")}
-              className="rounded-lg border border-cyan-300/30 bg-cyan-500/10 px-3 py-1.5 text-[11px] font-semibold text-cyan-100 transition hover:bg-cyan-500/20"
+              className="ds-focus-ring rounded-lg border border-[var(--ds-border)] bg-[var(--ds-surface-0)] px-3 py-1.5 text-[11.5px] font-semibold text-[var(--ds-text-secondary)] transition hover:bg-[var(--ds-surface-2)] hover:text-[var(--ds-text-primary)]"
             >
               Préparer une partie
             </button>
           </div>
 
-          <section className="space-y-2 rounded-xl border border-white/[0.08] bg-white/[0.02] p-3">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+          <section className="space-y-2 rounded-xl border border-[var(--ds-border-faint)] bg-[var(--ds-surface-0)] p-3">
+            <div className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-[var(--ds-text-faint)]">
               Templates
             </div>
             <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
@@ -1732,14 +1754,19 @@ export default function SkillsMatrixPage() {
                 type="button"
                 onClick={() => void applyTemplate(selectedTemplateId)}
                 disabled={!selectedTemplateId || applyingTemplate}
-                className="h-10 rounded-lg border border-cyan-300/30 bg-cyan-500/12 px-3 text-xs font-semibold text-cyan-100 transition hover:bg-cyan-500/22 disabled:opacity-50"
+                className="ds-focus-ring h-10 rounded-lg border px-3 text-xs font-semibold transition disabled:opacity-50"
+                style={{
+                  borderColor: "rgba(14,165,233,0.35)",
+                  background: "rgba(14,165,233,0.12)",
+                  color: "rgb(14,165,233)",
+                }}
               >
                 {applyingTemplate ? "Application..." : "Appliquer"}
               </button>
               <button
                 type="button"
                 onClick={() => navigate("/prepare/skills-matrix")}
-                className="h-10 rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 text-xs font-semibold text-slate-200 transition hover:bg-white/[0.07]"
+                className="ds-focus-ring h-10 rounded-lg border border-[var(--ds-border)] bg-[var(--ds-surface-0)] px-3 text-xs font-semibold text-[var(--ds-text-secondary)] transition hover:bg-[var(--ds-surface-2)] hover:text-[var(--ds-text-primary)]"
               >
                 Gérer
               </button>
@@ -1753,8 +1780,8 @@ export default function SkillsMatrixPage() {
             ) : null}
           </section>
 
-          <section className="space-y-2 rounded-xl border border-white/[0.08] bg-white/[0.02] p-3">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+          <section className="space-y-2 rounded-xl border border-[var(--ds-border-faint)] bg-[var(--ds-surface-0)] p-3">
+            <div className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-[var(--ds-text-faint)]">
               Paramètres session
             </div>
             <form onSubmit={saveSessionSettings} className="space-y-3">
@@ -1765,9 +1792,9 @@ export default function SkillsMatrixPage() {
                 className="h-10 w-full rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 text-sm text-slate-100"
               />
               <div className="rounded-lg border border-white/[0.08] bg-white/[0.02] p-3">
-                <div className="mb-1.5 flex items-center justify-between text-[11px] text-slate-400">
+                <div className="mb-1.5 flex items-center justify-between text-[11px] text-[var(--ds-text-faint)]">
                   <span>Échelle des niveaux</span>
-                  <span className="font-semibold text-cyan-200">
+                  <span className="font-semibold text-sky-300">
                     {sessionSettingsScaleMin} à {sessionSettingsScaleMax}
                   </span>
                 </div>
@@ -1799,8 +1826,8 @@ export default function SkillsMatrixPage() {
             </form>
           </section>
 
-          <section className="space-y-2 rounded-xl border border-white/[0.08] bg-white/[0.02] p-3">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+          <section className="space-y-2 rounded-xl border border-[var(--ds-border-faint)] bg-[var(--ds-surface-0)] p-3">
+            <div className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-[var(--ds-text-faint)]">
               Catégories
             </div>
             <form
@@ -1837,8 +1864,8 @@ export default function SkillsMatrixPage() {
             </div>
           </section>
 
-          <section className="space-y-2 rounded-xl border border-white/[0.08] bg-white/[0.02] p-3">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+          <section className="space-y-2 rounded-xl border border-[var(--ds-border-faint)] bg-[var(--ds-surface-0)] p-3">
+            <div className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-[var(--ds-text-faint)]">
               Compétences
             </div>
             <form
@@ -1876,9 +1903,9 @@ export default function SkillsMatrixPage() {
                 />
               </div>
               <div>
-                <div className="mb-1 text-[11px] text-slate-400">
+                <div className="mb-1 text-[11px] text-[var(--ds-text-faint)]">
                   Niveau attendu:{" "}
-                  <span className="font-semibold text-cyan-200">{skillRequiredLevelInput}</span>
+                  <span className="font-semibold text-sky-300">{skillRequiredLevelInput}</span>
                 </div>
                 <Slider
                   min={snapshot.session.scaleMin}
@@ -1971,9 +1998,9 @@ export default function SkillsMatrixPage() {
                     </div>
 
                     <div>
-                      <div className="mb-1 text-[11px] text-slate-400">
+                      <div className="mb-1 text-[11px] text-[var(--ds-text-faint)]">
                         Niveau attendu:{" "}
-                        <span className="font-semibold text-cyan-200">
+                        <span className="font-semibold text-sky-300">
                           {draft?.requiredLevel ?? skill.requiredLevel}
                         </span>
                       </div>
@@ -2026,47 +2053,63 @@ export default function SkillsMatrixPage() {
         </div>
       ) : null;
 
-    return (
-      <div>
-        {error ? (
-          <div className="fixed left-1/2 top-4 z-50 -translate-x-1/2 rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-200">
-            {error}
-          </div>
-        ) : null}
+    if (roomCode) {
+      const selfName = (profile.name || connectedDisplayName || "").trim();
+      const v2Participants: PresenceParticipant[] =
+        snapshot?.participants.map((p, i) => ({
+          id: p.participantId ?? `${p.displayName}-${i}`,
+          name: p.displayName,
+          avatar: p.avatar,
+          isHost: p.isAdmin,
+          isSelf: !!selfName && p.displayName.trim().toLowerCase() === selfName.toLowerCase(),
+          state: p.isAdmin ? ("ready" as const) : ("idle" as const),
+        })) ?? [];
+      const hostPlayer = snapshot?.participants.find((p) => p.isAdmin);
+      const shareUrl =
+        typeof window !== "undefined" ? `${window.location.origin}/join/${roomCode}` : undefined;
+      const shareMessage = `Rejoins-moi sur ${exp.label} avec le code ${roomCode} → ${shareUrl ?? ""}`;
 
-        <OnlineLobbyScreen
-          connected={true}
-          brandLabel="Matrice de Compétences"
-          accentColor={SKILLS_ACCENT.color}
-          accentGlow={SKILLS_ACCENT.ambientGlow}
-          roomCode={roomCode}
-          lobbyPlayers={lobbyPlayers}
-          onHost={handleHost}
-          onJoin={handleJoin}
-          onLeave={handleLeaveLobby}
-          onEditProfile={() => {
-            setOnboardingInitialStep(2);
-            setShowOnlineOnboarding(true);
-          }}
-          onStartGame={() => {
-            handleStartSession();
-          }}
-          canStart={Boolean(roomCode) && isAdmin}
-          initialName={profile.name || initialName || connectedDisplayName || undefined}
-          initialAvatar={profile.avatar}
-          initialMode={initialMode}
-          initialCode={initialCode}
-          autoSubmitKey={autoSubmitKey}
-          stepLabel="Etape 5/5"
-          stepCurrent={5}
-          stepTotal={5}
-          shellStyle="transparent"
-          hideRoundsControl
-          joinOnly={initialMode === "join" && !!initialCode}
-          titleWhenNoRoomOverride="Créer ou rejoindre une session Matrice"
-          hostSetupPanel={hostSetupPanel}
-        />
-      </div>
+      return (
+        <>
+          {error ? (
+            <div className="fixed left-1/2 top-4 z-50 -translate-x-1/2 rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-200">
+              {error}
+            </div>
+          ) : null}
+          <SessionLobby
+            roomCode={roomCode}
+            connected={true}
+            moduleLabel={exp.label}
+            moduleIcon={exp.icon}
+            accentRgb={exp.accentRgb}
+            brandLabel="Matrice de Compétences"
+            sessionTitle={snapshot?.title ?? null}
+            participants={v2Participants}
+            isHost={isAdmin}
+            canStart={Boolean(roomCode) && isAdmin}
+            shareUrl={shareUrl}
+            shareMessage={shareMessage}
+            waitingHostName={hostPlayer?.displayName}
+            onLeave={handleLeaveLobby}
+            onStart={() => {
+              handleStartSession();
+            }}
+            hostSetupTitle="Configuration host"
+            hostSetupPanel={hostSetupPanel}
+          />
+        </>
+      );
+    }
+
+    return (
+      <ConnectingState
+        accentRgb={exp.accentRgb}
+        mode={initialMode === "join" ? "joining" : "creating"}
+        code={initialMode === "join" ? initialCode : null}
+        error={error}
+        onRetry={error ? () => setShowOnlineOnboarding(true) : undefined}
+        onBack={() => navigate("/")}
+      />
     );
   }
 

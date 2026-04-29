@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight, FileDown, Frown, Meh, Smile } from "lucide-react";
-import { OnlineLobbyScreen } from "@/components/screens/OnlineLobbyScreen";
-import { OnlineOnboardingScreen } from "@/components/screens/OnlineOnboardingScreen";
+import { IdentityStep, SessionLobby, ConnectingState } from "@/components/app-shell-v2/pre-game";
+import type { PresenceParticipant } from "@/components/app-shell-v2/pre-game";
+import { EXPERIENCE_BY_ID } from "@/design-system/tokens";
 import { Card, SecondaryButton } from "@/components/app-shell";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
@@ -351,9 +352,6 @@ const RadarPartyPage = () => {
   const [onboardingInitialStep, setOnboardingInitialStep] = useState<1 | 2>(() =>
     forceProfileBeforeJoin ? 1 : initialName.length >= 2 ? 2 : 1,
   );
-  const [autoSubmitKey, setAutoSubmitKey] = useState<number>(() =>
-    initialAutoSubmit ? Date.now() : 0,
-  );
   const [connectedLaunchProfileApplied, setConnectedLaunchProfileApplied] = useState(false);
 
   const [teamRadar, setTeamRadar] = useState<RadarAxisValues>(createNeutralRadar());
@@ -438,6 +436,8 @@ const RadarPartyPage = () => {
     initialMode,
     roomCode,
   ]);
+
+  const directSubmitRef = useRef(false);
   const progressRows = useMemo(() => {
     return participants.map((participant) => {
       const exempted = participant.isHost && !hostParticipates;
@@ -1011,6 +1011,37 @@ const RadarPartyPage = () => {
     }
   };
 
+  // URL direct join/host (?auto=1 ou ?mode=join&code=…) :
+  // si on saute l'IdentityStep, on déclenche createRoom / joinRoom une seule fois.
+  // Placé après les déclarations de handleHost / handleJoin pour éviter une TDZ.
+  useEffect(() => {
+    if (directSubmitRef.current) return;
+    if (roomCode || showOnlineOnboarding) return;
+    if (!initialAutoSubmit && !initialDirectAccess) return;
+    const name = (profile.name || initialName || connectedDisplayName).trim();
+    if (name.length < 2) return;
+    directSubmitRef.current = true;
+    if (initialMode === "join" && initialCode) {
+      void handleJoin(initialCode, name, profile.avatar ?? 0);
+    } else {
+      void handleHost(name, profile.avatar ?? 0);
+    }
+    // handleHost/handleJoin sont des closures stables sur ce render — pas besoin
+    // de les surveiller dans les deps (référence reste valide pour ce single-shot).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    connectedDisplayName,
+    initialAutoSubmit,
+    initialCode,
+    initialDirectAccess,
+    initialMode,
+    initialName,
+    profile.avatar,
+    profile.name,
+    roomCode,
+    showOnlineOnboarding,
+  ]);
+
   const handleLeaveLobby = () => {
     persistRadarSession(null);
     if (roomCode) {
@@ -1023,18 +1054,8 @@ const RadarPartyPage = () => {
       setTeamInsights(null);
       setTeamRadar(createNeutralRadar());
       setResultPublished(false);
-      return;
     }
-    if (showOnlineOnboarding) {
-      if (fromEntry) {
-        navigate("/?stage=entry&experience=agile-radar");
-        return;
-      }
-      navigate("/?stage=select-experience");
-      return;
-    }
-    setOnboardingInitialStep(2);
-    setShowOnlineOnboarding(true);
+    navigate("/app");
   };
 
   const submitToSession = async () => {
@@ -1842,108 +1863,131 @@ const RadarPartyPage = () => {
   }
 
   if (stage === "lobby") {
+    const exp = EXPERIENCE_BY_ID["radar-party"];
+
     if (!roomCode && showOnlineOnboarding) {
+      const handleIdentitySubmit = ({ name, avatar }: { name: string; avatar: number }) => {
+        setProfile({ name, avatar });
+        setShowOnlineOnboarding(false);
+        if (initialMode === "join" && initialCode) {
+          void handleJoin(initialCode, name, avatar);
+        } else {
+          void handleHost(name, avatar);
+        }
+      };
+      const handleIdentityBack = () => {
+        if (fromEntry) {
+          navigate("/?stage=entry&experience=agile-radar");
+          return;
+        }
+        navigate("/?stage=select-experience");
+      };
       return (
-        <OnlineOnboardingScreen
+        <IdentityStep
           connected={true}
+          moduleLabel={exp.label}
+          moduleIcon={exp.icon}
+          accentRgb={exp.accentRgb}
           brandLabel="Radar Party"
-          accentColor={RADAR_ACCENT.color}
-          accentGlow={RADAR_ACCENT.ambientGlow}
           initialName={profile.name || undefined}
           initialAvatar={profile.avatar}
-          initialStep={onboardingInitialStep}
           overallStepStart={3}
           overallStepTotal={5}
-          onSubmit={({ name, avatar }) => {
-            setProfile({ name, avatar });
-            setShowOnlineOnboarding(false);
-            setOnboardingInitialStep(1);
-            setAutoSubmitKey(Date.now());
-          }}
-          onBack={() => {
-            if (fromEntry) {
-              navigate("/?stage=entry&experience=agile-radar");
-              return;
-            }
-            navigate("/?stage=select-experience");
-          }}
+          sessionPreview={
+            initialMode === "join" && initialCode ? { code: initialCode, status: "lobby" } : null
+          }
+          primaryLabel={initialMode === "join" ? "Rejoindre la session" : "Créer la session"}
+          onSubmit={handleIdentitySubmit}
+          onBack={handleIdentityBack}
         />
       );
     }
 
-    return (
-      <div>
-        {error ? (
-          <div className="fixed left-1/2 top-4 z-50 -translate-x-1/2 rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-200">
-            {error}
-          </div>
-        ) : null}
-        <OnlineLobbyScreen
-          connected={true}
-          brandLabel="Radar Party"
-          accentColor={RADAR_ACCENT.color}
-          accentGlow={RADAR_ACCENT.ambientGlow}
-          roomCode={roomCode}
-          lobbyPlayers={participants.map((participant) => ({
-            name: participant.displayName,
-            avatar: participant.avatar,
-            isHost: participant.isHost,
-            connected: true,
-          }))}
-          onHost={handleHost}
-          onJoin={handleJoin}
-          onLeave={handleLeaveLobby}
-          onEditProfile={() => {
-            setOnboardingInitialStep(2);
-            setShowOnlineOnboarding(true);
-          }}
-          onStartGame={() => {
-            void handleStartSession();
-          }}
-          canStart={Boolean(roomCode) && isHost}
-          initialName={profile.name || initialName || connectedDisplayName || undefined}
-          initialAvatar={profile.avatar}
-          initialMode={initialMode}
-          initialCode={initialCode}
-          autoSubmitKey={autoSubmitKey}
-          stepLabel="Etape 5/5"
-          stepCurrent={5}
-          stepTotal={5}
-          shellStyle="transparent"
-          hideRoundsControl
-          joinOnly={initialMode === "join" && !!initialCode}
-          hostSetupPanel={
-            roomCode && isHost ? (
-              <div className="space-y-3">
-                <p className="text-xs uppercase tracking-[0.1em] text-emerald-200/90">
-                  Participation de l'hote
-                </p>
-                <div className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-500/15 bg-slate-950/35 px-3 py-2">
+    if (roomCode) {
+      const selfName = (profile.name || connectedDisplayName || "").trim();
+      const v2Participants: PresenceParticipant[] = participants.map((p, i) => ({
+        id: `${p.displayName}-${i}`,
+        name: p.displayName,
+        avatar: p.avatar,
+        isHost: p.isHost,
+        isSelf: !!selfName && p.displayName.trim().toLowerCase() === selfName.toLowerCase(),
+        state: p.isHost ? "ready" : "idle",
+      }));
+      const hostPlayer = participants.find((p) => p.isHost);
+      const shareUrl =
+        typeof window !== "undefined" ? `${window.location.origin}/join/${roomCode}` : undefined;
+      const shareMessage = `Rejoins-moi sur ${exp.label} avec le code ${roomCode} → ${shareUrl ?? ""}`;
+
+      return (
+        <>
+          {error ? (
+            <div className="fixed left-1/2 top-4 z-50 -translate-x-1/2 rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-200">
+              {error}
+            </div>
+          ) : null}
+          <SessionLobby
+            roomCode={roomCode}
+            connected={true}
+            moduleLabel={exp.label}
+            moduleIcon={exp.icon}
+            accentRgb={exp.accentRgb}
+            brandLabel="Radar Party"
+            sessionTitle={null}
+            participants={v2Participants}
+            isHost={isHost}
+            canStart={isHost}
+            shareUrl={shareUrl}
+            shareMessage={shareMessage}
+            waitingHostName={hostPlayer?.displayName}
+            onLeave={handleLeaveLobby}
+            onStart={() => {
+              void handleStartSession();
+            }}
+            hostSetupTitle="Participation de l'hôte"
+            hostSetupPanel={
+              isHost ? (
+                <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface-0)] px-3 py-2.5">
                   <div className="min-w-0">
-                    <p className="text-sm text-slate-100">
+                    <p className="text-[13px] font-semibold text-[var(--ds-text-primary)]">
                       {hostParticipates
-                        ? "L'hote repond au questionnaire"
-                        : "L'hote n'a pas besoin de repondre"}
+                        ? "L'hôte répond au questionnaire"
+                        : "L'hôte n'a pas besoin de répondre"}
                     </p>
-                    <p className="mt-0.5 text-xs text-slate-300">
+                    <p className="mt-0.5 text-[11.5px] text-[var(--ds-text-muted)]">
                       {hostParticipates
-                        ? "L'hote voit le questionnaire et peut aussi suivre l'avancement."
-                        : "L'hote ouvre directement le menu de suivi quand la partie demarre."}
+                        ? "Tu verras le questionnaire et pourras suivre l'avancement."
+                        : "Tu ouvriras directement le menu de suivi quand la partie démarre."}
                     </p>
                   </div>
                   <Switch
                     checked={hostParticipates}
                     onCheckedChange={setHostParticipates}
-                    aria-label="L'hote participe au questionnaire"
+                    aria-label="L'hôte participe au questionnaire"
                     className="data-[state=checked]:bg-emerald-500 data-[state=unchecked]:bg-slate-700"
                   />
                 </div>
-              </div>
-            ) : null
+              ) : null
+            }
+          />
+        </>
+      );
+    }
+
+    return (
+      <ConnectingState
+        accentRgb={exp.accentRgb}
+        mode={initialMode === "join" ? "joining" : "creating"}
+        code={initialMode === "join" ? initialCode : null}
+        error={error}
+        onRetry={error ? () => setShowOnlineOnboarding(true) : undefined}
+        onBack={() => {
+          if (fromEntry) {
+            navigate("/?stage=entry&experience=agile-radar");
+            return;
           }
-          titleWhenNoRoomOverride="Creer ou rejoindre une session Radar"
-        />
-      </div>
+          navigate("/?stage=select-experience");
+        }}
+      />
     );
   }
 
