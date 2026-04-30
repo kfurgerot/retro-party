@@ -8,14 +8,24 @@ import {
   type Team,
 } from "@/net/api";
 import { EXPERIENCES, EXPERIENCE_BY_ID } from "@/design-system/tokens";
-import { Filter, Play, Search, Settings2, Users } from "lucide-react";
+import { Filter, Play, Plus, Search, Settings2, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TeamPicker } from "@/components/app-shell-v2/TeamPicker";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useNavigate } from "react-router-dom";
 
 type ModuleFilter = "all" | SuiteModuleId;
 type TeamFilter = "all" | "none" | string;
 
 export default function AppTemplates() {
+  const navigate = useNavigate();
   const [data, setData] = useState<DashboardActivitiesResponse | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
@@ -69,18 +79,68 @@ export default function AppTemplates() {
     return list.sort((a, b) => Date.parse(b.occurredAt || "") - Date.parse(a.occurredAt || ""));
   }, [data, moduleFilter, teamFilter, query]);
 
+  const creatableExperiences = useMemo(() => EXPERIENCES.filter((exp) => exp.prepareRoute), []);
+
   return (
     <div className="space-y-6 pb-12">
-      <header className="flex flex-col gap-1.5">
-        <p className="text-[12.5px] font-medium uppercase tracking-[0.14em] text-[var(--ds-text-faint)]">
-          Templates
-        </p>
-        <h1 className="text-[28px] font-semibold tracking-tight text-[var(--ds-text-primary)] sm:text-[32px]">
-          Vos templates
-        </h1>
-        <p className="text-[14px] text-[var(--ds-text-muted)]">
-          Préparez vos ateliers en avance, dupliquez ce qui marche, lancez en un clic.
-        </p>
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-col gap-1.5">
+          <p className="text-[12.5px] font-medium uppercase tracking-[0.14em] text-[var(--ds-text-faint)]">
+            Templates
+          </p>
+          <h1 className="text-[28px] font-semibold tracking-tight text-[var(--ds-text-primary)] sm:text-[32px]">
+            Vos templates
+          </h1>
+          <p className="text-[14px] text-[var(--ds-text-muted)]">
+            Préparez vos ateliers en avance, dupliquez ce qui marche, lancez en un clic.
+          </p>
+        </div>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="ds-focus-ring inline-flex h-10 shrink-0 items-center gap-1.5 self-start whitespace-nowrap rounded-lg border border-indigo-400/40 bg-indigo-500 px-4 text-[13px] font-semibold text-white shadow-[0_4px_16px_rgba(99,102,241,0.35)] transition hover:bg-indigo-400 sm:self-auto"
+            >
+              <Plus size={14} />
+              Créer un template
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="end"
+            className="w-64 border-[var(--ds-border)] bg-[var(--ds-bg-elevated)] text-[var(--ds-text-primary)]"
+          >
+            <DropdownMenuLabel className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[var(--ds-text-faint)]">
+              Choisir un module
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator className="bg-[var(--ds-border)]" />
+            {creatableExperiences.map((exp) => (
+              <DropdownMenuItem
+                key={exp.id}
+                onSelect={() => navigate(exp.prepareRoute!)}
+                className="flex cursor-pointer items-center gap-2.5 px-2.5 py-2 text-[13px] focus:bg-[var(--ds-surface-2)]"
+              >
+                <span
+                  className="flex h-7 w-7 items-center justify-center rounded-md border text-[14px]"
+                  style={{
+                    background: `rgba(${exp.accentRgb},0.14)`,
+                    borderColor: `rgba(${exp.accentRgb},0.3)`,
+                  }}
+                >
+                  {exp.icon}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-[13px] font-medium text-[var(--ds-text-primary)]">
+                    {exp.label}
+                  </div>
+                  <div className="truncate text-[11.5px] text-[var(--ds-text-faint)]">
+                    {exp.tagline}
+                  </div>
+                </div>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </header>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">

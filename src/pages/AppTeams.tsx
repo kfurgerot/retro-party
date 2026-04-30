@@ -1,7 +1,7 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, type Team } from "@/net/api";
-import { ArrowRight, Plus, Users, Crown, AlertCircle } from "lucide-react";
+import { ArrowRight, Plus, Users, Crown, AlertCircle, Search } from "lucide-react";
 
 export default function AppTeams() {
   const [teams, setTeams] = useState<Team[] | null>(null);
@@ -10,6 +10,16 @@ export default function AppTeams() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [query, setQuery] = useState("");
+
+  const filteredTeams = useMemo(() => {
+    if (!teams) return null;
+    const q = query.trim().toLowerCase();
+    if (!q) return teams;
+    return teams.filter(
+      (t) => t.name.toLowerCase().includes(q) || (t.description ?? "").toLowerCase().includes(q),
+    );
+  }, [teams, query]);
 
   const load = async () => {
     setError(null);
@@ -48,16 +58,29 @@ export default function AppTeams() {
 
   return (
     <div className="space-y-6 pb-12">
-      <header className="flex flex-col gap-1.5">
-        <p className="text-[12.5px] font-medium uppercase tracking-[0.14em] text-[var(--ds-text-faint)]">
-          Équipes
-        </p>
-        <h1 className="text-[28px] font-semibold tracking-tight text-[var(--ds-text-primary)] sm:text-[32px]">
-          Vos équipes
-        </h1>
-        <p className="text-[14px] text-[var(--ds-text-muted)]">
-          Regroupez vos collaborateurs pour suivre leur maturité et leurs compétences dans le temps.
-        </p>
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-col gap-1.5">
+          <p className="text-[12.5px] font-medium uppercase tracking-[0.14em] text-[var(--ds-text-faint)]">
+            Équipes
+          </p>
+          <h1 className="text-[28px] font-semibold tracking-tight text-[var(--ds-text-primary)] sm:text-[32px]">
+            Vos équipes
+          </h1>
+          <p className="text-[14px] text-[var(--ds-text-muted)]">
+            Regroupez vos collaborateurs pour suivre leur maturité et leurs compétences dans le
+            temps.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setCreating(true)}
+          disabled={creating}
+          className="ds-focus-ring inline-flex h-10 shrink-0 items-center gap-1.5 self-start whitespace-nowrap rounded-lg border border-indigo-400/40 bg-indigo-500 px-4 text-[13px] font-semibold text-white shadow-[0_4px_16px_rgba(99,102,241,0.35)] transition hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-50 sm:self-auto"
+        >
+          <Plus size={14} />
+          Nouvelle équipe
+        </button>
       </header>
 
       {error ? (
@@ -124,24 +147,34 @@ export default function AppTeams() {
             </div>
           </div>
         </form>
-      ) : (
-        <button
-          type="button"
-          onClick={() => setCreating(true)}
-          className="ds-focus-ring inline-flex h-10 items-center gap-1.5 rounded-lg bg-indigo-500 px-4 text-[13px] font-semibold text-white shadow-[0_4px_16px_rgba(99,102,241,0.3)] transition hover:bg-indigo-400"
-        >
-          <Plus size={13} />
-          Nouvelle équipe
-        </button>
-      )}
+      ) : null}
+
+      {teams && teams.length > 0 ? (
+        <div className="relative max-w-md">
+          <Search
+            size={14}
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ds-text-faint)]"
+          />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Rechercher une équipe…"
+            className="ds-focus-ring h-10 w-full rounded-lg border border-[var(--ds-border)] bg-[var(--ds-surface-1)] pl-9 pr-3 text-[13px] text-[var(--ds-text-primary)] placeholder:text-[var(--ds-text-faint)] focus:border-indigo-400/60 focus:outline-none"
+          />
+        </div>
+      ) : null}
 
       {teams === null ? (
         <Skeleton />
       ) : teams.length === 0 ? (
         <Empty />
+      ) : filteredTeams && filteredTeams.length === 0 ? (
+        <div className="rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface-0)] px-4 py-10 text-center text-[13px] text-[var(--ds-text-faint)]">
+          Aucune équipe ne correspond à « {query} ».
+        </div>
       ) : (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {teams.map((t) => (
+          {(filteredTeams ?? teams).map((t) => (
             <TeamCard key={t.id} team={t} />
           ))}
         </div>
