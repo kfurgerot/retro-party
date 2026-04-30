@@ -5,6 +5,7 @@ import {
   type DashboardActivity,
   type Team,
   type TeamInsights,
+  type TeamInvitation,
   type TeamMember,
 } from "@/net/api";
 import { useAuth } from "@/contexts/AuthContext";
@@ -12,6 +13,8 @@ import {
   AlertCircle,
   ArrowLeft,
   ArrowRight,
+  CheckCircle2,
+  Clock,
   Crown,
   FolderKanban,
   History,
@@ -22,6 +25,7 @@ import {
   UserMinus,
   UserPlus,
   Users,
+  X,
 } from "lucide-react";
 import { ActionItemsCard } from "@/components/app-shell-v2/ActionItemsCard";
 
@@ -32,6 +36,7 @@ export default function AppTeamDetail() {
 
   const [team, setTeam] = useState<Team | null>(null);
   const [members, setMembers] = useState<TeamMember[]>([]);
+  const [pendingInvitations, setPendingInvitations] = useState<TeamInvitation[]>([]);
   const [activities, setActivities] = useState<DashboardActivity[]>([]);
   const [insights, setInsights] = useState<TeamInsights | null>(null);
   const [loading, setLoading] = useState(true);
@@ -43,6 +48,7 @@ export default function AppTeamDetail() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviting, setInviting] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
+  const [inviteSuccess, setInviteSuccess] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const load = async () => {
@@ -56,6 +62,7 @@ export default function AppTeamDetail() {
       ]);
       setTeam(teamRes.team);
       setMembers(teamRes.members);
+      setPendingInvitations(teamRes.pendingInvitations ?? []);
       setName(teamRes.team.name);
       setDescription(teamRes.team.description ?? "");
       setActivities(dashRes.modules.flatMap((m) => m.activities));
@@ -98,14 +105,35 @@ export default function AppTeamDetail() {
     if (!team || !inviteEmail.trim()) return;
     setInviting(true);
     setInviteError(null);
+    setInviteSuccess(null);
     try {
-      await api.inviteTeamMember(team.id, { email: inviteEmail.trim() });
+      const res = await api.inviteTeamMember(team.id, { email: inviteEmail.trim() });
+      const target = inviteEmail.trim();
       setInviteEmail("");
+      if (res.kind === "member") {
+        setInviteSuccess(`${target} a été ajouté·e à l'équipe.`);
+      } else if (res.emailSent) {
+        setInviteSuccess(`Invitation envoyée à ${target}.`);
+      } else {
+        setInviteSuccess(
+          `Invitation enregistrée pour ${target}, mais l'envoi de l'e-mail a échoué — vérifiez la configuration SMTP.`,
+        );
+      }
       await load();
     } catch (err) {
       setInviteError(err instanceof Error ? err.message : "Erreur");
     } finally {
       setInviting(false);
+    }
+  };
+
+  const handleCancelInvitation = async (invitationId: string) => {
+    if (!team) return;
+    try {
+      await api.cancelTeamInvitation(team.id, invitationId);
+      setPendingInvitations((prev) => prev.filter((inv) => inv.id !== invitationId));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur");
     }
   };
 
@@ -238,7 +266,7 @@ export default function AppTeamDetail() {
             Inviter un membre
           </h2>
           <p className="mt-0.5 text-[12px] text-[var(--ds-text-muted)]">
-            La personne doit déjà avoir un compte AgileSuite.
+            Si la personne n'a pas encore de compte, elle recevra un e-mail pour rejoindre l'équipe.
           </p>
           <form onSubmit={handleInvite} className="mt-3 flex flex-col gap-2 sm:flex-row">
             <div className="relative flex-1">
@@ -264,6 +292,29 @@ export default function AppTeamDetail() {
             </button>
           </form>
           {inviteError ? <p className="mt-2 text-[12px] text-rose-300">{inviteError}</p> : null}
+          {inviteSuccess ? (
+            <p className="mt-2 inline-flex items-center gap-1.5 text-[12px] text-emerald-300">
+              <CheckCircle2 size={12} />
+              {inviteSuccess}
+            </p>
+          ) : null}
+        </section>
+      ) : null}
+
+      {isOwner && pendingInvitations.length > 0 ? (
+        <section>
+          <h2 className="mb-3 text-[14px] font-semibold text-[var(--ds-text-primary)]">
+            Invitations en attente ({pendingInvitations.length})
+          </h2>
+          <div className="overflow-hidden rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface-0)]">
+            {pendingInvitations.map((inv) => (
+              <PendingInvitationRow
+                key={inv.id}
+                invitation={inv}
+                onCancel={() => handleCancelInvitation(inv.id)}
+              />
+            ))}
+          </div>
         </section>
       ) : null}
 
@@ -609,5 +660,44 @@ function BackLink() {
       <ArrowLeft size={13} />
       Toutes les équipes
     </Link>
+  );
+}
+
+function PendingInvitationRow({
+  invitation,
+  onCancel,
+}: {
+  invitation: TeamInvitation;
+  onCancel: () => void;
+}) {
+  const expiresLabel = formatDate(invitation.expiresAt);
+  return (
+    <div className="flex items-center gap-3 border-b border-[var(--ds-border-faint)] px-4 py-3 last:border-b-0">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-300">
+        <Mail size={14} />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <span className="truncate text-[13.5px] font-medium text-[var(--ds-text-primary)]">
+            {invitation.email}
+          </span>
+          <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-1.5 py-px text-[10px] font-semibold uppercase tracking-wider text-amber-300">
+            <Clock size={9} />
+            En attente
+          </span>
+        </div>
+        <div className="truncate text-[11.5px] text-[var(--ds-text-faint)]">
+          Expire le {expiresLabel}
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={onCancel}
+        title="Annuler l'invitation"
+        className="ds-focus-ring flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--ds-border)] bg-[var(--ds-surface-0)] text-[var(--ds-text-faint)] hover:border-rose-500/40 hover:bg-rose-500/10 hover:text-rose-300"
+      >
+        <X size={13} />
+      </button>
+    </div>
   );
 }
