@@ -47,6 +47,14 @@ export function HostPill() {
   const [ending, setEnding] = useState(false);
   const [endError, setEndError] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement | null>(null);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => subscribeHostSession(setPushed), []);
 
@@ -129,8 +137,22 @@ export function HostPill() {
 
   const handleEndSession = async () => {
     if (!code || !canEndSession || !pushed) return;
+    if (ending) return; // double-click guard
     setEnding(true);
     setEndError(null);
+
+    // Watchdog : si la promesse n'aboutit pas en 8s, on rend la main au
+    // user (bouton réactivable + erreur visible) plutôt que de rester
+    // bloqué sur "...".
+    const TIMEOUT_MS = 8000;
+    let watchdogFired = false;
+    const watchdog = window.setTimeout(() => {
+      watchdogFired = true;
+      if (!mountedRef.current) return;
+      setEnding(false);
+      setEndError("La requête a pris trop de temps. Réessaie ou recharge la page.");
+    }, TIMEOUT_MS);
+
     try {
       if (pushed.endSession) {
         await pushed.endSession();
@@ -141,9 +163,16 @@ export function HostPill() {
       } else {
         await api.endSession(code, isRuntimeRoom ? pushed.participantSessionId : null);
       }
+      window.clearTimeout(watchdog);
+      if (watchdogFired || !mountedRef.current) return;
       setOpen(false);
+      // Reset l'état avant de naviguer pour éviter de garder "..." si on
+      // revient en arrière dans l'historique.
+      setEnding(false);
       navigate(`/r/${code}`, { replace: true });
     } catch (err) {
+      window.clearTimeout(watchdog);
+      if (watchdogFired || !mountedRef.current) return;
       setEndError(err instanceof Error ? err.message : "Erreur");
       setEnding(false);
     }
@@ -268,7 +297,7 @@ export function HostPill() {
                     disabled={ending}
                     className="ds-focus-ring h-8 flex-1 rounded-md bg-rose-500 text-[12px] font-semibold text-white shadow-[0_4px_12px_rgba(244,63,94,0.35)] transition hover:bg-rose-400 disabled:opacity-50"
                   >
-                    {ending ? "…" : "Terminer"}
+                    {ending ? "Terminaison…" : "Terminer"}
                   </button>
                 </div>
               </div>
