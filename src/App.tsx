@@ -31,6 +31,7 @@ import {
   loadAppTeamDetailPage,
   loadComingSoonPage,
   loadAppShell,
+  loadInvitationPage,
 } from "@/lib/routeLoaders";
 import { HostPill } from "@/components/app-shell-v2/HostPill";
 import { SessionEndedListener } from "@/components/app-shell-v2/SessionEndedListener";
@@ -62,6 +63,7 @@ const AppSettings = lazy(loadAppSettingsPage);
 const SessionShare = lazy(loadSessionSharePage);
 const AppTeams = lazy(loadAppTeamsPage);
 const AppTeamDetail = lazy(loadAppTeamDetailPage);
+const InvitationPage = lazy(loadInvitationPage);
 const ComingSoon = lazy(loadComingSoonPage);
 
 const queryClient = new QueryClient();
@@ -108,6 +110,7 @@ const App = () => {
                 <Route path="/join" element={<JoinPage />} />
                 <Route path="/join/:code" element={<JoinPage />} />
                 <Route path="/r/:code" element={<SessionShare />} />
+                <Route path="/invite/:token" element={<InvitationPage />} />
                 <Route path="/app" element={<AppShell />}>
                   <Route index element={<AppDashboard />} />
                   <Route path="experiences" element={<ExperienceCatalog />} />

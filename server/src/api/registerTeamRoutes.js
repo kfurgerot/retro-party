@@ -340,6 +340,106 @@ export function registerTeamRoutes(context) {
     }
   });
 
+  // Public preview of an invitation by token (no auth needed — the token
+  // itself is the secret). Used by the /invite/:token landing page.
+  app.get("/api/teams/invitations/:token", async (req, res, next) => {
+    try {
+      const { token } = req.params;
+      if (!token || typeof token !== "string") {
+        return res.status(400).json({ error: "Invalid token" });
+      }
+      const result = await pool.query(
+        `
+          SELECT i.email_lower, i.expires_at, i.status,
+                 t.id AS team_id, t.name AS team_name,
+                 u.display_name AS inviter_name, u.email AS inviter_email
+          FROM team_invitations i
+          INNER JOIN teams t ON t.id = i.team_id
+          LEFT JOIN users u ON u.id = i.invited_by_user_id
+          WHERE i.token = $1
+          LIMIT 1
+        `,
+        [token],
+      );
+      const row = result.rows[0];
+      if (!row) return res.status(404).json({ error: "Invitation not found" });
+      if (row.status !== "pending") {
+        return res.status(410).json({ error: "Invitation already used" });
+      }
+      if (new Date(row.expires_at) <= new Date()) {
+        return res.status(410).json({ error: "Invitation expired" });
+      }
+      return res.status(200).json({
+        invitation: {
+          email: row.email_lower,
+          expiresAt: row.expires_at,
+          team: { id: row.team_id, name: row.team_name },
+          inviterName: row.inviter_name ?? null,
+          inviterEmail: row.inviter_email ?? null,
+        },
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Accept an invitation (auth required, email of current user must match).
+  app.post("/api/teams/invitations/:token/accept", requireAuth, async (req, res, next) => {
+    try {
+      const { token } = req.params;
+      const userId = req.currentUser.id;
+      const userEmail = (req.currentUser.email || "").toLowerCase();
+
+      const inviteRes = await pool.query(
+        `
+            SELECT id, team_id, email_lower, role, status, expires_at
+            FROM team_invitations
+            WHERE token = $1
+            LIMIT 1
+          `,
+        [token],
+      );
+      const invite = inviteRes.rows[0];
+      if (!invite) return res.status(404).json({ error: "Invitation not found" });
+      if (invite.status !== "pending") {
+        return res.status(410).json({ error: "Invitation already used" });
+      }
+      if (new Date(invite.expires_at) <= new Date()) {
+        return res.status(410).json({ error: "Invitation expired" });
+      }
+      if (invite.email_lower !== userEmail) {
+        return res.status(403).json({ error: "Email mismatch" });
+      }
+
+      await pool.query(
+        `
+            INSERT INTO team_members (id, team_id, user_id, role)
+            VALUES ($1, $2, $3, $4)
+            ON CONFLICT (team_id, user_id) DO NOTHING
+          `,
+        [crypto.randomUUID(), invite.team_id, userId, invite.role],
+      );
+      await pool.query(
+        `
+            UPDATE team_invitations
+            SET status = 'accepted', accepted_at = now(), accepted_user_id = $1
+            WHERE id = $2
+          `,
+        [userId, invite.id],
+      );
+
+      const teamRes = await pool.query("SELECT id, name FROM teams WHERE id = $1 LIMIT 1", [
+        invite.team_id,
+      ]);
+      const team = teamRes.rows[0];
+      return res.status(200).json({
+        team: { id: team.id, name: team.name },
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
   // Cancel a pending invitation (owner only).
   app.delete("/api/teams/:teamId/invitations/:inviteId", requireAuth, async (req, res, next) => {
     try {

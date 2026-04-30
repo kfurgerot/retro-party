@@ -100,7 +100,7 @@ export function buildTeamInvitationEmail({
   expiresAt,
 }) {
   const origin = getPrimaryOrigin();
-  const url = `${origin}/?invitation=${encodeURIComponent(token)}`;
+  const url = `${origin}/invite/${encodeURIComponent(token)}`;
   const safeTeam = escapeHtml(teamName || "votre équipe");
   const safeInviter = escapeHtml(inviterName || inviterEmail || "Un collègue");
   const safeInviterEmail = escapeHtml(inviterEmail || "");

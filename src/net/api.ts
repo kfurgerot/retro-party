@@ -324,6 +324,25 @@ export type TeamMember = {
   joinedAt: string;
 };
 
+export type TeamInvitation = {
+  id: string;
+  teamId: string;
+  email: string;
+  role: "admin" | "member";
+  status: "pending" | "accepted" | "expired";
+  invitedByUserId: string;
+  createdAt: string;
+  expiresAt: string;
+};
+
+export type InvitationPreview = {
+  email: string;
+  expiresAt: string;
+  team: { id: string; name: string };
+  inviterName: string | null;
+  inviterEmail: string | null;
+};
+
 export type TeamRadarAxes = Record<
   | "collaboration"
   | "fun"
@@ -532,7 +551,11 @@ export const api = {
   createTeam: (payload: { name: string; description?: string | null }) =>
     request<{ team: Team }>("/teams", { method: "POST", body: JSON.stringify(payload) }),
   getTeam: (teamId: string) =>
-    request<{ team: Team; members: TeamMember[] }>(`/teams/${encodeURIComponent(teamId)}`, {
+    request<{
+      team: Team;
+      members: TeamMember[];
+      pendingInvitations: TeamInvitation[];
+    }>(`/teams/${encodeURIComponent(teamId)}`, {
       method: "GET",
     }),
   updateTeam: (teamId: string, payload: { name: string; description?: string | null }) =>
@@ -543,7 +566,10 @@ export const api = {
   deleteTeam: (teamId: string) =>
     request<void>(`/teams/${encodeURIComponent(teamId)}`, { method: "DELETE" }),
   inviteTeamMember: (teamId: string, payload: { email: string; role?: "member" | "admin" }) =>
-    request<{ member: TeamMember }>(`/teams/${encodeURIComponent(teamId)}/members`, {
+    request<
+      | { kind: "member"; member: TeamMember }
+      | { kind: "invitation"; invitation: TeamInvitation; emailSent: boolean }
+    >(`/teams/${encodeURIComponent(teamId)}/members`, {
       method: "POST",
       body: JSON.stringify(payload),
     }),
@@ -551,6 +577,20 @@ export const api = {
     request<void>(
       `/teams/${encodeURIComponent(teamId)}/members/${encodeURIComponent(memberUserId)}`,
       { method: "DELETE" },
+    ),
+  cancelTeamInvitation: (teamId: string, invitationId: string) =>
+    request<void>(
+      `/teams/${encodeURIComponent(teamId)}/invitations/${encodeURIComponent(invitationId)}`,
+      { method: "DELETE" },
+    ),
+  getInvitationPreview: (token: string) =>
+    request<{ invitation: InvitationPreview }>(`/teams/invitations/${encodeURIComponent(token)}`, {
+      method: "GET",
+    }),
+  acceptTeamInvitation: (token: string) =>
+    request<{ team: { id: string; name: string } }>(
+      `/teams/invitations/${encodeURIComponent(token)}/accept`,
+      { method: "POST" },
     ),
   getTeamInsights: (teamId: string) =>
     request<TeamInsights>(`/teams/${encodeURIComponent(teamId)}/insights`, { method: "GET" }),
