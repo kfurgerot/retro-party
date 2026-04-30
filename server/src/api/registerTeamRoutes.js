@@ -363,16 +363,17 @@ export function registerTeamRoutes(context) {
       );
       const row = result.rows[0];
       if (!row) return res.status(404).json({ error: "Invitation not found" });
-      if (row.status !== "pending") {
-        return res.status(410).json({ error: "Invitation already used" });
-      }
-      if (new Date(row.expires_at) <= new Date()) {
+      if (row.status === "expired" || new Date(row.expires_at) <= new Date()) {
         return res.status(410).json({ error: "Invitation expired" });
       }
+      // status === 'pending' or 'accepted': return team info either way.
+      // Frontend uses the `status` field to drive the next step (auto-accept
+      // or redirect to team page if already accepted).
       return res.status(200).json({
         invitation: {
           email: row.email_lower,
           expiresAt: row.expires_at,
+          status: row.status,
           team: { id: row.team_id, name: row.team_name },
           inviterName: row.inviter_name ?? null,
           inviterEmail: row.inviter_email ?? null,

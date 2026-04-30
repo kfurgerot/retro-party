@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { AuthModal } from "@/components/AuthModal";
 import {
@@ -24,9 +24,12 @@ const OAUTH_ERROR_MESSAGES: Record<string, string> = {
 export default function Landing() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [authOpen, setAuthOpen] = useState(false);
   const [oauthError, setOauthError] = useState<string | null>(null);
   const [pendingPath, setPendingPath] = useState<string | null>(null);
+  const [authInitialTab, setAuthInitialTab] = useState<"login" | "register" | "forgot">("login");
+  const [authInitialEmail, setAuthInitialEmail] = useState("");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -40,6 +43,21 @@ export default function Landing() {
     const cleanUrl = `${window.location.pathname}${search ? `?${search}` : ""}${window.location.hash}`;
     window.history.replaceState({}, "", cleanUrl);
   }, []);
+
+  // Came from /invite/:token without an auth session: open the signup modal
+  // pre-filled with the invited email and route post-auth back to /invite.
+  useEffect(() => {
+    const state = location.state as { invitation?: string; email?: string } | null;
+    if (!state || !state.invitation) return;
+    if (loading) return; // wait for auth check
+    if (user) return; // shouldn't happen — Invitation.tsx auto-accepts in this case
+    setAuthInitialTab("register");
+    if (state.email) setAuthInitialEmail(state.email);
+    setPendingPath(`/invite/${state.invitation}`);
+    setAuthOpen(true);
+    // clear location.state so a manual close + reopen doesn't re-trigger
+    window.history.replaceState({}, "", window.location.href);
+  }, [location.state, loading, user]);
 
   const handleStart = (path: string) => {
     if (loading) return;
@@ -91,9 +109,13 @@ export default function Landing() {
           if (!v) {
             setOauthError(null);
             setPendingPath(null);
+            setAuthInitialEmail("");
+            setAuthInitialTab("login");
           }
         }}
         onSuccess={handleAuthSuccess}
+        initialTab={authInitialTab}
+        initialEmail={authInitialEmail}
         postAuthPath={pendingPath}
         oauthError={oauthError}
       />

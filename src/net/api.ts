@@ -338,6 +338,7 @@ export type TeamInvitation = {
 export type InvitationPreview = {
   email: string;
   expiresAt: string;
+  status: "pending" | "accepted";
   team: { id: string; name: string };
   inviterName: string | null;
   inviterEmail: string | null;

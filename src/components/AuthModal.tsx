@@ -48,6 +48,7 @@ export const AuthModal = ({
   onOpenChange,
   onSuccess,
   initialTab = "login",
+  initialEmail = "",
   postAuthPath = null,
   oauthError = null,
 }: {
@@ -55,12 +56,13 @@ export const AuthModal = ({
   onOpenChange: (v: boolean) => void;
   onSuccess: () => void;
   initialTab?: AuthTab;
+  initialEmail?: string;
   postAuthPath?: string | null;
   oauthError?: string | null;
 }) => {
   const { login, register, startOAuthLogin, oauthProviders } = useAuth();
   const [tab, setTab] = useState<AuthTab>(initialTab);
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -73,6 +75,13 @@ export const AuthModal = ({
     if (!open) return;
     if (oauthError) setError(oauthError);
   }, [open, oauthError]);
+
+  // Sync initialTab + initialEmail when modal (re)opens with new context.
+  useEffect(() => {
+    if (!open) return;
+    setTab(initialTab);
+    if (initialEmail) setEmail(initialEmail);
+  }, [open, initialTab, initialEmail]);
 
   const reset = () => {
     setError(null);

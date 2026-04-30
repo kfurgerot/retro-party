@@ -49,9 +49,28 @@ export default function InvitationPage() {
   const inviteEmail = (preview?.email ?? "").toLowerCase();
   const emailMatches = !!userEmail && userEmail === inviteEmail;
 
-  // Auto-accept once authed AND email matches.
+  // Already-accepted: two sub-cases.
+  //  - user authed with matching email → silent redirect to team (typical
+  //    post-register flow where the registration hook auto-accepted)
+  //  - other (not authed, or wrong account) → friendly "already used" error
+  useEffect(() => {
+    if (status !== "ready" || !preview) return;
+    if (preview.status !== "accepted") return;
+    if (user && emailMatches) {
+      setStatus("accepted");
+      window.setTimeout(() => {
+        navigate(`/app/teams/${preview.team.id}`);
+      }, 600);
+    } else {
+      setError("Cette invitation a déjà été utilisée.");
+      setStatus("error");
+    }
+  }, [status, preview, user, emailMatches, navigate]);
+
+  // Auto-accept once authed AND email matches AND invitation still pending.
   useEffect(() => {
     if (status !== "ready" || !preview || !user || !emailMatches) return;
+    if (preview.status !== "pending") return;
     let alive = true;
     setStatus("accepting");
     api
@@ -59,7 +78,6 @@ export default function InvitationPage() {
       .then(({ team }) => {
         if (!alive) return;
         setStatus("accepted");
-        // small delay so the user sees the success state
         window.setTimeout(() => {
           navigate(`/app/teams/${team.id}`);
         }, 800);
