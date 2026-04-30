@@ -1,3 +1,5 @@
+import { sendTeamInvitationEmail } from "../../mailService.js";
+
 function safeParse(s) {
   try {
     return JSON.parse(s);
@@ -279,6 +281,9 @@ export function registerTeamRoutes(context) {
       }
 
       // Path 2 — no user yet: upsert a pending invitation.
+      const teamRow = await pool.query("SELECT name FROM teams WHERE id = $1 LIMIT 1", [teamId]);
+      const teamName = teamRow.rows[0]?.name ?? "votre équipe";
+
       const token = crypto.randomBytes(32).toString("hex");
       const expiresAt = new Date(Date.now() + INVITATION_TTL_DAYS * 24 * 60 * 60 * 1000);
       const upsertRes = await pool.query(
@@ -303,16 +308,32 @@ export function registerTeamRoutes(context) {
       );
       const invitation = upsertRes.rows[0];
 
-      // Lot B (next commit) will send the email here. For now we only log.
-      // The token is intentionally NOT exposed in the API response.
-      // eslint-disable-next-line no-console
-      console.log(
-        `[team-invitation] ${email} invited to team ${teamId} (token=${token}, expires=${expiresAt.toISOString()})`,
-      );
+      // Send the invitation email. Best-effort: a failure here must not
+      // block the API response — the owner can re-invite to retry.
+      let emailSent = false;
+      try {
+        await sendTeamInvitationEmail({
+          to: email,
+          teamName,
+          inviterName: req.currentUser?.displayName,
+          inviterEmail: req.currentUser?.email,
+          token,
+          expiresAt: expiresAt.toISOString(),
+        });
+        emailSent = true;
+      } catch (mailErr) {
+        // eslint-disable-next-line no-console
+        console.error(
+          `[team-invitation] sendMail failed for ${email}:`,
+          mailErr?.message || mailErr,
+        );
+      }
 
+      // The token is intentionally NOT exposed in the API response.
       return res.status(201).json({
         kind: "invitation",
         invitation: serializeInvitation(invitation),
+        emailSent,
       });
     } catch (err) {
       next(err);
