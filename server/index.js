@@ -449,9 +449,11 @@ function removePokerPlayerNow(code, socketId) {
   const room = pokerRooms.get(code);
   if (!room) return;
 
-  if (room.hostSocketId === socketId) {
-    closePokerRoomForAll(code);
-    return;
+  // Idem retro-party : quitter ne tue pas la room, même pour l'host.
+  // Seul POST /api/sessions/:code/end (auth) clôture définitivement.
+  const wasHost = room.hostSocketId === socketId;
+  if (wasHost) {
+    room.hostSocketId = null;
   }
 
   room.clients.delete(socketId);
@@ -1212,9 +1214,14 @@ function removePlayerNow(code, socketId) {
   const room = rooms.get(code);
   if (!room) return;
 
-  if (room.hostSocketId === socketId) {
-    closeRoomForAll(code);
-    return;
+  // Quitter ne tue plus la room, même si c'est l'host. Le seul moyen de
+  // terminer définitivement la session est l'endpoint auth-protégé
+  // POST /api/sessions/:code/end (via /app/sessions ou la route runtime).
+  // Sémantique : seul le créateur authentifié peut clôturer ; aucun
+  // membre ne reprend le rôle d'host.
+  const wasHost = room.hostSocketId === socketId;
+  if (wasHost) {
+    room.hostSocketId = null;
   }
 
   room.clients.delete(socketId);
@@ -1240,6 +1247,8 @@ function removePlayerNow(code, socketId) {
 
   syncHostFlags(room);
 
+  // Auto-clean si la room est totalement vide (plus aucun client connecté).
+  // Si le host est parti mais des membres restent, la room continue à vivre.
   if (room.lobby.length === 0 && room.clients.size === 0) {
     rooms.delete(code);
     return;
