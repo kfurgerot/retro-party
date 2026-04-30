@@ -184,6 +184,33 @@ export async function initDatabase() {
   `);
   await pool.query("CREATE INDEX IF NOT EXISTS idx_team_members_user_id ON team_members(user_id);");
 
+  // Pending invitations sent to an email address that does not yet have a
+  // user account. When the invitee registers, the pending row is converted
+  // into a team_members row.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS team_invitations (
+      id UUID PRIMARY KEY,
+      team_id UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+      email_lower TEXT NOT NULL,
+      role TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('admin', 'member')),
+      token TEXT NOT NULL UNIQUE,
+      invited_by_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      status TEXT NOT NULL DEFAULT 'pending'
+        CHECK (status IN ('pending', 'accepted', 'expired')),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      expires_at TIMESTAMPTZ NOT NULL,
+      accepted_at TIMESTAMPTZ NULL,
+      accepted_user_id UUID NULL REFERENCES users(id) ON DELETE SET NULL,
+      UNIQUE (team_id, email_lower)
+    );
+  `);
+  await pool.query(
+    "CREATE INDEX IF NOT EXISTS idx_team_invitations_email_lower ON team_invitations(email_lower);",
+  );
+  await pool.query(
+    "CREATE INDEX IF NOT EXISTS idx_team_invitations_team_id ON team_invitations(team_id);",
+  );
+
   // Phase δ — action items issued from sessions, tracked until done.
   await pool.query(`
     CREATE TABLE IF NOT EXISTS action_items (

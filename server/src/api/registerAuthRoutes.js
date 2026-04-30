@@ -786,6 +786,48 @@ export function registerAuthRoutes(context) {
         [userId, normalizedEmail, passwordHash, displayName.trim()],
       );
 
+      // Auto-accept pending team invitations matching this email.
+      // Best-effort: failures here must not block the registration.
+      try {
+        const pendingRes = await pool.query(
+          `
+            SELECT id, team_id, role
+            FROM team_invitations
+            WHERE email_lower = $1 AND status = 'pending' AND expires_at > now()
+          `,
+          [normalizedEmail],
+        );
+        for (const invite of pendingRes.rows) {
+          try {
+            await pool.query(
+              `
+                INSERT INTO team_members (id, team_id, user_id, role)
+                VALUES ($1, $2, $3, $4)
+                ON CONFLICT (team_id, user_id) DO NOTHING
+              `,
+              [crypto.randomUUID(), invite.team_id, userId, invite.role],
+            );
+            await pool.query(
+              `
+                UPDATE team_invitations
+                SET status = 'accepted', accepted_at = now(), accepted_user_id = $1
+                WHERE id = $2
+              `,
+              [userId, invite.id],
+            );
+          } catch (acceptErr) {
+            // eslint-disable-next-line no-console
+            console.error(
+              `[team-invitation] auto-accept failed for invite ${invite.id}:`,
+              acceptErr,
+            );
+          }
+        }
+      } catch (lookupErr) {
+        // eslint-disable-next-line no-console
+        console.error("[team-invitation] lookup at register failed:", lookupErr);
+      }
+
       const sessionToken = crypto.randomBytes(32).toString("hex");
       const sessionTokenHash = hashToken(sessionToken);
       const sessionExpiresAt = new Date(Date.now() + SESSION_TTL_DAYS * 24 * 60 * 60 * 1000);

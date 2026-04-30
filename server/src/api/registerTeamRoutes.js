@@ -38,6 +38,21 @@ function serializeMember(row) {
   };
 }
 
+function serializeInvitation(row) {
+  return {
+    id: row.id,
+    teamId: row.team_id,
+    email: row.email_lower,
+    role: row.role,
+    status: row.status,
+    invitedByUserId: row.invited_by_user_id,
+    createdAt: row.created_at,
+    expiresAt: row.expires_at,
+  };
+}
+
+const INVITATION_TTL_DAYS = 7;
+
 export function registerTeamRoutes(context) {
   const { app, pool, requireAuth, crypto } = context;
 
@@ -143,9 +158,26 @@ export function registerTeamRoutes(context) {
         [teamId],
       );
 
+      // Pending invitations are owner-only data: list them only for owners.
+      let pendingInvitations = [];
+      if (role === "owner") {
+        const invitesRes = await pool.query(
+          `
+            SELECT id, team_id, email_lower, role, status,
+                   invited_by_user_id, created_at, expires_at
+            FROM team_invitations
+            WHERE team_id = $1 AND status = 'pending' AND expires_at > now()
+            ORDER BY created_at DESC
+          `,
+          [teamId],
+        );
+        pendingInvitations = invitesRes.rows.map(serializeInvitation);
+      }
+
       return res.status(200).json({
         team: serializeTeam({ ...team, role, member_count: membersRes.rows.length }),
         members: membersRes.rows.map(serializeMember),
+        pendingInvitations,
       });
     } catch (err) {
       next(err);
@@ -197,7 +229,11 @@ export function registerTeamRoutes(context) {
     }
   });
 
-  // Invite an existing user by email (owner only).
+  // Invite a member by email (owner only).
+  // If the email already has a user account, they are added directly as a
+  // member. Otherwise, a pending invitation is created (and on Lot B, an
+  // email is sent). Re-inviting a pending email refreshes the token and
+  // expiration.
   app.post("/api/teams/:teamId/members", requireAuth, async (req, res, next) => {
     try {
       const userId = req.currentUser.id;
@@ -209,36 +245,99 @@ export function registerTeamRoutes(context) {
       const role = req.body?.role === "admin" ? "admin" : "member";
       if (!email) return res.status(400).json({ error: "Invalid payload" });
 
+      // Path 1 — user already exists: add directly as member.
       const userRes = await pool.query(
         "SELECT id, email, display_name FROM users WHERE LOWER(email) = $1 LIMIT 1",
         [email],
       );
       const target = userRes.rows[0];
-      if (!target) return res.status(404).json({ error: "User not found" });
-
-      try {
-        const insertRes = await pool.query(
-          `
-            INSERT INTO team_members (id, team_id, user_id, role)
-            VALUES ($1, $2, $3, $4)
-            RETURNING *
-          `,
-          [crypto.randomUUID(), teamId, target.id, role],
-        );
-        const member = insertRes.rows[0];
-        return res.status(201).json({
-          member: serializeMember({
-            ...member,
-            email: target.email,
-            display_name: target.display_name,
-          }),
-        });
-      } catch (err) {
-        if (err && err.code === "23505") {
-          return res.status(409).json({ error: "Already a member" });
+      if (target) {
+        try {
+          const insertRes = await pool.query(
+            `
+              INSERT INTO team_members (id, team_id, user_id, role)
+              VALUES ($1, $2, $3, $4)
+              RETURNING *
+            `,
+            [crypto.randomUUID(), teamId, target.id, role],
+          );
+          const member = insertRes.rows[0];
+          return res.status(201).json({
+            kind: "member",
+            member: serializeMember({
+              ...member,
+              email: target.email,
+              display_name: target.display_name,
+            }),
+          });
+        } catch (err) {
+          if (err && err.code === "23505") {
+            return res.status(409).json({ error: "Already a member" });
+          }
+          throw err;
         }
-        throw err;
       }
+
+      // Path 2 — no user yet: upsert a pending invitation.
+      const token = crypto.randomBytes(32).toString("hex");
+      const expiresAt = new Date(Date.now() + INVITATION_TTL_DAYS * 24 * 60 * 60 * 1000);
+      const upsertRes = await pool.query(
+        `
+          INSERT INTO team_invitations (
+            id, team_id, email_lower, role, token, invited_by_user_id,
+            status, expires_at
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7)
+          ON CONFLICT (team_id, email_lower) DO UPDATE SET
+            role = EXCLUDED.role,
+            token = EXCLUDED.token,
+            invited_by_user_id = EXCLUDED.invited_by_user_id,
+            status = 'pending',
+            created_at = now(),
+            expires_at = EXCLUDED.expires_at,
+            accepted_at = NULL,
+            accepted_user_id = NULL
+          RETURNING *
+        `,
+        [crypto.randomUUID(), teamId, email, role, token, userId, expiresAt.toISOString()],
+      );
+      const invitation = upsertRes.rows[0];
+
+      // Lot B (next commit) will send the email here. For now we only log.
+      // The token is intentionally NOT exposed in the API response.
+      // eslint-disable-next-line no-console
+      console.log(
+        `[team-invitation] ${email} invited to team ${teamId} (token=${token}, expires=${expiresAt.toISOString()})`,
+      );
+
+      return res.status(201).json({
+        kind: "invitation",
+        invitation: serializeInvitation(invitation),
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Cancel a pending invitation (owner only).
+  app.delete("/api/teams/:teamId/invitations/:inviteId", requireAuth, async (req, res, next) => {
+    try {
+      const userId = req.currentUser.id;
+      const { teamId, inviteId } = req.params;
+      const isOwner = await ensureOwnerRole(teamId, userId);
+      if (!isOwner) return res.status(403).json({ error: "Forbidden" });
+
+      const result = await pool.query(
+        `
+            DELETE FROM team_invitations
+            WHERE id = $1 AND team_id = $2 AND status = 'pending'
+          `,
+        [inviteId, teamId],
+      );
+      if (result.rowCount === 0) {
+        return res.status(404).json({ error: "Not found" });
+      }
+      return res.status(204).end();
     } catch (err) {
       next(err);
     }
