@@ -181,11 +181,14 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
   const mobileStoryEditorInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const votingPlayers = useMemo(
-    () => state.players.filter((player) => player.role === "player"),
+    // Exclut les joueurs hors-ligne (soft-leave / disconnect) du compteur
+    // de votants : la table de vote ne les attend pas.
+    () => state.players.filter((player) => player.role === "player" && player.connected !== false),
     [state.players],
   );
   const spectators = useMemo(
-    () => state.players.filter((player) => player.role === "spectator"),
+    () =>
+      state.players.filter((player) => player.role === "spectator" && player.connected !== false),
     [state.players],
   );
   const activeDeck = PLANNING_POKER_DECKS[state.voteSystem] ?? PLANNING_POKER_DECKS.fibonacci;

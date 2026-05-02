@@ -1023,29 +1023,33 @@ export function registerSocketHandlers(deps) {
       socketToRadarRoom.delete(socket.id);
       socketToSkillsMatrixRoom.delete(socket.id);
 
+      // Disconnect (fermeture d'onglet, perte réseau, etc.) traite la
+      // déconnexion comme un soft-leave : marque le slot offline, marque
+      // le state.players entry disconnected:true et avance le tour si
+      // c'était au joueur courant. Le slot persiste tant que END_SESSION
+      // n'est pas appelé.
       const pokerCode = socketToPokerRoom.get(socket.id);
       if (pokerCode) {
         const pokerRoom = pokerRooms.get(pokerCode);
-        socketToPokerRoom.delete(socket.id);
-
         if (pokerRoom) {
-          pokerRoom.clients.delete(socket.id);
-
           const pokerPlayer = pokerRoom.lobby.find((player) => player.socketId === socket.id);
-          if (pokerPlayer) {
-            pokerPlayer.connected = false;
-            pokerPlayer.disconnectedAt = Date.now();
-
-            if (!pokerPlayer.sessionId) {
-              removePokerPlayerNow(pokerCode, socket.id);
-            } else {
-              schedulePokerDisconnectCleanup(pokerCode, socket.id, pokerPlayer.sessionId);
-              broadcastPokerLobby(pokerCode);
-              broadcastPokerState(pokerCode);
+          if (pokerPlayer && !pokerPlayer.sessionId) {
+            // Legacy player sans sessionId : pas de reconnect possible,
+            // on retire complètement.
+            socketToPokerRoom.delete(socket.id);
+            pokerRoom.clients.delete(socket.id);
+            removePokerPlayerNow(pokerCode, socket.id);
+          } else if (pokerPlayer) {
+            softLeavePokerPlayer(pokerCode, socket.id);
+          } else {
+            socketToPokerRoom.delete(socket.id);
+            pokerRoom.clients.delete(socket.id);
+            if (pokerRoom.lobby.length === 0 && pokerRoom.clients.size === 0) {
+              pokerRooms.delete(pokerCode);
             }
-          } else if (pokerRoom.lobby.length === 0 && pokerRoom.clients.size === 0) {
-            pokerRooms.delete(pokerCode);
           }
+        } else {
+          socketToPokerRoom.delete(socket.id);
         }
       }
 
@@ -1053,31 +1057,33 @@ export function registerSocketHandlers(deps) {
       if (!code) return;
 
       const room = rooms.get(code);
-      socketToRoom.delete(socket.id);
-
-      if (!room) return;
-
-      room.clients.delete(socket.id);
+      if (!room) {
+        socketToRoom.delete(socket.id);
+        return;
+      }
 
       const player = room.lobby.find((p) => p.socketId === socket.id);
       if (!player) {
+        socketToRoom.delete(socket.id);
+        room.clients.delete(socket.id);
         if (room.lobby.length === 0 && room.clients.size === 0) {
           rooms.delete(code);
         }
         return;
       }
 
-      player.connected = false;
-      player.disconnectedAt = Date.now();
-
       if (!player.sessionId) {
+        // Legacy: pas de reconnect possible → cleanup direct.
+        socketToRoom.delete(socket.id);
+        room.clients.delete(socket.id);
         removePlayerNow(code, socket.id);
         return;
       }
 
-      scheduleDisconnectCleanup(code, socket.id, player.sessionId);
-      broadcastLobby(code);
-      broadcastState(code);
+      // Soft-leave standard : state préservé, tour avancé si nécessaire,
+      // notice "X a quitté la partie" déclenchée côté clients via le
+      // diff connected:true → false dans la lobby broadcast.
+      softLeavePlayer(code, socket.id);
     });
   });
 }
