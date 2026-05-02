@@ -144,6 +144,11 @@ export function registerSocketHandlers(deps) {
       const becomesHost = !room.hostSocketId;
       if (becomesHost) room.hostSocketId = socket.id;
       room.clients.add(socket.id);
+      // Filet anti-doublon : un seul slot par socketId vivant (idem retro).
+      const existingForSocket = room.lobby.findIndex((p) => p.socketId === socket.id);
+      if (existingForSocket >= 0) {
+        room.lobby.splice(existingForSocket, 1);
+      }
       room.lobby.push({
         socketId: socket.id,
         sessionId: resolvedSessionId,
@@ -581,6 +586,14 @@ export function registerSocketHandlers(deps) {
       const becomesHost = !room.hostSocketId;
       if (becomesHost) room.hostSocketId = socket.id;
       room.clients.add(socket.id);
+      // Filet anti-doublon : si le même socketId est déjà présent (cas où
+      // un client aurait émis deux JOIN_ROOM avec deux sessionIds dans la
+      // même fenêtre), on retire l'entrée précédente avant de pousser la
+      // nouvelle. Garantit un slot unique par socket vivant.
+      const existingForSocket = room.lobby.findIndex((p) => p.socketId === socket.id);
+      if (existingForSocket >= 0) {
+        room.lobby.splice(existingForSocket, 1);
+      }
       room.lobby.push({
         socketId: socket.id,
         sessionId: resolvedSessionId,

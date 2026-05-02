@@ -1690,6 +1690,8 @@ export default function SkillsMatrixPage() {
 
     if (!roomCode && showOnlineOnboarding) {
       const handleIdentitySubmit = ({ name, avatar }: { name: string; avatar: number }) => {
+        // Verrouille l'effet directSubmit pour éviter un double join.
+        directSubmitRef.current = true;
         const cleaned = cleanName(name);
         setProfile({ name: cleaned, avatar });
         setShowOnlineOnboarding(false);

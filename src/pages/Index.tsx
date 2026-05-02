@@ -207,6 +207,10 @@ const RetroPartyPage: React.FC<{ initialParams: InitialParams }> = ({ initialPar
 
       if (!online.code && showOnlineOnboarding) {
         const handleIdentitySubmit = ({ name, avatar }: { name: string; avatar: number }) => {
+          // Verrouille l'effet directSubmit AVANT les setState : le re-render
+          // déclenché par setShowOnlineOnboarding(false) ne doit pas refaire
+          // un joinRoom (sinon double JOIN_ROOM avec deux sessionIds → dup).
+          directSubmitRef.current = true;
           setOnboardingProfile({ name, avatar });
           setOnboardingInitialStep(1);
           setShowOnlineOnboarding(false);

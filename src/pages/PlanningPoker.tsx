@@ -156,6 +156,9 @@ const PlanningPokerPage: React.FC = () => {
   if (online.state.phase === "lobby") {
     if (!online.code && showOnboarding) {
       const handleIdentitySubmit = ({ name, avatar }: { name: string; avatar: number }) => {
+        // Voir Index.tsx : on neutralise l'effet directSubmit pour éviter
+        // un double join (qui pousserait deux sessionIds différents).
+        directSubmitRef.current = true;
         setProfile({ name, avatar });
         setShowOnboarding(false);
         if (initialParams.mode === "join" && initialParams.code) {

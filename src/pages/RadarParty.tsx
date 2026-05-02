@@ -1867,6 +1867,8 @@ const RadarPartyPage = () => {
 
     if (!roomCode && showOnlineOnboarding) {
       const handleIdentitySubmit = ({ name, avatar }: { name: string; avatar: number }) => {
+        // Verrouille l'effet directSubmit pour éviter un double join.
+        directSubmitRef.current = true;
         setProfile({ name, avatar });
         setShowOnlineOnboarding(false);
         if (initialMode === "join" && initialCode) {
