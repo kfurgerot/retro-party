@@ -454,20 +454,21 @@ export function usePlanningPokerOnlineState(options: UsePlanningPokerOnlineState
   );
 
   const leaveRoom = useCallback(() => {
+    // Soft-leave : voir useOnlineGameState. Le slot serveur est conservé
+    // pour permettre la reconnexion via /play?code=XXX&mode=join tant que
+    // le host n'a pas terminé la session.
     if (socket.connected) {
       socket.emit(C2S_EVENTS.LEAVE_POKER_ROOM);
     }
-    const previousCode = sessionRef.current?.code ?? code;
     storeHistory(sessionRef.current, []);
     sessionRef.current = null;
     pendingProfileRef.current = null;
     recordedSummariesRef.current.clear();
     setHistory([]);
-    removeStoredSession(previousCode);
     setCode(null);
     setState(EMPTY_STATE);
     latestStateRef.current = EMPTY_STATE;
-  }, [code]);
+  }, []);
 
   const startSession = useCallback(() => {
     socket.emit(C2S_EVENTS.START_POKER_SESSION);

@@ -460,22 +460,26 @@ export function useOnlineGameState(options: UseOnlineGameStateOptions = {}) {
   }, []);
 
   const leaveRoom = useCallback(() => {
+    // Soft-leave côté serveur : le slot est conservé pour permettre la
+    // reconnexion (RECONNECT_ROOM avec le même sessionId), tant que la
+    // session n'est pas terminée par le host (POST /sessions/:code/end).
+    // La sessionId reste donc en localStorage pour que /play?code=XXX
+    // ré-hydrate proprement et reattach automatiquement le slot existant
+    // (notice "X a rejoint" côté autres joueurs).
     if (socket.connected) socket.emit(C2S_EVENTS.LEAVE_ROOM);
-    const previousCode = sessionRef.current?.code ?? code;
     if (minigameCleanupRef.current) {
       window.clearTimeout(minigameCleanupRef.current);
       minigameCleanupRef.current = null;
     }
     sessionRef.current = null;
     pendingProfileRef.current = null;
-    removeStoredSession(previousCode);
     setCode(null);
     setLobby([]);
     previousLobbyRef.current = null;
     setGameState(EMPTY_STATE);
     setWhoSaidIt(null);
     setRoomNotice(null);
-  }, [code]);
+  }, []);
 
   const startGame = useCallback(
     (maxRounds: number) => socket.emit(C2S_EVENTS.START_GAME, { maxRounds }),

@@ -477,6 +477,31 @@ function removePokerPlayerNow(code, socketId) {
   broadcastPokerState(code);
 }
 
+// Idem retro-party : LEAVE_POKER_ROOM conserve le slot pour permettre
+// la reconnexion, ne tue pas la room.
+function softLeavePokerPlayer(code, socketId) {
+  const room = pokerRooms.get(code);
+  if (!room) return;
+
+  if (room.hostSocketId === socketId) {
+    room.hostSocketId = null;
+  }
+
+  room.clients.delete(socketId);
+  socketToPokerRoom.delete(socketId);
+
+  const slot = room.lobby.find((p) => p.socketId === socketId);
+  if (slot) {
+    slot.socketId = null;
+    slot.connected = false;
+    slot.disconnectedAt = Date.now();
+  }
+
+  syncPokerHostFlags(room);
+  broadcastPokerLobby(code);
+  broadcastPokerState(code);
+}
+
 function schedulePokerDisconnectCleanup(code, socketId, sessionId) {
   const room = pokerRooms.get(code);
   if (!room || !sessionId) return;
@@ -1258,6 +1283,50 @@ function removePlayerNow(code, socketId) {
   broadcastState(code);
 }
 
+// Soft-leave : l'utilisateur clique "Quitter" volontairement.
+// Le slot reste dans la lobby (sessionId persisté), il n'apparaît plus
+// dans le live game state, et son socket est détaché. Aucun timer de
+// cleanup : le slot persiste jusqu'à END_SESSION (REST auth).
+// Lifecycle reconnect : RECONNECT_ROOM avec le même sessionId rétablit
+// la connexion ; si une partie est en cours, le joueur est ré-injecté
+// dans state.players à la position 0 (sa progression précédente est
+// effacée volontairement).
+function softLeavePlayer(code, socketId) {
+  const room = rooms.get(code);
+  if (!room) return;
+
+  if (room.hostSocketId === socketId) {
+    room.hostSocketId = null;
+  }
+
+  room.clients.delete(socketId);
+  socketToRoom.delete(socketId);
+
+  const slot = room.lobby.find((p) => p.socketId === socketId);
+  if (slot) {
+    // On garde sessionId, name, avatar, isHost. socketId passe à null
+    // pour indiquer "vacant" et connected à false pour les notices UI.
+    slot.socketId = null;
+    slot.connected = false;
+    slot.disconnectedAt = Date.now();
+  }
+
+  room.state = removePlayerFromState(room.state, socketId);
+  if (isWhoSaidItActive(room)) {
+    removeWhoSaidItPlayer(room.wsi, socketId);
+    if (!room.wsi.playerIds.length) {
+      clearWhoSaidItTimers(room);
+      room.wsi = null;
+    }
+  }
+  clearBuzzwordTimers(room);
+  clearPointDuelTimers(room);
+
+  syncHostFlags(room);
+  broadcastLobby(code);
+  broadcastState(code);
+}
+
 function scheduleDisconnectCleanup(code, socketId, sessionId) {
   const room = rooms.get(code);
   if (!room || !sessionId) return;
@@ -1306,6 +1375,36 @@ function attachSocketToExistingPlayer(code, room, player, socket) {
   socket.join(code);
   clearDisconnectTimer(room, player.sessionId);
   syncHostFlags(room);
+
+  // Si l'on revient après un soft-leave alors qu'une partie est en cours,
+  // l'entrée state.players a été supprimée. On ré-injecte un pion neuf à
+  // la position 0 pour permettre au joueur de reprendre.
+  if (room.state.phase === "playing") {
+    const inState = room.state.players.some((p) => p.id === socket.id);
+    if (!inState) {
+      const color = pickNextPlayerColor(room.state.players);
+      room.state = {
+        ...room.state,
+        players: [
+          ...room.state.players,
+          {
+            id: socket.id,
+            name: player.name || "Player",
+            avatar: player.avatar ?? 0,
+            position: 0,
+            positionNodeId: "0",
+            lastPosition: -1,
+            points: 0,
+            stars: 0,
+            inventory: [],
+            skipNextTurn: false,
+            color,
+            isHost: !!player.isHost,
+          },
+        ],
+      };
+    }
+  }
 }
 registerSocketHandlers({
   io,
@@ -1378,6 +1477,8 @@ registerSocketHandlers({
   schedulePokerDisconnectCleanup,
   scheduleDisconnectCleanup,
   removePlayerNow,
+  softLeavePlayer,
+  softLeavePokerPlayer,
 });
 
 async function startServer() {

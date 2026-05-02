@@ -71,6 +71,8 @@ export function registerSocketHandlers(deps) {
     schedulePokerDisconnectCleanup,
     scheduleDisconnectCleanup,
     removePlayerNow,
+    softLeavePlayer,
+    softLeavePokerPlayer,
   } = deps;
 
   io.on("connection", (socket) => {
@@ -189,7 +191,8 @@ export function registerSocketHandlers(deps) {
       const code = socketToPokerRoom.get(socket.id);
       if (!code) return;
       socket.leave(code);
-      removePokerPlayerNow(code, socket.id);
+      // Soft-leave : voir LEAVE_ROOM (retro). Le slot reste pour reconnect.
+      softLeavePokerPlayer(code, socket.id);
     });
 
     socket.on(C2S_EVENTS.START_POKER_SESSION, () => {
@@ -657,7 +660,10 @@ export function registerSocketHandlers(deps) {
       const code = socketToRoom.get(socket.id);
       if (!code) return;
       socket.leave(code);
-      removePlayerNow(code, socket.id);
+      // Soft-leave : conserve le slot pour permettre la reconnexion future
+      // (RECONNECT_ROOM avec le même sessionId). Pour fermer définitivement,
+      // utiliser POST /api/sessions/:code/end.
+      softLeavePlayer(code, socket.id);
     });
 
     socket.on(C2S_EVENTS.START_GAME, ({ maxRounds } = {}) => {
