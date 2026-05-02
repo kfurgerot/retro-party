@@ -15,6 +15,10 @@ export interface Player {
   skipNextTurn: boolean;
   color: string;
   isHost?: boolean;
+  /** True quand le joueur a soft-leave la room ; le pion est faded
+   * dans l'UI et le serveur skip son tour automatiquement. Cleared
+   * au reconnect (RECONNECT_ROOM avec le même sessionId). */
+  disconnected?: boolean;
 }
 
 export type TileType =

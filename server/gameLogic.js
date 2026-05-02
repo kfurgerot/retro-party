@@ -1768,8 +1768,16 @@ export function nextTurn(state) {
   }
 
   let safety = 0;
-  while (players[nextIndex]?.skipNextTurn && safety < players.length) {
-    players[nextIndex].skipNextTurn = false;
+  // Skip players who are flagged skipNextTurn OR currently disconnected
+  // (soft-leave). When a disconnected player reconnects, they reclaim
+  // their slot at the next free turn cycle.
+  while (
+    (players[nextIndex]?.skipNextTurn || players[nextIndex]?.disconnected) &&
+    safety < players.length
+  ) {
+    if (players[nextIndex].skipNextTurn) {
+      players[nextIndex].skipNextTurn = false;
+    }
     nextIndex += 1;
     if (nextIndex >= players.length) {
       nextIndex = 0;

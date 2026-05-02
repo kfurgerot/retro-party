@@ -1284,13 +1284,16 @@ function removePlayerNow(code, socketId) {
 }
 
 // Soft-leave : l'utilisateur clique "Quitter" volontairement.
-// Le slot reste dans la lobby (sessionId persisté), il n'apparaît plus
-// dans le live game state, et son socket est détaché. Aucun timer de
-// cleanup : le slot persiste jusqu'à END_SESSION (REST auth).
-// Lifecycle reconnect : RECONNECT_ROOM avec le même sessionId rétablit
-// la connexion ; si une partie est en cours, le joueur est ré-injecté
-// dans state.players à la position 0 (sa progression précédente est
-// effacée volontairement).
+// Le slot reste dans la lobby (sessionId persisté) et son entrée dans
+// state.players est conservée avec un flag disconnected:true — sa
+// progression (position, points, inventaire) n'est PAS perdue. Le
+// socket est détaché. Aucun timer de cleanup : le slot persiste jusqu'à
+// END_SESSION (REST auth).
+// Lifecycle reconnect : RECONNECT_ROOM avec le même sessionId remap
+// l'id de l'entrée state.players vers le nouveau socketId via
+// attachSocketToExistingPlayer (qui clear aussi disconnected:false).
+// Le joueur reprend exactement où il en était, qu'il soit authentifié
+// ou anonyme (la sessionId est portée par le client via localStorage).
 function softLeavePlayer(code, socketId) {
   const room = rooms.get(code);
   if (!room) return;
@@ -1311,7 +1314,26 @@ function softLeavePlayer(code, socketId) {
     slot.disconnectedAt = Date.now();
   }
 
-  room.state = removePlayerFromState(room.state, socketId);
+  // Marque la live entry comme disconnected pour signaler aux autres
+  // joueurs (UI fade) et pour que nextTurn() saute le tour. Ne PAS
+  // appeler removePlayerFromState : on conserve la progression.
+  if (room.state.players?.length) {
+    const wasCurrent =
+      room.state.phase === "playing" &&
+      room.state.players[room.state.currentPlayerIndex]?.id === socketId;
+    room.state = {
+      ...room.state,
+      players: room.state.players.map((p) =>
+        p.id === socketId ? { ...p, disconnected: true } : p,
+      ),
+    };
+    // Si le joueur qui quitte était le joueur courant et qu'aucun
+    // pending choice/minigame ne bloque, on avance le tour pour
+    // débloquer la partie en cours.
+    if (wasCurrent) {
+      room.state = nextTurn(room.state);
+    }
+  }
   if (isWhoSaidItActive(room)) {
     removeWhoSaidItPlayer(room.wsi, socketId);
     if (!room.wsi.playerIds.length) {
@@ -1376,32 +1398,18 @@ function attachSocketToExistingPlayer(code, room, player, socket) {
   clearDisconnectTimer(room, player.sessionId);
   syncHostFlags(room);
 
-  // Si l'on revient après un soft-leave alors qu'une partie est en cours,
-  // l'entrée state.players a été supprimée. On ré-injecte un pion neuf à
-  // la position 0 pour permettre au joueur de reprendre.
-  if (room.state.phase === "playing") {
-    const inState = room.state.players.some((p) => p.id === socket.id);
-    if (!inState) {
-      const color = pickNextPlayerColor(room.state.players);
+  // Reconnect après soft-leave : remap a déjà mis à jour player.id vers
+  // le nouveau socketId. On clear le flag disconnected pour réintégrer
+  // le joueur dans le tour-loop. Sa progression (position, points,
+  // inventaire) est conservée intacte.
+  if (room.state.players?.length) {
+    const stateEntry = room.state.players.find((p) => p.id === socket.id);
+    if (stateEntry?.disconnected) {
       room.state = {
         ...room.state,
-        players: [
-          ...room.state.players,
-          {
-            id: socket.id,
-            name: player.name || "Player",
-            avatar: player.avatar ?? 0,
-            position: 0,
-            positionNodeId: "0",
-            lastPosition: -1,
-            points: 0,
-            stars: 0,
-            inventory: [],
-            skipNextTurn: false,
-            color,
-            isHost: !!player.isHost,
-          },
-        ],
+        players: room.state.players.map((p) =>
+          p.id === socket.id ? { ...p, disconnected: false } : p,
+        ),
       };
     }
   }
