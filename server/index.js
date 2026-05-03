@@ -1265,7 +1265,9 @@ function removePlayerNow(code, socketId) {
   room.clients.delete(socketId);
   socketToRoom.delete(socketId);
 
-  const leavingIndex = room.lobby.findIndex((p) => p.socketId === socketId);
+  const leavingIndex = room.lobby.findIndex(
+    (p) => p.socketId === socketId || p.statePlayerId === socketId,
+  );
   if (leavingIndex >= 0) {
     const leaving = room.lobby[leavingIndex];
     clearDisconnectTimer(room, leaving.sessionId);
@@ -1307,7 +1309,11 @@ function removePlayerNow(code, socketId) {
 // attachSocketToExistingPlayer (qui clear aussi disconnected:false).
 // Le joueur reprend exactement où il en était, qu'il soit authentifié
 // ou anonyme (la sessionId est portée par le client via localStorage).
-function softLeavePlayer(code, socketId) {
+function softLeavePlayer(
+  code,
+  socketId,
+  { advanceTurnIfCurrent = true, clearBlockingInteractions = true, appendLeaveLog = true } = {},
+) {
   const room = rooms.get(code);
   if (!room) return;
 
@@ -1343,41 +1349,45 @@ function softLeavePlayer(code, socketId) {
         p.id === socketId ? { ...p, disconnected: true } : p,
       ),
     };
-    const blocksTurn =
-      room.state.currentQuestion?.targetPlayerId === socketId ||
-      room.state.currentMinigame?.targetPlayerId === socketId ||
-      room.state.currentMinigame?.attackerId === socketId ||
-      room.state.currentMinigame?.defenderId === socketId ||
-      room.state.currentMinigame?.duelists?.includes?.(socketId) ||
-      room.state.pendingPathChoice?.playerId === socketId ||
-      room.state.pendingKudoPurchase?.playerId === socketId ||
-      room.state.pendingShop?.playerId === socketId;
+    if (clearBlockingInteractions) {
+      const blocksTurn =
+        room.state.currentQuestion?.targetPlayerId === socketId ||
+        room.state.currentMinigame?.targetPlayerId === socketId ||
+        room.state.currentMinigame?.attackerId === socketId ||
+        room.state.currentMinigame?.defenderId === socketId ||
+        room.state.currentMinigame?.duelists?.includes?.(socketId) ||
+        room.state.pendingPathChoice?.playerId === socketId ||
+        room.state.pendingKudoPurchase?.playerId === socketId ||
+        room.state.pendingShop?.playerId === socketId;
 
-    if (blocksTurn) {
-      room.state = {
-        ...room.state,
-        currentQuestion: null,
-        currentMinigame: null,
-        pendingPathChoice: null,
-        pendingKudoPurchase: null,
-        pendingShop: null,
-        diceValue: null,
-        isRolling: false,
-        pendingPreRollEffect: null,
-        pendingDoubleRoll: null,
-        preRollChoiceResolved: true,
-        preRollSelectedItemId: null,
-        turnPhase: "finished",
-      };
+      if (blocksTurn) {
+        room.state = {
+          ...room.state,
+          currentQuestion: null,
+          currentMinigame: null,
+          pendingPathChoice: null,
+          pendingKudoPurchase: null,
+          pendingShop: null,
+          diceValue: null,
+          isRolling: false,
+          pendingPreRollEffect: null,
+          pendingDoubleRoll: null,
+          preRollChoiceResolved: true,
+          preRollSelectedItemId: null,
+          turnPhase: "finished",
+        };
+      }
     }
-    room.state = appendActionLog(
-      room.state,
-      `${slot?.name ?? leavingPlayer?.name ?? "Un joueur"} a quitte la partie.`,
-    );
+    if (appendLeaveLog) {
+      room.state = appendActionLog(
+        room.state,
+        `${slot?.name ?? leavingPlayer?.name ?? "Un joueur"} a quitte la partie.`,
+      );
+    }
 
     // Si le joueur qui quitte était le joueur courant, on avance le tour
     // après avoir nettoyé ses choix/mini-jeux éventuels.
-    if (wasCurrent) {
+    if (advanceTurnIfCurrent && wasCurrent) {
       room.state = nextTurn(room.state);
     }
   }
@@ -1406,7 +1416,10 @@ function scheduleDisconnectCleanup(code, socketId, sessionId) {
     if (!activeRoom) return;
 
     const stillDisconnected = activeRoom.lobby.find(
-      (p) => p.sessionId === sessionId && p.socketId === socketId && !p.connected,
+      (p) =>
+        p.sessionId === sessionId &&
+        (p.socketId === socketId || p.statePlayerId === socketId) &&
+        !p.connected,
     );
     if (!stillDisconnected) return;
 

@@ -1028,11 +1028,10 @@ export function registerSocketHandlers(deps) {
       socketToRadarRoom.delete(socket.id);
       socketToSkillsMatrixRoom.delete(socket.id);
 
-      // Disconnect (fermeture d'onglet, perte réseau, etc.) traite la
-      // déconnexion comme un soft-leave : marque le slot offline, marque
-      // le state.players entry disconnected:true et avance le tour si
-      // c'était au joueur courant. Le slot persiste tant que END_SESSION
-      // n'est pas appelé.
+      // Disconnect (refresh, fermeture d'onglet, perte réseau, etc.) n'a
+      // pas la même intention qu'un clic "Quitter" : on marque le slot
+      // offline pour permettre la reconnexion, mais on ne consomme pas le
+      // tour du joueur courant pendant la fenêtre de grâce.
       const pokerCode = socketToPokerRoom.get(socket.id);
       if (pokerCode) {
         const pokerRoom = pokerRooms.get(pokerCode);
@@ -1085,10 +1084,12 @@ export function registerSocketHandlers(deps) {
         return;
       }
 
-      // Soft-leave standard : state préservé, tour avancé si nécessaire,
-      // notice "X a quitté la partie" déclenchée côté clients via le
-      // diff connected:true → false dans la lobby broadcast.
-      softLeavePlayer(code, socket.id);
+      softLeavePlayer(code, socket.id, {
+        advanceTurnIfCurrent: false,
+        clearBlockingInteractions: false,
+        appendLeaveLog: false,
+      });
+      scheduleDisconnectCleanup(code, socket.id, player.sessionId);
     });
   });
 }
