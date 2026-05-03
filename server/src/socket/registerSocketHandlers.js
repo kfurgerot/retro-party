@@ -656,14 +656,19 @@ export function registerSocketHandlers(deps) {
       broadcastState(code);
     });
 
-    socket.on(C2S_EVENTS.LEAVE_ROOM, () => {
+    socket.on(C2S_EVENTS.LEAVE_ROOM, (ack) => {
+      const acknowledge = typeof ack === "function" ? ack : () => {};
       const code = socketToRoom.get(socket.id);
-      if (!code) return;
+      if (!code) {
+        acknowledge({ ok: false });
+        return;
+      }
       socket.leave(code);
       // Soft-leave : conserve le slot pour permettre la reconnexion future
       // (RECONNECT_ROOM avec le même sessionId). Pour fermer définitivement,
       // utiliser POST /api/sessions/:code/end.
       softLeavePlayer(code, socket.id);
+      acknowledge({ ok: true });
     });
 
     socket.on(C2S_EVENTS.START_GAME, ({ maxRounds } = {}) => {

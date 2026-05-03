@@ -35,6 +35,7 @@ import {
   validateQuestion,
   nextTurn,
   resetGame,
+  appendActionLog,
   submitBuzzwordAnswer,
   resolveBuzzwordWord,
   maybeStartBuzzwordNextWord,
@@ -1193,6 +1194,11 @@ function removePlayerFromState(state, socketId) {
 }
 
 function syncHostFlags(room) {
+  const designatedHost = room.lobby.find((p) => p.isHost) ?? null;
+  const designatedHostSessionId = designatedHost?.sessionId ?? null;
+  const designatedHostStatePlayerId =
+    designatedHost?.statePlayerId ?? designatedHost?.socketId ?? null;
+
   if (
     !room.hostSocketId ||
     !room.lobby.some((p) => p.socketId === room.hostSocketId && p.connected !== false)
@@ -1205,11 +1211,18 @@ function syncHostFlags(room) {
         : null);
     room.hostSocketId = nextHost?.socketId ?? null;
   }
-  room.lobby = room.lobby.map((p) => ({ ...p, isHost: p.socketId === room.hostSocketId }));
+  room.lobby = room.lobby.map((p) => ({
+    ...p,
+    isHost: room.hostSocketId
+      ? p.socketId === room.hostSocketId
+      : !!designatedHostSessionId && p.sessionId === designatedHostSessionId,
+  }));
   if (room.state?.players?.length) {
     room.state.players = room.state.players.map((p) => ({
       ...p,
-      isHost: p.id === room.hostSocketId,
+      isHost: room.hostSocketId
+        ? p.id === room.hostSocketId
+        : !!designatedHostStatePlayerId && p.id === designatedHostStatePlayerId,
     }));
   }
 }
@@ -1298,6 +1311,8 @@ function softLeavePlayer(code, socketId) {
   const room = rooms.get(code);
   if (!room) return;
 
+  const leavingPlayer = room.state.players?.find((p) => p.id === socketId) ?? null;
+
   if (room.hostSocketId === socketId) {
     room.hostSocketId = null;
   }
@@ -1309,6 +1324,7 @@ function softLeavePlayer(code, socketId) {
   if (slot) {
     // On garde sessionId, name, avatar, isHost. socketId passe à null
     // pour indiquer "vacant" et connected à false pour les notices UI.
+    slot.statePlayerId = socketId;
     slot.socketId = null;
     slot.connected = false;
     slot.disconnectedAt = Date.now();
@@ -1327,9 +1343,40 @@ function softLeavePlayer(code, socketId) {
         p.id === socketId ? { ...p, disconnected: true } : p,
       ),
     };
-    // Si le joueur qui quitte était le joueur courant et qu'aucun
-    // pending choice/minigame ne bloque, on avance le tour pour
-    // débloquer la partie en cours.
+    const blocksTurn =
+      room.state.currentQuestion?.targetPlayerId === socketId ||
+      room.state.currentMinigame?.targetPlayerId === socketId ||
+      room.state.currentMinigame?.attackerId === socketId ||
+      room.state.currentMinigame?.defenderId === socketId ||
+      room.state.currentMinigame?.duelists?.includes?.(socketId) ||
+      room.state.pendingPathChoice?.playerId === socketId ||
+      room.state.pendingKudoPurchase?.playerId === socketId ||
+      room.state.pendingShop?.playerId === socketId;
+
+    if (blocksTurn) {
+      room.state = {
+        ...room.state,
+        currentQuestion: null,
+        currentMinigame: null,
+        pendingPathChoice: null,
+        pendingKudoPurchase: null,
+        pendingShop: null,
+        diceValue: null,
+        isRolling: false,
+        pendingPreRollEffect: null,
+        pendingDoubleRoll: null,
+        preRollChoiceResolved: true,
+        preRollSelectedItemId: null,
+        turnPhase: "finished",
+      };
+    }
+    room.state = appendActionLog(
+      room.state,
+      `${slot?.name ?? leavingPlayer?.name ?? "Un joueur"} a quitte la partie.`,
+    );
+
+    // Si le joueur qui quitte était le joueur courant, on avance le tour
+    // après avoir nettoyé ses choix/mini-jeux éventuels.
     if (wasCurrent) {
       room.state = nextTurn(room.state);
     }

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -44,6 +44,8 @@ export function HostPill() {
   const [dismissed, setDismissed] = useState(false);
   const [pushed, setPushed] = useState<HostSession | null>(() => getHostSession());
   const [confirmEnd, setConfirmEnd] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+  const [leaveError, setLeaveError] = useState<string | null>(null);
   const [ending, setEnding] = useState(false);
   const [endError, setEndError] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement | null>(null);
@@ -76,12 +78,15 @@ export function HostPill() {
     setDismissed(false);
     setCopied(false);
     setConfirmEnd(false);
+    setLeaving(false);
+    setLeaveError(null);
     setEndError(null);
   }, [location.pathname, location.search]);
 
   useEffect(() => {
     if (!open) {
       setConfirmEnd(false);
+      setLeaveError(null);
       setEndError(null);
     }
   }, [open]);
@@ -132,6 +137,26 @@ export function HostPill() {
       setTimeout(() => setCopied(false), 1800);
     } catch {
       // ignored
+    }
+  };
+
+  const handleLeaveSession = async () => {
+    if (leaving) return;
+    setLeaving(true);
+    setLeaveError(null);
+
+    try {
+      if (pushed?.leaveSession) {
+        await pushed.leaveSession();
+      }
+      if (!mountedRef.current) return;
+      setOpen(false);
+      setLeaving(false);
+      navigate("/app");
+    } catch (err) {
+      if (!mountedRef.current) return;
+      setLeaveError(err instanceof Error ? err.message : "Erreur");
+      setLeaving(false);
     }
   };
 
@@ -261,13 +286,16 @@ export function HostPill() {
                 <ExternalLink size={12} />
                 Aperçu page partagée
               </a>
-              <Link
-                to="/app"
-                className="ds-focus-ring flex h-9 w-full items-center justify-center gap-1.5 rounded-lg border border-[var(--ds-border)] bg-[var(--ds-surface-0)] text-[12.5px] font-medium text-[var(--ds-text-faint)] transition hover:bg-[var(--ds-surface-2)] hover:text-[var(--ds-text-primary)]"
+              <button
+                type="button"
+                onClick={handleLeaveSession}
+                disabled={leaving}
+                className="ds-focus-ring flex h-9 w-full items-center justify-center gap-1.5 rounded-lg border border-[var(--ds-border)] bg-[var(--ds-surface-0)] text-[12.5px] font-medium text-[var(--ds-text-faint)] transition hover:bg-[var(--ds-surface-2)] hover:text-[var(--ds-text-primary)] disabled:opacity-50"
               >
                 <LogOut size={12} />
-                Quitter (la session reste active)
-              </Link>
+                {leaving ? "Sortie..." : "Quitter (la session reste active)"}
+              </button>
+              {leaveError ? <p className="text-[11.5px] text-rose-300">{leaveError}</p> : null}
             </div>
 
             {canEndSession && confirmEnd ? (

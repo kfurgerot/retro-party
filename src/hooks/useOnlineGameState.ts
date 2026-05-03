@@ -12,6 +12,7 @@ import { C2S_EVENTS, S2C_EVENTS } from "@shared/contracts/socketEvents.js";
 
 type LobbyPlayer = {
   socketId?: string;
+  sessionId?: string;
   name: string;
   avatar: number;
   isHost: boolean;
@@ -197,20 +198,30 @@ export function useOnlineGameState(options: UseOnlineGameStateOptions = {}) {
         return;
       }
 
-      const prevById = new Map(previousLobby.map((player) => [player.socketId ?? "", player]));
-      const nextById = new Map(nextLobby.map((player) => [player.socketId ?? "", player]));
+      const presenceKey = (player: LobbyPlayer, index: number) =>
+        player.sessionId || player.socketId || `${player.name}-${index}`;
+      const selfSessionId = sessionRef.current?.sessionId ?? null;
+      const isSelf = (player: LobbyPlayer) =>
+        (!!selfSessionId && player.sessionId === selfSessionId) ||
+        (!!player.socketId && player.socketId === socket.id);
+      const prevById = new Map(
+        previousLobby.map((player, index) => [presenceKey(player, index), player]),
+      );
+      const nextById = new Map(
+        nextLobby.map((player, index) => [presenceKey(player, index), player]),
+      );
 
       const notices: string[] = [];
 
       for (const [socketId, player] of nextById) {
         if (!socketId || prevById.has(socketId)) continue;
-        if (socketId === socket.id) continue;
+        if (isSelf(player)) continue;
         notices.push(`${player.name} a rejoint la partie`);
       }
 
       for (const [socketId, player] of prevById) {
         if (!socketId || nextById.has(socketId)) continue;
-        if (socketId === socket.id) continue;
+        if (isSelf(player)) continue;
         notices.push(`${player.name} a quitte la partie`);
       }
 
@@ -218,7 +229,7 @@ export function useOnlineGameState(options: UseOnlineGameStateOptions = {}) {
         if (!socketId) continue;
         const prevPlayer = prevById.get(socketId);
         if (!prevPlayer) continue;
-        if (socketId === socket.id) continue;
+        if (isSelf(nextPlayer)) continue;
 
         const wasConnected = prevPlayer.connected !== false;
         const isConnectedNow = nextPlayer.connected !== false;
@@ -459,14 +470,20 @@ export function useOnlineGameState(options: UseOnlineGameStateOptions = {}) {
     socket.emit(C2S_EVENTS.JOIN_ROOM, { code: roomCode, name: normalizedName, avatar, sessionId });
   }, []);
 
-  const leaveRoom = useCallback(() => {
+  const leaveRoom = useCallback(async () => {
     // Soft-leave côté serveur : le slot est conservé pour permettre la
     // reconnexion (RECONNECT_ROOM avec le même sessionId), tant que la
     // session n'est pas terminée par le host (POST /sessions/:code/end).
     // La sessionId reste donc en localStorage pour que /play?code=XXX
     // ré-hydrate proprement et reattach automatiquement le slot existant
     // (notice "X a rejoint" côté autres joueurs).
-    if (socket.connected) socket.emit(C2S_EVENTS.LEAVE_ROOM);
+    if (socket.connected) {
+      await new Promise<void>((resolve) => {
+        socket.timeout(1500).emit(C2S_EVENTS.LEAVE_ROOM, () => {
+          resolve();
+        });
+      });
+    }
     if (minigameCleanupRef.current) {
       window.clearTimeout(minigameCleanupRef.current);
       minigameCleanupRef.current = null;

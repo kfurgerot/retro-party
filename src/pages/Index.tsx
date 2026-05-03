@@ -180,9 +180,25 @@ const RetroPartyPage: React.FC<{ initialParams: InitialParams }> = ({ initialPar
       moduleId: isPoker ? "planning-poker" : "retro-party",
       isHost: online.isHost,
       participantSessionId: online.sessionId,
+      leaveSession: online.leaveRoom,
     });
     return () => setHostSession(null);
-  }, [online.code, online.isHost, online.sessionId, location.search]);
+  }, [online.code, online.isHost, online.leaveRoom, online.sessionId, location.search]);
+
+  React.useEffect(() => {
+    if (!online.code) return;
+    const params = new URLSearchParams(location.search);
+    if (!params.has("new")) return;
+    params.delete("new");
+    const nextSearch = params.toString();
+    navigate(
+      {
+        pathname: location.pathname,
+        search: nextSearch ? `?${nextSearch}` : "",
+      },
+      { replace: true },
+    );
+  }, [location.pathname, location.search, navigate, online.code]);
 
   React.useEffect(() => {
     const view = isOnline ? online.gameState.phase : local.gameState.phase;
@@ -196,8 +212,8 @@ const RetroPartyPage: React.FC<{ initialParams: InitialParams }> = ({ initialPar
     perfMark(screenTransitionStartMark);
   }, [isOnline, online.gameState.phase, local.gameState.phase, screenTransitionStartMark]);
 
-  const leaveOnlineSession = () => {
-    online.leaveRoom();
+  const leaveOnlineSession = async () => {
+    await online.leaveRoom();
     navigate("/app");
   };
 

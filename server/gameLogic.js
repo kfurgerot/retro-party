@@ -98,7 +98,7 @@ function makeInventoryItemId(itemType) {
   return `${itemType}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function appendActionLog(state, message) {
+export function appendActionLog(state, message) {
   const nextLogs = [...(state.actionLogs ?? []), message];
   return {
     ...state,

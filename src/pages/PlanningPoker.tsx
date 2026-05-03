@@ -91,9 +91,10 @@ const PlanningPokerPage: React.FC = () => {
       moduleId: "planning-poker",
       isHost: online.isHost,
       participantSessionId: online.sessionId,
+      leaveSession: online.leaveRoom,
     });
     return () => setHostSession(null);
-  }, [online.code, online.isHost, online.sessionId]);
+  }, [online.code, online.isHost, online.leaveRoom, online.sessionId]);
 
   useEffect(() => {
     if (connectedLaunchProfileApplied || authLoading) return;

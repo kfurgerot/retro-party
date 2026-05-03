@@ -210,6 +210,10 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const hasMovedThisTurnRef = useRef(hasMovedThisTurn);
 
   const currentPlayer = gameState.players[gameState.currentPlayerIndex];
+  const boardPlayers = useMemo(
+    () => gameState.players.filter((player) => !player.disconnected),
+    [gameState.players],
+  );
   const bugSmashState =
     gameState.currentMinigame?.minigameId === "BUG_SMASH" ? gameState.currentMinigame : null;
   const buzzwordState =
@@ -1136,7 +1140,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               {ENABLE_BOARD_V2 ? (
                 <BoardV2
                   tiles={gameState.tiles}
-                  players={gameState.players}
+                  players={boardPlayers}
                   pendingPathChoice={pendingPathChoice}
                   lastMoveTrace={gameState.lastMoveTrace}
                   eventOverlayActive={isArrivalEventActive}
@@ -1146,7 +1150,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               ) : (
                 <GameBoard
                   tiles={gameState.tiles}
-                  players={gameState.players}
+                  players={boardPlayers}
                   focusPlayerId={currentPlayer?.id ?? null}
                   activePlayerHint={!isMyTurn ? activePlayerHint : null}
                   pendingPathChoice={pendingPathChoice}

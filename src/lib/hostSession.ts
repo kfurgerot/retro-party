@@ -6,6 +6,7 @@ export type HostSession = {
   isHost?: boolean;
   participantId?: string | null;
   participantSessionId?: string | null;
+  leaveSession?: () => void | Promise<void>;
   endSession?: () => void | Promise<void>;
 };
 
@@ -19,7 +20,9 @@ export function setHostSession(next: HostSession | null) {
     next?.moduleId === current?.moduleId &&
     next?.isHost === current?.isHost &&
     next?.participantId === current?.participantId &&
-    next?.participantSessionId === current?.participantSessionId
+    next?.participantSessionId === current?.participantSessionId &&
+    next?.leaveSession === current?.leaveSession &&
+    next?.endSession === current?.endSession
   ) {
     return;
   }
