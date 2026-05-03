@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 80" font-family="DM Sans, system-ui, sans-serif">
+  <defs>
+    <radialGradient id="logoGlow" cx="50%" cy="55%" r="55%">
+      <stop offset="0%" stop-color="#6366f1" stop-opacity="0.55" />
+      <stop offset="55%" stop-color="#ec4899" stop-opacity="0.18" />
+      <stop offset="100%" stop-color="#0a0a14" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="logoEdge" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#6366f1" stop-opacity="0.6" />
+      <stop offset="50%" stop-color="#ec4899" stop-opacity="0.6" />
+      <stop offset="100%" stop-color="#10b981" stop-opacity="0.6" />
+    </linearGradient>
+    <linearGradient id="suiteGradient" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#6366f1" />
+      <stop offset="50%" stop-color="#ec4899" />
+      <stop offset="100%" stop-color="#10b981" />
+    </linearGradient>
+  </defs>
+
+  <g transform="translate(8 8)">
+    <rect width="64" height="64" rx="14" ry="14" fill="#0a0a14" />
+    <rect x="0.5" y="0.5" width="63" height="63" rx="13.5" ry="13.5"
+          fill="none" stroke="url(#logoEdge)" stroke-width="1" opacity="0.9" />
+    <circle cx="32" cy="34" r="22" fill="url(#logoGlow)" />
+    <g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="5">
+      <polyline points="14,48 32,30 50,48" stroke="#10b981" />
+      <polyline points="14,40 32,22 50,40" stroke="#ec4899" />
+      <polyline points="14,32 32,14 50,32" stroke="#6366f1" />
+    </g>
+  </g>
+
+  <text x="88" y="46" font-size="30" font-weight="700" fill="#f5f5fa" letter-spacing="-0.5">Agile</text>
+  <text x="172" y="46" font-size="30" font-weight="500" fill="url(#suiteGradient)" letter-spacing="-0.5">Suite</text>
+  <text x="89" y="64" font-size="10" font-weight="500" fill="#9ca3af" letter-spacing="3">COLLAB · AGILE · PORTAL</text>
+</svg>

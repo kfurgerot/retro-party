@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { AuthModal } from "@/components/AuthModal";
+import { BrandMark } from "@/components/BrandMark";
 import {
   EXPERIENCE_CATEGORIES,
   EXPERIENCES,
@@ -157,9 +158,7 @@ function Header({
   return (
     <header className="relative z-10 mx-auto flex w-full max-w-[1200px] items-center justify-between px-5 py-5 sm:px-8">
       <Link to="/" className="flex items-center gap-2.5">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 via-pink-500 to-emerald-500 text-sm font-bold text-white shadow-md">
-          A
-        </div>
+        <BrandMark size={32} className="rounded-lg shadow-md" />
         <span className="text-[15px] font-semibold tracking-tight">AgileSuite</span>
       </Link>
 
@@ -176,13 +175,6 @@ function Header({
         >
           Comment ça marche
         </a>
-        <Link
-          to="/portal-legacy"
-          className="rounded-md px-3 py-1.5 text-[13px] font-medium text-[var(--ds-text-faint)] transition hover:text-[var(--ds-text-muted)]"
-          title="Ancienne interface"
-        >
-          Legacy
-        </Link>
       </nav>
 
       <div className="flex items-center gap-2">
@@ -552,17 +544,12 @@ function Footer() {
     <footer className="relative border-t border-[var(--ds-border)] bg-[var(--ds-bg)]">
       <div className="mx-auto flex w-full max-w-[1200px] flex-col items-start justify-between gap-4 px-5 py-8 text-[12.5px] text-[var(--ds-text-faint)] sm:flex-row sm:items-center sm:px-8">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-6 w-6 items-center justify-center rounded-md bg-gradient-to-br from-indigo-500 via-pink-500 to-emerald-500 text-[10px] font-bold text-white">
-            A
-          </div>
+          <BrandMark size={24} className="rounded-md" />
           <span>AgileSuite — animez vos rituels agiles, simplement.</span>
         </div>
         <div className="flex items-center gap-4">
           <Link to="/terms" className="hover:text-[var(--ds-text-muted)]">
             CGU
-          </Link>
-          <Link to="/portal-legacy" className="hover:text-[var(--ds-text-muted)]">
-            Ancienne interface
           </Link>
         </div>
       </div>

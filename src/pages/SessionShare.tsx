@@ -4,6 +4,7 @@ import { api, type SuiteModuleId } from "@/net/api";
 import { EXPERIENCE_BY_ID } from "@/design-system/tokens";
 import { ArrowRight, Copy, CheckCircle2, AlertCircle, Sparkles, LogIn } from "lucide-react";
 import { ActionItemsCard } from "@/components/app-shell-v2/ActionItemsCard";
+import { BrandMark } from "@/components/BrandMark";
 
 type Resolved = {
   moduleId: SuiteModuleId;
@@ -236,9 +237,7 @@ function Shell({ children, accentRgb }: { children: React.ReactNode; accentRgb?:
           to="/"
           className="flex items-center gap-2 text-[13px] font-medium text-[var(--ds-text-muted)] hover:text-[var(--ds-text-primary)]"
         >
-          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-gradient-to-br from-indigo-500 via-pink-500 to-emerald-500 text-[11px] font-bold text-white">
-            A
-          </div>
+          <BrandMark size={28} className="rounded-md" />
           AgileSuite
         </Link>
       </header>

@@ -1,6 +1,7 @@
 import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { LayoutDashboard, Sparkles, Users, FolderKanban, History, Settings } from "lucide-react";
+import { BrandMark } from "@/components/BrandMark";
 
 type NavItem = {
   to: string;
@@ -21,9 +22,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <aside className="flex h-full w-[240px] flex-col border-r border-[var(--ds-border)] bg-[var(--ds-bg)]">
       <div className="flex items-center gap-2.5 px-5 pt-5 pb-6">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 via-pink-500 to-emerald-500 text-sm font-bold text-white shadow-md">
-          A
-        </div>
+        <BrandMark size={32} className="rounded-lg shadow-md" />
         <div className="leading-tight">
           <div className="text-[15px] font-semibold text-[var(--ds-text-primary)]">AgileSuite</div>
           <div className="text-[11px] text-[var(--ds-text-faint)]">Workspace personnel</div>

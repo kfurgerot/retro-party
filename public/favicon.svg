@@ -1,24 +1,25 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" shape-rendering="crispEdges">
-  <rect width="64" height="64" fill="#060b14" />
-  <rect x="2" y="2" width="60" height="60" fill="none" stroke="#22d3ee" stroke-width="2" />
-  <rect x="8" y="8" width="48" height="48" fill="#0b1220" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <radialGradient id="agileSuiteGlow" cx="50%" cy="55%" r="55%">
+      <stop offset="0%" stop-color="#6366f1" stop-opacity="0.55" />
+      <stop offset="55%" stop-color="#ec4899" stop-opacity="0.18" />
+      <stop offset="100%" stop-color="#0a0a14" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="agileSuiteEdge" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#6366f1" stop-opacity="0.6" />
+      <stop offset="50%" stop-color="#ec4899" stop-opacity="0.6" />
+      <stop offset="100%" stop-color="#10b981" stop-opacity="0.6" />
+    </linearGradient>
+  </defs>
 
-  <rect x="14" y="14" width="18" height="18" fill="#0891b2" />
-  <rect x="32" y="14" width="18" height="18" fill="#16a34a" />
-  <rect x="14" y="32" width="18" height="18" fill="#dc2626" />
-  <rect x="32" y="32" width="18" height="18" fill="#7c3aed" />
+  <rect width="64" height="64" rx="14" ry="14" fill="#0a0a14" />
+  <rect x="0.5" y="0.5" width="63" height="63" rx="13.5" ry="13.5"
+        fill="none" stroke="url(#agileSuiteEdge)" stroke-width="1" opacity="0.9" />
+  <circle cx="32" cy="34" r="22" fill="url(#agileSuiteGlow)" />
 
-  <rect x="30" y="12" width="4" height="40" fill="#0b1220" />
-  <rect x="12" y="30" width="40" height="4" fill="#0b1220" />
-
-  <rect x="28" y="24" width="8" height="16" fill="#fde047" />
-  <rect x="24" y="28" width="16" height="8" fill="#fde047" />
-  <rect x="30" y="26" width="4" height="12" fill="#fef9c3" />
-  <rect x="26" y="30" width="12" height="4" fill="#fef9c3" />
-
-  <rect x="50" y="10" width="4" height="4" fill="#67e8f9" />
-  <rect x="46" y="14" width="4" height="4" fill="#67e8f9" />
-  <rect x="50" y="14" width="4" height="4" fill="#ecfeff" />
-  <rect x="54" y="14" width="4" height="4" fill="#67e8f9" />
-  <rect x="50" y="18" width="4" height="4" fill="#67e8f9" />
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="5">
+    <polyline points="14,48 32,30 50,48" stroke="#10b981" />
+    <polyline points="14,40 32,22 50,40" stroke="#ec4899" />
+    <polyline points="14,32 32,14 50,32" stroke="#6366f1" />
+  </g>
 </svg>

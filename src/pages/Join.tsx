@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api } from "@/net/api";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { PreJoinLobby } from "@/components/app-shell-v2/PreJoinLobby";
+import { BrandMark } from "@/components/BrandMark";
 
 const CODE_LEN = 4;
 
@@ -138,9 +139,7 @@ function CodeEntry({ seed }: { seed: string }) {
           href="/"
           className="flex items-center gap-2 text-[13px] font-medium text-[var(--ds-text-muted)] hover:text-[var(--ds-text-primary)]"
         >
-          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-gradient-to-br from-indigo-500 via-pink-500 to-emerald-500 text-[11px] font-bold text-white">
-            A
-          </div>
+          <BrandMark size={28} className="rounded-md" />
           AgileSuite
         </a>
         <a

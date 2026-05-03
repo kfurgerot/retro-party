@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { BrandMark } from "@/components/BrandMark";
 import { api, type SessionPreview } from "@/net/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { EXPERIENCE_BY_ID } from "@/design-system/tokens";
@@ -443,9 +444,7 @@ function Shell({ children, accentRgb }: { children: React.ReactNode; accentRgb?:
           to="/"
           className="flex items-center gap-2 text-[13px] font-medium text-[var(--ds-text-muted)] hover:text-[var(--ds-text-primary)]"
         >
-          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-gradient-to-br from-indigo-500 via-pink-500 to-emerald-500 text-[11px] font-bold text-white">
-            A
-          </div>
+          <BrandMark size={28} className="rounded-md" />
           AgileSuite
         </Link>
         <CheckCircle2 size={14} className="text-[var(--ds-text-faint)]" />
