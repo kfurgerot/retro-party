@@ -19,6 +19,9 @@ export interface Player {
    * sur le plateau et le serveur skip son tour automatiquement. Cleared
    * au reconnect (RECONNECT_ROOM avec le même sessionId). */
   disconnected?: boolean;
+  /** True pendant une coupure temporaire (refresh, mobile en veille,
+   * perte reseau courte). Le tour n'est pas consomme. */
+  reconnecting?: boolean;
 }
 
 export type TileType =

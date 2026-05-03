@@ -1088,6 +1088,9 @@ export function registerSocketHandlers(deps) {
         advanceTurnIfCurrent: false,
         clearBlockingInteractions: false,
         appendLeaveLog: false,
+        markStateDisconnected: false,
+        presenceStatus: "reconnecting",
+        cleanupActiveSystems: false,
       });
       scheduleDisconnectCleanup(code, socket.id, player.sessionId);
     });

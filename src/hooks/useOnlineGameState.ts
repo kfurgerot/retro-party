@@ -17,6 +17,7 @@ type LobbyPlayer = {
   avatar: number;
   isHost: boolean;
   connected?: boolean;
+  presenceStatus?: "connected" | "reconnecting" | "left";
 };
 type RoomPresenceNotice = {
   id: number;
@@ -28,6 +29,11 @@ type OnlineSession = {
   avatar: number;
   sessionId: string;
   updatedAt?: number;
+};
+type WakeLockSentinelLike = {
+  release: () => Promise<void>;
+  addEventListener?: (type: "release", listener: () => void) => void;
+  removeEventListener?: (type: "release", listener: () => void) => void;
 };
 
 const EMPTY_STATE: GameState = {
@@ -171,6 +177,7 @@ export function useOnlineGameState(options: UseOnlineGameStateOptions = {}) {
   const minigameCleanupRef = useRef<number | null>(null);
   const previousLobbyRef = useRef<LobbyPlayer[] | null>(null);
   const roomNoticeSeqRef = useRef(0);
+  const wakeLockRef = useRef<WakeLockSentinelLike | null>(null);
 
   useEffect(() => {
     const tryResumeSession = () => {
@@ -235,9 +242,13 @@ export function useOnlineGameState(options: UseOnlineGameStateOptions = {}) {
         const isConnectedNow = nextPlayer.connected !== false;
 
         if (!wasConnected && isConnectedNow) {
-          notices.push(`${nextPlayer.name} a rejoint la partie`);
+          notices.push(`${nextPlayer.name} est de retour`);
         } else if (wasConnected && !isConnectedNow) {
-          notices.push(`${nextPlayer.name} a quitte la partie`);
+          notices.push(
+            nextPlayer.presenceStatus === "left"
+              ? `${nextPlayer.name} a quitte la partie`
+              : `${nextPlayer.name} est en reconnexion`,
+          );
         }
       }
 
@@ -449,6 +460,49 @@ export function useOnlineGameState(options: UseOnlineGameStateOptions = {}) {
       }
     };
   }, [skipRestore]);
+
+  useEffect(() => {
+    const wakeLockApi = (
+      navigator as Navigator & {
+        wakeLock?: { request: (type: "screen") => Promise<WakeLockSentinelLike> };
+      }
+    ).wakeLock;
+    if (!wakeLockApi || !code || gameState.phase !== "playing") return;
+
+    let cancelled = false;
+    const releaseWakeLock = () => {
+      const current = wakeLockRef.current;
+      wakeLockRef.current = null;
+      if (current) void current.release().catch(() => {});
+    };
+    const requestWakeLock = async () => {
+      if (cancelled || document.visibilityState !== "visible" || wakeLockRef.current) return;
+      try {
+        wakeLockRef.current = await wakeLockApi.request("screen");
+        wakeLockRef.current.addEventListener?.("release", () => {
+          wakeLockRef.current = null;
+        });
+      } catch {
+        // Best effort: unsupported browsers, low battery modes, or user
+        // settings can reject the request.
+      }
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void requestWakeLock();
+      } else {
+        releaseWakeLock();
+      }
+    };
+
+    void requestWakeLock();
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      cancelled = true;
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      releaseWakeLock();
+    };
+  }, [code, gameState.phase]);
 
   const createRoom = useCallback((name: string, avatar: number) => {
     const normalizedName = name.trim() || "Hote";

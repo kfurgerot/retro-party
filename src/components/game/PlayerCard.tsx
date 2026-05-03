@@ -12,6 +12,7 @@ interface PlayerCardProps {
 
 const PlayerCardComponent: React.FC<PlayerCardProps> = ({ player, isActive, compact = false }) => {
   const isOffline = !!player.disconnected;
+  const isReconnecting = !!player.reconnecting && !isOffline;
   if (compact) {
     return (
       <div
@@ -21,6 +22,7 @@ const PlayerCardComponent: React.FC<PlayerCardProps> = ({ player, isActive, comp
             ? "border-pink-400/55 bg-pink-500/18 shadow-[0_0_0_1px_rgba(236,72,153,0.22)]"
             : "border-pink-400/20 bg-slate-900/52",
           isOffline && "opacity-50 grayscale",
+          isReconnecting && "border-amber-400/45 bg-amber-500/10",
         )}
         style={{ borderColor: isActive ? player.color : undefined }}
       >
@@ -30,9 +32,9 @@ const PlayerCardComponent: React.FC<PlayerCardProps> = ({ player, isActive, comp
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
             <span className="truncate text-sm font-semibold text-slate-100">{player.name}</span>
-            {isOffline ? (
+            {isOffline || isReconnecting ? (
               <span className="shrink-0 rounded-full border border-amber-500/40 bg-amber-500/15 px-1.5 py-0 text-[9px] font-semibold uppercase tracking-wider text-amber-300">
-                Inactif
+                {isOffline ? "Inactif" : "Reconnexion"}
               </span>
             ) : null}
           </div>
@@ -51,6 +53,7 @@ const PlayerCardComponent: React.FC<PlayerCardProps> = ({ player, isActive, comp
         "transition-all duration-300",
         isActive && "scale-105",
         isOffline && "opacity-50 grayscale",
+        isReconnecting && "ring-1 ring-amber-300/40",
       )}
       style={{ borderColor: player.color }}
     >
@@ -64,7 +67,13 @@ const PlayerCardComponent: React.FC<PlayerCardProps> = ({ player, isActive, comp
         <div className="flex-1">
           <div className="font-pixel text-sm">{player.name}</div>
           <div className="mt-1 text-xs opacity-80">
-            {isOffline ? "Inactif" : player.isHost ? fr.terms.host : fr.terms.player}
+            {isOffline
+              ? "Inactif"
+              : isReconnecting
+                ? "Reconnexion"
+                : player.isHost
+                  ? fr.terms.host
+                  : fr.terms.player}
           </div>
         </div>
         <div className="text-right">
@@ -87,7 +96,8 @@ function arePlayerCardsEqual(prev: PlayerCardProps, next: PlayerCardProps) {
     prev.player.stars === next.player.stars &&
     prev.player.isHost === next.player.isHost &&
     prev.player.color === next.player.color &&
-    prev.player.disconnected === next.player.disconnected
+    prev.player.disconnected === next.player.disconnected &&
+    prev.player.reconnecting === next.player.reconnecting
   );
 }
 

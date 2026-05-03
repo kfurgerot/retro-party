@@ -1312,7 +1312,14 @@ function removePlayerNow(code, socketId) {
 function softLeavePlayer(
   code,
   socketId,
-  { advanceTurnIfCurrent = true, clearBlockingInteractions = true, appendLeaveLog = true } = {},
+  {
+    advanceTurnIfCurrent = true,
+    clearBlockingInteractions = true,
+    appendLeaveLog = true,
+    markStateDisconnected = true,
+    presenceStatus = "left",
+    cleanupActiveSystems = true,
+  } = {},
 ) {
   const room = rooms.get(code);
   if (!room) return;
@@ -1333,12 +1340,13 @@ function softLeavePlayer(
     slot.statePlayerId = socketId;
     slot.socketId = null;
     slot.connected = false;
+    slot.presenceStatus = presenceStatus;
     slot.disconnectedAt = Date.now();
   }
 
-  // Marque la live entry comme disconnected pour signaler aux autres
-  // joueurs (UI fade) et pour que nextTurn() saute le tour. Ne PAS
-  // appeler removePlayerFromState : on conserve la progression.
+  // Depart volontaire : disconnected:true masque le pion et nextTurn()
+  // saute le joueur. Coupure temporaire : reconnecting:true garde sa
+  // place et son tour pendant la fenêtre de reconnexion.
   if (room.state.players?.length) {
     const wasCurrent =
       room.state.phase === "playing" &&
@@ -1346,7 +1354,13 @@ function softLeavePlayer(
     room.state = {
       ...room.state,
       players: room.state.players.map((p) =>
-        p.id === socketId ? { ...p, disconnected: true } : p,
+        p.id === socketId
+          ? {
+              ...p,
+              disconnected: markStateDisconnected,
+              reconnecting: !markStateDisconnected,
+            }
+          : p,
       ),
     };
     if (clearBlockingInteractions) {
@@ -1391,15 +1405,17 @@ function softLeavePlayer(
       room.state = nextTurn(room.state);
     }
   }
-  if (isWhoSaidItActive(room)) {
+  if (cleanupActiveSystems && isWhoSaidItActive(room)) {
     removeWhoSaidItPlayer(room.wsi, socketId);
     if (!room.wsi.playerIds.length) {
       clearWhoSaidItTimers(room);
       room.wsi = null;
     }
   }
-  clearBuzzwordTimers(room);
-  clearPointDuelTimers(room);
+  if (cleanupActiveSystems) {
+    clearBuzzwordTimers(room);
+    clearPointDuelTimers(room);
+  }
 
   syncHostFlags(room);
   broadcastLobby(code);
@@ -1450,6 +1466,7 @@ function attachSocketToExistingPlayer(code, room, player, socket) {
   player.socketId = socket.id;
   player.statePlayerId = socket.id;
   player.connected = true;
+  player.presenceStatus = "connected";
   delete player.disconnectedAt;
 
   room.clients.add(socket.id);
@@ -1469,6 +1486,15 @@ function attachSocketToExistingPlayer(code, room, player, socket) {
         ...room.state,
         players: room.state.players.map((p) =>
           p.id === socket.id ? { ...p, disconnected: false } : p,
+        ),
+      };
+    }
+    const reconnectingEntry = room.state.players.find((p) => p.id === socket.id);
+    if (reconnectingEntry?.reconnecting) {
+      room.state = {
+        ...room.state,
+        players: room.state.players.map((p) =>
+          p.id === socket.id ? { ...p, reconnecting: false } : p,
         ),
       };
     }
