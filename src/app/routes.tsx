@@ -27,7 +27,7 @@ import {
   loadSkillsMatrixTemplateEditorPage,
   loadTemplateEditorPage,
   loadTermsPage,
-} from "@/lib/routeLoaders";
+} from "@/app/routeLoaders";
 import { Suspense, lazy } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 
