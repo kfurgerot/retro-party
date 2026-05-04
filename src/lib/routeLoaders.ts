@@ -1,7 +1,6 @@
 export const loadPortalPage = () => import("@/pages/Portal");
 export const loadDashboardPage = () => import("@/pages/Dashboard");
 export const loadPlayPage = () => import("@/pages/Index");
-export const loadPreparePage = () => import("@/pages/Prepare");
 export const loadPrepareRetroPage = () => import("@/pages/PrepareRetro");
 export const loadPreparePlanningPokerPage = () => import("@/pages/PreparePlanningPoker");
 export const loadSkillsMatrixPreparePage = () => import("@/pages/SkillsMatrixPrepare");
@@ -25,6 +24,5 @@ export const loadSessionSharePage = () => import("@/pages/SessionShare");
 export const loadAppTeamsPage = () => import("@/pages/AppTeams");
 export const loadAppTeamDetailPage = () => import("@/pages/AppTeamDetail");
 export const loadInvitationPage = () => import("@/pages/Invitation");
-export const loadComingSoonPage = () => import("@/pages/ComingSoon");
 export const loadAppShell = () =>
   import("@/components/app-shell-v2/AppShell").then((m) => ({ default: m.AppShell }));
