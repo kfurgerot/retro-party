@@ -7,11 +7,41 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
+
+# Build outputs and generated reports
 dist
 dist-ssr
+coverage
+.nyc_output
+playwright-report
+test-results
+tmp
+
+# Tool caches
+.vite
+.turbo
+.cache
+.parcel-cache
+
+# Environment files
+.env
+.env.*
 *.local
-.env.prod
+!.env.example
+!.env.local.example
+!.env.prod.example
+!.env.development
+!server/.env.example
+
+# Local AI / agent runtime state
+.codex-docker-config
+.claude
+.codex
+.agents
+_bmad-output
+_bmad
 
 # Editor directories and files
 .vscode/*

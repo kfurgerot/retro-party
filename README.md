@@ -1,269 +1,248 @@
-l# Retro Party
+# AgileSuite
 
-Application web de retrospective d'equipe en mode jeu de plateau retro, jouable en ligne (temps reel via Socket.IO) et en local.
+AgileSuite est une suite web pour animer des rituels Agile en equipe, avec une experience temps reel et une interface orientee facilitation.
 
-## Apercu
+Modules principaux :
 
-Retro Party contient:
+- **Retro Party** : retrospective multijoueur en mode jeu.
+- **Planning Party** : planning poker collaboratif.
+- **Radar Party** : diagnostic Agile avec scores individuels, radar equipe et insights.
+- **Skills Matrix** : cartographie de competences et templates associes.
 
-- un frontend React/TypeScript (Vite, Tailwind, shadcn/ui)
-- un backend Node.js/Express avec Socket.IO
-- une base PostgreSQL
-- un deploiement conteneurise (Docker + Docker Compose + Nginx)
+## Stack
 
-Fonctions principales:
+- Frontend : React 18, TypeScript, Vite 7, Tailwind CSS, Radix/shadcn UI, Pixi.js.
+- Backend : Node.js 20, Express 4, Socket.IO, PostgreSQL.
+- Realtime : Socket.IO, serveur autoritaire pour les sessions online.
+- Build/deploiement : Docker, Docker Compose, Nginx.
+- Qualite : ESLint, Prettier, Vitest, tests Node natifs cote serveur.
 
-- parties online avec code de room
-- logique de jeu autoritaire cote serveur
-- authentification (inscription/connexion/logout)
-- authentification OAuth (Google + Microsoft) en plus du login classique
-- gestion de templates de partie + questions personnalisees
-- creation de room rapide ou basee sur template
-- reset de mot de passe via email (SMTP Gmail)
-- module Radar Party (questionnaire Agile, radar individuel/equipe, insights atelier)
-
-## Stack technique
-
-- Frontend: React 18, TypeScript, Vite 5, TailwindCSS, shadcn/ui
-- Realtime: Socket.IO (client + serveur)
-- Backend: Node.js 20, Express 4
-- Base de donnees: PostgreSQL 16
-- Reverse proxy: Nginx (frontend statique + proxy `/api` et `/socket.io`)
-- Tests:
-  - frontend: Vitest
-  - backend: test unitaire `server/whoSaidItEngine.test.js`
-
-## Architecture du repository
+## Arborescence
 
 ```text
 .
 |- src/                    # Frontend React
-|- server/                 # Backend Express + Socket.IO + DB init
-|- public/                 # Assets statiques
-|- Dockerfile              # Build frontend + image Nginx
+|  |- components/          # UI partagee, shell, ecrans et composants metier
+|  |- pages/               # Pages routees
+|  |- features/            # Logique metier frontend par domaine
+|  |- hooks/               # Orchestration d'etat
+|  |- net/                 # Acces API et Socket.IO
+|  |- lib/                 # Utilitaires transverses
+|  |- data/                # Donnees statiques frontend
+|  `- design-system/       # Tokens et exports design system
+|- server/                 # Backend Express, Socket.IO, DB et moteurs metier
+|  `- src/
+|     |- api/              # Routes REST modulaires
+|     |- services/         # Services backend partages
+|     `- socket/           # Handlers Socket.IO
+|- shared/                 # Contrats partages frontend/backend
+|- public/                 # Assets statiques servis par le frontend
+|- docs/                   # Documentation produit et technique
+|- scripts/                # Scripts de maintenance
+|- Dockerfile              # Image frontend Nginx
 |- server/Dockerfile       # Image backend Node
 |- docker-compose.yml      # Stack locale
 |- docker-compose-prod.yml # Stack production
-|- nginx.conf              # Proxy Nginx vers backend
-`- .env*.example           # Exemples de variables d'environnement
+`- nginx.conf              # Proxy Nginx vers backend
 ```
 
-## Demarrage rapide (dev sans Docker)
+Les dossiers d'outillage local ou agent (`node_modules`, `dist`, `playwright-report`, `test-results`, `tmp`, caches, fichiers `.env` reels) ne doivent pas etre pousses.
 
-### 1) Frontend
+## Prerequis
+
+- Node.js 20+
+- npm
+- Docker et Docker Compose pour l'execution integree
+- PostgreSQL si le backend est lance sans Docker
+
+## Installation locale
 
 ```bash
 npm install
-npm run dev
-```
-
-Frontend disponible sur `http://localhost:5173`.
-
-### 2) Backend
-
-```bash
 cd server
 npm install
-npm run dev
 ```
 
-Backend disponible sur `http://localhost:3001`.
-
-## Demarrage avec Docker (local)
-
-1. Copier les variables locales:
+Copier les variables locales si necessaire :
 
 ```bash
 cp .env.local.example .env.local
 ```
 
-2. Lancer la stack:
+## Developpement sans Docker
+
+Terminal 1, frontend :
+
+```bash
+npm run dev
+```
+
+Terminal 2, backend :
+
+```bash
+cd server
+npm run dev
+```
+
+URLs par defaut :
+
+- Frontend : `http://localhost:5173`
+- Backend : `http://localhost:3001`
+- Healthcheck : `http://localhost:3001/health`
+
+## Developpement avec Docker
 
 ```bash
 docker compose up -d --build
 ```
 
-3. Acceder aux services:
+Services locaux :
 
-- frontend: `http://localhost:8088`
-- backend: `http://localhost:3001`
-- postgres: `localhost:5432` (expose uniquement en compose local)
+- Frontend : `http://localhost:8088`
+- Backend : `http://localhost:3001`
+- PostgreSQL : `localhost:5432`
 
-Arret:
+Arret :
 
 ```bash
 docker compose down
 ```
 
-Arret + suppression des volumes locaux:
+Arret avec suppression des volumes locaux :
 
 ```bash
 docker compose down -v
 ```
 
-## Deploiement production (`docker-compose-prod.yml`)
+## Production
 
-Le compose de production demarre 3 services:
+Le deploiement production utilise `docker-compose-prod.yml`.
 
-- `frontend` (Nginx, port `8088:80`)
-- `backend` (Node.js, port `3001:3001`)
-- `postgres` (non expose publiquement par defaut)
-
-### 1) Variables d'environnement
-
-Copier le template:
+1. Copier le template :
 
 ```bash
 cp .env.prod.example .env.prod
 ```
 
-Renseigner au minimum:
+2. Renseigner au minimum :
 
-- `ORIGIN` (URL publique autorisee en CORS)
-- `POSTGRES_PASSWORD`
-- `GMAIL_USER` et `GMAIL_APP_PASSWORD` (si reset password actif)
-- `RESET_PASSWORD_URL_BASE`
+- `ORIGIN` : URL publique autorisee en CORS.
+- `POSTGRES_PASSWORD` : mot de passe PostgreSQL.
+- `RESET_PASSWORD_URL_BASE` : URL publique de reset password.
+- `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `MAIL_FROM` si les emails transactionnels sont actifs.
+- `OAUTH_STATE_SECRET`, `OAUTH_CALLBACK_BASE_URL` et les secrets Google/Microsoft si le SSO est actif.
 
-### 2) Volume PostgreSQL
-
-Dans `docker-compose-prod.yml`, le volume DB est actuellement:
+3. Adapter le volume PostgreSQL dans `docker-compose-prod.yml` si le chemin serveur differe :
 
 ```yml
 /volume1/docker/retro-postgres-db:/var/lib/postgresql/data
 ```
 
-Adapter ce chemin a votre serveur avant de deployer.
-
-### 3) Lancer en production
+4. Valider puis deployer :
 
 ```bash
+docker compose --env-file .env.prod -f docker-compose-prod.yml config
 docker compose --env-file .env.prod -f docker-compose-prod.yml up -d --build
 ```
 
-### 4) Sante des services
+## Scripts
 
-- endpoint backend: `GET /health`
-- verification rapide:
+Racine :
 
 ```bash
-curl http://localhost:3001/health
+npm run dev
+npm run lint
+npm run test
+npm run build
+npm run preview
+npm run format
+npm run format:check
+```
+
+Backend :
+
+```bash
+cd server
+npm run dev
+npm run start
+npm test
 ```
 
 ## Variables d'environnement
 
-### Frontend
+Templates versionnes :
 
-- `VITE_BACKEND_URL` (optionnel)
-  - en local sans proxy: `http://localhost:3001`
-  - en prod derriere meme domaine: peut etre omis
+- `.env.example` : variables frontend et rappel SMTP.
+- `.env.local.example` : developpement local.
+- `.env.prod.example` : production.
+- `server/.env.example` : variables backend.
 
-### Backend
+Les fichiers reels (`.env`, `.env.local`, `.env.prod`, secrets locaux) ne doivent pas etre commit.
 
-Variables principales:
+Variables backend importantes :
 
-- `PORT` (defaut `3001`)
-- `ORIGIN` (CORS, URL frontend)
+- `PORT`
+- `ORIGIN`
 - `DATABASE_URL`
-- `SESSION_COOKIE_NAME` (defaut `rp_session`)
-- `SESSION_TTL_DAYS` (defaut `7`)
-- `BCRYPT_ROUNDS` (defaut `12`)
-- `LOGIN_RATE_LIMIT_WINDOW_MS` (defaut `900000`)
-- `LOGIN_RATE_LIMIT_MAX` (defaut `10`)
-- `RESET_TOKEN_TTL_MINUTES` (defaut `60`)
+- `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`
+- `SESSION_COOKIE_NAME`, `SESSION_TTL_DAYS`
+- `BCRYPT_ROUNDS`
+- `LOGIN_RATE_LIMIT_*`, `API_RATE_LIMIT_*`, `AUTH_RATE_LIMIT_*`
 - `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `MAIL_FROM`
-- `RESET_PASSWORD_URL_BASE`
-- `OAUTH_STATE_SECRET`
-- `OAUTH_CALLBACK_BASE_URL` (URL publique du backend pour les callbacks OAuth)
+- `RESET_PASSWORD_URL_BASE`, `RESET_TOKEN_TTL_MINUTES`
+- `OAUTH_STATE_SECRET`, `OAUTH_CALLBACK_BASE_URL`
 - `OAUTH_GOOGLE_CLIENT_ID`, `OAUTH_GOOGLE_CLIENT_SECRET`
-- `OAUTH_MICROSOFT_CLIENT_ID`, `OAUTH_MICROSOFT_CLIENT_SECRET`, `OAUTH_MICROSOFT_TENANT_ID` (defaut `common`)
+- `OAUTH_MICROSOFT_CLIENT_ID`, `OAUTH_MICROSOFT_CLIENT_SECRET`, `OAUTH_MICROSOFT_TENANT_ID`
 
-Voir:
+## API et temps reel
 
-- `.env.local.example`
-- `.env.prod.example`
+Surfaces REST principales :
 
-## Endpoints API (resume)
+- Auth : `/api/auth/*`
+- Templates : `/api/templates/*`
+- Rooms : `/api/rooms/quick`
+- Dashboard : `/api/dashboard/*`
+- Teams : `/api/teams/*`
+- Radar : `/api/radar/*`
+- Skills Matrix : `/api/skills-matrix/*`
 
-Auth:
+Socket.IO gere les parcours online : creation/join/reconnexion de room, lobby, presence, lancement, actions de jeu et synchronisation d'etat.
 
-- `POST /api/auth/register`
-- `POST /api/auth/login`
-- `POST /api/auth/logout`
-- `GET /api/auth/me`
-- `POST /api/auth/forgot-password`
-- `POST /api/auth/reset-password`
-- `GET /api/auth/oauth/providers`
-- `GET /api/auth/oauth/google/start`
-- `GET /api/auth/oauth/microsoft/start`
+## Hygiene Git
 
-Templates (auth requis):
-
-- `GET/POST /api/templates`
-- `GET/PATCH/DELETE /api/templates/:templateId`
-- `GET/POST /api/templates/:templateId/questions`
-- `PATCH/DELETE /api/templates/:templateId/questions/:questionId`
-- `PUT /api/templates/:templateId/questions/reorder`
-- `POST /api/templates/:templateId/launch-room`
-
-Rooms:
-
-- `POST /api/rooms/quick`
-
-Radar Party:
-
-- `GET /api/radar/questions`
-- `POST /api/radar/sessions`
-- `POST /api/radar/sessions/:code/participants`
-- `POST /api/radar/sessions/:code/submissions`
-- `GET /api/radar/sessions/:code`
-
-Documentation module:
-
-- `docs/radar-party.md`
-
-## Socket.IO (evenements principaux)
-
-- Room: `create_room`, `join_room`, `reconnect_room`, `leave_room`
-- Partie: `start_game`, `roll_dice`, `move_player`, `choose_path`, `validate_question`, `reset_game`
-- Minigames: `BUZZWORD_SUBMIT`, `WSI_SUBMIT`, `point_duel_roll`, `BUG_SMASH_*`
-- Flux serveur: `state_update`, `lobby_update`, `room_closed`, `error_msg`
-
-## Scripts utiles
-
-A la racine:
+Avant de committer :
 
 ```bash
-npm run dev
+git status -sb
+git status --ignored
 npm run build
-npm run preview
-npm run lint
-npm run test
+cd server && npm test
 ```
 
-Dans `server/`:
+Ne pas ajouter :
+
+- `node_modules/`
+- `dist/`
+- `playwright-report/`
+- `test-results/`
+- `tmp/`
+- fichiers `.env` reels
+- caches locaux et configuration machine
+
+Si un artefact genere a deja ete suivi par Git, le retirer du suivi sans supprimer le fichier local :
 
 ```bash
-npm run dev
-npm run start
-node whoSaidItEngine.test.js
+git rm --cached <chemin>
 ```
 
-## Notes d'implementation
+## Notes d'architecture
 
-- Le mode online est actif par defaut dans le frontend.
-- Le mode local reste disponible via le parametre `?online=0`.
-- L'etat de jeu online est gere cote serveur (`server/gameLogic.js`).
-- La base est auto-initialisee au demarrage backend (`initDatabase()` dans `server/db.js`).
-
-## Recommandations production
-
-- Ne jamais committer `.env.prod`.
-- Utiliser des mots de passe forts et uniques.
-- Restreindre `ORIGIN` a votre domaine public.
-- Placer un reverse proxy TLS (Nginx/Traefik/Caddy) devant les ports exposes.
-- Sauvegarder regulierement le volume PostgreSQL.
+- Le client ne doit pas etre autoritaire sur la logique de partie online.
+- Les routes backend doivent valider les payloads et utiliser des requetes SQL parametrees.
+- Les hooks frontend centralisent les transitions de session et nettoient les listeners Socket.IO.
+- Les refactors d'arborescence source doivent rester separes des commits de nettoyage Git/README pour garder les reviews lisibles.
 
 ## Licence
 
 Copyright (c) 2026 Karl FURGEROT.
-Contact: karl.furgerot@gmail.com
+Contact : karl.furgerot@gmail.com
