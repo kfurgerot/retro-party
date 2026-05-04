@@ -1,4 +1,9 @@
 import https from "node:https";
+import {
+  sendWelcomeEmail,
+  sendSsoWelcomeEmail,
+  sendPasswordResetEmail,
+} from "../../mailService.js";
 
 export function registerAuthRoutes(context) {
   const {
@@ -473,6 +478,7 @@ export function registerAuthRoutes(context) {
       );
 
       let user = userResult.rows[0] ?? null;
+      let userWasCreated = false;
 
       if (!user) {
         const byEmailResult = await client.query(
@@ -498,6 +504,7 @@ export function registerAuthRoutes(context) {
             [crypto.randomUUID(), email, passwordHash, displayName],
           );
           user = inserted.rows[0];
+          userWasCreated = true;
         }
 
         await client.query(
@@ -532,7 +539,7 @@ export function registerAuthRoutes(context) {
       );
 
       await client.query("COMMIT");
-      return user;
+      return { user, created: userWasCreated };
     } catch (error) {
       await client.query("ROLLBACK");
       throw error;
@@ -740,12 +747,24 @@ export function registerAuthRoutes(context) {
         return res.redirect(302, buildOauthErrorRedirect(frontendOrigin, "/", reason));
       }
 
-      const user = await resolveUserForOauthProfile({
+      const { user, created } = await resolveUserForOauthProfile({
         provider,
         subject: oauthProfile.subject,
         email: oauthProfile.email,
         displayName: oauthProfile.displayName,
       });
+
+      if (created) {
+        sendSsoWelcomeEmail({
+          to: user.email,
+          displayName: user.display_name,
+          email: user.email,
+          provider,
+        }).catch((mailErr) => {
+          if (mailErr?.code === "MAIL_NOT_CONFIGURED") return;
+          console.error(`[sso-welcome-email/${provider}] failed:`, mailErr);
+        });
+      }
 
       const sessionToken = await createUserSession(user.id, req);
       setSessionCookie(res, sessionToken);
@@ -785,6 +804,15 @@ export function registerAuthRoutes(context) {
         `,
         [userId, normalizedEmail, passwordHash, displayName.trim()],
       );
+
+      sendWelcomeEmail({
+        to: normalizedEmail,
+        displayName: displayName.trim(),
+        email: normalizedEmail,
+      }).catch((mailErr) => {
+        if (mailErr?.code === "MAIL_NOT_CONFIGURED") return;
+        console.error("[welcome-email] failed:", mailErr);
+      });
 
       // Auto-accept pending team invitations matching this email.
       // Best-effort: failures here must not block the registration.
@@ -965,23 +993,12 @@ export function registerAuthRoutes(context) {
       await client.query("COMMIT");
 
       try {
-        await sendMail({
+        await sendPasswordResetEmail({
           to: user.email,
-          subject: "Retro Party - Password reset request",
-          text: [
-            `Hello ${user.display_name || "host"},`,
-            "",
-            "You requested a password reset for your Retro Party account.",
-            `Reset link: ${resetUrl}`,
-            "",
-            "If you did not request this, you can ignore this email.",
-          ].join("\n"),
-          html: [
-            `<p>Hello ${user.display_name || "host"},</p>`,
-            "<p>You requested a password reset for your Retro Party account.</p>",
-            `<p><a href="${resetUrl}">Reset your password</a></p>`,
-            "<p>If you did not request this, you can ignore this email.</p>",
-          ].join(""),
+          displayName: user.display_name,
+          email: user.email,
+          resetUrl,
+          expiresInMinutes: RESET_TOKEN_TTL_MINUTES,
         });
       } catch (mailErr) {
         if (mailErr?.code === "MAIL_NOT_CONFIGURED") {
