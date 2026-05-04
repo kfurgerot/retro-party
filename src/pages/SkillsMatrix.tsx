@@ -37,8 +37,17 @@ import {
   loadPersistedSkillsMatrixSession,
   persistSkillsMatrixSession,
 } from "@/features/skillsMatrix/sessionPersistence";
+import { resolveMatrixCellTone } from "@/features/skillsMatrix/cellTone";
 import { useAuth } from "@/contexts/AuthContext";
 import { isSkillsMatrixTemplate } from "@/features/skillsMatrix/templateConfig";
+import {
+  buildGroupSkillsRadarModel,
+  buildParticipantSkillsRadarModels,
+  computeMatrixFilling,
+  EMPTY_SKILLS_RADAR_MODEL,
+  groupMatrixRowsByCategory,
+  type SkillsRadarModel,
+} from "@/features/skillsMatrix/radarModel";
 import { assessmentKey, cleanName } from "@/features/skillsMatrix/utils";
 import { CTA_NEON_DANGER, CTA_NEON_SECONDARY_SUBTLE, TOOL_ACCENT } from "@/lib/uiTokens";
 import {
@@ -75,117 +84,8 @@ type MatrixCellEditorState = {
   wantsToMentor: boolean;
 };
 
-type MatrixCellTone = {
-  surfaceClass: string;
-  valueClass: string;
-  badgeClass: string;
-  badgeLabel: string;
-};
-
-type RadarSkillMetric = {
-  skillId: string;
-  skillName: string;
-  requiredLevel: number;
-  currentLevel: number | null;
-  scorePct: number;
-};
-
-type RadarCategoryMetric = {
-  categoryKey: string;
-  categoryName: string;
-  scorePct: number;
-  averageCurrentLevel: number | null;
-  averageRequiredLevel: number;
-  skills: RadarSkillMetric[];
-};
-
-type SkillsRadarModel = {
-  categories: RadarCategoryMetric[];
-  averageScorePct: number;
-  completedSkills: number;
-  totalSkills: number;
-};
-
 const AUTO_REFRESH_MS = 4000;
 const SKILLS_ACCENT = TOOL_ACCENT["skills-matrix"];
-const EMPTY_RADAR_MODEL: SkillsRadarModel = {
-  categories: [],
-  averageScorePct: 0,
-  completedSkills: 0,
-  totalSkills: 0,
-};
-
-function clampNumber(value: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, value));
-}
-
-function averageFiniteNumbers(values: number[]) {
-  if (values.length === 0) return null;
-  return values.reduce((sum, value) => sum + value, 0) / values.length;
-}
-
-function toCoveragePercent(currentLevel: number | null, requiredLevel: number) {
-  if (!Number.isFinite(currentLevel)) return 0;
-  if (requiredLevel <= 0) return 100;
-  return clampNumber((Number(currentLevel) / requiredLevel) * 100, 0, 100);
-}
-
-function toDisplayLevel(level: number | null) {
-  if (!Number.isFinite(level)) return "—";
-  const rounded = Math.round(Number(level) * 10) / 10;
-  return Number.isInteger(rounded) ? `N${rounded}` : `N${rounded.toFixed(1)}`;
-}
-
-function resolveMatrixCellTone(currentLevel: number | null, requiredLevel: number): MatrixCellTone {
-  if (!Number.isFinite(currentLevel)) {
-    return {
-      surfaceClass: "border-slate-500/30 bg-slate-500/10",
-      valueClass: "text-slate-200",
-      badgeClass: "border-slate-400/30 bg-slate-500/15 text-slate-200",
-      badgeLabel: "Non renseigné",
-    };
-  }
-
-  const gap = Number(currentLevel) - requiredLevel;
-  if (gap <= -2) {
-    return {
-      surfaceClass: "border-rose-400/40 bg-rose-500/15",
-      valueClass: "text-rose-100",
-      badgeClass: "border-rose-300/40 bg-rose-600/20 text-rose-100",
-      badgeLabel: "Lacune critique",
-    };
-  }
-  if (gap === -1) {
-    return {
-      surfaceClass: "border-orange-300/40 bg-orange-500/15",
-      valueClass: "text-orange-100",
-      badgeClass: "border-orange-200/40 bg-orange-600/20 text-orange-100",
-      badgeLabel: "Lacune",
-    };
-  }
-  if (gap === 0) {
-    return {
-      surfaceClass: "border-yellow-300/40 bg-yellow-500/15",
-      valueClass: "text-yellow-100",
-      badgeClass: "border-yellow-200/40 bg-yellow-600/20 text-yellow-100",
-      badgeLabel: "Cible atteinte",
-    };
-  }
-  if (gap === 1) {
-    return {
-      surfaceClass: "border-lime-300/40 bg-lime-500/15",
-      valueClass: "text-lime-100",
-      badgeClass: "border-lime-200/40 bg-lime-600/20 text-lime-100",
-      badgeLabel: "Force",
-    };
-  }
-  return {
-    surfaceClass: "border-emerald-300/40 bg-emerald-500/15",
-    valueClass: "text-emerald-100",
-    badgeClass: "border-emerald-200/40 bg-emerald-600/20 text-emerald-100",
-    badgeLabel: "Force forte",
-  };
-}
 
 function LevelSelector({
   value,
@@ -1345,22 +1245,7 @@ export default function SkillsMatrixPage() {
 
   const matrixRowsByCategory = useMemo(() => {
     if (!snapshot) return [];
-    const byCategory = new Map<
-      string,
-      { categoryId: string | null; categoryName: string; rows: SkillsMatrixSnapshot["matrix"] }
-    >();
-    for (const row of snapshot.matrix) {
-      const key = row.categoryId ?? "__uncategorized__";
-      if (!byCategory.has(key)) {
-        byCategory.set(key, {
-          categoryId: row.categoryId,
-          categoryName: row.categoryName,
-          rows: [],
-        });
-      }
-      byCategory.get(key)?.rows.push(row);
-    }
-    return Array.from(byCategory.values());
+    return groupMatrixRowsByCategory(snapshot.matrix);
   }, [snapshot]);
 
   useEffect(() => {
@@ -1374,104 +1259,24 @@ export default function SkillsMatrixPage() {
     );
   }, [snapshot]);
 
-  const buildRadarModel = useCallback(
-    (resolveCurrentLevel: (row: SkillsMatrixSnapshot["matrix"][number]) => number | null) => {
-      const categories = matrixRowsByCategory
-        .map<RadarCategoryMetric>((group) => {
-          const skills = group.rows.map<RadarSkillMetric>((row) => {
-            const currentLevel = resolveCurrentLevel(row);
-            return {
-              skillId: row.skillId,
-              skillName: row.skillName,
-              requiredLevel: row.requiredLevel,
-              currentLevel,
-              scorePct: toCoveragePercent(currentLevel, row.requiredLevel),
-            };
-          });
-
-          const categorySkillScores = skills.map((skill) => skill.scorePct);
-          const categorySkillLevels = skills
-            .map((skill) => skill.currentLevel)
-            .filter((value): value is number => Number.isFinite(value));
-          const categoryRequiredLevels = skills.map((skill) => skill.requiredLevel);
-          const categoryScore = averageFiniteNumbers(categorySkillScores) ?? 0;
-          const averageCurrentLevel = averageFiniteNumbers(categorySkillLevels);
-          const averageRequiredLevel = averageFiniteNumbers(categoryRequiredLevels) ?? 0;
-
-          return {
-            categoryKey: group.categoryId ?? `uncategorized-${group.categoryName}`,
-            categoryName: group.categoryName,
-            scorePct: categoryScore,
-            averageCurrentLevel,
-            averageRequiredLevel,
-            skills,
-          };
-        })
-        .filter((category) => category.skills.length > 0);
-
-      const totalSkills = categories.reduce((sum, category) => sum + category.skills.length, 0);
-      const completedSkills = categories.reduce(
-        (sum, category) =>
-          sum + category.skills.filter((skill) => Number.isFinite(skill.currentLevel)).length,
-        0,
-      );
-      const averageScorePct =
-        averageFiniteNumbers(
-          categories.flatMap((category) => category.skills.map((skill) => skill.scorePct)),
-        ) ?? 0;
-
-      return {
-        categories,
-        averageScorePct,
-        completedSkills,
-        totalSkills,
-      };
-    },
-    [matrixRowsByCategory],
-  );
-
   const groupRadarModel = useMemo(
-    () =>
-      buildRadarModel((row) => {
-        const levels = row.cells
-          .map((cell) => cell.currentLevel)
-          .filter((value): value is number => Number.isFinite(value));
-        return averageFiniteNumbers(levels);
-      }),
-    [buildRadarModel],
+    () => buildGroupSkillsRadarModel(matrixRowsByCategory),
+    [matrixRowsByCategory],
   );
 
   const participantRadarModels = useMemo(() => {
     if (!snapshot) return new Map<string, SkillsRadarModel>();
-    const models = new Map<string, SkillsRadarModel>();
-    snapshot.participants.forEach((participant) => {
-      models.set(
-        participant.id,
-        buildRadarModel((row) => {
-          const cell = row.cells.find((entry) => entry.participantId === participant.id);
-          return cell?.currentLevel ?? null;
-        }),
-      );
-    });
-    return models;
-  }, [buildRadarModel, snapshot]);
+    return buildParticipantSkillsRadarModels(matrixRowsByCategory, snapshot.participants);
+  }, [matrixRowsByCategory, snapshot]);
 
   const selectedRadarParticipant =
     snapshot?.participants.find((participant) => participant.id === selectedRadarParticipantId) ??
     null;
   const selectedParticipantRadarModel =
     (selectedRadarParticipant && participantRadarModels.get(selectedRadarParticipant.id)) ??
-    EMPTY_RADAR_MODEL;
+    EMPTY_SKILLS_RADAR_MODEL;
 
-  const matrixFilling = useMemo(() => {
-    if (!snapshot) return { filled: 0, total: 0, ratio: 0 };
-    const total = snapshot.matrix.length * snapshot.participants.length;
-    const filled = snapshot.assessments.filter((assessment) =>
-      Number.isFinite(assessment.currentLevel),
-    ).length;
-    const ratio = total > 0 ? Math.round((filled / total) * 100) : 0;
-    return { filled, total, ratio };
-  }, [snapshot]);
+  const matrixFilling = useMemo(() => computeMatrixFilling(snapshot), [snapshot]);
 
   const openCellEditor = useCallback(
     (row: SkillsMatrixSnapshot["matrix"][number]) => {
