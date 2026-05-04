@@ -7,6 +7,7 @@ AgileSuite est une suite d'outils Agile en ligne comprenant :
 - Retro Party : jeu de rétrospective multijoueur
 - Planning Party : planning poker multijoueur
 - Radar Party : diagnostic d’équipe Agile avec restitution radar
+- Skill Matrix : Cartographie des forces, envies de progresser et capacité de montée en compétence
 
 ## Modes de travail
 
