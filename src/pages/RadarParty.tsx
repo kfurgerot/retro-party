@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight, FileDown, Frown, Meh, Smile } from "lucide-react";
 import { IdentityStep, SessionLobby, ConnectingState } from "@/components/app-shell-v2/pre-game";
@@ -7,7 +7,7 @@ import { EXPERIENCE_BY_ID } from "@/design-system/tokens";
 import { Card, SecondaryButton } from "@/components/app-shell";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/useAuth";
 import { setHostSession } from "@/lib/hostSession";
 import { AVATARS } from "@/types/game";
 import {
@@ -478,47 +478,50 @@ const RadarPartyPage = () => {
       };
     }).sort((a, b) => b.score - a.score);
 
-  const refreshSession = async (codeArg?: string, participantIdOverride?: string) => {
-    const code = (codeArg ?? roomCode ?? "").trim().toUpperCase();
-    if (!code) return;
-    const response = await api.radarGetSession(code);
-    setRoomCode(response.session.code);
-    setSessionStatus(response.session.status);
-    setHostParticipates(response.session.hostParticipates !== false);
-    setParticipants(response.participants);
+  const refreshSession = useCallback(
+    async (codeArg?: string, participantIdOverride?: string) => {
+      const code = (codeArg ?? roomCode ?? "").trim().toUpperCase();
+      if (!code) return;
+      const response = await api.radarGetSession(code);
+      setRoomCode(response.session.code);
+      setSessionStatus(response.session.status);
+      setHostParticipates(response.session.hostParticipates !== false);
+      setParticipants(response.participants);
 
-    const memberRadars = response.participants
-      .map((participant) => participant.result?.radar)
-      .filter((radar): radar is RadarAxisValues => Boolean(radar));
-    const nextTeamRadar = response.team?.radar ?? computeTeamAverageRadar(memberRadars);
-    const nextTeamInsights =
-      response.team?.insights ?? emptyTeamInsights(nextTeamRadar, response.participants);
-    setTeamRadar(nextTeamRadar);
-    setTeamInsights(nextTeamInsights);
-    const currentParticipantId = participantIdOverride ?? participantId;
-    const self = response.participants.find(
-      (participant) => participant.id === currentParticipantId,
-    );
-    const submitted = Boolean(self?.submittedAt);
-    setResultPublished(submitted);
-    if (submitted && self?.result) {
-      setLocalResult({
-        radar: self.result.radar,
-        polesPercent: self.result.polesPercent,
-        insights: self.result.insights,
-      });
-    }
-
-    if (response.session.status === "live" && stage === "lobby") {
-      const shouldOpenProgressMenu =
-        Boolean(self?.isHost) && response.session.hostParticipates === false;
-      if (submitted) {
-        setStage("individual");
-      } else {
-        setStage(shouldOpenProgressMenu ? "team-progress" : "questionnaire");
+      const memberRadars = response.participants
+        .map((participant) => participant.result?.radar)
+        .filter((radar): radar is RadarAxisValues => Boolean(radar));
+      const nextTeamRadar = response.team?.radar ?? computeTeamAverageRadar(memberRadars);
+      const nextTeamInsights =
+        response.team?.insights ?? emptyTeamInsights(nextTeamRadar, response.participants);
+      setTeamRadar(nextTeamRadar);
+      setTeamInsights(nextTeamInsights);
+      const currentParticipantId = participantIdOverride ?? participantId;
+      const self = response.participants.find(
+        (participant) => participant.id === currentParticipantId,
+      );
+      const submitted = Boolean(self?.submittedAt);
+      setResultPublished(submitted);
+      if (submitted && self?.result) {
+        setLocalResult({
+          radar: self.result.radar,
+          polesPercent: self.result.polesPercent,
+          insights: self.result.insights,
+        });
       }
-    }
-  };
+
+      if (response.session.status === "live" && stage === "lobby") {
+        const shouldOpenProgressMenu =
+          Boolean(self?.isHost) && response.session.hostParticipates === false;
+        if (submitted) {
+          setStage("individual");
+        } else {
+          setStage(shouldOpenProgressMenu ? "team-progress" : "questionnaire");
+        }
+      }
+    },
+    [participantId, roomCode, stage],
+  );
 
   useEffect(() => {
     if (!roomCode) return;
@@ -574,7 +577,7 @@ const RadarPartyPage = () => {
       window.removeEventListener("online", onWindowFocus);
       socket.emit(C2S_EVENTS.LEAVE_RADAR_ROOM, { code });
     };
-  }, [roomCode, stage, participantId]);
+  }, [refreshSession, roomCode, stage]);
 
   useEffect(() => {
     if (!roomCode || (stage !== "lobby" && stage !== "team-progress" && stage !== "team-radar"))
@@ -583,7 +586,7 @@ const RadarPartyPage = () => {
       void refreshSession(roomCode);
     }, RADAR_FALLBACK_SYNC_MS);
     return () => window.clearInterval(interval);
-  }, [roomCode, stage, participantId]);
+  }, [refreshSession, roomCode, stage]);
 
   const computeLocalResult = (allAnswers: RadarAnswers) => {
     const scoring = computeRadarScores(allAnswers);

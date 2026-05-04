@@ -34,7 +34,7 @@ import {
   persistSkillsMatrixSession,
 } from "@/features/skillsMatrix/sessionPersistence";
 import { resolveMatrixCellTone } from "@/features/skillsMatrix/cellTone";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/useAuth";
 import { isSkillsMatrixTemplate } from "@/features/skillsMatrix/templateConfig";
 import {
   buildGroupSkillsRadarModel,

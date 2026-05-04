@@ -5,7 +5,7 @@ import { IdentityStep, SessionLobby, ConnectingState } from "@/components/app-sh
 import type { PresenceParticipant } from "@/components/app-shell-v2/pre-game";
 import { usePlanningPokerOnlineState } from "@/hooks/usePlanningPokerOnlineState";
 import { useProfile } from "@/hooks/useProfile";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/useAuth";
 import { setHostSession } from "@/lib/hostSession";
 import { PlanningPokerRole, PlanningPokerVoteSystem } from "@/types/planningPoker";
 import { PLANNING_POKER_DECKS } from "@/lib/planningPoker";

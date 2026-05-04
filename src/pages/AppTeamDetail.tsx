@@ -8,7 +8,7 @@ import {
   type TeamInvitation,
   type TeamMember,
 } from "@/net/api";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/useAuth";
 import {
   AlertCircle,
   ArrowLeft,

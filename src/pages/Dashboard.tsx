@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, PrimaryButton, SecondaryButton } from "@/components/app-shell";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/useAuth";
 import { api, type DashboardActivitiesResponse } from "@/net/api";
 import {
   Dialog,

@@ -844,7 +844,6 @@ export function registerAuthRoutes(context) {
               [userId, invite.id],
             );
           } catch (acceptErr) {
-            // eslint-disable-next-line no-console
             console.error(
               `[team-invitation] auto-accept failed for invite ${invite.id}:`,
               acceptErr,
@@ -852,7 +851,6 @@ export function registerAuthRoutes(context) {
           }
         }
       } catch (lookupErr) {
-        // eslint-disable-next-line no-console
         console.error("[team-invitation] lookup at register failed:", lookupErr);
       }
 

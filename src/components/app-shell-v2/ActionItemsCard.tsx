@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
 import { api, type ActionItem } from "@/net/api";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/useAuth";
 import { AlertCircle, CheckCircle2, Circle, ListChecks, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 

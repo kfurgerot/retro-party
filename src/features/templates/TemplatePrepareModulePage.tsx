@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, type NavigateFunction } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/useAuth";
 import { fr } from "@/i18n/fr";
 import { api, type TemplateItem, type SuiteModuleId } from "@/net/api";
 import { PrepareAuthForm } from "@/features/templates/PrepareAuthForm";

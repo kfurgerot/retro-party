@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/useAuth";
 import { api, type DashboardActivitiesResponse, type DashboardActivity } from "@/net/api";
 import { EXPERIENCES, EXPERIENCE_BY_ID } from "@/design-system/tokens";
 import { ExperienceCard } from "@/components/app-shell-v2/ExperienceCard";

@@ -1,7 +1,7 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, TemplateItem } from "@/net/api";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/useAuth";
 import { fr } from "@/i18n/fr";
 import { PageShell } from "@/components/app-shell";
 

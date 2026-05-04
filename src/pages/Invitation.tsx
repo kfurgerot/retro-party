@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, type InvitationPreview } from "@/net/api";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/useAuth";
 import { ArrowRight, CheckCircle2, AlertTriangle, Mail, Users } from "lucide-react";
 
 type Status = "loading" | "ready" | "accepting" | "accepted" | "error";

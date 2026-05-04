@@ -357,6 +357,9 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     !gameState.pendingPreRollEffect &&
     !gameState.pendingDoubleRoll;
 
+  const lastRollDice = gameState.lastRollResult?.dice;
+  const lastRollDiceKey = useMemo(() => (lastRollDice ?? []).join("-"), [lastRollDice]);
+
   useEffect(() => {
     if (!shouldShowPreRollChoiceModal) setSelectedPreRollType(null);
   }, [shouldShowPreRollChoiceModal]);
@@ -613,8 +616,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     const stepsToMove = Number(gameState.diceValue);
     if (!Number.isFinite(stepsToMove) || stepsToMove <= 0) return;
     const announcedTotal = typeof total === "number" ? total : stepsToMove;
-    const diceKey = (gameState.lastRollResult?.dice ?? []).join("-");
-    const key = `${gameState.currentRound}-${gameState.currentPlayerIndex}-${announcedTotal}-${stepsToMove}-${diceKey}`;
+    const key = `${gameState.currentRound}-${gameState.currentPlayerIndex}-${announcedTotal}-${stepsToMove}-${lastRollDiceKey}`;
     if (lastRollAnnouncementKeyRef.current === key) return;
     lastRollAnnouncementKeyRef.current = key;
     autoMoveKeyRef.current = key;
@@ -639,7 +641,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     gameState.currentRound,
     gameState.isRolling,
     gameState.lastRollResult?.total,
-    (gameState.lastRollResult?.dice ?? []).join("-"),
+    lastRollDiceKey,
     gameState.turnPhase,
     gameState.diceValue,
     hasMovedThisTurn,
@@ -923,8 +925,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     gameState.isRolling,
     gameState.turnPhase,
     gameState.currentQuestion?.status,
-    gameState.preRollChoiceResolved,
-    gameState.preRollActionUsed,
     gameState.diceValue,
     isPathChoiceActive,
     isKudoPurchaseActive,

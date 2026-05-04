@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, LogIn, Sparkles } from "lucide-react";
 import { AVATARS } from "@/types/game";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/useAuth";
 import { IdentityCard } from "./IdentityCard";
 import { AvatarCarousel } from "./AvatarCarousel";
 import { PreGameShell, PreGameStickyFooter } from "./PreGameShell";

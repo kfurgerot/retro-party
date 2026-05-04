@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useGameState } from "@/hooks/useGameState";
 import { useOnlineGameState } from "@/hooks/useOnlineGameState";
 import { useProfile } from "@/hooks/useProfile";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/useAuth";
 import { LobbyScreen } from "@/components/screens/LobbyScreen";
 import { IdentityStep, SessionLobby, ConnectingState } from "@/components/app-shell-v2/pre-game";
 import type { PresenceParticipant } from "@/components/app-shell-v2/pre-game";

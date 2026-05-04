@@ -1,19 +1,11 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { api, HostUser, OAuthProviderId, OAuthProvidersAvailability } from "@/net/api";
-
-type AuthState = {
-  user: HostUser | null;
-  loading: boolean;
-  oauthProviders: OAuthProvidersAvailability;
-  login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, displayName: string) => Promise<void>;
-  startOAuthLogin: (provider: OAuthProviderId, nextPath?: string) => void;
-  updateProfile: (displayName: string) => Promise<void>;
-  changePassword: (currentPassword: string, newPassword: string) => Promise<string>;
-  logout: () => Promise<void>;
-};
-
-const AuthContext = createContext<AuthState | null>(null);
+import React, { useCallback, useEffect, useState } from "react";
+import {
+  api,
+  type HostUser,
+  type OAuthProviderId,
+  type OAuthProvidersAvailability,
+} from "@/net/api";
+import { AuthContext } from "./authContextValue";
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<HostUser | null>(null);
@@ -87,10 +79,4 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       {children}
     </AuthContext.Provider>
   );
-};
-
-export const useAuth = (): AuthState => {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used inside AuthProvider");
-  return ctx;
 };

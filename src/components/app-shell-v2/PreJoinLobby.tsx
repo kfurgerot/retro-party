@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { BrandMark } from "@/components/BrandMark";
 import { api, type SessionPreview } from "@/net/api";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/useAuth";
 import { EXPERIENCE_BY_ID } from "@/design-system/tokens";
 import {
   AlertCircle,

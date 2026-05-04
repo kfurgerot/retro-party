@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { EditorLayout } from "@/components/app-shell-v2/EditorLayout";
 import { Slider } from "@/components/ui/slider";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/useAuth";
 import {
   createDraftId,
   isSkillsMatrixTemplate,

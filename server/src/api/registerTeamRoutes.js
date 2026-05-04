@@ -322,7 +322,6 @@ export function registerTeamRoutes(context) {
         });
         emailSent = true;
       } catch (mailErr) {
-        // eslint-disable-next-line no-console
         console.error(
           `[team-invitation] sendMail failed for ${email}:`,
           mailErr?.message || mailErr,
