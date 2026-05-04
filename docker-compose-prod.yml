@@ -64,8 +64,6 @@ services:
       - POSTGRES_USER=${POSTGRES_USER:-retro}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     # No host port exposure by default in production.
-    ports:
-      - "5432:5432"
     volumes:
       - /volume1/docker/retro-postgres-db:/var/lib/postgresql/data
     healthcheck:
