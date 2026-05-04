@@ -25,6 +25,13 @@ import {
   formatPlanningValueForSystem,
   PLANNING_POKER_DECKS,
 } from "@/lib/planningPoker";
+import {
+  buildHistoryByStoryTitle,
+  buildPlanningPokerHistoryEntries,
+  buildPlanningPokerStoryListItems,
+  type PendingUnvotedStory,
+  type StoryListItem,
+} from "@/features/planningPoker/sessionModel";
 
 // Portal-aligned local tokens
 const HUD = "rounded-2xl border border-white/[0.06] bg-[#0d0d1a]/90 backdrop-blur";
@@ -92,15 +99,6 @@ type SummaryRow = {
   median: string;
   consensus: string;
   votes: PlanningPokerRoundSummary["votes"];
-};
-
-type StoryListItem = {
-  id: string;
-  title: string;
-  description: string | null;
-  preparedIndex: number | null;
-  isCurrent: boolean;
-  isVoted: boolean;
 };
 
 const VOTE_SYSTEM_OPTIONS: Array<{ value: PlanningPokerState["voteSystem"]; label: string }> = [
@@ -201,43 +199,16 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
     [votingPlayers],
   );
   const totalVoters = votingPlayers.length;
-  const historyEntries = useMemo(() => {
-    const byStory = new Map<string, PlanningPokerRoundSummary>();
-    for (const entry of history) {
-      const key = entry.storyTitle?.trim() || `Vote #${entry.round}`;
-      byStory.set(key, entry);
-    }
-
-    const parseStoryIndex = (title: string) => {
-      const match = title.match(/(\d+)\s*$/);
-      if (!match) return Number.POSITIVE_INFINITY;
-      const value = Number(match[1]);
-      return Number.isFinite(value) ? value : Number.POSITIVE_INFINITY;
-    };
-
-    return [...byStory.values()].sort((a, b) => {
-      const indexA = parseStoryIndex(a.storyTitle || "");
-      const indexB = parseStoryIndex(b.storyTitle || "");
-      if (indexA !== indexB) return indexB - indexA;
-      return (b.revealedAt ?? 0) - (a.revealedAt ?? 0);
-    });
-  }, [history]);
-  const historyByStoryTitle = useMemo(() => {
-    const byStory = new Map<string, PlanningPokerRoundSummary>();
-    for (const entry of historyEntries) {
-      const key = entry.storyTitle?.trim();
-      if (key) byStory.set(key, entry);
-    }
-    return byStory;
-  }, [historyEntries]);
+  const historyEntries = useMemo(() => buildPlanningPokerHistoryEntries(history), [history]);
+  const historyByStoryTitle = useMemo(
+    () => buildHistoryByStoryTitle(historyEntries),
+    [historyEntries],
+  );
   const votedStoryTitles = useMemo(
     () => new Set(historyByStoryTitle.keys()),
     [historyByStoryTitle],
   );
-  const [pendingUnvotedStory, setPendingUnvotedStory] = useState<{
-    title: string;
-    round: number;
-  } | null>(null);
+  const [pendingUnvotedStory, setPendingUnvotedStory] = useState<PendingUnvotedStory | null>(null);
   React.useEffect(() => {
     if (hasPreparedSession) {
       setPendingUnvotedStory(null);
@@ -261,109 +232,29 @@ export const PlanningPokerGameScreen: React.FC<Props> = ({
     });
   }, [hasPreparedSession, state.round, state.storyTitle, votedStoryTitles]);
 
-  const storyListItems = useMemo<StoryListItem[]>(() => {
-    const currentTitle = state.storyTitle.trim();
-
-    if (hasPreparedSession) {
-      return state.preparedStories.map((story, idx) => {
-        const normalizedStoryTitle = story.title.trim();
-        const isVoted = normalizedStoryTitle ? votedStoryTitles.has(normalizedStoryTitle) : false;
-        return {
-          id: story.id,
-          title: story.title,
-          description: story.description,
-          preparedIndex: idx,
-          isCurrent: idx === state.currentStoryIndex,
-          isVoted,
-        };
-      });
-    }
-
-    type NonPreparedStoryItem = {
-      id: string;
-      title: string;
-      normalizedTitle: string;
-      firstRound: number;
-      firstSeenOrder: number;
-      isVoted: boolean;
-    };
-
-    const byStoryTitle = new Map<string, NonPreparedStoryItem>();
-    let firstSeenOrder = 0;
-
-    for (const entry of history) {
-      const normalizedStoryTitle = entry.storyTitle.trim();
-      if (!normalizedStoryTitle) continue;
-
-      const existing = byStoryTitle.get(normalizedStoryTitle);
-      if (!existing) {
-        byStoryTitle.set(normalizedStoryTitle, {
-          id: entry.id,
-          title: entry.storyTitle,
-          normalizedTitle: normalizedStoryTitle,
-          firstRound: entry.round,
-          firstSeenOrder: firstSeenOrder++,
-          isVoted: true,
-        });
-        continue;
-      }
-
-      existing.id = entry.id;
-      existing.title = entry.storyTitle;
-      existing.firstRound = Math.min(existing.firstRound, entry.round);
-      existing.isVoted = true;
-    }
-
-    if (pendingUnvotedStory) {
-      const normalizedPendingTitle = pendingUnvotedStory.title.trim();
-      if (normalizedPendingTitle && !byStoryTitle.has(normalizedPendingTitle)) {
-        byStoryTitle.set(normalizedPendingTitle, {
-          id: `pending-story-${pendingUnvotedStory.round}-${normalizedPendingTitle}`,
-          title: pendingUnvotedStory.title,
-          normalizedTitle: normalizedPendingTitle,
-          firstRound: pendingUnvotedStory.round,
-          firstSeenOrder: firstSeenOrder++,
-          isVoted: false,
-        });
-      }
-    }
-
-    if (currentTitle && !byStoryTitle.has(currentTitle)) {
-      byStoryTitle.set(currentTitle, {
-        id: `current-story-${state.round}-${currentTitle}`,
-        title: state.storyTitle,
-        normalizedTitle: currentTitle,
-        firstRound: state.round,
-        firstSeenOrder: firstSeenOrder++,
-        isVoted: false,
-      });
-    }
-
-    const orderedStories = [...byStoryTitle.values()].sort((a, b) => {
-      if (a.firstRound !== b.firstRound) return a.firstRound - b.firstRound;
-      return a.firstSeenOrder - b.firstSeenOrder;
-    });
-
-    return orderedStories.map((story) => {
-      return {
-        id: story.id,
-        title: story.title,
-        description: null,
-        preparedIndex: null,
-        isCurrent: !!currentTitle && currentTitle === story.normalizedTitle,
-        isVoted: story.isVoted,
-      };
-    });
-  }, [
-    hasPreparedSession,
-    history,
-    pendingUnvotedStory,
-    state.currentStoryIndex,
-    state.preparedStories,
-    state.round,
-    state.storyTitle,
-    votedStoryTitles,
-  ]);
+  const storyListItems = useMemo<StoryListItem[]>(
+    () =>
+      buildPlanningPokerStoryListItems({
+        hasPreparedSession,
+        preparedStories: state.preparedStories,
+        currentStoryIndex: state.currentStoryIndex,
+        storyTitle: state.storyTitle,
+        round: state.round,
+        history,
+        pendingUnvotedStory,
+        votedStoryTitles,
+      }),
+    [
+      hasPreparedSession,
+      history,
+      pendingUnvotedStory,
+      state.currentStoryIndex,
+      state.preparedStories,
+      state.round,
+      state.storyTitle,
+      votedStoryTitles,
+    ],
+  );
   const archivedStorySnapshot = useMemo(() => {
     if (state.votesOpen || state.revealed) return null;
     const key = state.storyTitle.trim();
